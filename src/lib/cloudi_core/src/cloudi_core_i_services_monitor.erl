@@ -11,7 +11,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
+%%% @copyright 2011-2020 Michael Truog
 %%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -47,6 +47,8 @@
          process_init_begin/1,
          process_init_end/1,
          process_terminate_begin/2,
+         process_increase/5,
+         process_decrease/5,
          shutdown/2,
          restart/2,
          suspend/2,
@@ -54,9 +56,7 @@
          update/2,
          search/2,
          status/2,
-         pids/2,
-         increase/5,
-         decrease/5]).
+         pids/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -161,15 +161,15 @@
 
 -record(cloudi_service_terminate_begin,
     {
-        reason :: any(),
         pid :: pid(),
+        reason :: any(),
         time_terminate :: cloudi_timestamp:native_monotonic()
     }).
 
 -record(cloudi_service_terminate_end,
     {
-        reason :: any(),
         pid :: pid(),
+        reason :: any(),
         service_id :: cloudi_service_api:service_id(),
         service :: #service{}
     }).
@@ -239,8 +239,8 @@ process_init_begin([Pid | Pids])
 process_init_end(Pid)
     when is_pid(Pid) ->
     TimeInitialized = cloudi_timestamp:native_monotonic(),
-    ?MODULE !  #cloudi_service_init_end{pid = Pid,
-                                        time_initialized = TimeInitialized},
+    ?MODULE ! #cloudi_service_init_end{pid = Pid,
+                                       time_initialized = TimeInitialized},
     ok.
 
 -spec process_terminate_begin(Pid :: pid(),
@@ -250,11 +250,22 @@ process_init_end(Pid)
 process_terminate_begin(Pid, Reason)
     when is_pid(Pid) ->
     TimeTerminate = cloudi_timestamp:native_monotonic(),
-    ?CATCH_EXIT(gen_server:cast(?MODULE,
-                                #cloudi_service_terminate_begin{
-                                    reason = Reason,
-                                    pid = Pid,
-                                    time_terminate = TimeTerminate})).
+    ?MODULE ! #cloudi_service_terminate_begin{pid = Pid,
+                                              reason = Reason,
+                                              time_terminate = TimeTerminate},
+    ok.
+
+process_increase(Pid, Period, RateCurrent, RateMax, CountProcessMax)
+    when is_pid(Pid), is_integer(Period), is_number(RateCurrent),
+         is_number(RateMax), is_number(CountProcessMax) ->
+    ?MODULE ! {increase, Pid, Period, RateCurrent, RateMax, CountProcessMax},
+    ok.
+
+process_decrease(Pid, Period, RateCurrent, RateMin, CountProcessMin)
+    when is_pid(Pid), is_integer(Period), is_number(RateCurrent),
+         is_number(RateMin), is_number(CountProcessMin) ->
+    ?MODULE ! {decrease, Pid, Period, RateCurrent, RateMin, CountProcessMin},
+    ok.
 
 shutdown(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
@@ -300,22 +311,6 @@ pids(ServiceId, Timeout)
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {pids, ServiceId},
                                 Timeout)).
-
-increase(Pid, Period, RateCurrent, RateMax, CountProcessMax)
-    when is_pid(Pid), is_integer(Period), is_number(RateCurrent),
-         is_number(RateMax), is_number(CountProcessMax) ->
-    ?CATCH_EXIT(gen_server:cast(?MODULE,
-                                {increase,
-                                 Pid, Period, RateCurrent,
-                                 RateMax, CountProcessMax})).
-
-decrease(Pid, Period, RateCurrent, RateMin, CountProcessMin)
-    when is_pid(Pid), is_integer(Period), is_number(RateCurrent),
-         is_number(RateMin), is_number(CountProcessMin) ->
-    ?CATCH_EXIT(gen_server:cast(?MODULE,
-                                {decrease,
-                                 Pid, Period, RateCurrent,
-                                 RateMin, CountProcessMin})).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -495,54 +490,8 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
 
-handle_cast({Direction,
-             Pid, Period, RateCurrent,
-             RateLimit, CountProcessLimit},
-            #state{services = Services,
-                   changes = Changes} = State)
-    when (Direction =:= increase);
-         (Direction =:= decrease) ->
-    case cloudi_x_key2value:find2(Pid, Services) of
-        {ok, {[ServiceId], _}} ->
-            Entry = {Direction, RateCurrent, RateLimit, CountProcessLimit},
-            ChangeNew = case maps:find(ServiceId, Changes) of
-                {ok, #pids_change_input{changes = ChangeList} = Change} ->
-                    Change#pids_change_input{changes = [Entry | ChangeList]};
-                error ->
-                    erlang:send_after(Period * 1000, self(),
-                                      {changes, ServiceId}),
-                    #pids_change_input{period = Period,
-                                       changes = [Entry]}
-            end,
-            {noreply, State#state{changes = maps:put(ServiceId,
-                                                     ChangeNew,
-                                                     Changes)}};
-        error ->
-            % discard old change
-            {noreply, State}
-    end;
-
-handle_cast(#cloudi_service_terminate_begin{
-                reason = Reason,
-                pid = Pid,
-                time_terminate = TimeTerminate},
-            #state{services = Services} = State) ->
-    case cloudi_x_key2value:find2(Pid, Services) of
-        {ok, {[ServiceId], #service{} = Service}} ->
-            ok = terminate_end_enforce(TimeTerminate, self(),
-                                       Reason, Pid, ServiceId, Service),
-            ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
-                Service#service{time_terminate = TimeTerminate}, Services),
-            {noreply, State#state{services = ServicesNew}};
-        error ->
-            {noreply, State}
-    end;
-
 handle_cast(Request, State) ->
     {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
-
-handle_info({changes, ServiceId}, State) ->
-    {noreply, pids_change_check(ServiceId, State)};
 
 handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             #state{services = Services} = State) ->
@@ -622,16 +571,61 @@ handle_info(#restart_stage3{pid = OldPid,
      restart_stage3(Service, Services, State,
                     ServiceId, TimeTerminate, OldPid)};
 
-handle_info(#cloudi_service_terminate_end{reason = Reason,
-                                          pid = Pid,
+handle_info(#cloudi_service_terminate_begin{pid = Pid,
+                                            reason = Reason,
+                                            time_terminate = TimeTerminate},
+            #state{services = Services} = State) ->
+    case cloudi_x_key2value:find2(Pid, Services) of
+        {ok, {[ServiceId], #service{} = Service}} ->
+            ok = terminate_end_enforce(TimeTerminate, self(),
+                                       Reason, Pid, ServiceId, Service),
+            ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
+                Service#service{time_terminate = TimeTerminate}, Services),
+            {noreply, State#state{services = ServicesNew}};
+        error ->
+            {noreply, State}
+    end;
+
+handle_info(#cloudi_service_terminate_end{pid = Pid,
+                                          reason = Reason,
                                           service_id = ServiceId,
                                           service = Service}, State) ->
-    ok = terminate_end_enforce_now(Reason, Pid, ServiceId, Service),
+    ok = terminate_end_enforce_now(Pid, Reason, ServiceId, Service),
     {noreply, State};
 
 handle_info(#cloudi_service_init_end{pid = Pid}, State) ->
     ok = cloudi_core_i_configurator:service_process_init_end(Pid),
     {noreply, State};
+
+handle_info({changes, ServiceId}, State) ->
+    {noreply, pids_change_check(ServiceId, State)};
+
+handle_info({Direction,
+             Pid, Period, RateCurrent,
+             RateLimit, CountProcessLimit},
+            #state{services = Services,
+                   changes = Changes} = State)
+    when (Direction =:= increase);
+         (Direction =:= decrease) ->
+    case cloudi_x_key2value:find2(Pid, Services) of
+        {ok, {[ServiceId], _}} ->
+            Entry = {Direction, RateCurrent, RateLimit, CountProcessLimit},
+            ChangeNew = case maps:find(ServiceId, Changes) of
+                {ok, #pids_change_input{changes = ChangeList} = Change} ->
+                    Change#pids_change_input{changes = [Entry | ChangeList]};
+                error ->
+                    erlang:send_after(Period * 1000, self(),
+                                      {changes, ServiceId}),
+                    #pids_change_input{period = Period,
+                                       changes = [Entry]}
+            end,
+            {noreply, State#state{changes = maps:put(ServiceId,
+                                                     ChangeNew,
+                                                     Changes)}};
+        error ->
+            % discard old change
+            {noreply, State}
+    end;
 
 handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
     % gen_server:call/3 had a timeout exception that was caught but the
@@ -728,6 +722,16 @@ restart_stage1_clear([Pid | Pids] = L) ->
         {'cloudi_service_update_now', Pid, _} ->
             restart_stage1_clear(L);
         {'cloudi_service_suspended', Pid, _} ->
+            restart_stage1_clear(L);
+        #cloudi_service_terminate_begin{pid = Pid} ->
+            restart_stage1_clear(L);
+        #cloudi_service_terminate_end{pid = Pid} ->
+            restart_stage1_clear(L);
+        #cloudi_service_init_end{pid = Pid} ->
+            restart_stage1_clear(L);
+        {increase, Pid, _, _, _, _} ->
+            restart_stage1_clear(L);
+        {decrease, Pid, _, _, _, _} ->
             restart_stage1_clear(L)
     after
         0 ->
@@ -1007,11 +1011,11 @@ terminate_service_wait([Pid | Pids], OldPid) ->
     receive
         {'DOWN', _MonitorRef, 'process', Pid, _} ->
             terminate_service_wait(Pids, OldPid);
-        #cloudi_service_terminate_end{reason = ShutdownExit,
-                                      pid = Pid,
+        #cloudi_service_terminate_end{pid = Pid,
+                                      reason = ShutdownExit,
                                       service_id = ServiceId,
                                       service = Service} ->
-            ok = terminate_end_enforce_now(ShutdownExit, Pid,
+            ok = terminate_end_enforce_now(Pid, ShutdownExit,
                                            ServiceId, Service),
             receive
                 {'DOWN', _MonitorRef, 'process', Pid, _} ->
@@ -1034,16 +1038,16 @@ terminate_end_enforce(TimeTerminate, Self,
         Timeout > 0 ->
             erlang:send_after(Timeout, Self,
                               #cloudi_service_terminate_end{
-                                  reason = Reason,
                                   pid = Pid,
+                                  reason = Reason,
                                   service_id = ServiceId,
                                   service = Service}),
             ok;
         true ->
-            terminate_end_enforce_now(Reason, Pid, ServiceId, Service)
+            terminate_end_enforce_now(Pid, Reason, ServiceId, Service)
     end.
 
-terminate_end_enforce_now(Reason, Pid, ServiceId,
+terminate_end_enforce_now(Pid, Reason, ServiceId,
                           #service{timeout_term = TimeoutTerm}) ->
     case erlang:is_process_alive(Pid) of
         true ->
@@ -1297,10 +1301,10 @@ pids_change_decrease(Count, OldPids, CountProcessCurrent, Rate,
                erlang:round(Rate * 10) / 10,
                [P || #service{pids = P} <- ServiceL]]),
     CountProcess = CountProcessCurrent + Count,
-    ServiceLNew = pids_change_decrease_loop(Count, lists:reverse(ServiceL)),
-    {_,
-     ServicesNew} = pids_change_update(ServiceLNew, CountProcess,
+    {ServiceLNew, % reversed
+     ServicesNew} = pids_change_update(ServiceL, CountProcess,
                                        ServiceId, Services),
+    [_ | _] = pids_change_decrease_loop(Count, ServiceLNew),
     ServicesNew.
 
 pids_change_update(ServiceL, CountProcess, ServiceId, Services) ->
@@ -1308,12 +1312,19 @@ pids_change_update(ServiceL, CountProcess, ServiceId, Services) ->
 
 pids_change_update([], Output, _, _, Services) ->
     {Output, Services};
-pids_change_update([#service{pids = Pids} = Service | ServiceL], Output,
+pids_change_update([#service{process_index = ProcessIndex,
+                             pids = Pids} = Service | ServiceL], Output,
                    CountProcess, ServiceId, Services) ->
+    CountProcessUpdate = ProcessIndex < CountProcess,
     ServiceNew = Service#service{count_process = CountProcess},
     ServicesNew = lists:foldl(fun(P, D) ->
-        cloudi_core_i_rate_based_configuration:
-        count_process_dynamic_update(P, CountProcess),
+        if
+            CountProcessUpdate =:= true ->
+                cloudi_core_i_rate_based_configuration:
+                count_process_dynamic_update(P, CountProcess);
+            CountProcessUpdate =:= false ->
+                ok
+        end,
         cloudi_x_key2value:store(ServiceId, P, ServiceNew, D)
     end, Services, Pids),
     pids_change_update(ServiceL, [ServiceNew | Output],

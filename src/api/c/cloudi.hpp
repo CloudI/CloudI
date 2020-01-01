@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -595,7 +595,8 @@ class API
         static int const ASYNC = 1;
         static int const SYNC = -1;
 
-        API(unsigned int const thread_index);
+        API(unsigned int const thread_index,
+            bool const terminate_return_value = true);
         ~API();
         API(API const & object);
 
@@ -1239,7 +1240,7 @@ class API
         int * m_count; // m_api shared pointer count
 
     public:
-        // create a nested namespace in a way the c++ standard accepts
+        // enumeration namespace that is valid with the C++98 standard
         class return_value
         {
             public:
@@ -1367,6 +1368,26 @@ class API
                 {
                     return "Synchronous Call Forward Invalid";
                 }
+        };
+
+        class terminate_exception : public std::exception
+        {
+            public:
+                terminate_exception(uint32_t const timeout) throw() :
+                    m_timeout(timeout)
+                {
+                }
+                virtual ~terminate_exception() throw() {}
+                virtual char const * what() const throw()
+                {
+                    return "Terminate";
+                }
+                uint32_t timeout() const
+                {
+                    return m_timeout;
+                }
+            private:
+                uint32_t const m_timeout;
         };
 
 };

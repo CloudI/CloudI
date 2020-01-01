@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -64,12 +64,10 @@ class API(object):
 
     def __init__(self, thread_index):
         # pylint: disable=broad-except
-        self.__timeout_terminate = 1000 # TIMEOUT_TERMINATE_MIN
         try:
             self.__api = libcloudi_py.cloudi_c(thread_index)
         except Exception as exception:
             self.__rethrow_exception(exception)
-        self.__timeout_terminate = self.__api.timeout_terminate()
 
     @staticmethod
     def thread_count():
@@ -312,7 +310,7 @@ class API(object):
         """
         returns the service termination timeout
         """
-        return self.__timeout_terminate
+        return self.__api.timeout_terminate()
 
     def poll(self, timeout=-1):
         """
@@ -341,7 +339,7 @@ class API(object):
         elif isinstance(exception, libcloudi_py.invalid_input_exception):
             raise InvalidInputException(str(exception))
         elif isinstance(exception, libcloudi_py.terminate_exception):
-            raise TerminateException(self.__timeout_terminate)
+            raise TerminateException(exception.timeout)
         else:
             raise exception
 

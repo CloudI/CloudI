@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -105,37 +105,23 @@ python_cloudi_instance_object_new(PyTypeObject * type, PyObject *, PyObject *)
     return (PyObject *) self;
 }
 
-static int
-python_cloudi_instance_object_init(PyObject * self, PyObject * args, PyObject *)
+static void
+python_terminate_error(uint32_t const timeout)
 {
-    python_cloudi_instance_object * object =
-        (python_cloudi_instance_object *) self;
-    unsigned int thread_index;
-    if (! PyArg_ParseTuple(args, "I:__init__()", &thread_index))
-    {
-        return -1;
-    }
-    try
-    {
-        object->api = new CloudI::API(thread_index);
-        object->thread_state = 0;
-    }
-    catch (CloudI::API::invalid_input_exception const & e)
-    {
-        PyErr_SetString(python_cloudi_invalid_input_exception, e.what());
-        return -1;
-    }
-    return 0;
+    PyObject * timeout_value = Py_BuildValue("I", timeout);
+    PyObject_SetAttrString(python_cloudi_terminate_exception,
+                           "timeout", timeout_value);
+    Py_DECREF(timeout_value);
+    PyErr_SetString(python_cloudi_terminate_exception, "Terminate");
 }
 
 static void
-python_error(int value)
+python_error(CloudI::API const & api, int const value)
 {
     switch (value)
     {
         case CloudI::API::return_value::terminate:
-            PyErr_SetString(python_cloudi_terminate_exception,
-                            "terminate"); // shares error_poll_HUP
+            python_terminate_error(api.timeout_terminate());
             return;
         case CloudI::API::return_value::timeout:
             PyErr_SetString(python_cloudi_message_decoding_exception,
@@ -290,6 +276,34 @@ python_error(int value)
                          "unknown (%d)", value);
             return;
     }
+}
+
+static int
+python_cloudi_instance_object_init(PyObject * self, PyObject * args, PyObject *)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    unsigned int thread_index;
+    if (! PyArg_ParseTuple(args, "I:__init__()", &thread_index))
+    {
+        return -1;
+    }
+    try
+    {
+        object->api = new CloudI::API(thread_index);
+        object->thread_state = 0;
+    }
+    catch (CloudI::API::invalid_input_exception const & e)
+    {
+        PyErr_SetString(python_cloudi_invalid_input_exception, e.what());
+        return -1;
+    }
+    catch (CloudI::API::terminate_exception const & e)
+    {
+        python_terminate_error(e.timeout());
+        return -1;
+    }
+    return 0;
 }
 
 static PyObject *
@@ -531,10 +545,14 @@ MODINIT_FUNC_DECLARE(libcloudi_py)
     PyModule_AddObject(m, "message_decoding_exception",
                        python_cloudi_message_decoding_exception);
 
+    PyObject * terminate_exception_attrs = PyDict_New();
+    PyDict_SetItemString(terminate_exception_attrs, "timeout", Py_None);
     python_cloudi_terminate_exception = PyErr_NewException(
         const_cast<char *>("libcloudi_py."
-                           "terminate_exception"), NULL, NULL);
+                           "terminate_exception"), NULL,
+        terminate_exception_attrs);
     Py_INCREF(python_cloudi_terminate_exception);
+    Py_DECREF(terminate_exception_attrs);
     PyModule_AddObject(m, "terminate_exception",
                        python_cloudi_terminate_exception);
 
@@ -661,7 +679,10 @@ class callback : public CloudI::API::function_object_c
                 }
                 else
                 {
-                    PyErr_Print();
+                    if (::strcmp(exception_name, "TerminateException") == 0)
+                        PyErr_Clear();
+                    else
+                        PyErr_Print();
                     exception_invalid = true;
                 }
                 THREADS_UNBLOCK;
@@ -840,6 +861,7 @@ python_cloudi_subscribe(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * pattern;
     PyObject * f;
     if (! PyArg_ParseTuple(args, "sO:subscribe", &pattern, &f))
@@ -854,12 +876,11 @@ python_cloudi_subscribe(PyObject * self, PyObject * args)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->subscribe(pattern,
-                                    new callback(f, object->thread_state));
+    result = api->subscribe(pattern, new callback(f, object->thread_state));
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -870,6 +891,7 @@ python_cloudi_subscribe_count(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * pattern;
     if (! PyArg_ParseTuple(args, "s:subscribe_count", &pattern))
     {
@@ -877,14 +899,14 @@ python_cloudi_subscribe_count(PyObject * self, PyObject * args)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->subscribe_count(pattern);
+    result = api->subscribe_count(pattern);
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
-    return Py_BuildValue("I", object->api->get_subscribe_count());
+    return Py_BuildValue("I", api->get_subscribe_count());
 }
 
 static PyObject *
@@ -892,6 +914,7 @@ python_cloudi_unsubscribe(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * pattern;
     if (! PyArg_ParseTuple(args, "s:unsubscribe", &pattern))
     {
@@ -899,11 +922,11 @@ python_cloudi_unsubscribe(PyObject * self, PyObject * args)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->unsubscribe(pattern);
+    result = api->unsubscribe(pattern);
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -914,13 +937,14 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * name;
     char const * request;
     uint32_t request_size = 0;
-    uint32_t timeout = object->api->timeout_async();
+    uint32_t timeout = api->timeout_async();
     char const * request_info = NULL;
     uint32_t request_info_size = 0;
-    int8_t priority = object->api->priority_default();
+    int8_t priority = api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
     if (! PyArg_ParseTupleAndKeywords(args, kwargs,
@@ -935,8 +959,8 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->send_async(name, request_info, request_info_size,
-                                     request, request_size, timeout, priority);
+    result = api->send_async(name, request_info, request_info_size,
+                             request, request_size, timeout, priority);
     THREADS_END;
     if (result != 0)
     {
@@ -944,11 +968,11 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
-    PY_ASSERT(object->api->get_trans_id_count() == 1);
-    return Py_BuildValue(BUILDVALUE_BYTES, object->api->get_trans_id(0), 16);
+    PY_ASSERT(api->get_trans_id_count() == 1);
+    return Py_BuildValue(BUILDVALUE_BYTES, api->get_trans_id(0), 16);
 }
 
 static PyObject *
@@ -956,13 +980,14 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * name;
     char const * request;
     uint32_t request_size = 0;
-    uint32_t timeout = object->api->timeout_sync();
+    uint32_t timeout = api->timeout_sync();
     char const * request_info = NULL;
     uint32_t request_info_size = 0;
-    int8_t priority = object->api->priority_default();
+    int8_t priority = api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
     if (! PyArg_ParseTupleAndKeywords(args, kwargs,
@@ -977,8 +1002,8 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->send_sync(name, request_info, request_info_size,
-                                    request, request_size, timeout, priority);
+    result = api->send_sync(name, request_info, request_info_size,
+                            request, request_size, timeout, priority);
     THREADS_END;
     if (result != 0)
     {
@@ -986,18 +1011,18 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
-    PY_ASSERT(object->api->get_trans_id_count() == 1);
+    PY_ASSERT(api->get_trans_id_count() == 1);
     return Py_BuildValue("(" BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ")",
-                         object->api->get_response_info(),
-                         object->api->get_response_info_size(),
-                         object->api->get_response(),
-                         object->api->get_response_size(),
-                         object->api->get_trans_id(0), 16);
+                         api->get_response_info(),
+                         api->get_response_info_size(),
+                         api->get_response(),
+                         api->get_response_size(),
+                         api->get_trans_id(0), 16);
 }
 
 static PyObject *
@@ -1005,13 +1030,14 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * name;
     char const * request;
     uint32_t request_size = 0;
-    uint32_t timeout = object->api->timeout_async();
+    uint32_t timeout = api->timeout_async();
     char const * request_info = NULL;
     uint32_t request_info_size = 0;
-    int8_t priority = object->api->priority_default();
+    int8_t priority = api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
     if (! PyArg_ParseTupleAndKeywords(args, kwargs,
@@ -1026,8 +1052,8 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->mcast_async(name, request_info, request_info_size,
-                                      request, request_size, timeout, priority);
+    result = api->mcast_async(name, request_info, request_info_size,
+                              request, request_size, timeout, priority);
     THREADS_END;
     if (result != 0)
     {
@@ -1035,11 +1061,11 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
-    return Py_BuildValue(BUILDVALUE_BYTES, object->api->get_trans_id(0),
-                         object->api->get_trans_id_count() * 16);
+    return Py_BuildValue(BUILDVALUE_BYTES, api->get_trans_id(0),
+                         api->get_trans_id_count() * 16);
 }
 
 static PyObject *
@@ -1047,6 +1073,7 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * name;
     char const * request_info;
     uint32_t request_info_size = 0;
@@ -1072,11 +1099,11 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
     THREADS_BEGIN;
     try
     {
-        result = object->api->forward_async(name,
-                                            request_info, request_info_size,
-                                            request, request_size,
-                                            timeout, priority,
-                                            trans_id, pid, pid_size);
+        result = api->forward_async(name,
+                                    request_info, request_info_size,
+                                    request, request_size,
+                                    timeout, priority,
+                                    trans_id, pid, pid_size);
     }
     catch (CloudI::API::forward_async_exception const &)
     {
@@ -1084,7 +1111,7 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1095,6 +1122,7 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * name;
     char const * request_info;
     uint32_t request_info_size = 0;
@@ -1120,11 +1148,11 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
     THREADS_BEGIN;
     try
     {
-        result = object->api->forward_sync(name,
-                                           request_info, request_info_size,
-                                           request, request_size,
-                                           timeout, priority,
-                                           trans_id, pid, pid_size);
+        result = api->forward_sync(name,
+                                   request_info, request_info_size,
+                                   request, request_size,
+                                   timeout, priority,
+                                   trans_id, pid, pid_size);
     }
     catch (CloudI::API::forward_sync_exception const &)
     {
@@ -1132,7 +1160,7 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1143,6 +1171,7 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * name;
     char const * pattern;
     char const * response_info;
@@ -1168,11 +1197,10 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
     THREADS_BEGIN;
     try
     {
-        result = object->api->return_async(name, pattern,
-                                           response_info,
-                                           response_info_size,
-                                           response, response_size, timeout,
-                                           trans_id, pid, pid_size);
+        result = api->return_async(name, pattern,
+                                   response_info, response_info_size,
+                                   response, response_size,
+                                   timeout, trans_id, pid, pid_size);
     }
     catch (CloudI::API::return_async_exception const &)
     {
@@ -1180,7 +1208,7 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1191,6 +1219,7 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * name;
     char const * pattern;
     char const * response_info;
@@ -1216,11 +1245,10 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
     THREADS_BEGIN;
     try
     {
-        result = object->api->return_sync(name, pattern,
-                                          response_info,
-                                          response_info_size,
-                                          response, response_size, timeout,
-                                          trans_id, pid, pid_size);
+        result = api->return_sync(name, pattern,
+                                  response_info, response_info_size,
+                                  response, response_size,
+                                  timeout, trans_id, pid, pid_size);
     }
     catch (CloudI::API::return_sync_exception const &)
     {
@@ -1228,7 +1256,7 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1239,7 +1267,8 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    uint32_t timeout = object->api->timeout_sync();
+    CloudI::API * api = object->api;
+    uint32_t timeout = api->timeout_sync();
     char const * trans_id = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
     uint32_t trans_id_size = 16;
     bool consume = true;
@@ -1256,7 +1285,7 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
     PY_ASSERT(trans_id_size == 16);
     int result;
     THREADS_BEGIN;
-    result = object->api->recv_async(timeout, trans_id, consume);
+    result = api->recv_async(timeout, trans_id, consume);
     THREADS_END;
     if (result != 0)
     {
@@ -1264,18 +1293,18 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
-    PY_ASSERT(object->api->get_trans_id_count() == 1);
+    PY_ASSERT(api->get_trans_id_count() == 1);
     return Py_BuildValue("(" BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ")",
-                         object->api->get_response_info(),
-                         object->api->get_response_info_size(),
-                         object->api->get_response(),
-                         object->api->get_response_size(),
-                         object->api->get_trans_id(0), 16);
+                         api->get_response_info(),
+                         api->get_response_info_size(),
+                         api->get_response(),
+                         api->get_response_size(),
+                         api->get_trans_id(0), 16);
 }
 
 static PyObject *
@@ -1283,7 +1312,8 @@ python_cloudi_process_index(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->process_index());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->process_index());
 }
 
 static PyObject *
@@ -1291,7 +1321,8 @@ python_cloudi_process_count(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->process_count());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->process_count());
 }
 
 static PyObject *
@@ -1299,7 +1330,8 @@ python_cloudi_process_count_max(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->process_count_max());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->process_count_max());
 }
 
 static PyObject *
@@ -1307,7 +1339,8 @@ python_cloudi_process_count_min(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->process_count_min());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->process_count_min());
 }
 
 static PyObject *
@@ -1315,7 +1348,8 @@ python_cloudi_prefix(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("s", object->api->prefix());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("s", api->prefix());
 }
 
 static PyObject *
@@ -1323,7 +1357,8 @@ python_cloudi_timeout_initialize(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->timeout_initialize());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->timeout_initialize());
 }
 
 static PyObject *
@@ -1331,7 +1366,8 @@ python_cloudi_timeout_async(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->timeout_async());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->timeout_async());
 }
 
 static PyObject *
@@ -1339,7 +1375,8 @@ python_cloudi_timeout_sync(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->timeout_sync());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->timeout_sync());
 }
 
 static PyObject *
@@ -1347,7 +1384,8 @@ python_cloudi_timeout_terminate(PyObject * self, PyObject *)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
-    return Py_BuildValue("I", object->api->timeout_terminate());
+    CloudI::API * api = object->api;
+    return Py_BuildValue("I", api->timeout_terminate());
 }
 
 static PyObject *
@@ -1355,6 +1393,7 @@ python_cloudi_poll(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     int32_t timeout;
     if (! PyArg_ParseTuple(args, "i:poll", &timeout))
     {
@@ -1362,7 +1401,7 @@ python_cloudi_poll(PyObject * self, PyObject * args)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->poll(timeout);
+    result = api->poll(timeout);
     THREADS_END;
     if (result != 0)
     {
@@ -1372,7 +1411,7 @@ python_cloudi_poll(PyObject * self, PyObject * args)
         }
         else
         {
-            python_error(result);
+            python_error(*api, result);
             return NULL;
         }
     }
@@ -1384,6 +1423,7 @@ python_cloudi_shutdown(PyObject * self, PyObject * args, PyObject * kwargs)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
     char const * reason = "";
     static char const * kwlist[] = {
         "reason", NULL};
@@ -1396,11 +1436,11 @@ python_cloudi_shutdown(PyObject * self, PyObject * args, PyObject * kwargs)
     }
     int result;
     THREADS_BEGIN;
-    result = object->api->shutdown(reason);
+    result = api->shutdown(reason);
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
+        python_error(*api, result);
         return NULL;
     }
     Py_RETURN_NONE;

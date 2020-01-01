@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -42,35 +42,35 @@ extern "C"
 typedef struct cloudi_instance_t
 {
     void * state;
-    int fd_in;
-    int fd_out;
-    int use_header;
-    int initialization_complete;
-    int terminate;
-    uint32_t buffer_size;
     void * lookup;
     void * buffer_send;
     void * buffer_recv;
-    uint32_t buffer_recv_index;
     void * buffer_call;
     void * poll_timer;
+    char * prefix;
+    char * response_info;
+    char * response;
+    char * trans_id;          /* always 16 characters (128 bits) length */
+    uint32_t buffer_size;
+    uint32_t buffer_recv_index;
     uint32_t process_index;
     uint32_t process_count;
     uint32_t process_count_max;
     uint32_t process_count_min;
-    char * prefix;
     uint32_t timeout_initialize;
     uint32_t timeout_async;
     uint32_t timeout_sync;
     uint32_t timeout_terminate;
-    int8_t priority_default;
-    char * response_info;
     uint32_t response_info_size;
-    char * response;
     uint32_t response_size;
-    char * trans_id;          /* always 16 characters (128 bits) length */
     uint32_t trans_id_count;
     uint32_t subscribe_count;
+    int fd;
+    int8_t priority_default;
+    int use_header:1;
+    int initialization_complete:1;
+    int terminate:1;
+    int cxx_terminate_exception:1;
 
 } cloudi_instance_t;
 

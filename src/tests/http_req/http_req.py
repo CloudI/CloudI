@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -50,9 +50,13 @@ class Task(threading.Thread):
         """
         # pylint: disable=bare-except
         try:
-            assert self.__api.subscribe_count(self.__name + '.xml/get') == 0
+            if self.__name == 'python':
+                assert self.__api.subscribe_count('python.xml/get') == 0
+
             self.__api.subscribe(self.__name + '.xml/get', self.__request)
-            assert self.__api.subscribe_count(self.__name + '.xml/get') == 1
+
+            if self.__name == 'python':
+                assert self.__api.subscribe_count('python.xml/get') == 1
 
             result = self.__api.poll()
             assert result is False

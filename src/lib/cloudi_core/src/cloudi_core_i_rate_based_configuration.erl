@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -356,12 +356,12 @@ count_process_dynamic_reinit(Dispatcher,
     if
         RateCurrent > RateMax ->
             cloudi_core_i_services_monitor:
-            increase(Dispatcher, Period, RateCurrent,
-                     RateMax, CountProcessMax);
+            process_increase(Dispatcher, Period, RateCurrent,
+                             RateMax, CountProcessMax);
         RateCurrent < RateMin ->
             cloudi_core_i_services_monitor:
-            decrease(Dispatcher, Period, RateCurrent,
-                     RateMin, CountProcessMin);
+            process_decrease(Dispatcher, Period, RateCurrent,
+                             RateMin, CountProcessMin);
         true ->
             ok
     end,
