@@ -290,7 +290,7 @@ python_cloudi_instance_object_init(PyObject * self, PyObject * args, PyObject *)
     }
     try
     {
-        object->api = new CloudI::API(thread_index);
+        object->api = new CloudI::API(thread_index, true);
         object->thread_state = 0;
     }
     catch (CloudI::API::invalid_input_exception const & e)

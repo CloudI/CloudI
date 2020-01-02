@@ -1237,7 +1237,7 @@ class API
 
     private:
         cloudi_instance_t * const m_api;
-        int * m_count; // m_api shared pointer count
+        int * const m_count; // m_api shared reference count
 
     public:
         // enumeration namespace that is valid with the C++98 standard
@@ -1295,6 +1295,7 @@ class API
                 error_poll_unknown                  = 112
             };
         };
+        typedef int return_value_type;
 
         // Get the backtrace at the current point of execution
         // (e.g., when throwing an exception):

@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,123 +25,132 @@
  */
 #include "cloudi.hpp"
 #include "thread_pool.hpp"
-#include <unistd.h>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <iostream>
 #include <cstring>
 #include <sstream>
 #include "assert.hpp"
 
-class ThreadData
-{
-};
-
-class OutputData
+class thread_data : public thread_pool_thread_data
 {
     public:
-        OutputData & setError(int value)
+        virtual ~thread_data() throw() {}
+};
+
+class task_output_data : public thread_pool_output_data
+{
+    public:
+        task_output_data(CloudI::API::return_value_type const error) :
+            m_error(error)
         {
-            m_error = value;
-            return *this;
         }
-        int error() const { return m_error; }
+
+        virtual ~task_output_data() throw() {}
+
+        void output_error() const
+        {
+            if (m_error && m_error != CloudI::API::return_value::terminate)
+                std::cerr << "C/C++ CloudI API error " << m_error << std::endl;
+        }
 
     private:
-        int m_error;
+        CloudI::API::return_value_type const m_error;
 };
 
-class Input
+class task : public thread_pool_input<thread_data, task_output_data>
 {
     public:
-        Input(unsigned int const thread_index) :
+        task(unsigned int const thread_index,
+             uint32_t & timeout_terminate) :
             m_stop_default(false),
             m_stop(m_stop_default),
-            m_api(thread_index),
+            m_api(thread_index, false),
             m_thread_index(thread_index)
         {
+            timeout_terminate = m_api.timeout_terminate();
         }
 
-        uint32_t timeout_terminate() const
-        {
-            return m_api.timeout_terminate();
-        }
+        virtual ~task() throw() {}
 
-        OutputData process(bool const & stop, ThreadData & /*data*/)
+        task_output_data process(bool const & stop, thread_data & /*data*/)
         {
             int result;
             result = m_api.subscribe("a/b/c/d", *this,
-                                     &Input::sequence1_abcd);
+                                     &task::sequence1_abcd);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("a/b/c/*", *this,
-                                     &Input::sequence1_abc_);
+                                     &task::sequence1_abc_);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("a/b/*/d", *this,
-                                     &Input::sequence1_ab_d);
+                                     &task::sequence1_ab_d);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("a/*/c/d", *this,
-                                     &Input::sequence1_a_cd);
+                                     &task::sequence1_a_cd);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("*/b/c/d", *this,
-                                     &Input::sequence1__bcd);
+                                     &task::sequence1__bcd);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("a/b/*", *this,
-                                     &Input::sequence1_ab__);
+                                     &task::sequence1_ab__);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("a/*/d", *this,
-                                     &Input::sequence1_a__d);
+                                     &task::sequence1_a__d);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("*/c/d", *this,
-                                     &Input::sequence1___cd);
+                                     &task::sequence1___cd);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("a/*", *this,
-                                     &Input::sequence1_a___);
+                                     &task::sequence1_a___);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("*/d", *this,
-                                     &Input::sequence1____d);
+                                     &task::sequence1____d);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("*", *this,
-                                     &Input::sequence1_____);
+                                     &task::sequence1_____);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("sequence1", *this,
-                                     &Input::sequence1);
+                                     &task::sequence1);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e1);
+                                     &task::sequence2_e1);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e2);
+                                     &task::sequence2_e2);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e3);
+                                     &task::sequence2_e3);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e4);
+                                     &task::sequence2_e4);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e5);
+                                     &task::sequence2_e5);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e6);
+                                     &task::sequence2_e6);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e7);
+                                     &task::sequence2_e7);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("e", *this,
-                                     &Input::sequence2_e8);
+                                     &task::sequence2_e8);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("sequence2", *this,
-                                     &Input::sequence2);
+                                     &task::sequence2);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("f1", *this,
-                                     &Input::sequence3_f1);
+                                     &task::sequence3_f1);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("f2", *this,
-                                     &Input::sequence3_f2);
+                                     &task::sequence3_f2);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("g1", *this,
-                                     &Input::sequence3_g1);
+                                     &task::sequence3_g1);
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("sequence3", *this,
-                                     &Input::sequence3);
+                                     &task::sequence3);
             assert(result == CloudI::API::return_value::success);
             if (m_thread_index == 0)
             {
@@ -150,17 +159,17 @@ class Input
                 assert(result == CloudI::API::return_value::success);
             }
 
-            OutputData resultObject;
-            int value;
             m_stop = stop;
             while (CloudI::API::return_value::timeout ==
-                   (value = m_api.poll(1000)))
+                   (result = m_api.poll(1000)))
             {
                 if (stop)
-                    return resultObject.setError(
-                        CloudI::API::return_value::success);
+                {
+                    result = CloudI::API::return_value::success;
+                    break;
+                }
             }
-            return resultObject.setError(value);
+            return task_output_data(result);
         }
 
     private:
@@ -1022,52 +1031,76 @@ class Input
 
 };
 
-class Output
+class task_output : public thread_pool_output<task_output_data>
 {
     public:
-        Output() : m_got_output(false) {}
-
-        void output(OutputData & data)
+        task_output() :
+            m_terminate(false)
         {
-            if (data.error() &&
-                data.error() != CloudI::API::return_value::terminate)
-            {
-                std::cerr << "CloudI error " << data.error() << std::endl;
-            }
-            m_got_output = true;
         }
 
-        bool got_output() const { return m_got_output; }
+        virtual ~task_output() throw() {}
+
+        void output(task_output_data & data)
+        {
+            bool terminated;
+            {
+                boost::lock_guard<boost::mutex> lock(m_terminate_mutex);
+                data.output_error();
+                terminated = m_terminate;
+                m_terminate = true;
+            }
+            if (terminated == false)
+                m_terminate_conditional.notify_all();
+        }
+
+        void wait_on_terminate()
+        {
+            if (m_terminate == false)
+            {
+                boost::unique_lock<boost::mutex> lock(m_terminate_mutex);
+                m_terminate_conditional.wait(lock);
+            }
+        }
 
     private:
-        bool m_got_output;
+        bool m_terminate;
+        boost::mutex m_terminate_mutex;
+        boost::condition_variable m_terminate_conditional;
 };
 
 int main(int, char **)
 {
-    unsigned int const thread_count = CloudI::API::thread_count();
-
-    Output outputObject;
-    ThreadPool<Input, ThreadData, Output, OutputData>
-        threadPool(thread_count, thread_count, outputObject);
-
-    uint32_t timeout_terminate = 0;
-    for (unsigned int i = 0; i < thread_count; ++i)
+    try
     {
-        Input inputObject(i);
-        if (timeout_terminate == 0)
+        unsigned int const thread_count = CloudI::API::thread_count();
+
+        task_output output_object;
+        thread_pool<task, thread_data, task_output, task_output_data>
+            thread_pool(thread_count, thread_count, output_object);
+
+        uint32_t timeout_terminate = 0;
+        for (unsigned int i = 0; i < thread_count; ++i)
         {
-            timeout_terminate = inputObject.timeout_terminate();
-            assert(timeout_terminate >= 1000);
+            task task_input(i, timeout_terminate);
+            bool const result = thread_pool.input(task_input);
+            assert(result);
         }
-        bool const result = threadPool.input(inputObject);
-        assert(result);
+
+        assert(timeout_terminate >= 1000);
+        output_object.wait_on_terminate();
+        thread_pool.exit(timeout_terminate - 100);
+    }
+    catch (CloudI::API::invalid_input_exception const & e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
+    catch (CloudI::API::terminate_exception const &)
+    {
     }
 
-    while (outputObject.got_output() == false)
-        ::sleep(1);
     std::cout << "terminate messaging c++" << std::endl;
-    threadPool.exit(timeout_terminate - 100);
+
     return 0;
 }
 

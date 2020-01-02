@@ -8,12 +8,15 @@
     * Fix Python/C CloudI API TerminateException when initializing
       (it is not an InvalidInputException now)
     * Add C++ CloudI API terminate_exception
-      (currently only used in the constructor)
     * Change the C++ CloudI API constructor to take the boolean
       terminate_return_value with a default of true, so the
       terminate_exception is only used in the constructor unless
       terminate_return_value is set to false
     * Minimize C CloudI API memory consumption
+    * Change integration tests C++ thread_pool to use consistent naming and
+      add abstract base classes
+    * Change the C++ messaging integration test to use the
+      C++ CloudI API terminate_exception
 
 2019-12-27 Michael Truog   <mjtruog at protonmail dot com>
 
