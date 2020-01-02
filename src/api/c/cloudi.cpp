@@ -1489,7 +1489,10 @@ static int poll_request(cloudi_instance_t * p,
     int result;
     if (p->terminate)
     {
-        return cloudi_success;
+        if (external)
+            return cloudi_success;
+        else
+            return cloudi_terminate;
     }
     else if (external && ! p->initialization_complete)
     {

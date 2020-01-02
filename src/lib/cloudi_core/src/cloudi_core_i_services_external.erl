@@ -2463,7 +2463,8 @@ socket_close(socket_closed = Reason,
 socket_close(_Reason,
              #state_socket{protocol = Protocol,
                            socket = Socket,
-                           timeout_term = TimeoutTerm} = StateSocket)
+                           timeout_term = TimeoutTerm,
+                           socket_options = SocketOptions} = StateSocket)
     when Protocol =:= tcp; Protocol =:= local ->
     if
         Socket =:= undefined ->
@@ -2472,6 +2473,7 @@ socket_close(_Reason,
             case send('terminate_out'(), StateSocket) of
                 ok ->
                     Timeout = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
+                    ok = inet:setopts(Socket, [{active, true} | SocketOptions]),
                     receive
                         {tcp_closed, Socket} ->
                             ok;
