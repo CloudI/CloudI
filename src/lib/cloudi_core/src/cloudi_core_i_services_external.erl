@@ -128,7 +128,7 @@
         protocol = undefined :: undefined | tcp | udp | local,
         % (14) external thread connection port
         port = undefined :: undefined | non_neg_integer(),
-        % (15) wait for cloudi_core_i_services_monitor:process_init_begin/1
+        % (15) wait for cloudi_core_i_services_monitor:process_init_begin/2
         % to send cloudi_service_init_begin when all of the service instance
         % processes have been spawned
         initialize = false :: boolean(),
@@ -431,6 +431,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 command_line = CommandLine,
                 prefix = Prefix,
                 timeout_init = Timeout,
+                os_pid = OSPid,
                 init_timer = InitTimer,
                 subscribed = Subscriptions,
                 options = #config_service_options{
@@ -443,7 +444,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                       ServiceState) of
         {ok, ServiceStateNew} ->
             ok = cloudi_core_i_services_monitor:
-                 process_init_end(Dispatcher),
+                 process_init_end(Dispatcher, OSPid),
             if
                 Subscriptions == [] ->
                     ok;
@@ -920,6 +921,7 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 'HANDLE'(connection, {'shutdown', Reason},
          #state{dispatcher = Dispatcher,
+                os_pid = OSPid,
                 init_timer = InitTimer} = State) ->
     StopReason = if
         Reason == "" ->
@@ -933,8 +935,9 @@ handle_event(EventType, EventContent, StateName, State) ->
         is_reference(InitTimer) ->
             % initialization was interrupted by the shutdown request
             cancel_timer_async(InitTimer),
+            % initialization is considered successful
             ok = cloudi_core_i_services_monitor:
-                 process_init_end(Dispatcher),
+                 process_init_end(Dispatcher, OSPid),
             {stop, StopReason, State#state{init_timer = undefined}};
         InitTimer =:= undefined ->
             {stop, StopReason}
@@ -1527,12 +1530,13 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 terminate(Reason, _,
           #state{dispatcher = Dispatcher,
-                 timeout_term = TimeoutTerm,
                  service_state = ServiceState,
+                 timeout_term = TimeoutTerm,
+                 os_pid = OSPid,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}} = State) ->
-    _ = cloudi_core_i_services_monitor:
-        process_terminate_begin(Dispatcher, Reason),
+    ok = cloudi_core_i_services_monitor:
+         process_terminate_begin(Dispatcher, OSPid, Reason),
     {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
     ok = socket_close(Reason, socket_data_from_state(State)),
     ok.
@@ -1608,14 +1612,10 @@ os_pid_set(OSPid, State) ->
     ?LOG_INFO("OS pid ~w connected", [OSPid]),
     State#state{os_pid = OSPid}.
 
-os_pid_terminate(#state_socket{os_pid = undefined}) ->
+os_pid_unset(#state_socket{os_pid = undefined}) ->
     ok;
-os_pid_terminate(#state_socket{os_pid = OSPid,
-                               cgroup = CGroup}) ->
-    % if the OSPid exists at this point, it is probably stuck.
-    % without this kill, the process could just stay around, while
-    % being unresponsive and without its Erlang socket pids.
-    _ = os:cmd(cloudi_string:format("kill -9 ~w", [OSPid])),
+os_pid_unset(#state_socket{os_pid = OSPid,
+                           cgroup = CGroup}) ->
     _ = cloudi_core_i_os_process:cgroup_unset(OSPid, CGroup),
     ok.
 
@@ -2527,7 +2527,7 @@ socket_close(#state_socket{protocol = Protocol,
         true ->
             ok
     end,
-    ok = os_pid_terminate(StateSocket),
+    ok = os_pid_unset(StateSocket),
     ok;
 socket_close(#state_socket{protocol = udp,
                            socket = Socket} = StateSocket) ->
@@ -2537,7 +2537,7 @@ socket_close(#state_socket{protocol = udp,
         is_port(Socket) ->
             catch gen_udp:close(Socket)
     end,
-    ok = os_pid_terminate(StateSocket),
+    ok = os_pid_unset(StateSocket),
     ok.
 
 socket_data_to_state(#state_socket{protocol = Protocol,
@@ -2813,7 +2813,8 @@ update_after(StateSocket, State) ->
     case socket_recv_term(StateSocket) of
         {ok, {'pid', OSPid}, StateSocketNew} ->
             StateNew = socket_data_to_state(StateSocketNew, State),
-            update_after(StateSocketNew, os_pid_set(OSPid, StateNew));
+            update_after(StateSocketNew#state_socket{os_pid = OSPid},
+                         os_pid_set(OSPid, StateNew));
         {ok, 'init', StateSocketNew} ->
             StateNew = socket_data_to_state(StateSocketNew, State),
             ok = os_init(StateNew),

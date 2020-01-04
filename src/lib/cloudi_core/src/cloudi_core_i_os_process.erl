@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_process).
@@ -410,9 +410,9 @@ cgroup_unset(OSPid, Values)
     {ok, CGroups} = cloudi_x_cgroups:new(),
     if
         UpdateOrCreate =:= true ->
-            % OSPid should have been sent SIGKILL already and may not exist
+            % move the OSPid back to the root cgroup
             _ = cloudi_x_cgroups:update("", [OSPid], [], CGroups),
-            % may not be the last process to die
+            % delete the cgroup path if no OSPids remain in the cgroup path
             _ = cloudi_x_cgroups:delete_recursive(Name, CGroups),
             ok;
         UpdateOrCreate =:= false ->

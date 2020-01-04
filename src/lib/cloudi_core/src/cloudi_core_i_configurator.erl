@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
+%%% @copyright 2011-2020 Michael Truog
 %%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -1017,7 +1017,8 @@ service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
         {'DOWN', MonitorRef, process, Pid, Info} ->
             ErrorNew = if
                 Error =:= undefined ->
-                    {error, {service_internal_start_failed, Info}};
+                    % first error encountered is returned
+                    {error, Info};
                 true ->
                     Error
             end,
@@ -1026,8 +1027,13 @@ service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
 
 service_start_wait_pids([], undefined, Service) ->
     {ok, Service};
-service_start_wait_pids([], Error, _) ->
-    Error;
+service_start_wait_pids([], {error, Reason}, Service) ->
+    case Service of
+        #config_service_internal{} ->
+            {error, {service_internal_start_failed, Reason}};
+        #config_service_external{} ->
+            {error, {service_external_start_failed, Reason}}
+    end;
 service_start_wait_pids([M | MonitorPids], Error, Service) ->
     service_start_wait_pids(MonitorPids,
                             service_start_wait_pid(M, Error), Service).
@@ -1041,8 +1047,6 @@ service_start_wait(Pids, Service) ->
     % and pass the error reason as a return value of the configure/2 function
     % or the cloudi_service_api:services_add/2 function when a service
     % starts for the first time
-    % (restarts require cloudi_core_i_services_monitor to
-    %  call cloudi_core_i_services_monitor:process_init_begin/1)
     ok = cloudi_core_i_services_monitor:process_init_begin(Pids),
     service_start_wait_pids(MonitorPids, undefined, Service).
 

@@ -2021,8 +2021,8 @@ terminate(Reason,
                  duo_mode_pid = undefined,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}}) ->
-    _ = cloudi_core_i_services_monitor:
-        process_terminate_begin(Dispatcher, Reason),
+    ok = cloudi_core_i_services_monitor:
+         process_terminate_begin(Dispatcher, Reason),
     {ok, ServiceStateNew} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
@@ -3611,8 +3611,8 @@ duo_mode_loop_terminate(Reason,
                                    timeout_term = TimeoutTerm,
                                    options = #config_service_options{
                                        aspects_terminate_before = Aspects}}) ->
-    _ = cloudi_core_i_services_monitor:
-        process_terminate_begin(DuoModePid, Reason),
+    ok = cloudi_core_i_services_monitor:
+         process_terminate_begin(DuoModePid, Reason),
     {ok, ServiceStateNew} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),

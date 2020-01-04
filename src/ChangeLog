@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-01-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Move service OS process termination with SIGKILL after the
+      termination timeout into the service monitor process
+
 2020-01-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix external service termination timeout delay
