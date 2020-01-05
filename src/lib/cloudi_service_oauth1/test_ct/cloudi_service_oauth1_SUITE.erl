@@ -36,7 +36,7 @@
 -define(DEFAULT_PGSQL_PORT, 5432).
 -define(DEFAULT_RIAK_HOST, "127.0.0.1").
 -define(DEFAULT_RIAK_PORT, 8087).
--define(TIMEOUT, (?CLOUDI_LONG_TEST_TIMEOUT * 1000)). % milliseconds
+-define(TIMEOUT, (?CLOUDI_LONG_TEST_TIMEOUT * 60000)). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
