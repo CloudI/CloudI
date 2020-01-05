@@ -24,8 +24,8 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--ifndef(CLOUDI_TEST_TIMEOUT).
--define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-ifndef(CLOUDI_LONG_TEST_TIMEOUT).
+-define(CLOUDI_LONG_TEST_TIMEOUT, 60). % minutes
 -endif.
 -define(DEFAULT_PGSQL_HOST, "127.0.0.1").
 -define(DEFAULT_PGSQL_PORT, 5432).
@@ -53,7 +53,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
+     {timetrap, {minutes, ?CLOUDI_LONG_TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
     Path = [_ | _] = os:getenv("TEST_DIR"),
@@ -388,19 +388,25 @@ t_table_query_3(_Config) ->
 %%%------------------------------------------------------------------------
 
 test_condition(L) ->
-    case gen_tcp:connect(?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT, []) of
-        {ok, Socket} ->
-            catch gen_tcp:close(Socket),
-            L;
-        {error, econnrefused} ->
-            error_logger:error_msg("unable to test ~p",
-                                   [{?DEFAULT_PGSQL_HOST,
-                                     ?DEFAULT_PGSQL_PORT}]),
-            {skip, pgsql_dead};
-        {error, Reason} ->
-            error_logger:error_msg("unable to test ~p: ~p",
-                                   [{?DEFAULT_PGSQL_HOST,
-                                     ?DEFAULT_PGSQL_PORT}, Reason]),
-            {skip, pgsql_dead}
+    if
+        ?CLOUDI_LONG_TEST_TIMEOUT > 0 ->
+            case gen_tcp:connect(?DEFAULT_PGSQL_HOST,
+                                 ?DEFAULT_PGSQL_PORT, []) of
+                {ok, Socket} ->
+                    catch gen_tcp:close(Socket),
+                    L;
+                {error, econnrefused} ->
+                    error_logger:error_msg("unable to test ~p",
+                                           [{?DEFAULT_PGSQL_HOST,
+                                             ?DEFAULT_PGSQL_PORT}]),
+                    {skip, pgsql_dead};
+                {error, Reason} ->
+                    error_logger:error_msg("unable to test ~p: ~p",
+                                           [{?DEFAULT_PGSQL_HOST,
+                                             ?DEFAULT_PGSQL_PORT}, Reason]),
+                    {skip, pgsql_dead}
+            end;
+        ?CLOUDI_LONG_TEST_TIMEOUT =:= 0 ->
+            {skip, long_tests_disabled}
     end.
 

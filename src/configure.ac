@@ -332,6 +332,8 @@ else
     integration_tests_ran="false"
 fi
 AC_MSG_RESULT([$integration_tests_ran])
+
+AC_MSG_CHECKING([the CloudI Erlang test timeout])
 AC_ARG_WITH([test-timeout],
     [AS_HELP_STRING([--with-test-timeout@<:@=ARG@:>@],
         [The maximum amount of time a CloudI test will wait for completion
@@ -355,6 +357,28 @@ AC_ARG_WITH([test-timeout],
     [CLOUDI_TEST_TIMEOUT="10"])
 AC_MSG_RESULT([$CLOUDI_TEST_TIMEOUT])
 AC_SUBST(CLOUDI_TEST_TIMEOUT)
+
+AC_MSG_CHECKING([the CloudI Erlang long test timeout])
+AC_ARG_WITH([long-test-timeout],
+    [AS_HELP_STRING([--with-long-test-timeout@<:@=ARG@:>@],
+        [The maximum amount of time a CloudI long test will wait for completion
+         in minutes.  The default long test timeout is 60 minutes.
+         @<:@ARG=no@:>@ ])],
+    [
+    if test "x$withval" = "xyes"; then
+        CLOUDI_LONG_TEST_TIMEOUT="60"
+    elif test "x$withval" = "xno"; then
+        CLOUDI_LONG_TEST_TIMEOUT="0"
+    elif test "$withval" -ge 1; then
+        CLOUDI_LONG_TEST_TIMEOUT="$withval"
+    else
+        AC_MSG_ERROR([--with-long-test-timeout needs yes or no or an integer,
+                      not $withval])
+    fi
+    ],
+    [CLOUDI_LONG_TEST_TIMEOUT="0"])
+AC_MSG_RESULT([$CLOUDI_LONG_TEST_TIMEOUT])
+AC_SUBST(CLOUDI_LONG_TEST_TIMEOUT)
 
 # C requirements
 # setrlimit resource values:
@@ -745,15 +769,21 @@ AC_CONFIG_FILES([
     Makefile
     lib/Makefile
     lib/cloudi_core/Makefile
+    lib/cloudi_core/rebar.config
     lib/cloudi_core/cxx_src/Makefile
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_core/src/cloudi_environment.hrl
+    lib/cloudi_service_api_batch/rebar.config
     lib/cloudi_service_api_batch/src/cloudi_service_api_batch.app.src
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
     lib/cloudi_service_cron/src/cloudi_service_cron.app.src
+    lib/cloudi_service_db_mysql/rebar.config
     lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
+    lib/cloudi_service_db_pgsql/rebar.config
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
+    lib/cloudi_service_filesystem/rebar.config
     lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
+    lib/cloudi_service_http_client/rebar.config
     lib/cloudi_service_http_client/src/cloudi_service_http_client.app.src
     lib/cloudi_service_http_cowboy1/src/cloudi_service_http_cowboy1.app.src
     lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src
@@ -761,14 +791,18 @@ AC_CONFIG_FILES([
     lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src
     lib/cloudi_service_monitoring/src/cloudi_service_monitoring.app.src
     lib/cloudi_service_null/src/cloudi_service_null.app.src
+    lib/cloudi_service_oauth1/rebar.config
     lib/cloudi_service_oauth1/src/cloudi_service_oauth1.app.src
+    lib/cloudi_service_queue/rebar.config
     lib/cloudi_service_queue/src/cloudi_service_queue.app.src
+    lib/cloudi_service_quorum/rebar.config
     lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src
     lib/cloudi_service_request_rate/src/cloudi_service_request_rate.app.src
     lib/cloudi_service_router/src/cloudi_service_router.app.src
     lib/cloudi_service_shell/src/cloudi_service_shell.app.src
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
+    lib/cloudi_service_validate/rebar.config
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
     api/Makefile
     api/c/Makefile

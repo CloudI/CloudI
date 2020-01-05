@@ -7,5 +7,5 @@
 {clean_files, ["test_ct/*.beam"]}.
 {ct_dir, "test_ct"}.
 {ct_log_dir, "test_ct/logs"}.
-{ct_extra_params, "-test"}.
+{ct_extra_params, "-test -env ERL_COMPILER_OPTIONS \"[{d, 'CLOUDI_TEST_TIMEOUT', @CLOUDI_TEST_TIMEOUT@}]\""}.
 {ct_use_short_names, true}.

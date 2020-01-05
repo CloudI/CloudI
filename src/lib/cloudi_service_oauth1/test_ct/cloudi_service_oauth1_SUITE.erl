@@ -29,14 +29,14 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--ifndef(CLOUDI_TEST_TIMEOUT).
--define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-ifndef(CLOUDI_LONG_TEST_TIMEOUT).
+-define(CLOUDI_LONG_TEST_TIMEOUT, 60). % minutes
 -endif.
 -define(DEFAULT_PGSQL_HOST, "127.0.0.1").
 -define(DEFAULT_PGSQL_PORT, 5432).
 -define(DEFAULT_RIAK_HOST, "127.0.0.1").
 -define(DEFAULT_RIAK_PORT, 8087).
--define(TIMEOUT, (?CLOUDI_TEST_TIMEOUT * 1000)). % milliseconds
+-define(TIMEOUT, (?CLOUDI_LONG_TEST_TIMEOUT * 1000)). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -92,7 +92,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
+     {timetrap, {minutes, ?CLOUDI_LONG_TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
@@ -585,11 +585,16 @@ test_conditions_merge([Group | L], Output) ->
     test_conditions_merge(L, [Group | Output]).
 
 test_conditions_merge(L) ->
-    case test_conditions_merge(L, []) of
-        [] ->
-            {skip, L};
-        [_ | _] = NewL ->
-            NewL
+    if
+        ?CLOUDI_LONG_TEST_TIMEOUT > 0 ->
+            case test_conditions_merge(L, []) of
+                [] ->
+                    {skip, L};
+                [_ | _] = NewL ->
+                    NewL
+            end;
+        ?CLOUDI_LONG_TEST_TIMEOUT =:= 0 ->
+            {skip, long_tests_disabled}
     end.
 
 test_condition(L, Host, Port, ErrorReason) ->

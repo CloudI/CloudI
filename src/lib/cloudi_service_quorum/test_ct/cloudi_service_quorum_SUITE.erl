@@ -36,8 +36,8 @@
 %-define(NUMTESTS, 10000).
 %-define(CLOUDI_TEST_TIMEOUT, 3600). % 1 hour in seconds
 -define(NUMTESTS, 1).
--ifndef(CLOUDI_TEST_TIMEOUT).
--define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-ifndef(CLOUDI_LONG_TEST_TIMEOUT).
+-define(CLOUDI_LONG_TEST_TIMEOUT, 60). % minutes
 -endif.
 
 % for features specific to Erlang/OTP version 21.x (and later versions)
@@ -79,8 +79,8 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 all() ->
-    [{group, quorum_timeout},
-     {group, quorum_crash}].
+    test_condition([{group, quorum_timeout},
+                    {group, quorum_crash}]).
 
 groups() ->
     [{quorum_timeout, [],
@@ -94,7 +94,7 @@ groups() ->
 
 suite() ->
     [{enable_builtin_hooks, false},
-     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
+     {timetrap, {minutes, ?CLOUDI_LONG_TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:
@@ -307,6 +307,14 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+test_condition(L) ->
+    if
+        ?CLOUDI_LONG_TEST_TIMEOUT > 0 ->
+            L;
+        ?CLOUDI_LONG_TEST_TIMEOUT =:= 0 ->
+            {skip, long_tests_disabled}
+    end.
 
 services_add(I, Configuration) ->
     services_add(I, [], Configuration).

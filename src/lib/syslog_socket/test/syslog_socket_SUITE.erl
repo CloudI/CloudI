@@ -78,7 +78,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, ?TEST_TIMEOUT * 1000 + 100}].
+     {timetrap, {seconds, ?TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
     {ok, _} = application:ensure_all_started(syslog_socket),

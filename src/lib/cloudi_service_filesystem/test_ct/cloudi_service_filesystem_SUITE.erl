@@ -91,7 +91,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
+     {timetrap, {seconds, ?CLOUDI_TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
     Refresh = ?REFRESH,

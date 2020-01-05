@@ -7,6 +7,8 @@
       termination timeout into the service monitor process
     * Add the configure script argument --with-test-timeout to
       control the time limit for individual test case execution
+    * Add the configure script argument --with-long-test-timeout to
+      control the time limit for individual long test case execution
 
 2020-01-02 Michael Truog   <mjtruog at protonmail dot com>
 
