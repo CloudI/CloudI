@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_validate_SUITE).
@@ -67,6 +67,9 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-ifndef(CLOUDI_TEST_TIMEOUT).
+-define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-endif.
 -define(SERVICE_PREFIX1, "/validate").
 -define(SERVICE_PREFIX2, "/test/").
 -define(SERVICE_SUFFIX1, "incr_source").
@@ -139,7 +142,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 5100}].
+     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(sasl,

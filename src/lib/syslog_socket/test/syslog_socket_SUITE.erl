@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2016-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2016-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2016-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2016-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(syslog_socket_SUITE).
@@ -53,6 +53,11 @@
 
 -include_lib("common_test/include/ct.hrl").
 
+-ifdef(CLOUDI_TEST_TIMEOUT).
+-define(TEST_TIMEOUT, ?CLOUDI_TEST_TIMEOUT). % seconds
+-else.
+-define(TEST_TIMEOUT, 10). % seconds
+-endif.
 % for features specific to Erlang/OTP version 20.x (and later versions)
 -ifdef(ERLANG_OTP_VERSION_19).
 -else.
@@ -73,7 +78,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 10100}].
+     {timetrap, ?TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
     {ok, _} = application:ensure_all_started(syslog_socket),

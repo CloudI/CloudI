@@ -19,6 +19,9 @@
 
 -include_lib("common_test/include/ct.hrl").
 
+-ifndef(CLOUDI_TEST_TIMEOUT).
+-define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-endif.
 % cloudi_core isn't started, so using error_logger
 -define(LOG_TRACE, error_logger:info_msg).
 
@@ -35,7 +38,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 5100}].
+     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_x_uuid, [], infinity),

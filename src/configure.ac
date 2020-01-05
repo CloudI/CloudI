@@ -332,6 +332,29 @@ else
     integration_tests_ran="false"
 fi
 AC_MSG_RESULT([$integration_tests_ran])
+AC_ARG_WITH([test-timeout],
+    [AS_HELP_STRING([--with-test-timeout@<:@=ARG@:>@],
+        [The maximum amount of time a CloudI test will wait for completion
+         in seconds.  The default of 10 seconds is for bare-metal use
+         (ARG=dev).  Unreliable container execution should use ARG=container
+         to get 60 seconds or provide the integer directly.
+         @<:@ARG=dev@:>@ ])],
+    [
+    if test "x$withval" = "xdev"; then
+        CLOUDI_TEST_TIMEOUT="10"
+    elif test "x$withval" = "xcontainer"; then
+        CLOUDI_TEST_TIMEOUT="60"
+    elif test "$withval" -ge 10; then
+        CLOUDI_TEST_TIMEOUT="$withval"
+    else
+        AC_MSG_ERROR([--with-test-timeout needs dev or container or
+                      an integer (greater than or equal to 10),
+                      not $withval])
+    fi
+    ],
+    [CLOUDI_TEST_TIMEOUT="10"])
+AC_MSG_RESULT([$CLOUDI_TEST_TIMEOUT])
+AC_SUBST(CLOUDI_TEST_TIMEOUT)
 
 # C requirements
 # setrlimit resource values:

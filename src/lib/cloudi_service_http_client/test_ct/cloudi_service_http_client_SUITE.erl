@@ -20,6 +20,9 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-ifndef(CLOUDI_TEST_TIMEOUT).
+-define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-endif.
 -define(SERVICE_PREFIX1, "/client/").
 
 %%%------------------------------------------------------------------------
@@ -36,7 +39,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 10100}].
+     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core,

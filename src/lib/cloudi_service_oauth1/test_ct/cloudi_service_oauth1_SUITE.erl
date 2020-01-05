@@ -29,11 +29,14 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-ifndef(CLOUDI_TEST_TIMEOUT).
+-define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-endif.
 -define(DEFAULT_PGSQL_HOST, "127.0.0.1").
 -define(DEFAULT_PGSQL_PORT, 5432).
 -define(DEFAULT_RIAK_HOST, "127.0.0.1").
 -define(DEFAULT_RIAK_PORT, 8087).
--define(TIMEOUT, 10000).
+-define(TIMEOUT, (?CLOUDI_TEST_TIMEOUT * 1000)). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -89,7 +92,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, ?TIMEOUT + 100}].
+     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),

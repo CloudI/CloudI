@@ -28,6 +28,9 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-ifndef(CLOUDI_TEST_TIMEOUT).
+-define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-endif.
 -define(REQUEST1, "Hello World!").
 -define(RESPONSE1, "REQUEST " ?REQUEST1).
 -define(PREFIX_QUEUE, "/queue").
@@ -123,7 +126,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 21000}].
+     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),

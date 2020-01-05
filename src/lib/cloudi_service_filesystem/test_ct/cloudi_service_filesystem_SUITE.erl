@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem_SUITE).
@@ -60,13 +60,15 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-ifndef(CLOUDI_TEST_TIMEOUT).
+-define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-endif.
 -define(SERVICE_PREFIX1, "/filesystem/").
 % ASCII_FILE created with: file:write_file("ASCII.bin", lists:seq(0, 126)).
 -define(ASCII_FILE, "ASCII.bin").
 -define(WRITABLE_FILENAME1, "filename1.txt").
--define(TIMEOUT, 960000).
--define(REFRESH, 2400). % ((?TIMEOUT * 2.5) div 1000)
--define(REFRESH_STRING, "2400").
+-define(TIMEOUT, (?CLOUDI_TEST_TIMEOUT * 1000 div 2)).
+-define(REFRESH, (erlang:round(?TIMEOUT * 2.5) div 1000)).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from CT
@@ -89,10 +91,11 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, ?TIMEOUT * 2 + 100}].
+     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
-    ?REFRESH = erlang:round(?TIMEOUT * 2.5) div 1000,
+    Refresh = ?REFRESH,
+    Refresh = erlang:round(?TIMEOUT * 2.5) div 1000,
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     TmpDir = os:getenv("TMPDIR", "/tmp"),
     TmpDir1 = TmpDir ++ "/cloudi_service_filesystem_test_dir1/",
@@ -1172,12 +1175,13 @@ t_filesystem_basic_read_cache_1(_Config) ->
     Request = <<>>,
     Timeout = undefined, % default
     Priority = undefined, % default
+    RefreshString = erlang:integer_to_binary(?REFRESH),
     {{ok,
       [{<<"content-type">>, <<"application/octet-stream">>},
        {<<"content-disposition">>,
         <<"attachment; filename=\"ASCII.bin\"">>},
        {<<"etag">>, ETag},
-       {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
+       {<<"cache-control">>, <<"public,max-age=", RefreshString/binary>>},
        {<<"expires">>, _},
        {<<"last-modified">>, LastModified},
        {<<"date">>, _},
@@ -1203,7 +1207,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        {<<"content-disposition">>,
         <<"attachment; filename=\"ASCII.bin\"">>},
        {<<"etag">>, ETag},
-       {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
+       {<<"cache-control">>, <<"public,max-age=", RefreshString/binary>>},
        {<<"expires">>, _},
        {<<"last-modified">>, LastModified},
        {<<"date">>, _},
@@ -1228,7 +1232,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        {<<"content-disposition">>,
         <<"attachment; filename=\"ASCII.bin\"">>},
        {<<"etag">>, ETag},
-       {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
+       {<<"cache-control">>, <<"public,max-age=", RefreshString/binary>>},
        {<<"expires">>, _},
        {<<"last-modified">>, LastModified},
        {<<"date">>, _},
@@ -1254,7 +1258,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        {<<"content-disposition">>,
         <<"attachment; filename=\"ASCII.bin\"">>},
        {<<"etag">>, ETag},
-       {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
+       {<<"cache-control">>, <<"public,max-age=", RefreshString/binary>>},
        {<<"expires">>, _},
        {<<"last-modified">>, LastModified},
        {<<"date">>, _},
@@ -1279,7 +1283,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        {<<"content-disposition">>,
         <<"attachment; filename=\"ASCII.bin\"">>},
        {<<"etag">>, ETag},
-       {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
+       {<<"cache-control">>, <<"public,max-age=", RefreshString/binary>>},
        {<<"expires">>, _},
        {<<"last-modified">>, LastModified},
        {<<"date">>, _},

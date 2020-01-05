@@ -34,9 +34,11 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 %-define(NUMTESTS, 10000).
-%-define(TIMEOUT_MAX, 3600000). % ms (1 hour)
+%-define(CLOUDI_TEST_TIMEOUT, 3600). % 1 hour in seconds
 -define(NUMTESTS, 1).
--define(TIMEOUT_MAX, 1800000). % ms (30 minutes)
+-ifndef(CLOUDI_TEST_TIMEOUT).
+-define(CLOUDI_TEST_TIMEOUT, 10). % seconds
+-endif.
 
 % for features specific to Erlang/OTP version 21.x (and later versions)
 -ifdef(OTP_RELEASE).
@@ -92,7 +94,7 @@ groups() ->
 
 suite() ->
     [{enable_builtin_hooks, false},
-     {timetrap, ?TIMEOUT_MAX + 100}].
+     {timetrap, ?CLOUDI_TEST_TIMEOUT * 1000 + 100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:
