@@ -94,6 +94,11 @@ case $COMMAND in
                 ln -s $abs_top_srcdir/$d/include \
                       $abs_top_builddir/$d/include
             fi
+            if [ -f $abs_top_builddir/$d/rebar.config -a \
+                 ! -e $abs_top_srcdir/$d/rebar.config ]; then
+                ln -s $abs_top_builddir/$d/rebar.config \
+                      $abs_top_srcdir/$d/rebar.config
+            fi
             if [ -f $abs_top_builddir/$d/src/$application.app.src -a \
                  ! -e $abs_top_srcdir/$d/src/$application.app.src ]; then
                 ln -s $abs_top_builddir/$d/src/$application.app.src \
@@ -121,6 +126,9 @@ case $COMMAND in
             fi
             if [ -h $abs_top_builddir/$d/include ]; then
                 rm -f $abs_top_builddir/$d/include
+            fi
+            if [ -h $abs_top_srcdir/$d/rebar.config ]; then
+                rm -f $abs_top_srcdir/$d/rebar.config
             fi
             if [ -h $abs_top_srcdir/$d/src/$application.app.src ]; then
                 rm -f $abs_top_srcdir/$d/src/$application.app.src
