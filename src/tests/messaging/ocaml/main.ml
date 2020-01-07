@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -348,7 +348,7 @@ let subscribe api suffix f =
     ()
 
 let task thread_index =
-  match Cloudi.api thread_index () with
+  match Cloudi.api thread_index () ~terminate_return_value:false with
   | Error (error) ->
     prerr_endline error
   | Ok (api) ->

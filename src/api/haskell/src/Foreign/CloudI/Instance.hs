@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -99,6 +99,7 @@ data Response s =
 -- | an instance of the CloudI API
 data T s = T
     { state :: !s
+    , terminateException :: !Bool
     , socketHandle :: !Handle
     , useHeader :: !Bool
     , initializationComplete :: !Bool
@@ -144,11 +145,13 @@ makeSocketHandle protocol fd = do
     socket <- makeSocket protocol fd
     Socket.socketToHandle socket SysIO.ReadWriteMode
 
-make :: s -> String -> C.CInt -> Bool -> Int -> Int -> IO (T s)
-make state' protocol fd useHeader' bufferSize' timeoutTerminate' = do
+make :: s -> Bool -> String -> C.CInt -> Bool -> Int -> Int -> IO (T s)
+make state' terminateException'
+    protocol fd useHeader' bufferSize' timeoutTerminate' = do
     socketHandle' <- makeSocketHandle protocol fd
     return $ T {
           state = state'
+        , terminateException = terminateException'
         , socketHandle = socketHandle'
         , useHeader = useHeader'
         , initializationComplete = False

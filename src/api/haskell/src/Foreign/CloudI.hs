@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -158,6 +158,7 @@ data Exception s =
     | ReturnAsync (Instance.T s)
     | ForwardSync (Instance.T s)
     | ForwardAsync (Instance.T s)
+    | Terminate (Instance.T s)
     deriving (Show, Typeable)
 
 instance Typeable s => Exception.Exception (Exception s)
@@ -179,9 +180,9 @@ data CallbackResult s =
 type Result a = Either String a
 
 -- | creates an instance of the CloudI API
-api :: Typeable s => Int -> s ->
+api :: Typeable s => Int -> s -> Maybe Bool ->
     IO (Result (Instance.T s))
-api threadIndex state = do
+api threadIndex state terminateReturnValueOpt = do
     SysIO.hSetEncoding SysIO.stdout SysIO.utf8
     SysIO.hSetBuffering SysIO.stdout SysIO.LineBuffering
     SysIO.hSetEncoding SysIO.stderr SysIO.utf8
@@ -190,7 +191,9 @@ api threadIndex state = do
     bufferSizeValue <- POSIX.getEnv "CLOUDI_API_INIT_BUFFER_SIZE"
     case (protocolValue, bufferSizeValue) of
         (Just protocol, Just bufferSizeStr) ->
-            let bufferSize = read bufferSizeStr :: Int
+            let terminateReturnValue = fromMaybe True terminateReturnValueOpt
+                terminateException = not terminateReturnValue
+                bufferSize = read bufferSizeStr :: Int
                 fd = C.CInt $ fromIntegral (threadIndex + 3)
                 useHeader = protocol /= "udp"
                 timeoutTerminate' = 1000
@@ -200,12 +203,13 @@ api threadIndex state = do
                 Left err ->
                     return $ Left $ show err
                 Right initBinary -> do
-                    api0 <- Instance.make state protocol fd
-                        useHeader bufferSize timeoutTerminate'
+                    api0 <- Instance.make state terminateException
+                        protocol fd useHeader bufferSize timeoutTerminate'
                     send api0 initBinary
                     result <- pollRequest api0 (-1) False
                     case result of
                         Left err ->
+                            -- Terminate exception not used here
                             return $ Left err
                         Right (_, api1) ->
                             return $ Right api1
@@ -240,7 +244,9 @@ subscribe api0 pattern f =
 -- | returns the number of subscriptions for a single service name pattern
 subscribeCount :: Typeable s => Instance.T s -> ByteString ->
     IO (Result (Int, Instance.T s))
-subscribeCount api0 pattern =
+subscribeCount api0@Instance.T{
+      Instance.terminateException = terminateException}
+    pattern =
     let subscribeCountTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "subscribe_count")
             , Erlang.OtpErlangString pattern]
@@ -253,7 +259,10 @@ subscribeCount api0 pattern =
             result <- pollRequest api0 (-1) False
             case result of
                 Left err ->
-                    return $ Left err
+                    if err == terminateError && terminateException then
+                        Exception.throwIO $ Terminate api0
+                    else
+                        return $ Left err
                 Right (_, api1@Instance.T{Instance.subscribeCount = count}) ->
                     return $ Right (count, api1)
 
@@ -277,7 +286,8 @@ sendAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (ByteString, Instance.T s))
 sendAsync api0@Instance.T{
-      Instance.timeoutAsync = timeoutAsync'
+      Instance.terminateException = terminateException
+    , Instance.timeoutAsync = timeoutAsync'
     , Instance.priorityDefault = priorityDefault}
     name request timeoutOpt requestInfoOpt priorityOpt =
     let timeout = fromMaybe timeoutAsync' timeoutOpt
@@ -299,7 +309,10 @@ sendAsync api0@Instance.T{
             result <- pollRequest api0 (-1) False
             case result of
                 Left err ->
-                    return $ Left err
+                    if err == terminateError && terminateException then
+                        Exception.throwIO $ Terminate api0
+                    else
+                        return $ Left err
                 Right (_, api1@Instance.T{Instance.transId = transId}) ->
                     return $ Right (transId, api1)
 
@@ -308,7 +321,8 @@ sendSync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (ByteString, ByteString, ByteString, Instance.T s))
 sendSync api0@Instance.T{
-      Instance.timeoutSync = timeoutSync'
+      Instance.terminateException = terminateException
+    , Instance.timeoutSync = timeoutSync'
     , Instance.priorityDefault = priorityDefault}
     name request timeoutOpt requestInfoOpt priorityOpt =
     let timeout = fromMaybe timeoutSync' timeoutOpt
@@ -330,7 +344,10 @@ sendSync api0@Instance.T{
             result <- pollRequest api0 (-1) False
             case result of
                 Left err ->
-                    return $ Left err
+                    if err == terminateError && terminateException then
+                        Exception.throwIO $ Terminate api0
+                    else
+                        return $ Left err
                 Right (_, api1@Instance.T{
                       Instance.responseInfo = responseInfo
                     , Instance.response = response
@@ -343,7 +360,8 @@ mcastAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (Array Int ByteString, Instance.T s))
 mcastAsync api0@Instance.T{
-      Instance.timeoutAsync = timeoutAsync'
+      Instance.terminateException = terminateException
+    , Instance.timeoutAsync = timeoutAsync'
     , Instance.priorityDefault = priorityDefault}
     name request timeoutOpt requestInfoOpt priorityOpt =
     let timeout = fromMaybe timeoutAsync' timeoutOpt
@@ -365,7 +383,10 @@ mcastAsync api0@Instance.T{
             result <- pollRequest api0 (-1) False
             case result of
                 Left err ->
-                    return $ Left err
+                    if err == terminateError && terminateException then
+                        Exception.throwIO $ Terminate api0
+                    else
+                        return $ Left err
                 Right (_, api1@Instance.T{Instance.transIds = transIds}) ->
                     return $ Right (transIds, api1)
 
@@ -521,7 +542,9 @@ returnSync api0 name pattern responseInfo response timeout transId pid = do
 recvAsync :: Typeable s => Instance.T s ->
     Maybe Int -> Maybe ByteString -> Maybe Bool ->
     IO (Result (ByteString, ByteString, ByteString, Instance.T s))
-recvAsync api0@Instance.T{Instance.timeoutSync = timeoutSync'}
+recvAsync api0@Instance.T{
+      Instance.terminateException = terminateException
+    , Instance.timeoutSync = timeoutSync'}
     timeoutOpt transIdOpt consumeOpt =
     let timeout = fromMaybe timeoutSync' timeoutOpt
         transId = fromMaybe transIdNull transIdOpt
@@ -540,7 +563,10 @@ recvAsync api0@Instance.T{Instance.timeoutSync = timeoutSync'}
             result <- pollRequest api0 (-1) False
             case result of
                 Left err ->
-                    return $ Left err
+                    if err == terminateError && terminateException then
+                        Exception.throwIO $ Terminate api0
+                    else
+                        return $ Left err
                 Right (_, api1@Instance.T{
                       Instance.responseInfo = responseInfo
                     , Instance.response = response
@@ -630,6 +656,8 @@ callback api0@Instance.T{
                 requestInfo request timeout priority transId pid
                 state api1
             case callbackResultAsyncValue of
+                Left (Terminate api2) ->
+                    return $ ReturnI (empty, empty, state, api2)
                 Left (ReturnSync api2) -> do
                     printException "Synchronous Call Return Invalid"
                     return $ Finished api2
@@ -659,6 +687,8 @@ callback api0@Instance.T{
                 requestInfo request timeout priority transId pid
                 state api1
             case callbackResultSyncValue of
+                Left (Terminate api2) ->
+                    return $ ReturnI (empty, empty, state, api2)
                 Left (ReturnSync api2) ->
                     return $ Finished api2
                 Left (ReturnAsync api2) -> do
@@ -685,7 +715,7 @@ callback api0@Instance.T{
     callbackResultType <- case callbackResultValue of
         Left exception -> do
             printException $ show (exception :: Exception.SomeException)
-            return $ Finished api1
+            return $ ReturnI (empty, empty, state, api1)
         Right callbackResult ->
             return $ callbackResult
     case requestType of
@@ -973,7 +1003,10 @@ pollRequest api0@Instance.T{
       Instance.initializationComplete = initializationComplete
     , Instance.terminate = terminate} timeout external =
     if terminate then
-        return $ Right (False, api0)
+        if external then
+            return $ Right (False, api0)
+        else
+            return $ Left terminateError
     else do
         pollTimer <- if timeout <= 0 then
                 return 0

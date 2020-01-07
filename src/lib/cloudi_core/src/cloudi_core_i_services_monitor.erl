@@ -688,6 +688,7 @@ os_pid_update(OSPid, Pid, Services) ->
                     % after an update creates a new OS process,
                     % ensure SIGKILL is sent to the old OS process after
                     % the termination timeout
+                    true = OSPid /= OSPidOld,
                     terminate_end_enforce(undefined, self(),
                                           undefined, undefined, ServiceId,
                                           ServiceOld)

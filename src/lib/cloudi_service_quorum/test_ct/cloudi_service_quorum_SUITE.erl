@@ -34,7 +34,6 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 %-define(NUMTESTS, 10000).
-%-define(CLOUDI_TEST_TIMEOUT, 3600). % 1 hour in seconds
 -define(NUMTESTS, 1).
 -ifndef(CLOUDI_LONG_TEST_TIMEOUT).
 -define(CLOUDI_LONG_TEST_TIMEOUT, 60). % minutes

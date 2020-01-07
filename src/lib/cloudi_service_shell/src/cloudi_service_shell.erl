@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019 Michael Truog
+%%% @copyright 2019-2020 Michael Truog
 %%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -190,6 +190,7 @@ env_reset(L) ->
     [{"BINDIR", false},
      {"EMU", false},
      {"ERL_AFLAGS", false},
+     {"ERL_COMPILER_OPTIONS", false},
      {"ERL_CRASH_DUMP", false},
      {"ERL_CRASH_DUMP_SECONDS", false},
      {"ERL_EPMD_ADDRESS", false},

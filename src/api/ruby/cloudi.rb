@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -272,12 +272,13 @@ module CloudI
                     if not response.kind_of?(String)
                         response = ''
                     end
-                rescue InvalidInputException => e
-                    raise e
                 rescue MessageDecodingException => e
-                    raise e
+                    @terminate = true
+                    response_info = ''
+                    response = ''
                 rescue TerminateException => e
-                    raise e
+                    response_info = ''
+                    response = ''
                 rescue ReturnAsyncException
                     return
                 rescue ForwardAsyncException
@@ -321,12 +322,13 @@ module CloudI
                     if not response.kind_of?(String)
                         response = ''
                     end
-                rescue InvalidInputException => e
-                    raise e
                 rescue MessageDecodingException => e
-                    raise e
+                    @terminate = true
+                    response_info = ''
+                    response = ''
                 rescue TerminateException => e
-                    raise e
+                    response_info = ''
+                    response = ''
                 rescue ReturnSyncException
                     return
                 rescue ForwardSyncException
@@ -402,7 +404,11 @@ module CloudI
 
         def poll_request(timeout, external)
             if @terminate
-                return false
+                if external
+                    return false
+                else
+                    raise TerminateException.new(@timeout_terminate)
+                end
             elsif external and not @initialization_complete
                 send(Erlang.term_to_binary(:polling))
                 @initialization_complete = true
@@ -492,6 +498,9 @@ module CloudI
                     callback(command, name, pattern, request_info, request,
                              request_timeout, priority, trans_id,
                              Erlang.binary_to_term(pid))
+                    if @terminate
+                        return false
+                    end
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
                     response_info_size = data[i, j].unpack('L')[0]

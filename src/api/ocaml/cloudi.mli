@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -76,9 +76,12 @@ exception ReturnSync
 exception ReturnAsync
 exception ForwardSync
 exception ForwardAsync
+exception Terminate
 
 (** creates an instance of the CloudI API *)
-val api : int -> 's -> ('s Instance.t, string) result
+val api :
+  ?terminate_return_value:bool ->
+  int -> 's -> ('s Instance.t, string) result
 
 (** returns the thread count from the service configuration *)
 val thread_count : unit -> (int, string) result

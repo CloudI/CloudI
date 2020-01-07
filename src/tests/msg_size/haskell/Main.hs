@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -73,7 +73,7 @@ task :: Int -> IO ()
 task threadIndex = do
     let prerr = SysIO.hPutStrLn SysIO.stderr
         prout = putStrLn
-    apiValue <- CloudI.api threadIndex ()
+    apiValue <- CloudI.api threadIndex () Nothing
     case apiValue of
         Left err ->
             prerr err

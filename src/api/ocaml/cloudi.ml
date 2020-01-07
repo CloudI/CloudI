@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -60,6 +60,7 @@ type callback_result =
 module Instance = struct
   type 's t = {
       mutable state : 's;
+      terminate_exception : bool;
       socket : Unix.file_descr;
       use_header : bool;
       mutable initialization_complete : bool;
@@ -90,9 +91,10 @@ module Instance = struct
       mutable trans_ids : string array;
       mutable subscribe_count : int;
     }
-  let make ~state ~socket ~use_header ~fragment_size ~fragment_recv
+  let make ~state ~terminate_exception
+    ~socket ~use_header ~fragment_size ~fragment_recv
     ~callbacks ~buffer_recv ~timeout_terminate =
-    {state; socket; use_header;
+    {state; terminate_exception; socket; use_header;
      initialization_complete = false;
      terminate = false;
      fragment_size; fragment_recv; callbacks; buffer_recv;
@@ -186,6 +188,7 @@ exception ReturnSync
 exception ReturnAsync
 exception ForwardSync
 exception ForwardAsync
+exception Terminate
 
 let print_exception str =
   prerr_endline ("Exception: " ^ str)
@@ -636,6 +639,8 @@ and callback
           request_type name pattern request_info request
           timeout priority trans_id pid state api)
       with
+        | Terminate ->
+          Some (Null)
         | ReturnSync ->
           print_exception "Synchronous Call Return Invalid" ;
           None
@@ -655,6 +660,8 @@ and callback
           request_type name pattern request_info request
           timeout priority trans_id pid state api)
       with
+        | Terminate ->
+          Some (Null)
         | ReturnSync ->
           None
         | ReturnAsync ->
@@ -867,9 +874,14 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                         else (* cmd = message_send_sync *)
                           SYNC
                       in
-                      callback
-                        api request_type name pattern request_info request
-                        timeout priority trans_id pid
+                      let callback_result =
+                        callback
+                          api request_type name pattern request_info request
+                          timeout priority trans_id pid in
+                      if api.Instance.terminate then
+                        Ok (Some false)
+                      else
+                        callback_result
     else if cmd = message_recv_async || cmd = message_return_sync then
       match unpack_uint32_native (i + 4) data with
       | Error (error) ->
@@ -1005,7 +1017,10 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
 let poll_request api timeout ext : (bool, string) result =
   let {Instance.initialization_complete; terminate; _} = api in
   if terminate then
-    Ok (false)
+    if ext then
+      Ok (false)
+    else
+      Error (terminate_error)
   else
     let poll_timer =
       if timeout > 0 then
@@ -1027,7 +1042,9 @@ let poll_request api timeout ext : (bool, string) result =
     else
       poll_request_loop api timeout ext poll_timer
 
-let api (thread_index : int) (state : 's): ('s Instance.t, string) result =
+let api
+  ?terminate_return_value:(terminate_return_value = true)
+  (thread_index : int) (state : 's): ('s Instance.t, string) result =
   let protocol = getenv "CLOUDI_API_INIT_PROTOCOL" in
   if protocol = "" then
     Error (invalid_input_error)
@@ -1036,7 +1053,8 @@ let api (thread_index : int) (state : 's): ('s Instance.t, string) result =
       | Error (error) ->
         Error (error)
       | Ok (buffer_size) ->
-        let socket = fd_of_int (thread_index + 3)
+        let terminate_exception = not terminate_return_value
+        and socket = fd_of_int (thread_index + 3)
         and use_header = (protocol <> "udp")
         and fragment_size = buffer_size
         and fragment_recv = Bytes.create buffer_size
@@ -1045,6 +1063,7 @@ let api (thread_index : int) (state : 's): ('s Instance.t, string) result =
         and timeout_terminate = 1000 in
         let api = Instance.make
           ~state:state
+          ~terminate_exception:terminate_exception
           ~socket:socket
           ~use_header:use_header
           ~fragment_size:fragment_size
@@ -1062,6 +1081,7 @@ let api (thread_index : int) (state : 's): ('s Instance.t, string) result =
           | Ok _ ->
             match poll_request api (-1) false with
             | Error (error) ->
+              (* Terminate exception not used here *)
               Error (error)
             | Ok _ ->
               Ok (api)
@@ -1098,7 +1118,10 @@ let subscribe_count api pattern =
     | Ok _ ->
       match poll_request api (-1) false with
       | Error (error) ->
-        Error (error)
+        if error = terminate_error && api.Instance.terminate_exception then
+          raise Terminate
+        else
+          Error (error)
       | Ok _ ->
         Ok (api.Instance.subscribe_count)
 
@@ -1150,7 +1173,10 @@ let send_async
     | Ok _ ->
       match poll_request api (-1) false with
       | Error (error) ->
-        Error (error)
+        if error = terminate_error && api.Instance.terminate_exception then
+          raise Terminate
+        else
+          Error (error)
       | Ok _ ->
         Ok (api.Instance.trans_id)
 
@@ -1187,7 +1213,10 @@ let send_sync
     | Ok _ ->
       match poll_request api (-1) false with
       | Error (error) ->
-        Error (error)
+        if error = terminate_error && api.Instance.terminate_exception then
+          raise Terminate
+        else
+          Error (error)
       | Ok _ ->
         Ok ((
           api.Instance.response_info,
@@ -1227,7 +1256,10 @@ let mcast_async
     | Ok _ ->
       match poll_request api (-1) false with
       | Error (error) ->
-        Error (error)
+        if error = terminate_error && api.Instance.terminate_exception then
+          raise Terminate
+        else
+          Error (error)
       | Ok _ ->
         Ok (api.Instance.trans_ids)
 
@@ -1257,7 +1289,10 @@ let recv_async
     | Ok _ ->
       match poll_request api (-1) false with
       | Error (error) ->
-        Error (error)
+        if error = terminate_error && api.Instance.terminate_exception then
+          raise Terminate
+        else
+          Error (error)
       | Ok _ ->
         Ok ((
           api.Instance.response_info,

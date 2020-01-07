@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -518,11 +518,16 @@ sub _callback
         my $e = $@;
         if ($e)
         {
-            if ($e->isa('CloudI::InvalidInputException') ||
-                $e->isa('CloudI::MessageDecodingException') ||
-                $e->isa('CloudI::TerminateException'))
+            if ($e->isa('CloudI::MessageDecodingException'))
             {
-                die $e;
+                $self->{_terminate} = 1;
+                $response_info = '';
+                $response = '';
+            }
+            elsif ($e->isa('CloudI::TerminateException'))
+            {
+                $response_info = '';
+                $response = '';
             }
             elsif ($e->isa('CloudI::ReturnAsyncException') ||
                    $e->isa('CloudI::ForwardAsyncException'))
@@ -590,11 +595,16 @@ sub _callback
         my $e = $@;
         if ($e)
         {
-            if ($e->isa('CloudI::InvalidInputException') ||
-                $e->isa('CloudI::MessageDecodingException') ||
-                $e->isa('CloudI::TerminateException'))
+            if ($e->isa('CloudI::MessageDecodingException'))
             {
-                die $e;
+                $self->{_terminate} = 1;
+                $response_info = '';
+                $response = '';
+            }
+            elsif ($e->isa('CloudI::TerminateException'))
+            {
+                $response_info = '';
+                $response = '';
             }
             elsif ($e->isa('CloudI::ReturnSyncException') ||
                    $e->isa('CloudI::ForwardSyncException'))
@@ -634,7 +644,6 @@ sub _callback
     {
         die CloudI::MessageDecodingException->new();
     }
-
 }
 
 sub _handle_events
@@ -709,7 +718,14 @@ sub _poll_request
     my ($timeout, $external) = @_;
     if ($self->{_terminate})
     {
-        return 0;
+        if ($external)
+        {
+            return 0;
+        }
+        else
+        {
+            die CloudI::TerminateException->new($self->{_timeout_terminate});
+        }
     }
     elsif ($external && ! $self->{_initialization_complete})
     {
@@ -826,6 +842,10 @@ sub _poll_request
                              $request_info, $request,
                              $request_timeout, $priority, $trans_id,
                              Erlang::binary_to_term($pid));
+            if ($self->{_terminate})
+            {
+                return 0;
+            }
         }
         elsif ($command == MESSAGE_RECV_ASYNC ||
                $command == MESSAGE_RETURN_SYNC)

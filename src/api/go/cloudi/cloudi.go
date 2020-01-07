@@ -5,7 +5,7 @@ package cloudi
 //
 // MIT License
 //
-// Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -716,12 +716,11 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 		responseInfo, response, err := api.callbackExecute(function, command, name, pattern, requestInfo, request, timeout, priority, transId, pid)
 		if err != nil {
 			switch err.(type) {
-			case *InvalidInputError:
-				return err
 			case *MessageDecodingError:
-				return err
+				api.terminate = true
+				err = nil
 			case *TerminateError:
-				return err
+				err = nil
 			case *ReturnAsyncError:
 				return nil
 			case *ReturnSyncError:
@@ -740,12 +739,11 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 		responseInfo, response, err := api.callbackExecute(function, command, name, pattern, requestInfo, request, timeout, priority, transId, pid)
 		if err != nil {
 			switch err.(type) {
-			case *InvalidInputError:
-				return err
 			case *MessageDecodingError:
-				return err
+				api.terminate = true
+				err = nil
 			case *TerminateError:
-				return err
+				err = nil
 			case *ReturnAsyncError:
 				return err
 			case *ReturnSyncError:
@@ -857,7 +855,10 @@ func (api *Instance) handleEvents(external bool, reader *bytes.Reader, command u
 func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 	var err error
 	if api.terminate {
-		return false, nil
+		if external {
+			return false, nil
+		}
+		return true, terminateErrorNew(api.timeoutTerminate)
 	} else if external && !api.initializationComplete {
 		var polling []byte
 		polling, err = erlang.TermToBinary(erlang.OtpErlangAtom("polling"), -1)
@@ -1062,6 +1063,9 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 			err = api.callback(command, string(name), string(pattern), requestInfo, request, requestTimeout, priority, transId, Source(pid.(erlang.OtpErlangPid)))
 			if err != nil {
 				return false, err
+			}
+			if api.terminate {
+				return false, nil
 			}
 		case messageRecvAsync:
 			fallthrough

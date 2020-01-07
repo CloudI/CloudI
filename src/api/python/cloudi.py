@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -415,12 +415,13 @@ class API(object):
                     response_info = b''
                 if not isinstance(response, (bytes, TypeUnicode)):
                     response = b''
-            except InvalidInputException as exception:
-                raise exception
-            except MessageDecodingException as exception:
-                raise exception
-            except TerminateException as exception:
-                raise exception
+            except MessageDecodingException:
+                self.__terminate = True
+                response_info = b''
+                response = b''
+            except TerminateException:
+                response_info = b''
+                response = b''
             except ReturnAsyncException:
                 return
             except ReturnSyncException:
@@ -457,12 +458,13 @@ class API(object):
                     response_info = b''
                 if not isinstance(response, (bytes, TypeUnicode)):
                     response = b''
-            except InvalidInputException as exception:
-                raise exception
-            except MessageDecodingException as exception:
-                raise exception
-            except TerminateException as exception:
-                raise exception
+            except MessageDecodingException:
+                self.__terminate = True
+                response_info = b''
+                response = b''
+            except TerminateException:
+                response_info = b''
+                response = b''
             except ReturnSyncException:
                 return
             except ReturnAsyncException:
@@ -527,7 +529,10 @@ class API(object):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
         if self.__terminate:
-            return False
+            if external:
+                return False
+            else:
+                raise TerminateException(self.__timeout_terminate)
         elif external and not self.__initialization_complete:
             self.__send(term_to_binary(OtpErlangAtom(b'polling')))
             self.__initialization_complete = True
@@ -611,6 +616,8 @@ class API(object):
                                 request_info, request,
                                 request_timeout, priority, trans_id,
                                 binary_to_term(pid))
+                if self.__terminate:
+                    return False
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4

@@ -1288,6 +1288,9 @@ static void callback(cloudi_instance_t * p,
               request, request_size,
               timeout, priority, trans_id, pid, pid_size);
         }
+        catch (CloudI::API::terminate_exception const &)
+        {
+        }
         catch (CloudI::API::return_async_exception const &)
         {
             return;
@@ -1305,9 +1308,6 @@ static void callback(cloudi_instance_t * p,
         {
             assert(false);
             return;
-        }
-        catch (CloudI::API::terminate_exception const &)
-        {
         }
         catch (boost::exception const & e)
         {
@@ -1339,6 +1339,9 @@ static void callback(cloudi_instance_t * p,
               request, request_size,
               timeout, priority, trans_id, pid, pid_size);
         }
+        catch (CloudI::API::terminate_exception const &)
+        {
+        }
         catch (CloudI::API::return_async_exception const &)
         {
             assert(false);
@@ -1356,9 +1359,6 @@ static void callback(cloudi_instance_t * p,
         catch (CloudI::API::forward_sync_exception const &)
         {
             return;
-        }
-        catch (CloudI::API::terminate_exception const &)
-        {
         }
         catch (boost::exception const & e)
         {

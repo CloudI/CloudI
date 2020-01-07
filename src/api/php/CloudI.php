@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -376,17 +376,16 @@ class API
                     if (! is_string($response))
                         $response = '';
                 }
-                catch (InvalidInputException $e)
-                {
-                    throw $e;
-                }
                 catch (MessageDecodingException $e)
                 {
-                    throw $e;
+                    $this->terminate = true;
+                    $response_info = '';
+                    $response = '';
                 }
                 catch (TerminateException $e)
                 {
-                    throw $e;
+                    $response_info = '';
+                    $response = '';
                 }
                 catch (ReturnAsyncException $e)
                 {
@@ -447,17 +446,16 @@ class API
                     if (! is_string($response))
                         $response = '';
                 }
-                catch (InvalidInputException $e)
-                {
-                    throw $e;
-                }
                 catch (MessageDecodingException $e)
                 {
-                    throw $e;
+                    $this->terminate = true;
+                    $response_info = '';
+                    $response = '';
                 }
                 catch (TerminateException $e)
                 {
-                    throw $e;
+                    $response_info = '';
+                    $response = '';
                 }
                 catch (ReturnSyncException $e)
                 {
@@ -554,7 +552,10 @@ class API
     {
         if ($this->terminate)
         {
-            return false;
+            if ($external)
+                return false;
+            else
+                throw new TerminateException($this->timeout_terminate);
         }
         elseif ($external && ! $this->initialization_complete)
         {
@@ -676,6 +677,10 @@ class API
                                     $request_info, $request,
                                     $request_timeout, $priority, $trans_id,
                                     \Erlang\binary_to_term($pid));
+                    if ($this->terminate)
+                    {
+                        return false;
+                    }
                     break;
                 case MESSAGE_RECV_ASYNC:
                 case MESSAGE_RETURN_SYNC:

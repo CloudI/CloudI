@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-01-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add OCaml and Haskell CloudI API Terminate exception to be
+      similar to the C++ CloudI API terminate_exception use based on the
+      optional terminate_return_value parameter
+    * Change Go/Java/PHP/Python/Ruby CloudI API exception handling to
+      provide a service request null response before returning from poll
+    * Use the terminate_return_value parameter as false in the
+      OCaml and Haskell messaging integration tests
+
 2020-01-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Move service OS process termination with SIGKILL after the

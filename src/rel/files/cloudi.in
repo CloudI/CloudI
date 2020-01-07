@@ -34,6 +34,7 @@ ERL_AFLAGS=""
 ERL_ZFLAGS=""
 ERL_FLAGS=""
 ERL_LIBS=""
+ERL_COMPILER_OPTIONS="[]"
 ERL_EPMD_ADDRESS=""
 ERL_EPMD_PORT="4369"
 
@@ -186,6 +187,7 @@ case "$1" in
         export ERL_ZFLAGS
         export ERL_FLAGS
         export ERL_LIBS
+        export ERL_COMPILER_OPTIONS
 
         exec "$BINDIR/erl" "$REMSH"
         ;;
@@ -200,6 +202,7 @@ case "$1" in
         export ERL_ZFLAGS
         export ERL_FLAGS
         export ERL_LIBS
+        export ERL_COMPILER_OPTIONS
         # erl -heart settings
         export HEART_BEAT_TIMEOUT
         export HEART_KILL_SIGNAL=SIGKILL

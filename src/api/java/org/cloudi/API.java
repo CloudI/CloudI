@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1091,17 +1091,12 @@ public class API
                 }
                 return;
             }
-            catch (InvalidInputException e)
-            {
-                throw e;
-            }
             catch (MessageDecodingException e)
             {
-                throw e;
+                this.terminate = true;
             }
             catch (TerminateException e)
             {
-                throw e;
             }
             catch (ReturnAsyncException e_return)
             {
@@ -1114,18 +1109,18 @@ public class API
             catch (Throwable e)
             {
                 e.printStackTrace(API.err);
-                try
-                {
-                    return_async(name, pattern,
-                                 ("").getBytes(),
-                                 ("").getBytes(),
-                                 timeout, trans_id, pid);
-                }
-                catch (ReturnAsyncException e_return)
-                {
-                }
-                return;
             }
+            try
+            {
+                return_async(name, pattern,
+                             ("").getBytes(),
+                             ("").getBytes(),
+                             timeout, trans_id, pid);
+            }
+            catch (ReturnAsyncException e_return)
+            {
+            }
+            return;
         }
         else if (command == MESSAGE_SEND_SYNC)
         {
@@ -1168,17 +1163,12 @@ public class API
                 }
                 return;
             }
-            catch (InvalidInputException e)
-            {
-                throw e;
-            }
             catch (MessageDecodingException e)
             {
-                throw e;
+                this.terminate = true;
             }
             catch (TerminateException e)
             {
-                throw e;
             }
             catch (ReturnSyncException e_return)
             {
@@ -1191,18 +1181,18 @@ public class API
             catch (Throwable e)
             {
                 e.printStackTrace(API.err);
-                try
-                {
-                    return_sync(name, pattern,
-                                ("").getBytes(),
-                                ("").getBytes(),
-                                timeout, trans_id, pid);
-                }
-                catch (ReturnSyncException e_return)
-                {
-                }
-                return;
             }
+            try
+            {
+                return_sync(name, pattern,
+                            ("").getBytes(),
+                            ("").getBytes(),
+                            timeout, trans_id, pid);
+            }
+            catch (ReturnSyncException e_return)
+            {
+            }
+            return;
         }
         else
         {
@@ -1274,7 +1264,10 @@ public class API
     {
         if (this.terminate)
         {
-            return Boolean.FALSE;
+            if (external)
+                return Boolean.FALSE;
+            else
+                throw new TerminateException(this.timeout_terminate);
         }
         else if (external && ! this.initialization_complete)
         {
@@ -1355,6 +1348,8 @@ public class API
                         }
                         callback(command, name, pattern, request_info, request,
                                  request_timeout, priority, trans_id, pid);
+                        if (this.terminate)
+                            return Boolean.FALSE;
                         break;
                     }
                     case MESSAGE_RECV_ASYNC:
