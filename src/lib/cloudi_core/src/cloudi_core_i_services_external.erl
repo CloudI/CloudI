@@ -2472,15 +2472,20 @@ socket_close(_Reason,
         is_port(Socket) ->
             case send('terminate_out'(), StateSocket) of
                 ok ->
-                    Timeout = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
-                    ok = inet:setopts(Socket, [{active, true} | SocketOptions]),
-                    receive
-                        {tcp_closed, Socket} ->
-                            ok;
-                        {tcp_error, Socket, _} ->
-                            ok
-                    after
-                        Timeout ->
+                    case inet:setopts(Socket,
+                                      [{active, true} | SocketOptions]) of
+                        ok ->
+                            Timeout = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
+                            receive
+                                {tcp_closed, Socket} ->
+                                    ok;
+                                {tcp_error, Socket, _} ->
+                                    ok
+                            after
+                                Timeout ->
+                                    ok
+                            end;
+                        {error, _} ->
                             ok
                     end;
                 {error, _} ->

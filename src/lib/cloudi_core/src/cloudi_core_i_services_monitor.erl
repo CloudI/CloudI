@@ -1109,14 +1109,21 @@ terminate_service_clear([Pid | Pids] = L) ->
 
 terminate_end_enforce(TimeTerminate, Self,
                       Pid, Reason, ServiceId,
-                      #service{timeout_term = TimeoutTerm} = Service) ->
-    Timeout = if
+                      #service{os_pid = OSPid,
+                               timeout_term = TimeoutTerm} = Service) ->
+    TimeoutTermNew = if
         TimeTerminate =:= undefined ->
             TimeoutTerm;
         is_integer(TimeTerminate) ->
             TimeoutTerm -
             cloudi_timestamp:convert(cloudi_timestamp:native_monotonic() -
                                      TimeTerminate, native, millisecond)
+    end,
+    Timeout = if
+        OSPid =:= undefined ->
+            TimeoutTermNew;
+        is_integer(OSPid) ->
+            ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTermNew)
     end,
     if
         Timeout > 0 ->

@@ -7,6 +7,8 @@
       C/C++/Go/Haskell/Java/Javascript/OCaml/Perl/PHP/Python/Ruby CloudI APIs
       (all terminate if the wrong return type is used
        with error output)
+    * Improve external service termination by ensuring the SIGKILL
+      happens during the last 500ms of the termination timeout
 
 2020-01-06 Michael Truog   <mjtruog at protonmail dot com>
 
