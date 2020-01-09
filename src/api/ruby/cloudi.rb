@@ -253,6 +253,7 @@ module CloudI
                 function = function_queue.shift
                 function_queue.push(function)
             end
+            return_null_response = false
             case command
             when MESSAGE_SEND_ASYNC
                 begin
@@ -274,28 +275,29 @@ module CloudI
                     end
                 rescue MessageDecodingException => e
                     @terminate = true
-                    response_info = ''
-                    response = ''
+                    return_null_response = true
                 rescue TerminateException => e
-                    response_info = ''
-                    response = ''
+                    return_null_response = true
                 rescue ReturnAsyncException
+                    return
+                rescue ReturnSyncException => e
+                    @terminate = true
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
                     return
                 rescue ForwardAsyncException
                     return
-                rescue ReturnSyncException => e
-                    $stderr.puts e.message
-                    $stderr.puts e.backtrace
-                    API.assert{false}
-                    return
                 rescue ForwardSyncException => e
+                    @terminate = true
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
-                    API.assert{false}
                     return
                 rescue
+                    return_null_response = true
                     $stderr.puts $!.message
                     $stderr.puts $!.backtrace
+                end
+                if return_null_response
                     response_info = ''
                     response = ''
                 end
@@ -324,28 +326,29 @@ module CloudI
                     end
                 rescue MessageDecodingException => e
                     @terminate = true
-                    response_info = ''
-                    response = ''
+                    return_null_response = true
                 rescue TerminateException => e
-                    response_info = ''
-                    response = ''
+                    return_null_response = true
                 rescue ReturnSyncException
+                    return
+                rescue ReturnAsyncException => e
+                    @terminate = true
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
                     return
                 rescue ForwardSyncException
                     return
-                rescue ReturnAsyncException => e
-                    $stderr.puts e.message
-                    $stderr.puts e.backtrace
-                    API.assert{false}
-                    return
                 rescue ForwardAsyncException => e
+                    @terminate = true
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
-                    API.assert{false}
                     return
                 rescue
+                    return_null_response = true
                     $stderr.puts $!.message
                     $stderr.puts $!.backtrace
+                end
+                if return_null_response
                     response_info = ''
                     response = ''
                 end

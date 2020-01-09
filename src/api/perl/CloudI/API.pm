@@ -486,10 +486,10 @@ sub _callback
         $function = shift(@function_queue);
         push(@function_queue, $function);
     }
+    my $response_info;
+    my $response;
     if ($command == MESSAGE_SEND_ASYNC)
     {
-        my $response_info;
-        my $response;
         eval
         {
             ($response_info,
@@ -521,13 +521,9 @@ sub _callback
             if ($e->isa('CloudI::MessageDecodingException'))
             {
                 $self->{_terminate} = 1;
-                $response_info = '';
-                $response = '';
             }
             elsif ($e->isa('CloudI::TerminateException'))
             {
-                $response_info = '';
-                $response = '';
             }
             elsif ($e->isa('CloudI::ReturnAsyncException') ||
                    $e->isa('CloudI::ForwardAsyncException'))
@@ -537,16 +533,16 @@ sub _callback
             elsif ($e->isa('CloudI::ReturnSyncException') ||
                    $e->isa('CloudI::ForwardSyncException'))
             {
+                $self->{_terminate} = 1;
                 print "$e";
-                assert(0);
                 return;
             }
             else
             {
                 print "$e";
-                $response_info = '';
-                $response = '';
             }
+            $response_info = '';
+            $response = '';
         }
         eval
         {
@@ -565,8 +561,6 @@ sub _callback
     }
     elsif ($command == MESSAGE_SEND_SYNC)
     {
-        my $response_info;
-        my $response;
         eval
         {
             ($response_info,
@@ -598,13 +592,9 @@ sub _callback
             if ($e->isa('CloudI::MessageDecodingException'))
             {
                 $self->{_terminate} = 1;
-                $response_info = '';
-                $response = '';
             }
             elsif ($e->isa('CloudI::TerminateException'))
             {
-                $response_info = '';
-                $response = '';
             }
             elsif ($e->isa('CloudI::ReturnSyncException') ||
                    $e->isa('CloudI::ForwardSyncException'))
@@ -614,21 +604,21 @@ sub _callback
             elsif ($e->isa('CloudI::ReturnAsyncException') ||
                    $e->isa('CloudI::ForwardAsyncException'))
             {
+                $self->{_terminate} = 1;
                 print "$e";
-                assert(0);
                 return;
             }
             else
             {
                 print "$e";
-                $response_info = '';
-                $response = '';
             }
+            $response_info = '';
+            $response = '';
         }
         eval
         {
             $self->return_sync($name, $pattern, $response_info, $response,
-                                $timeout, $trans_id, $pid);
+                               $timeout, $trans_id, $pid);
         };
         $e = $@;
         if ($e)

@@ -1295,18 +1295,20 @@ static void callback(cloudi_instance_t * p,
         {
             return;
         }
-        catch (CloudI::API::return_sync_exception const &)
+        catch (CloudI::API::return_sync_exception const & e)
         {
-            assert(false);
+            p->terminate = 1;
+            std::cerr << boost::diagnostic_information(e);
             return;
         }
         catch (CloudI::API::forward_async_exception const &)
         {
             return;
         }
-        catch (CloudI::API::forward_sync_exception const &)
+        catch (CloudI::API::forward_sync_exception const & e)
         {
-            assert(false);
+            p->terminate = 1;
+            std::cerr << boost::diagnostic_information(e);
             return;
         }
         catch (boost::exception const & e)
@@ -1342,22 +1344,24 @@ static void callback(cloudi_instance_t * p,
         catch (CloudI::API::terminate_exception const &)
         {
         }
-        catch (CloudI::API::return_async_exception const &)
-        {
-            assert(false);
-            return;
-        }
         catch (CloudI::API::return_sync_exception const &)
         {
             return;
         }
-        catch (CloudI::API::forward_async_exception const &)
+        catch (CloudI::API::return_async_exception const & e)
         {
-            assert(false);
+            p->terminate = 1;
+            std::cerr << boost::diagnostic_information(e);
             return;
         }
         catch (CloudI::API::forward_sync_exception const &)
         {
+            return;
+        }
+        catch (CloudI::API::forward_async_exception const & e)
+        {
+            p->terminate = 1;
+            std::cerr << boost::diagnostic_information(e);
             return;
         }
         catch (boost::exception const & e)

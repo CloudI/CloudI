@@ -97,6 +97,7 @@ import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang as Erlang
 import qualified Foreign.CloudI.Instance as Instance
 import qualified System.IO as SysIO
+import qualified System.IO.Error as SysIOErr
 import qualified System.IO.Unsafe as Unsafe
 import qualified System.Posix.Env as POSIX (getEnv)
 type Array = IArray.Array
@@ -658,16 +659,16 @@ callback api0@Instance.T{
             case callbackResultAsyncValue of
                 Left (Terminate api2) ->
                     return $ ReturnI (empty, empty, state, api2)
+                Left (ReturnAsync api2) ->
+                    return $ Finished api2
                 Left (ReturnSync api2) -> do
                     printException "Synchronous Call Return Invalid"
-                    return $ Finished api2
-                Left (ReturnAsync api2) ->
+                    return $ Finished (setTerminate api2)
+                Left (ForwardAsync api2) ->
                     return $ Finished api2
                 Left (ForwardSync api2) -> do
                     printException "Synchronous Call Forward Invalid"
-                    return $ Finished api2
-                Left (ForwardAsync api2) ->
-                    return $ Finished api2
+                    return $ Finished (setTerminate api2)
                 Right (Instance.ResponseInfo (v0, v1, v2, v3)) ->
                     return $ ReturnI (v0, v1, v2, v3)
                 Right (Instance.Response (v0, v1, v2)) ->
@@ -693,12 +694,12 @@ callback api0@Instance.T{
                     return $ Finished api2
                 Left (ReturnAsync api2) -> do
                     printException "Asynchronous Call Return Invalid"
-                    return $ Finished api2
+                    return $ Finished (setTerminate api2)
                 Left (ForwardSync api2) ->
                     return $ Finished api2
                 Left (ForwardAsync api2) -> do
                     printException "Asynchronous Call Forward Invalid"
-                    return $ Finished api2
+                    return $ Finished (setTerminate api2)
                 Right (Instance.ResponseInfo (v0, v1, v2, v3)) ->
                     return $ ReturnI (v0, v1, v2, v3)
                 Right (Instance.Response (v0, v1, v2)) ->
@@ -750,11 +751,8 @@ handleEvents messages api0 external cmd0 = do
     cmd <- if cmd0 == 0 then Get.getWord32host else return cmd0
     case () of
       _ | cmd == messageTerm ->
-            let api1 = api0{
-                      Instance.terminate = True
-                    , Instance.timeout = Just False} in
             if external then
-                return ([], api1)
+                return ([], setTerminate api0)
             else
                 fail terminateError
         | cmd == messageReinit -> do
@@ -958,16 +956,15 @@ pollRequestData api0 external dataIn =
 pollRequestLoop :: Typeable s =>
     Instance.T s -> Int -> Bool -> Clock.NominalDiffTime ->
     IO (Result (Bool, Instance.T s))
-pollRequestLoop api0@Instance.T{
-      Instance.socketHandle = socketHandle
-    , Instance.bufferRecvSize = bufferRecvSize}
-    timeout external pollTimer = do
-    inputAvailable <- if bufferRecvSize > 0 then
-            return True
-        else
-            SysIO.hWaitForInput socketHandle timeout
-    if not inputAvailable then
+pollRequestLoop api0 timeout external pollTimer = do
+    inputAvailable <- pollWait api0 timeout
+    if inputAvailable == Just False then
         return $ Right (True, api0{Instance.timeout = Nothing})
+    else if inputAvailable == Nothing then
+        let api1 = api0{
+              Instance.terminate = True
+            , Instance.timeout = Nothing} in
+        return $ Right (False, api1)
     else do
         (dataIn, _, api1) <- recv api0
         dataResult <- pollRequestData api1 external dataIn
@@ -1024,6 +1021,23 @@ pollRequest api0@Instance.T{
                         timeout external pollTimer
         else
             pollRequestLoopBegin api0 timeout external pollTimer
+
+pollWait :: Typeable s => Instance.T s -> Int -> IO (Maybe Bool)
+pollWait Instance.T{
+      Instance.socketHandle = socketHandle
+    , Instance.bufferRecvSize = bufferRecvSize}
+    timeout = do
+    if bufferRecvSize > 0 then
+        return $ Just True
+    else
+        SysIOErr.catchIOError
+            (do
+             inputAvailable <- SysIO.hWaitForInput socketHandle timeout
+             return $ Just inputAvailable)
+            (\e -> if SysIOErr.isEOFError e then
+                 return Nothing
+             else
+                 SysIOErr.ioError e)
 
 -- | blocks to process incoming CloudI service requests
 poll :: Typeable s => Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
@@ -1143,6 +1157,11 @@ timeoutAdjustmentPoll t0 timeout = do
             return (t1, 0)
         else
             return (t1, fromIntegral $ timeoutValue - elapsed)
+
+setTerminate :: Instance.T s -> Instance.T s
+setTerminate api0 =
+    api0{ Instance.terminate = True
+        , Instance.timeout = Just False}
 
 threadList :: Concurrent.MVar [Concurrent.MVar ()]
 threadList = Unsafe.unsafePerformIO (Concurrent.newMVar [])

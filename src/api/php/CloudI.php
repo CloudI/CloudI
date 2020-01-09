@@ -351,6 +351,7 @@ class API
             $function = array_shift($function_queue);
             $function_queue[] = $function;
         }
+        $return_null_response = false;
         switch ($command)
         {
             case MESSAGE_SEND_ASYNC:
@@ -379,37 +380,39 @@ class API
                 catch (MessageDecodingException $e)
                 {
                     $this->terminate = true;
-                    $response_info = '';
-                    $response = '';
+                    $return_null_response = true;
                 }
                 catch (TerminateException $e)
                 {
-                    $response_info = '';
-                    $response = '';
+                    $return_null_response = true;
                 }
                 catch (ReturnAsyncException $e)
                 {
+                    return;
+                }
+                catch (ReturnSyncException $e)
+                {
+                    $this->terminate = true;
+                    echo "{$e->getMessage()}\n{$e}\n";
                     return;
                 }
                 catch (ForwardAsyncException $e)
                 {
                     return;
                 }
-                catch (ReturnSyncException $e)
-                {
-                    echo "{$e->getMessage()}\n{$e}\n";
-                    assert(false);
-                    return;
-                }
                 catch (ForwardSyncException $e)
                 {
+                    $this->terminate = true;
                     echo "{$e->getMessage()}\n{$e}\n";
-                    assert(false);
                     return;
                 }
                 catch (\Exception $e)
                 {
+                    $return_null_response = true;
                     echo "{$e->getMessage()}\n{$e}\n";
+                }
+                if ($return_null_response)
+                {
                     $response_info = '';
                     $response = '';
                 }
@@ -449,37 +452,39 @@ class API
                 catch (MessageDecodingException $e)
                 {
                     $this->terminate = true;
-                    $response_info = '';
-                    $response = '';
+                    $return_null_response = true;
                 }
                 catch (TerminateException $e)
                 {
-                    $response_info = '';
-                    $response = '';
+                    $return_null_response = true;
                 }
                 catch (ReturnSyncException $e)
                 {
+                    return;
+                }
+                catch (ReturnAsyncException $e)
+                {
+                    $this->terminate = true;
+                    echo "{$e->getMessage()}\n{$e}\n";
                     return;
                 }
                 catch (ForwardSyncException $e)
                 {
                     return;
                 }
-                catch (ReturnAsyncException $e)
-                {
-                    echo "{$e->getMessage()}\n{$e}\n";
-                    assert(false);
-                    return;
-                }
                 catch (ForwardAsyncException $e)
                 {
+                    $this->terminate = true;
                     echo "{$e->getMessage()}\n{$e}\n";
-                    assert(false);
                     return;
                 }
                 catch (\Exception $e)
                 {
+                    $return_null_response = true;
                     echo "{$e->getMessage()}\n{$e}\n";
+                }
+                if ($return_null_response)
+                {
                     $response_info = '';
                     $response = '';
                 }

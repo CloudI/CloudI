@@ -641,15 +641,17 @@ and callback
       with
         | Terminate ->
           Some (Null)
-        | ReturnSync ->
-          print_exception "Synchronous Call Return Invalid" ;
-          None
         | ReturnAsync ->
           None
-        | ForwardSync ->
-          print_exception "Synchronous Call Forward Invalid" ;
+        | ReturnSync ->
+          api.Instance.terminate <- true ;
+          print_exception "Synchronous Call Return Invalid" ;
           None
         | ForwardAsync ->
+          None
+        | ForwardSync ->
+          api.Instance.terminate <- true ;
+          print_exception "Synchronous Call Forward Invalid" ;
           None
         | e ->
           print_exception (backtrace e) ;
@@ -665,11 +667,13 @@ and callback
         | ReturnSync ->
           None
         | ReturnAsync ->
+          api.Instance.terminate <- true ;
           print_exception "Asynchronous Call Return Invalid" ;
           None
         | ForwardSync ->
           None
         | ForwardAsync ->
+          api.Instance.terminate <- true ;
           print_exception "Asynchronous Call Forward Invalid" ;
           None
         | e ->

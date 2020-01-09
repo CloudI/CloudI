@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -294,7 +294,6 @@ CloudI.API = function API (thread_index, callback) {
                 err instanceof MessageDecodingException) {
                 CloudI.stderr_write(err.stack + '\n');
                 API._poll_terminate();
-                process.exit(1);
             }
             else if (err instanceof TerminateException) {
                 API._poll_terminate();
@@ -302,14 +301,12 @@ CloudI.API = function API (thread_index, callback) {
             else {
                 API._exception(err);
                 API._poll_terminate();
-                process.exit(1);
             }
         }
     });
     API._s_in.on('error', function(err) {
         API._exception(err);
         API._poll_terminate();
-        process.exit(1);
     });
     API._send(new Erlang.OtpErlangAtom('init'));
 };
@@ -592,33 +589,33 @@ CloudI.API.prototype._callback = function (command, name, pattern,
             domain_async.name = 'CloudI Async';
             domain_async.on('error', function(err) {
                 domain_async.exit();
-                if (err instanceof InvalidInputException ||
-                    err instanceof MessageDecodingException) {
-                    CloudI.stderr_write(err.stack + '\n');
-                    API._poll_terminate();
-                    process.exit(1);
+                var return_null_response = false;
+                if (err instanceof MessageDecodingException) {
+                    API._terminate = true;
+                    return_null_response = true;
                 }
                 else if (err instanceof TerminateException) {
-                    API._poll_terminate();
+                    return_null_response = true;
                 }
                 else if (err instanceof ReturnAsyncException) {
                     return;
                 }
                 else if (err instanceof ReturnSyncException) {
+                    API._terminate = true;
                     CloudI.stderr_write(err.stack + '\n');
-                    API._poll_terminate();
-                    process.exit(1);
                 }
                 else if (err instanceof ForwardAsyncException) {
                     return;
                 }
                 else if (err instanceof ForwardSyncException) {
+                    API._terminate = true;
                     CloudI.stderr_write(err.stack + '\n');
-                    API._poll_terminate();
-                    process.exit(1);
                 }
                 else {
+                    return_null_response = true;
                     API._exception(err);
+                }
+                if (return_null_response) {
                     var response_info = '';
                     var response = '';
                     try {
@@ -629,6 +626,9 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     catch (err_new) {
                         err_new = undefined;
                     }
+                }
+                if (API._terminate) {
+                    API._poll_terminate();
                 }
             });
             domain_async.enter();
@@ -671,33 +671,33 @@ CloudI.API.prototype._callback = function (command, name, pattern,
             domain_sync.name = 'CloudI Sync';
             domain_sync.on('error', function(err) {
                 domain_sync.exit();
-                if (err instanceof InvalidInputException ||
-                    err instanceof MessageDecodingException) {
-                    CloudI.stderr_write(err.stack + '\n');
-                    API._poll_terminate();
-                    process.exit(1);
+                var return_null_response = false;
+                if (err instanceof MessageDecodingException) {
+                    API._terminate = true;
+                    return_null_response = true;
                 }
                 else if (err instanceof TerminateException) {
-                    API._poll_terminate();
+                    return_null_response = true;
                 }
                 else if (err instanceof ReturnAsyncException) {
+                    API._terminate = true;
                     CloudI.stderr_write(err.stack + '\n');
-                    API._poll_terminate();
-                    process.exit(1);
                 }
                 else if (err instanceof ReturnSyncException) {
                     return;
                 }
                 else if (err instanceof ForwardAsyncException) {
+                    API._terminate = true;
                     CloudI.stderr_write(err.stack + '\n');
-                    API._poll_terminate();
-                    process.exit(1);
                 }
                 else if (err instanceof ForwardSyncException) {
                     return;
                 }
                 else {
+                    return_null_response = true;
                     API._exception(err);
+                }
+                if (return_null_response) {
                     var response_info = '';
                     var response = '';
                     try {
@@ -708,6 +708,9 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     catch (err_new) {
                         err_new = undefined;
                     }
+                }
+                if (API._terminate) {
+                    API._poll_terminate();
                 }
             });
             domain_sync.enter();
@@ -762,6 +765,7 @@ CloudI.API.prototype._handle_events = function (data, data_size, i, command) {
     while (true) {
         switch (command) {
             case MESSAGE_TERM:
+                API._terminate = true;
                 throw new TerminateException(API._timeout_terminate);
             case MESSAGE_REINIT:
                 API._process_count = unpackUint32(i, data);
@@ -872,7 +876,6 @@ CloudI.API.prototype._poll_request = function (data) {
                     if (err) {
                         API._exception(err);
                         API._poll_terminate();
-                        process.exit(1);
                     }
                     else {
                         API._callback(command, name, pattern,
@@ -1018,6 +1021,7 @@ CloudI.API.prototype._poll_terminate = function () {
     if (API._terminate_callback !== undefined) {
         API._terminate_callback(false);
     }
+    process.exit();
 };
 
 CloudI.API.prototype._poll_blocked = function () {
@@ -1127,8 +1131,6 @@ CloudI.API.prototype._send = function (terms) {
         if (err) {
             API._exception(err);
             API._poll_terminate();
-            process.exit(1);
-            return;
         }
         if (API._use_header) {
             data = Buffer.concat([packUint32big(data.length), data]);

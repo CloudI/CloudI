@@ -1102,8 +1102,20 @@ public class API
             {
                 return;
             }
+            catch (ReturnSyncException e_return)
+            {
+                this.terminate = true;
+                e_return.printStackTrace(API.err);
+                return;
+            }
             catch (ForwardAsyncException e_forward)
             {
+                return;
+            }
+            catch (ForwardSyncException e_forward)
+            {
+                this.terminate = true;
+                e_forward.printStackTrace(API.err);
                 return;
             }
             catch (Throwable e)
@@ -1174,8 +1186,20 @@ public class API
             {
                 return;
             }
+            catch (ReturnAsyncException e_return)
+            {
+                this.terminate = true;
+                e_return.printStackTrace(API.err);
+                return;
+            }
             catch (ForwardSyncException e_forward)
             {
+                return;
+            }
+            catch (ForwardAsyncException e_forward)
+            {
+                this.terminate = true;
+                e_forward.printStackTrace(API.err);
                 return;
             }
             catch (Throwable e)

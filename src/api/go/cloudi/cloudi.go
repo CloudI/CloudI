@@ -724,10 +724,12 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 			case *ReturnAsyncError:
 				return nil
 			case *ReturnSyncError:
+				api.terminate = true
 				return err
 			case *ForwardAsyncError:
 				return nil
 			case *ForwardSyncError:
+				api.terminate = true
 				return err
 			default:
 				os.Stderr.WriteString(err.Error() + "\n")
@@ -745,10 +747,12 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 			case *TerminateError:
 				err = nil
 			case *ReturnAsyncError:
+				api.terminate = true
 				return err
 			case *ReturnSyncError:
 				return nil
 			case *ForwardAsyncError:
+				api.terminate = true
 				return err
 			case *ForwardSyncError:
 				return nil

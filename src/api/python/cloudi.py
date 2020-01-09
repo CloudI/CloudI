@@ -402,6 +402,7 @@ class API(object):
         else:
             function = function_queue.popleft()
             function_queue.append(function)
+        return_null_response = False
         if command == _MESSAGE_SEND_ASYNC:
             try:
                 response = function(API.ASYNC, name, pattern,
@@ -417,25 +418,25 @@ class API(object):
                     response = b''
             except MessageDecodingException:
                 self.__terminate = True
-                response_info = b''
-                response = b''
+                return_null_response = True
             except TerminateException:
-                response_info = b''
-                response = b''
+                return_null_response = True
             except ReturnAsyncException:
                 return
             except ReturnSyncException:
+                self.__terminate = True
                 traceback.print_exc(file=sys.stderr)
-                assert False
                 return
             except ForwardAsyncException:
                 return
             except ForwardSyncException:
+                self.__terminate = True
                 traceback.print_exc(file=sys.stderr)
-                assert False
                 return
             except:
+                return_null_response = True
                 traceback.print_exc(file=sys.stderr)
+            if return_null_response:
                 response_info = b''
                 response = b''
             try:
@@ -460,25 +461,25 @@ class API(object):
                     response = b''
             except MessageDecodingException:
                 self.__terminate = True
-                response_info = b''
-                response = b''
+                return_null_response = True
             except TerminateException:
-                response_info = b''
-                response = b''
+                return_null_response = True
             except ReturnSyncException:
                 return
             except ReturnAsyncException:
+                self.__terminate = True
                 traceback.print_exc(file=sys.stderr)
-                assert False
                 return
             except ForwardSyncException:
                 return
             except ForwardAsyncException:
+                self.__terminate = True
                 traceback.print_exc(file=sys.stderr)
-                assert False
                 return
             except:
+                return_null_response = True
                 traceback.print_exc(file=sys.stderr)
+            if return_null_response:
                 response_info = b''
                 response = b''
             try:
