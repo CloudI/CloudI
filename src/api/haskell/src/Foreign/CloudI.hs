@@ -658,7 +658,7 @@ callback api0@Instance.T{
                 state api1
             case callbackResultAsyncValue of
                 Left (Terminate api2) ->
-                    return $ ReturnI (empty, empty, state, api2)
+                    return $ ReturnI (empty, empty, state, setTerminate api2)
                 Left (ReturnAsync api2) ->
                     return $ Finished api2
                 Left (ReturnSync api2) -> do
@@ -689,7 +689,7 @@ callback api0@Instance.T{
                 state api1
             case callbackResultSyncValue of
                 Left (Terminate api2) ->
-                    return $ ReturnI (empty, empty, state, api2)
+                    return $ ReturnI (empty, empty, state, setTerminate api2)
                 Left (ReturnSync api2) ->
                     return $ Finished api2
                 Left (ReturnAsync api2) -> do
