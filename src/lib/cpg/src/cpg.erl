@@ -33,8 +33,8 @@
 %%% %CopyrightEnd%
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -3127,18 +3127,17 @@ join_group_local(Count, GroupName, Pid,
                         callbacks = Callbacks} = State) ->
     Reason = join_local,
     cpg_callbacks:notify_join(Callbacks, GroupName, Pid, Reason),
-    PidList = lists:duplicate(Count, Pid),
     GroupData = case DictI:find(GroupName, OldGroupsData) of
         {ok, #cpg_data{local_count = LocalI,
                        local = Local,
                        history = History} = OldGroupData} ->
             OldGroupData#cpg_data{local_count = LocalI + Count,
-                                  local = PidList ++ Local,
-                                  history = PidList ++ History};
+                                  local = prepend(Pid, Count, Local),
+                                  history = prepend(Pid, Count, History)};
         error ->
             #cpg_data{local_count = Count,
-                      local = PidList,
-                      history = PidList}
+                      local = lists:duplicate(Count, Pid),
+                      history = lists:duplicate(Count, Pid)}
     end,
     GroupsData = DictI:store(GroupName, GroupData, OldGroupsData),
     State#state{groups = {DictI, GroupsData},
@@ -3151,18 +3150,17 @@ join_group_remote(Count, GroupName, Pid,
                          callbacks = Callbacks} = State) ->
     Reason = join_remote,
     cpg_callbacks:notify_join(Callbacks, GroupName, Pid, Reason),
-    PidList = lists:duplicate(Count, Pid),
     GroupData = case DictI:find(GroupName, OldGroupsData) of
         {ok, #cpg_data{remote_count = RemoteI,
                        remote = Remote,
                        history = History} = OldGroupData} ->
             OldGroupData#cpg_data{remote_count = RemoteI + Count,
-                                  remote = PidList ++ Remote,
-                                  history = PidList ++ History};
+                                  remote = prepend(Pid, Count, Remote),
+                                  history = prepend(Pid, Count, History)};
         error ->
             #cpg_data{remote_count = Count,
-                      remote = PidList,
-                      history = PidList}
+                      remote = lists:duplicate(Count, Pid),
+                      history = lists:duplicate(Count, Pid)}
     end,
     GroupsData = DictI:store(GroupName, GroupData, OldGroupsData),
     {Monitors,
@@ -3649,6 +3647,11 @@ count([Elem | T], I, Elem) ->
     count(T, I + 1, Elem);
 count([_ | T], I, Elem) ->
     count(T, I, Elem).
+
+prepend(_, 0, List) ->
+    List;
+prepend(Elem, Count, List) ->
+    prepend(Elem, Count - 1, [Elem | List]).
 
 -compile({inline, [{random,1}]}).
 

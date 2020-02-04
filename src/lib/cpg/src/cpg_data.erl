@@ -12,7 +12,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -33,8 +33,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -493,10 +493,9 @@ get_random_pid(GroupName, Groups) ->
         {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local_count = LocalCount,
-                                local = Local,
                                 remote_count = RemoteCount,
-                                remote = Remote}} ->
-            pick(LocalCount + RemoteCount, Local ++ Remote, Pattern)
+                                history = History}} ->
+            pick(LocalCount + RemoteCount, History, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -520,10 +519,9 @@ get_random_pid(GroupName, Exclude, Groups)
         {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local_count = LocalCount,
-                                local = Local,
                                 remote_count = RemoteCount,
-                                remote = Remote}} ->
-            pick(LocalCount + RemoteCount, Local ++ Remote,
+                                history = History}} ->
+            pick(LocalCount + RemoteCount, History,
                  Exclude, GroupName, Pattern)
     end.
 

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-02-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update cpg
+
 2020-01-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Haskell CloudI API use of terminate_return_value as False
