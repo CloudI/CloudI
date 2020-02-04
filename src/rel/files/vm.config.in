@@ -9,9 +9,14 @@
     %{net_setuptime, 7}, % seconds
     {net_ticktime, 60}, % seconds
     {dist_nodelay, true},
+    {dist_auto_connect, never},
     % Erlang/OTP >= 21.0 kernel logger
-    {logger_level, debug},
+    % (new configuration, current with Erlang/OTP >= 22.0)
+    %{logger,
+    % [{handler,default,logger_std_h,#{config=>#{file=>"erlang_kernel.log"}}}]},
+    % (old configuration)
     {error_logger, {file, "erlang_kernel.log"}},
+    {logger_level, debug},
     {logger_sasl_compatible, false}
   ]},
  {sasl, [

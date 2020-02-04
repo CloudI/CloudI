@@ -3,6 +3,7 @@
 
 2020-02-04 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add Erlang/OTP kernel config {dist_auto_connect, never}
     * Update cpg
 
 2020-01-10 Michael Truog   <mjtruog at protonmail dot com>
