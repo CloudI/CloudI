@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-02-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update cpg
+
 2020-02-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Erlang/OTP kernel config {dist_auto_connect, never}

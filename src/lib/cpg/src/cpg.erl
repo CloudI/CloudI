@@ -3135,9 +3135,10 @@ join_group_local(Count, GroupName, Pid,
                                   local = prepend(Pid, Count, Local),
                                   history = prepend(Pid, Count, History)};
         error ->
+            PidList = lists:duplicate(Count, Pid),
             #cpg_data{local_count = Count,
-                      local = lists:duplicate(Count, Pid),
-                      history = lists:duplicate(Count, Pid)}
+                      local = PidList,
+                      history = PidList}
     end,
     GroupsData = DictI:store(GroupName, GroupData, OldGroupsData),
     State#state{groups = {DictI, GroupsData},
@@ -3158,9 +3159,10 @@ join_group_remote(Count, GroupName, Pid,
                                   remote = prepend(Pid, Count, Remote),
                                   history = prepend(Pid, Count, History)};
         error ->
+            PidList = lists:duplicate(Count, Pid),
             #cpg_data{remote_count = Count,
-                      remote = lists:duplicate(Count, Pid),
-                      history = lists:duplicate(Count, Pid)}
+                      remote = PidList,
+                      history = PidList}
     end,
     GroupsData = DictI:store(GroupName, GroupData, OldGroupsData),
     {Monitors,
