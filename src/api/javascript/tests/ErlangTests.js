@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -33,6 +33,13 @@ var assert = require('assert');
 // to make the tests more exhaustive
 
 var toNativeString = {}.toString;
+var bufferFrom;
+if (Erlang.nodejs_version_after('5.10.0',true)) {
+    bufferFrom = Buffer.from;
+}
+else {
+    bufferFrom = Buffer;
+}
 String.prototype.repeat = function(i) {
     return new Array(i + 1).join(this);
 };
@@ -374,12 +381,13 @@ var hex = function hex(buffer) {
         });
         Erlang.binary_to_term('\x83m\0\0\0\0', function(err, term) {
             assert.strictEqual(err, undefined);
-            assert.deepEqual(term, new Erlang.OtpErlangBinary(new Buffer([])));
+            assert.deepEqual(term, new Erlang.OtpErlangBinary(
+                                       new bufferFrom([])));
         });
         Erlang.binary_to_term('\x83m\0\0\0\4data', function(err, term) {
             assert.strictEqual(err, undefined);
             assert.deepEqual(term, new Erlang.OtpErlangBinary(
-                                       new Buffer('data', 'binary')));
+                                       new bufferFrom('data', 'binary')));
         });
     }).call(this);
     (function test_binary_to_term_float () {

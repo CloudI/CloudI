@@ -36,6 +36,13 @@ var fs = require('fs');
 var assert = require('assert');
 
 var toNativeString = {}.toString;
+var bufferFrom;
+if (Erlang.nodejs_version_after('5.10.0',true)) {
+    bufferFrom = Buffer.from;
+}
+else {
+    bufferFrom = Buffer;
+}
 var littleEndian = (
     (new Uint16Array((new Uint8Array([0,1])).buffer))[0] === 0x0100);
 var unpackUint8 = function unpackUint8 (i, data) {
@@ -67,25 +74,12 @@ else {
     unpackUint32 = unpackUint32big;
 }
 var packUint32big = function packUint32big (value) {
-    return new Buffer([(value >>> 24) & 0xff,
-                       (value >>> 16) & 0xff,
-                       (value >>> 8) & 0xff,
-                       value & 0xff]);
+    return new bufferFrom([(value >>> 24) & 0xff,
+                           (value >>> 16) & 0xff,
+                           (value >>> 8) & 0xff,
+                           value & 0xff]);
 };
-var nodejs_version = process.versions['node'].split('.').map(s => parseInt(s));
-var nodejsVersionAfter = function nodejsVersionAfter (s, include) {
-    var v = s.split('.').map(s => parseInt(s));
-    for (var i = 0; i < v.length; i++) {
-        if (nodejs_version[i] > v[i]) {
-            return true;
-        }
-        if (nodejs_version[i] < v[i]) {
-            return false;
-        }
-    }
-    return include;
-};
-if (nodejsVersionAfter('10.0.0',true)) {
+if (Erlang.nodejs_version_after('10.0.0',true)) {
     var originalEmitWarning = process.emitWarning;
     process.emitWarning = function(warning, type, code, ctor) {
         if (code === 'DEP0097') {

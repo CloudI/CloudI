@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-02-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix Javascript CloudI API deprecation warning output
+      (DEP0005 node.js Buffer() is deprecated)
+
 2020-02-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update cpg
