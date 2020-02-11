@@ -232,7 +232,7 @@ CloudI.API = function API (thread_index, callback) {
     else {
         throw new InvalidInputException();
     }
-    if (nodejsVersionAfter('0.12.1',false)) {
+    if (Erlang.nodejs_version_after('0.12.1',false)) {
         API._s_in = new net.Socket({fd: (thread_index + 3),
                                     readable: true,
                                     writable: true});
