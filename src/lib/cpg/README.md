@@ -4,45 +4,36 @@
 
 ## Purpose
 
-CPG provides a process group interface that is similar to the pg2 module
-within Erlang OTP.  The pg2 module is used internally by
-Erlang/OTP, and is currently the most common approach to the combination of
-availability and partition tolerance in Erlang (as they relate to the
-CAP theorem).  When comparing these goals with gproc (and its usage of
-`gen_leader`), gproc is focused on availability and consistency (as it relates
-to the CAP theorem), which makes its goals similar to mnesia.
+cpg provides a process group interface that is focused on
+availability and partition tolerance (in the CAP theorem).
+The pg process group implementation added in Erlang/OTP 23 by
+WhatsApp Inc. (Facebook Inc.) is based on cpg.
+The cpg interface is compatible with pg2
+(scheduled for removal in Erlang/OTP 24).
 
-The cpg interface was created to avoid some problems with pg2 while pursuing
-better availability and partition tolerance.  pg2 utilizes ets (global
-key/value storage in Erlang which requires internal memory locking,
-which limits scalability) but cpg uses internal process memory
-(see the [Design](#design) section for more information).  By default,
-cpg utilizes Erlang strings for group names (list of integers) and provides
-the ability to set a pattern string as a group name.  A pattern string
-is a string that includes the `"*"` or `"?"` wildcard characters
-(equivalent to a ".+" regex while `"**"`, `"??"`, `"*?"`, and `"?*"`
- are forbidden).  When a group name is a pattern string, a process can be
-retrieved by matching the pattern.  To change the behavior to be compatible
-with pg2 usage (or gproc), see the [Usage](#usage) section below.
+## Features (Compare and Contrast)
 
-The cpg interface provides more error checking than the pg2 module, and it
-allows the user to obtain the groups state so that group name lookups do not
-require a message to the cpg scope process.  The cpg scope is a locally
-registered process name used to provide all the group names with a scope.
-By avoiding a message to the cpg scope process, contention for the single
-process message queue can be avoided.
+### cpg
 
-The process group solutions for Erlang discussed here depend on
-the distributed Erlang functionality, provided natively by Erlang/OTP.
-The distributed Erlang functionality automatically creates a fully-connected
-network topology and is only meant for a Local Area Network (LAN).
-Since a fully-connected network topology is created that requires a
-net tick time average of 60 seconds (the net tick time is not increased
-to ensure distributed Erlang nodes fail-fast) the distributed
-Erlang node connections are limited to roughly 50-100 nodes.  So, that
-means these process group solutions are only targeting a cluster of Erlang
-nodes, given the constraints of distributed Erlang and a fully-connected
-network topology.
+* By default, cpg utilizes Erlang strings for group names (list of integers) and provides the ability to set a pattern string as a group name.  A pattern string is a string that includes the `"*"` or `"?"` wildcard characters (equivalent to a ".+" regex while `"**"`, `"??"`, `"*?"`, and `"?*"` are forbidden).  When a group name is a pattern string, a process can be retrieved by matching the pattern (more information at the [CloudI FAQ](https://cloudi.org/faq.html#4_URLregex)).  To not use this approach for group names, refer to the [Usage](#usage) section below.
+* cpg provides its internal state for usage in separate Erlang processes as cached data with the `cpg_data` module.  That approach is more efficient than usage of ets.
+* Each cpg scope is an atom used as a locally registered process name for the cpg scope Erlang process.  Separate cpg scopes may be used to keep group memberships entirely separate.
+* cpg data lookups are done based on the Erlang process being local or remote, or the relative age of the local membership to the group, or with random selection (using the terminology `closest`, `furthest`, `random`, `local`, `remote`, `oldest`, `newest`).  `closest` prefers local processes if they are present while `furthest` prefers remote processes if they are present.  The `oldest` process in a group is naturally the most stable process.
+* cpg provides an interface for `via` process registry use (examples are provided in the [tests](https://github.com/okeuday/cpg/blob/master/test/cpg_tests.erl)).
+
+### pg (>= Erlang/OTP 23)
+
+* pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies and may never remove remote group members).
+* pg uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
+
+### pg2 (=< Erlang/OTP 24)
+
+* pg2 uses global:trans/2 which is unable to handle network or node failures.
+* pg2 uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
+
+### gproc / syn
+
+* Both are focused on consistency with leader election and are unable to be available when suffering network or node failures.  Failures can cause unpredictable conflict resolution, in an attempt to achieve consistency.
 
 ## Design
 
@@ -92,10 +83,10 @@ described above.
 
 ## Usage
 
-If you need non-string (not a list of integers) group names
-(e.g., when replacing gproc), you can change the cpg application
-`group_storage` env setting by providing a module name that provides a
-dict module interface (or just set to `dict`).
+If you need non-string (not a list of integers) group names,
+set the cpg application `group_storage` env value to a module name that
+provides a dict module interface
+(e.g., use `dict` or [`mapsd`](https://github.com/okeuday/mapsd)).
 
 ## Example
 

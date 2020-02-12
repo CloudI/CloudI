@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2017-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_node_monitor).
@@ -175,6 +175,11 @@ monitors_send({'DOWN', _MonitorRef, process, Pid, Info}, DOWNS,
     end.
 
 monitors_flush(Pids) ->
+    % The death of processes on other nodes may be consumed here,
+    % to get handled with the death of a single node.  That results
+    % in the loss of the remote pid's exit reason
+    % (only impacts the callback usage).  This is best to keep the
+    % message queue burden of the cpg scope process as small as possible.
     receive
         {'DOWNS', PidReasons} ->
             monitors_flush(lists:foldl(fun({Pid, _}, NewPids) ->
