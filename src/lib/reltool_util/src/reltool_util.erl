@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -1555,7 +1555,7 @@ script_remove_instructions([{apply, {c, erlangrc, _}} | L],
 
 ensure_all_loaded([]) ->
     ok;
-ensure_all_loaded([Module | Modules]) ->
+ensure_all_loaded([Module | Modules] = L) ->
     case is_module_loaded_check(Module) of
         true ->
             Loaded = lists:all(fun(M) ->
@@ -1573,7 +1573,7 @@ ensure_all_loaded([Module | Modules]) ->
             end, Modules),
             if
                 NotLoaded ->
-                    load_all_modules([Module | Modules]);
+                    code:atomic_load(L);
                 true ->
                     {error, modules_partially_loaded}
             end
@@ -1676,16 +1676,6 @@ modules_filter([{Behaviour, Name} | Options], Modules, Loaded)
     modules_filter(Options, NewModules, true);
 modules_filter([_ | _], _, _) ->
     erlang:exit(badarg).
-
-load_all_modules([]) ->
-    ok;
-load_all_modules([Module | Modules]) ->
-    case code:load_file(Module) of
-        {module, Module} ->
-            load_all_modules(Modules);
-        {error, Reason} ->
-            {error, {Reason, Module}}
-    end.
 
 load_all_paths([], _) ->
     ok;
