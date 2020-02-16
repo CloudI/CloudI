@@ -64,6 +64,7 @@
          module_loaded/1,
          module_unload/1,
          module_reload/1,
+         modules_reload/1,
          is_module_loaded/1,
          is_module_loaded/2,
          module_purged/1,
@@ -659,6 +660,27 @@ module_reload(Module)
     case code:load_file(Module) of
         {module, Module} ->
             code:soft_purge(Module),
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reload a list of modules.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec modules_reload(Modules :: nonempty_list(atom())) ->
+    ok |
+    {error, any()}.
+
+modules_reload([Module | _] = Modules)
+    when is_atom(Module) ->
+    ok = modules_map(Modules, purge),
+    case code:atomic_load(Modules) of
+        ok ->
+            ok = modules_map(Modules, soft_purge),
             ok;
         {error, _} = Error ->
             Error
@@ -1676,6 +1698,12 @@ modules_filter([{Behaviour, Name} | Options], Modules, Loaded)
     modules_filter(Options, NewModules, true);
 modules_filter([_ | _], _, _) ->
     erlang:exit(badarg).
+
+modules_map([], _) ->
+    ok;
+modules_map([Module | Modules], Function) ->
+    _ = code:Function(Module),
+    modules_map(Modules, Function).
 
 load_all_paths([], _) ->
     ok;

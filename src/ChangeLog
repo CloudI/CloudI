@@ -3,6 +3,10 @@
 
 2020-02-15 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Fix CloudI Service API services_update code_paths_remove use
+      (with a list size greater than 1)
+    * Change CloudI Service API services_update modules_load to
+      load all the modules atomically
     * Update reltool_util
 
 2020-02-12 Michael Truog   <mjtruog at protonmail dot com>

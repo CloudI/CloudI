@@ -2059,13 +2059,8 @@ update_results([{error, Reason} | Results], ResultsSuccess, ResultsError) ->
 
 update_load_module([]) ->
     ok;
-update_load_module([Module | ModulesLoad]) ->
-    case cloudi_x_reltool_util:module_reload(Module) of
-        ok ->
-            update_load_module(ModulesLoad);
-        {error, _} = Error ->
-            Error
-    end.
+update_load_module([_ | _] = ModulesLoad) ->
+    cloudi_x_reltool_util:modules_reload(ModulesLoad).
 
 update_load_module([], ModulesLoad) ->
     update_load_module(ModulesLoad);
@@ -2127,7 +2122,7 @@ update_unload_module([]) ->
     ok;
 update_unload_module([CodePathRemove | CodePathsRemove]) ->
     code:del_path(CodePathRemove),
-    update_load_module(CodePathsRemove).
+    update_unload_module(CodePathsRemove).
 
 update_unload_module([], CodePathsRemove) ->
     update_unload_module(CodePathsRemove);
