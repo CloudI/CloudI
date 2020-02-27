@@ -5,5 +5,16 @@
 -ifdef(ERLANG_OTP_VERSION_19).
 -else.
 -define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-ifdef(ERLANG_OTP_VERSION_20).
+-else.
+-ifdef(OTP_RELEASE).
+% able to use -if/-elif here
+-if(?OTP_RELEASE >= 23).
+-define(ERLANG_OTP_VERSION_23_FEATURES, true).
+-endif.
+-else.
+-error("Erlang/OTP version invalid").
+-endif.
+-endif.
 -endif.
 

@@ -38,6 +38,7 @@
          param_list/2
 ]).
 
+-include("nodefinder.hrl").
 -include("nodefinder_ec2_api.hrl").
 
 -define(ERLCLOUD_RETRY_TIMEOUT, 10000).
@@ -309,6 +310,10 @@ format_timestamp({{Yr, Mo, Da}, {H, M, S}}) ->
 sha256(V) ->
     crypto:hash(sha256, V).
 
+-ifdef(ERLANG_OTP_VERSION_23_FEATURES).
+sha256_mac(K, S) ->
+    crypto:mac(hmac, sha256, K, S).
+-else.
 sha256_mac(K, S) ->
     crypto:hmac(sha256, K, S).
-
+-endif.

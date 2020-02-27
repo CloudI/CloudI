@@ -223,13 +223,13 @@ process_packet(_Packet, _IP, _State) ->
     ok.
 
 identifier_v4(Message, KeyV4) ->
-    crypto:hmac(sha256, KeyV4, Message).
+    hmac_sha256(KeyV4, Message).
 
 identifier_v3(Message, KeyV3) ->
-    crypto:hmac(sha256, KeyV3, Message).
+    hmac_sha256(KeyV3, Message).
 
 identifier_v2(Message, KeyV2) ->
-    crypto:hmac(sha, KeyV2, Message).
+    hmac_sha(KeyV2, Message).
 
 key_v4() ->
     crypto:hash(sha256, erlang:atom_to_binary(erlang:get_cookie(), utf8)).
@@ -269,3 +269,16 @@ connect_node(visible, Node) ->
 connect_node(hidden, Node) ->
     net_kernel:hidden_connect_node(Node).
 
+-ifdef(ERLANG_OTP_VERSION_23_FEATURES).
+hmac_sha256(Key, Data) ->
+    crypto:mac(hmac, sha256, Key, Data).
+
+hmac_sha(Key, Data) ->
+    crypto:mac(hmac, sha, Key, Data).
+-else.
+hmac_sha256(Key, Data) ->
+    crypto:hmac(sha256, Key, Data).
+
+hmac_sha(Key, Data) ->
+    crypto:hmac(sha, Key, Data).
+-endif.

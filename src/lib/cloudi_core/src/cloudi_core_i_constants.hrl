@@ -35,7 +35,7 @@
 -ifdef(ERLANG_OTP_VERSION_20).
 -else.
 -ifdef(OTP_RELEASE).
-% able to use -elif here
+% able to use -if/-elif here
 -define(ERLANG_OTP_VERSION_21_FEATURES, true).
 -else.
 -error("Erlang/OTP version invalid").

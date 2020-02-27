@@ -34,7 +34,7 @@
 %%%
 %%% @author Tim Fletcher <mail@tfletcher.com>
 %%% @copyright 2012 Tim Fletcher
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_data).
@@ -45,6 +45,12 @@
          signature/5]).
 
 -include_lib("public_key/include/public_key.hrl").
+
+-ifdef(OTP_RELEASE).
+-if(?OTP_RELEASE >= 23).
+-define(ERLANG_OTP_VERSION_23_FEATURES, true).
+-endif.
+-endif.
 
 -spec verify(Signature :: string(),
              HttpMethod :: string(),
@@ -98,8 +104,13 @@ hmac_sha1_verify(Signature, HttpMethod, URL, Params, Consumer, TokenSecret) ->
                                                        Consumer,
                                                        TokenSecret), Signature).
 
+-ifdef(ERLANG_OTP_VERSION_23_FEATURES).
+hmac_sha(Key, Data) ->
+    crypto:mac(hmac, sha, Key, Data).
+-else.
 hmac_sha(Key, Data) ->
     crypto:hmac(sha, Key, Data).
+-endif.
 
 rsa_sha1_verify(Signature, HttpMethod, URL, Params, {_, ConsumerSecret, _}) ->
     BaseString = signature_base_string(HttpMethod, URL, Params),
@@ -127,6 +138,29 @@ params_encode(Params) ->
     Concatenated = [lists:concat([K, "=", V]) || {K, V} <- Sorted],
     cloudi_string:join("&", Concatenated).
 
+-ifdef(ERLANG_OTP_VERSION_23_FEATURES).
+uri_normalize(URI) ->
+    try uri_string:parse(URI) of
+        Values ->
+            Scheme = case maps:get(scheme, Values) of
+                "http" ->
+                    http;
+                "https" ->
+                    https;
+                SchemeStr ->
+                    SchemeStr
+            end,
+            UserInfo = maps:get(userinfo, Values),
+            Host = maps:get(host, Values),
+            Port = maps:get(port, Values),
+            Path = maps:get(path, Values),
+            uri_normalize(Scheme, UserInfo,
+                          cloudi_string:lowercase(Host), Port, [Path])
+    catch
+        ErrorType:Error ->
+            {error, {ErrorType, Error}}
+    end.
+-else.
 uri_normalize(URI) ->
     case http_uri:parse(URI) of
         {ok, {Scheme, UserInfo, Host, Port, Path, _Query}} ->
@@ -135,6 +169,7 @@ uri_normalize(URI) ->
         {error, _} = Error ->
             Error
     end.
+-endif.
 
 uri_normalize(Scheme, [], Acc) ->
   lists:concat([Scheme, "://" | Acc]);
