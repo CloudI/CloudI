@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2019 Michael Truog
+%%% @copyright 2009-2020 Michael Truog
 %%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -1771,9 +1771,12 @@ new([Term | _], _) ->
     {error, {invalid, Term}}.
 
 uuid_generator() ->
+    Variant = application:get_env(cloudi_core, uuid_v1_variant,
+                                  ?UUID_V1_VARIANT_DEFAULT),
     {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     cloudi_x_uuid:new(self(), [{timestamp_type, erlang},
-                               {mac_address, MacAddress}]).
+                               {mac_address, MacAddress},
+                               {variant, Variant}]).
 
 services_add_service(NextServices, Timeout) ->
     services_add_service(NextServices, [], Timeout).

@@ -80,10 +80,11 @@ stop_link(Process) ->
     ok.
 
 -spec died(Process :: process()) ->
-    list(pid()).
+    {list(pid()), list(nonempty_list({pid(), {exit, any()}}))}.
 
 died(Process) ->
-    monitors_flush(gen_server:call(Process, died)).
+    Pids = gen_server:call(Process, died),
+    {Pids, monitors_flush([])}.
 
 -spec add(Process :: process(),
           Pid :: pid()) ->
@@ -160,33 +161,26 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-monitors_send({'DOWN', _MonitorRef, process, Pid, Info}, DOWNS,
+monitors_send({'DOWN', _MonitorRef, process, Pid, Info}, PidReasons,
               #state{parent = Parent,
                      monitors = Monitors} = State) ->
-    NewDOWNS = [{Pid, {exit, Info}} | DOWNS],
-    NewState = State#state{monitors = maps:remove(Pid, Monitors)},
+    PidReasonsNew = [{Pid, {exit, Info}} | PidReasons],
+    StateNew = State#state{monitors = maps:remove(Pid, Monitors)},
     receive
         {'DOWN', _, process, _, _} = DOWN ->
-            monitors_send(DOWN, NewDOWNS, NewState)
+            monitors_send(DOWN, PidReasonsNew, StateNew)
     after
-        ?MONITORS_ACCUMULATE_DELAY ->
-            Parent ! {'DOWNS', NewDOWNS},
-            NewState
+        ?MONITORS_SEND_DELAY ->
+            Parent ! {'DOWNS', PidReasonsNew},
+            StateNew
     end.
 
-monitors_flush(Pids) ->
-    % The death of processes on other nodes may be consumed here,
-    % to get handled with the death of a single node.  That results
-    % in the loss of the remote pid's exit reason
-    % (only impacts the callback usage).  This is best to keep the
-    % message queue burden of the cpg scope process as small as possible.
+monitors_flush(PidReasonsL) ->
     receive
         {'DOWNS', PidReasons} ->
-            monitors_flush(lists:foldl(fun({Pid, _}, NewPids) ->
-                [Pid | NewPids]
-            end, Pids, PidReasons))
+            monitors_flush([PidReasons | PidReasonsL])
     after
-        0 ->
-            Pids
+        ?MONITORS_FLUSH_DELAY ->
+            lists:reverse(PidReasonsL)
     end.
 

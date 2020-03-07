@@ -19,8 +19,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit 118a0e5349beabf9c1ee42fe57e92a7658f3fb9b (v1.8.0)`
-- `Fri Nov 29 04:40:49 UTC 2019`
+- `commit 0d2245aa67e49573b4e199716cab9bfcc5ef0e3e`
+- `Sat Mar  7 23:13:17 UTC 2020`
 - `MIT`
 
 `erlang_term`
@@ -73,8 +73,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit 0637ae730be8df752051b728bde7d9ece5cfeda7 (v1.8.0)`
-- `Fri Nov 29 04:40:49 UTC 2019`
+- `commit 6df30d122ea37785ce131959c902ee57bf272b09`
+- `Sat Mar  7 23:13:17 UTC 2020`
 - `MIT`
 
 `supool`
@@ -109,8 +109,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
-- `commit 115c1a437d570c8e952e96a04d345f85194e44fc (v1.8.0)`
-- `Fri Nov 29 04:40:49 UTC 2019`
+- `commit ad4a66183c718e9cd27c54ec1de7a2502df2eb89`
+- `Sat Mar  7 23:13:17 UTC 2020`
 - `MIT`
 
 `varpool`

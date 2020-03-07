@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -285,12 +285,15 @@ new(Options)
     Receiver = self(),
     UUID = if
         OldUUID =:= undefined ->
+            Variant = application:get_env(cloudi_core, uuid_v1_variant,
+                                          ?UUID_V1_VARIANT_DEFAULT),
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
             {ok, TimestampType} = application:get_env(cloudi_core,
                                                       timestamp_type),
             cloudi_x_uuid:new(Receiver,
                               [{timestamp_type, TimestampType},
-                               {mac_address, MacAddress}]);
+                               {mac_address, MacAddress},
+                               {variant, Variant}]);
         true ->
             OldUUID
     end,

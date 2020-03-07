@@ -21,7 +21,7 @@ The cpg interface is compatible with pg2
 * cpg data lookups are done based on the Erlang process being local or remote, or the relative age of the local membership to the group, or with random selection (using the terminology `closest`, `furthest`, `random`, `local`, `remote`, `oldest`, `newest`).  `closest` prefers local processes if they are present while `furthest` prefers remote processes if they are present.  The `oldest` process in a group is naturally the most stable process.
 * cpg provides an interface for `via` process registry use (examples are provided in the [tests](https://github.com/okeuday/cpg/blob/master/test/cpg_tests.erl)).
 
-### pg (>= Erlang/OTP 23)
+### pg (>= Erlang/OTP 23) (https://github.com/max-au/spg)
 
 * pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies and may never remove remote group members).
 * pg uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
@@ -31,7 +31,7 @@ The cpg interface is compatible with pg2
 * pg2 uses global:trans/2 which is unable to handle network or node failures.
 * pg2 uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
 
-### gproc / syn
+### [gproc](https://github.com/uwiger/gproc/) / [syn](https://github.com/ostinelli/syn)
 
 * Both are focused on consistency with leader election and are unable to be available when suffering network or node failures.  Failures can cause unpredictable conflict resolution, in an attempt to achieve consistency.
 

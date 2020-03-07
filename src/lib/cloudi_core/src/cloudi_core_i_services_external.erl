@@ -332,12 +332,15 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
             WordSize = erlang:system_info(wordsize),
             ConfigOptionsNew =
                 check_init_receive(check_init_send(ConfigOptions)),
+            Variant = application:get_env(cloudi_core, uuid_v1_variant,
+                                          ?UUID_V1_VARIANT_DEFAULT),
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
             {ok, TimestampType} = application:get_env(cloudi_core,
                                                       timestamp_type),
             UUID = cloudi_x_uuid:new(Dispatcher,
                                      [{timestamp_type, TimestampType},
-                                      {mac_address, MacAddress}]),
+                                      {mac_address, MacAddress},
+                                      {variant, Variant}]),
             Groups = destination_refresh_groups(DestRefresh, undefined),
             #config_service_options{
                 dest_refresh_start = Delay,
@@ -892,7 +895,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                               State),
                     keep_state_and_data
             end;
-        <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> -> % v1 UUID
+        <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, _:2, _:62>> -> % v1 UUID
             case maps:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,

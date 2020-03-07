@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
+%%% @copyright 2011-2020 Michael Truog
 %%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -328,10 +328,13 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
         true ->
             Dispatcher
     end,
+    Variant = application:get_env(cloudi_core, uuid_v1_variant,
+                                  ?UUID_V1_VARIANT_DEFAULT),
     {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     {ok, TimestampType} = application:get_env(cloudi_core, timestamp_type),
     UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, TimestampType},
-                                          {mac_address, MacAddress}]),
+                                          {mac_address, MacAddress},
+                                          {variant, Variant}]),
     Groups = destination_refresh_groups(DestRefresh, undefined),
     State = #state{dispatcher = Dispatcher,
                    queued_word_size = WordSize,

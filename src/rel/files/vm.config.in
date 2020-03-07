@@ -57,6 +57,7 @@
     {scope, []}
   ]},
  {cloudi_core, [
+    {uuid_v1_variant, @CLOUDI_UUID_V1_VARIANT@},
     {monkey_latency, false},
     {monkey_chaos, false},
     {configuration, "@cloudi_confdir@/cloudi.conf"}

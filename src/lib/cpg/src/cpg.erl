@@ -4,8 +4,6 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Process Groups (CPG)==
-%%% Based on the pg2 module in the Erlang OTP kernel application
-%%% (lib/kernel-x.x.x/src/pg2.erl).
 %%% cpg relies on distributed Erlang for node communication, which means
 %%% a fully connected network topology is created.  With Distributed Erlang,
 %%% Erlang pids either exist on the local node or a remote node
@@ -13,24 +11,25 @@
 %%%  so only 1 node hop is necessary in the worst case).
 %%% @end
 %%%
-%%% The pg2 module copyright is below:
-%%% %CopyrightBegin%
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
-%%% Copyright Ericsson AB 1997-2013. All Rights Reserved.
+%%% Permission is hereby granted, free of charge, to any person obtaining a
+%%% copy of this software and associated documentation files (the "Software"),
+%%% to deal in the Software without restriction, including without limitation
+%%% the rights to use, copy, modify, merge, publish, distribute, sublicense,
+%%% and/or sell copies of the Software, and to permit persons to whom the
+%%% Software is furnished to do so, subject to the following conditions:
 %%%
-%%% Licensed under the Apache License, Version 2.0 (the "License");
-%%% you may not use this file except in compliance with the License.
-%%% You may obtain a copy of the License at
+%%% The above copyright notice and this permission notice shall be included in
+%%% all copies or substantial portions of the Software.
 %%%
-%%%     http://www.apache.org/licenses/LICENSE-2.0
-%%%
-%%% Unless required by applicable law or agreed to in writing, software
-%%% distributed under the License is distributed on an "AS IS" BASIS,
-%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-%%% See the License for the specific language governing permissions and
-%%% limitations under the License.
-%%%
-%%% %CopyrightEnd%
+%%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+%%% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+%%% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+%%% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+%%% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+%%% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+%%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
@@ -176,8 +175,7 @@
                     {name(), pos_integer()} |
                     name(). % for OTP behaviors
 -type reason_join() :: join_local |
-                       join_remote |
-                       {exit, any()}.
+                       join_remote.
 -type reason_leave() :: leave_local |
                         leave_remote |
                         {exit, any()}.
@@ -2666,20 +2664,9 @@ remove_leave_callback(Scope, GroupName, F)
 
 init([Scope]) ->
     Listen = cpg_app:listen_type(),
-    monitor_nodes(true, Listen),
-    Nodes = if
-        Listen =:= visible ->
-            nodes();
-        Listen =:= all ->
-            nodes(connected)
-    end,
-    lists:foreach(fun(Node) ->
-        {Scope, Node} ! {new, node()}
-        % data is not persistent in ets, so trust the
-        % Groups coming from other nodes if this server
-        % has restarted and wants previous state
-    end, Nodes),
-    quickrand:seed(),
+    ok = monitor_nodes(true, Listen),
+    ok = gather_groups(listen_nodes(Listen), Scope),
+    ok = quickrand:seed(),
     {ok, #state{scope = Scope,
                 groups = cpg_data:get_empty_groups(),
                 listen = Listen}}.
@@ -2711,13 +2698,13 @@ handle_call({leave, Pid} = Request, _,
             #state{monitors = Monitors} = State) ->
     case maps:take(Pid, Monitors) of
         {#state_monitor{monitor = MonitorRef,
-                        names = GroupNameList}, NewMonitors} ->
+                        names = GroupNameList}, MonitorsNew} ->
             true = is_reference(MonitorRef),
             true = erlang:demonitor(MonitorRef, [flush]),
             abcast_hidden_nodes(Request, State),
             {reply, ok,
              leave_all_local(GroupNameList, Pid, leave_local,
-                             State#state{monitors = NewMonitors})};
+                             State#state{monitors = MonitorsNew})};
         error ->
             {reply, error, State}
     end;
@@ -2957,12 +2944,12 @@ handle_cast({leave, Pid},
             #state{monitors = Monitors} = State) ->
     case maps:take(Pid, Monitors) of
         {#state_monitor{monitor = MonitorProcess,
-                        names = GroupNameList}, NewMonitors} ->
+                        names = GroupNameList}, MonitorsNew} ->
             true = is_pid(MonitorProcess),
             ok = cpg_node_monitor:remove(MonitorProcess, Pid),
             {noreply,
              leave_all_remote(GroupNameList, Pid, leave_remote,
-                              State#state{monitors = NewMonitors})};
+                              State#state{monitors = MonitorsNew})};
         error ->
             {noreply, State}
     end;
@@ -3006,36 +2993,31 @@ handle_cast({leave_counts, Counts, Pid},
     end;
 
 handle_cast(reset,
-            #state{listen = OldListen} = State) ->
-    Listen = cpg_app:listen_type(),
-    if
-        Listen /= OldListen ->
-            monitor_nodes(true, Listen),
-            monitor_nodes(false, OldListen);
-        true ->
-            ok
-    end,
-    {noreply, State#state{listen = Listen}};
+            #state{scope = Scope,
+                   listen = ListenOld} = State) ->
+    ListenNew = cpg_app:listen_type(),
+    ok = listen_reset(ListenNew, ListenOld, Scope),
+    {noreply, State#state{listen = ListenNew}};
 
 handle_cast({add_join_callback, GroupName, F},
             #state{callbacks = Callbacks} = State) ->
-    NewCallbacks = cpg_callbacks:add_join(Callbacks, GroupName, F),
-    {noreply, State#state{callbacks = NewCallbacks}};
+    CallbacksNew = cpg_callbacks:add_join(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = CallbacksNew}};
 
 handle_cast({add_leave_callback, GroupName, F},
             #state{callbacks = Callbacks} = State) ->
-    NewCallbacks = cpg_callbacks:add_leave(Callbacks, GroupName, F),
-    {noreply, State#state{callbacks = NewCallbacks}};
+    CallbacksNew = cpg_callbacks:add_leave(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = CallbacksNew}};
 
 handle_cast({remove_join_callback, GroupName, F},
             #state{callbacks = Callbacks} = State) ->
-    NewCallbacks = cpg_callbacks:remove_join(Callbacks, GroupName, F),
-    {noreply, State#state{callbacks = NewCallbacks}};
+    CallbacksNew = cpg_callbacks:remove_join(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = CallbacksNew}};
 
 handle_cast({remove_leave_callback, GroupName, F},
             #state{callbacks = Callbacks} = State) ->
-    NewCallbacks = cpg_callbacks:remove_leave(Callbacks, GroupName, F),
-    {noreply, State#state{callbacks = NewCallbacks}};
+    CallbacksNew = cpg_callbacks:remove_leave(Callbacks, GroupName, F),
+    {noreply, State#state{callbacks = CallbacksNew}};
 
 handle_cast(Request, State) ->
     {stop, lists:flatten(io_lib:format("Unknown cast \"~w\"", [Request])),
@@ -3061,11 +3043,11 @@ handle_info({nodedown, Node, InfoList},
         {ok, Process} ->
             NodeDownReason = {_, _} = lists:keyfind(nodedown_reason, 1,
                                                     InfoList),
-            Pids = cpg_node_monitor:died(Process),
-            NewNodeMonitors = maps:remove(Node, NodeMonitors),
+            {Pids, PidReasonsL} = cpg_node_monitor:died(Process),
+            NodeMonitorsNew = maps:remove(Node, NodeMonitors),
             {noreply,
-             node_died(Pids, {exit, NodeDownReason},
-                       State#state{node_monitors = NewNodeMonitors})};
+             node_died(Pids, {exit, NodeDownReason}, PidReasonsL,
+                       State#state{node_monitors = NodeMonitorsNew})};
         error ->
             {noreply, State}
     end;
@@ -3110,6 +3092,16 @@ code_change(_, State, _) ->
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}, nodedown_reason]).
 
+gather_groups([], _, _) ->
+    ok;
+gather_groups([RemoteNode | RemoteNodes], Node, Scope) ->
+    % request data to merge for current groups state
+    {Scope, RemoteNode} ! {new, Node},
+    gather_groups(RemoteNodes, Node, Scope).
+
+gather_groups(RemoteNodes, Scope) ->
+    gather_groups(RemoteNodes, node(), Scope).
+
 abcast_hidden_nodes(_, #state{listen = visible}) ->
     ok;
 abcast_hidden_nodes(Request, #state{scope = Scope,
@@ -3121,17 +3113,52 @@ abcast_hidden_nodes(Request, #state{scope = Scope,
             gen_server:abcast(HiddenNodes, Scope, Request)
     end.
 
+listen_nodes(visible) ->
+    nodes(visible);
+listen_nodes(all) ->
+    nodes(connected).
+
+listen_reset(Listen, Listen, _) ->
+    ok;
+listen_reset(ListenNew, ListenOld, Scope) ->
+    ok = monitor_nodes(true, ListenNew),
+    HiddenNodesBefore = nodes(hidden),
+    ok = monitor_nodes(false, ListenOld),
+    if
+        ListenNew =:= all ->
+            visible = ListenOld,
+            ok = listen_reset_all(HiddenNodesBefore, Scope);
+        ListenNew =:= visible ->
+            all = ListenOld,
+            HiddenNodesAfter = lists:usort(nodes(hidden) ++ HiddenNodesBefore),
+            ok = listen_reset_visible(HiddenNodesAfter, Scope)
+    end,
+    ok.
+
+listen_reset_all(HiddenNodes, Scope) ->
+    gather_groups(HiddenNodes, Scope).
+
+listen_reset_visible([], _, _) ->
+    ok;
+listen_reset_visible([HiddenNode | HiddenNodes], HiddenNodeInfo, Scope) ->
+    Scope ! {nodedown, HiddenNode, HiddenNodeInfo},
+    listen_reset_visible(HiddenNodes, HiddenNodeInfo, Scope).
+
+listen_reset_visible(HiddenNodes, Scope) ->
+    HiddenNodeInfo = [{nodedown_reason, cpg_reset}, {node_type, hidden}],
+    listen_reset_visible(HiddenNodes, HiddenNodeInfo, Scope).
+
 join_group_local(Count, GroupName, Pid,
-                 #state{groups = {DictI, OldGroupsData},
-                        monitors = OldMonitors,
+                 #state{groups = {DictI, GroupsDataOld},
+                        monitors = MonitorsOld,
                         callbacks = Callbacks} = State) ->
     Reason = join_local,
     cpg_callbacks:notify_join(Callbacks, GroupName, Pid, Reason),
-    GroupData = case DictI:find(GroupName, OldGroupsData) of
+    GroupData = case DictI:find(GroupName, GroupsDataOld) of
         {ok, #cpg_data{local_count = LocalI,
                        local = Local,
-                       history = History} = OldGroupData} ->
-            OldGroupData#cpg_data{local_count = LocalI + Count,
+                       history = History} = GroupDataOld} ->
+            GroupDataOld#cpg_data{local_count = LocalI + Count,
                                   local = prepend(Pid, Count, Local),
                                   history = prepend(Pid, Count, History)};
         error ->
@@ -3140,22 +3167,22 @@ join_group_local(Count, GroupName, Pid,
                       local = PidList,
                       history = PidList}
     end,
-    GroupsData = DictI:store(GroupName, GroupData, OldGroupsData),
+    GroupsData = DictI:store(GroupName, GroupData, GroupsDataOld),
     State#state{groups = {DictI, GroupsData},
-                monitors = monitor_local(Pid, GroupName, OldMonitors)}.
+                monitors = monitor_local(Pid, GroupName, MonitorsOld)}.
 
 join_group_remote(Count, GroupName, Pid,
-                  #state{groups = {DictI, OldGroupsData},
-                         monitors = OldMonitors,
-                         node_monitors = OldNodeMonitors,
+                  #state{groups = {DictI, GroupsDataOld},
+                         monitors = MonitorsOld,
+                         node_monitors = NodeMonitorsOld,
                          callbacks = Callbacks} = State) ->
     Reason = join_remote,
     cpg_callbacks:notify_join(Callbacks, GroupName, Pid, Reason),
-    GroupData = case DictI:find(GroupName, OldGroupsData) of
+    GroupData = case DictI:find(GroupName, GroupsDataOld) of
         {ok, #cpg_data{remote_count = RemoteI,
                        remote = Remote,
-                       history = History} = OldGroupData} ->
-            OldGroupData#cpg_data{remote_count = RemoteI + Count,
+                       history = History} = GroupDataOld} ->
+            GroupDataOld#cpg_data{remote_count = RemoteI + Count,
                                   remote = prepend(Pid, Count, Remote),
                                   history = prepend(Pid, Count, History)};
         error ->
@@ -3164,101 +3191,101 @@ join_group_remote(Count, GroupName, Pid,
                       remote = PidList,
                       history = PidList}
     end,
-    GroupsData = DictI:store(GroupName, GroupData, OldGroupsData),
+    GroupsData = DictI:store(GroupName, GroupData, GroupsDataOld),
     {Monitors,
-     NodeMonitors} = monitor_remote(Pid, GroupName,
-                                    OldMonitors, OldNodeMonitors),
+     NodeMonitors} = monitor_remote(Pid, node(Pid), GroupName,
+                                    MonitorsOld, NodeMonitorsOld),
     State#state{groups = {DictI, GroupsData},
                 monitors = Monitors,
                 node_monitors = NodeMonitors}.
 
 leave_group_local(Count, GroupName, Pid,
-                  #state{groups = {DictI, OldGroupsData},
-                         monitors = OldMonitors,
+                  #state{groups = {DictI, GroupsDataOld},
+                         monitors = MonitorsOld,
                          callbacks = Callbacks} = State) ->
     Reason = leave_local,
-    OldGroupData = DictI:fetch(GroupName, OldGroupsData),
+    GroupDataOld = DictI:fetch(GroupName, GroupsDataOld),
     #cpg_data{local_count = LocalI,
-              local = OldLocal,
-              history = OldHistory} = OldGroupData,
-    {I, Local} = leave_group_pid(Count, OldLocal, Pid),
-    History = leave_group_pid_count(I, OldHistory, Pid),
+              local = LocalOld,
+              history = HistoryOld} = GroupDataOld,
+    {I, Local} = leave_group_pid(Count, LocalOld, Pid),
+    History = leave_group_pid_count(I, HistoryOld, Pid),
     cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, Reason, I),
     {Member,
      GroupsData} = if
         History == [] ->
             {false,
-             DictI:erase(GroupName, OldGroupsData)};
+             DictI:erase(GroupName, GroupsDataOld)};
         true ->
             {lists:member(Pid, Local),
              DictI:store(GroupName,
-                         OldGroupData#cpg_data{local_count = LocalI - I,
+                         GroupDataOld#cpg_data{local_count = LocalI - I,
                                                local = Local,
                                                history = History},
-                         OldGroupsData)}
+                         GroupsDataOld)}
     end,
     Monitors = if
         Member =:= true ->
-            OldMonitors;
+            MonitorsOld;
         Member =:= false ->
-            case maps:get(Pid, OldMonitors) of
+            case maps:get(Pid, MonitorsOld) of
                 #state_monitor{monitor = MonitorRef,
                                names = [GroupName]} ->
                     true = is_reference(MonitorRef),
                     true = erlang:demonitor(MonitorRef, [flush]),
-                    maps:remove(Pid, OldMonitors);
-                #state_monitor{names = OldGroupNameList} = OldStateMonitor ->
-                    GroupNameList = lists:delete(GroupName, OldGroupNameList),
+                    maps:remove(Pid, MonitorsOld);
+                #state_monitor{names = GroupNameListOld} = StateMonitorOld ->
+                    GroupNameList = lists:delete(GroupName, GroupNameListOld),
                     maps:put(Pid,
-                             OldStateMonitor#state_monitor{
+                             StateMonitorOld#state_monitor{
                                  names = GroupNameList},
-                             OldMonitors)
+                             MonitorsOld)
             end
     end,
     State#state{groups = {DictI, GroupsData},
                 monitors = Monitors}.
 
 leave_group_remote(Count, GroupName, Pid,
-                   #state{groups = {DictI, OldGroupsData},
-                          monitors = OldMonitors,
+                   #state{groups = {DictI, GroupsDataOld},
+                          monitors = MonitorsOld,
                           callbacks = Callbacks} = State) ->
     Reason = leave_remote,
-    OldGroupData = DictI:fetch(GroupName, OldGroupsData),
+    GroupDataOld = DictI:fetch(GroupName, GroupsDataOld),
     #cpg_data{remote_count = RemoteI,
-              remote = OldRemote,
-              history = OldHistory} = OldGroupData,
-    {I, Remote} = leave_group_pid(Count, OldRemote, Pid),
-    History = leave_group_pid_count(I, OldHistory, Pid),
+              remote = RemoteOld,
+              history = HistoryOld} = GroupDataOld,
+    {I, Remote} = leave_group_pid(Count, RemoteOld, Pid),
+    History = leave_group_pid_count(I, HistoryOld, Pid),
     cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, Reason, I),
     {Member,
      GroupsData} = if
         History == [] ->
             {false,
-             DictI:erase(GroupName, OldGroupsData)};
+             DictI:erase(GroupName, GroupsDataOld)};
         true ->
             {lists:member(Pid, Remote),
              DictI:store(GroupName,
-                         OldGroupData#cpg_data{remote_count = RemoteI - I,
+                         GroupDataOld#cpg_data{remote_count = RemoteI - I,
                                                remote = Remote,
                                                history = History},
-                         OldGroupsData)}
+                         GroupsDataOld)}
     end,
     Monitors = if
         Member =:= true ->
-            OldMonitors;
+            MonitorsOld;
         Member =:= false ->
-            case maps:get(Pid, OldMonitors) of
+            case maps:get(Pid, MonitorsOld) of
                 #state_monitor{monitor = MonitorProcess,
                                names = [GroupName]} ->
                     true = is_pid(MonitorProcess),
                     ok = cpg_node_monitor:remove(MonitorProcess, Pid),
-                    maps:remove(Pid, OldMonitors);
-                #state_monitor{names = OldGroupNameList} = OldStateMonitor ->
-                    GroupNameList = lists:delete(GroupName, OldGroupNameList),
+                    maps:remove(Pid, MonitorsOld);
+                #state_monitor{names = GroupNameListOld} = StateMonitorOld ->
+                    GroupNameList = lists:delete(GroupName, GroupNameListOld),
                     maps:put(Pid,
-                             OldStateMonitor#state_monitor{
+                             StateMonitorOld#state_monitor{
                                  names = GroupNameList},
-                             OldMonitors)
+                             MonitorsOld)
             end
     end,
     State#state{groups = {DictI, GroupsData},
@@ -3289,24 +3316,24 @@ leave_group_pid_count(Count, Pids, Pid) ->
 leave_all_local([], _, _, State) ->
     State;
 leave_all_local([GroupName | GroupNameList], Pid, Reason,
-                #state{groups = {DictI, OldGroupsData},
+                #state{groups = {DictI, GroupsDataOld},
                        callbacks = Callbacks} = State) ->
-    OldGroupData = DictI:fetch(GroupName, OldGroupsData),
+    GroupDataOld = DictI:fetch(GroupName, GroupsDataOld),
     #cpg_data{local_count = LocalI,
-              local = OldLocal,
-              history = OldHistory} = OldGroupData,
-    {I, Local} = leave_all_pid(OldLocal, Pid),
+              local = LocalOld,
+              history = HistoryOld} = GroupDataOld,
+    {I, Local} = leave_all_pid(LocalOld, Pid),
     cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, Reason, I),
-    History = [P || P <- OldHistory, P /= Pid],
+    History = [P || P <- HistoryOld, P /= Pid],
     GroupsData = if
         History == [] ->
-            DictI:erase(GroupName, OldGroupsData);
+            DictI:erase(GroupName, GroupsDataOld);
         true ->
             DictI:store(GroupName,
-                        OldGroupData#cpg_data{local_count = LocalI - I,
+                        GroupDataOld#cpg_data{local_count = LocalI - I,
                                               local = Local,
                                               history = History},
-                        OldGroupsData)
+                        GroupsDataOld)
     end,
     leave_all_local(GroupNameList, Pid, Reason,
                     State#state{groups = {DictI, GroupsData}}).
@@ -3314,24 +3341,24 @@ leave_all_local([GroupName | GroupNameList], Pid, Reason,
 leave_all_remote([], _, _, State) ->
     State;
 leave_all_remote([GroupName | GroupNameList], Pid, Reason,
-                 #state{groups = {DictI, OldGroupsData},
+                 #state{groups = {DictI, GroupsDataOld},
                         callbacks = Callbacks} = State) ->
-    OldGroupData = DictI:fetch(GroupName, OldGroupsData),
+    GroupDataOld = DictI:fetch(GroupName, GroupsDataOld),
     #cpg_data{remote_count = RemoteI,
-              remote = OldRemote,
-              history = OldHistory} = OldGroupData,
-    {I, Remote} = leave_all_pid(OldRemote, Pid),
+              remote = RemoteOld,
+              history = HistoryOld} = GroupDataOld,
+    {I, Remote} = leave_all_pid(RemoteOld, Pid),
     cpg_callbacks:notify_leave(Callbacks, GroupName, Pid, Reason, I),
-    History = [P || P <- OldHistory, P /= Pid],
+    History = [P || P <- HistoryOld, P /= Pid],
     GroupsData = if
         History == [] ->
-            DictI:erase(GroupName, OldGroupsData);
+            DictI:erase(GroupName, GroupsDataOld);
         true ->
             DictI:store(GroupName,
-                        OldGroupData#cpg_data{remote_count = RemoteI - I,
+                        GroupDataOld#cpg_data{remote_count = RemoteI - I,
                                               remote = Remote,
                                               history = History},
-                        OldGroupsData)
+                        GroupsDataOld)
     end,
     leave_all_remote(GroupNameList, Pid, Reason,
                      State#state{groups = {DictI, GroupsData}}).
@@ -3348,18 +3375,44 @@ leave_all_pid(Pids, Pid) ->
 
 merge_pid_conflict([], GroupData, _, GroupName,
                    DictI, GroupsData, Monitors0, NodeMonitors0,
-                   _, _) ->
+                   _, _, _) ->
     {DictI:store(GroupName, GroupData, GroupsData),
      Monitors0,
      NodeMonitors0};
-merge_pid_conflict([Pid | Pids_X],
-                   #cpg_data{local_count = LocalI,
-                             local = Local,
-                             history = History} = GroupData,
-                   History_X, GroupName,
-                   DictI, GroupsData, Monitors0, NodeMonitors0,
-                   Callbacks, Node)
-    when node(Pid) =:= Node ->
+merge_pid_conflict([Pid | Pids_X], GroupData, History_X, GroupName,
+                   DictI, GroupsData, Monitors, NodeMonitors,
+                   Callbacks, Node, NodesConnected) ->
+    PidNode = node(Pid),
+    if
+        PidNode =:= Node ->
+            merge_pid_conflict_local(Pid, Pids_X,
+                                     GroupData, History_X, GroupName,
+                                     DictI, GroupsData, Monitors, NodeMonitors,
+                                     Callbacks, Node, NodesConnected);
+        true ->
+            case sets:is_element(PidNode, NodesConnected) of
+                true ->
+                    merge_pid_conflict_remote(Pid, PidNode, Pids_X,
+                                              GroupData, History_X, GroupName,
+                                              DictI, GroupsData,
+                                              Monitors, NodeMonitors,
+                                              Callbacks, Node, NodesConnected);
+                false ->
+                    merge_pid_conflict(Pids_X,
+                                       GroupData, History_X, GroupName,
+                                       DictI, GroupsData,
+                                       Monitors, NodeMonitors,
+                                       Callbacks, Node, NodesConnected)
+            end
+    end.
+
+merge_pid_conflict_local(Pid, Pids_X,
+                         #cpg_data{local_count = LocalI,
+                                   local = Local,
+                                   history = History} = GroupData,
+                         History_X, GroupName,
+                         DictI, GroupsData, Monitors, NodeMonitors,
+                         Callbacks, Node, NodesConnected) ->
     % local pid counts must be equal
     I = count(Pid, History_X) - count(Pid, Local),
     if
@@ -3367,43 +3420,44 @@ merge_pid_conflict([Pid | Pids_X],
             % add
             cpg_callbacks:notify_join(Callbacks, GroupName, Pid,
                                       join_local, I),
-            NewLocal = merge_pid_conflict_add(I, Local, Pid),
-            NewHistory = merge_pid_conflict_add(I, History, Pid),
-            MonitorsN = monitor_local(Pid, GroupName, Monitors0),
+            LocalNew = merge_pid_conflict_add(I, Local, Pid),
+            HistoryNew = merge_pid_conflict_add(I, History, Pid),
+            MonitorsNew = monitor_local(Pid, GroupName, Monitors),
             merge_pid_conflict(Pids_X,
                                GroupData#cpg_data{
                                    local_count = LocalI + I,
-                                   local = NewLocal,
-                                   history = NewHistory},
+                                   local = LocalNew,
+                                   history = HistoryNew},
                                History_X, GroupName,
-                               DictI, GroupsData, MonitorsN, NodeMonitors0,
-                               Callbacks, Node);
+                               DictI, GroupsData, MonitorsNew, NodeMonitors,
+                               Callbacks, Node, NodesConnected);
         I < 0 ->
             % remove
             cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
                                        leave_local, I * -1),
-            NewLocal = merge_pid_conflict_remove(I, Local, Pid),
-            NewHistory = merge_pid_conflict_remove(I, History, Pid),
+            LocalNew = merge_pid_conflict_remove(I, Local, Pid),
+            HistoryNew = merge_pid_conflict_remove(I, History, Pid),
             merge_pid_conflict(Pids_X,
                                GroupData#cpg_data{
                                    local_count = LocalI + I,
-                                   local = NewLocal,
-                                   history = NewHistory},
+                                   local = LocalNew,
+                                   history = HistoryNew},
                                History_X, GroupName,
-                               DictI, GroupsData, Monitors0, NodeMonitors0,
-                               Callbacks, Node);
+                               DictI, GroupsData, Monitors, NodeMonitors,
+                               Callbacks, Node, NodesConnected);
         true ->
             merge_pid_conflict(Pids_X, GroupData, History_X, GroupName,
-                               DictI, GroupsData, Monitors0, NodeMonitors0,
-                               Callbacks, Node)
-    end;
-merge_pid_conflict([Pid | Pids_X],
-                   #cpg_data{remote_count = RemoteI,
-                             remote = Remote,
-                             history = History} = GroupData,
-                   History_X, GroupName,
-                   DictI, GroupsData, Monitors0, NodeMonitors0,
-                   Callbacks, Node) ->
+                               DictI, GroupsData, Monitors, NodeMonitors,
+                               Callbacks, Node, NodesConnected)
+    end.
+
+merge_pid_conflict_remote(Pid, PidNode, Pids_X,
+                          #cpg_data{remote_count = RemoteI,
+                                    remote = Remote,
+                                    history = History} = GroupData,
+                          History_X, GroupName,
+                          DictI, GroupsData, Monitors, NodeMonitors,
+                          Callbacks, Node, NodesConnected) ->
     % remote pid counts must be equal
     I = count(Pid, History_X) - count(Pid, Remote),
     if
@@ -3411,37 +3465,37 @@ merge_pid_conflict([Pid | Pids_X],
             % add
             cpg_callbacks:notify_join(Callbacks, GroupName, Pid,
                                       join_remote, I),
-            NewRemote = merge_pid_conflict_add(I, Remote, Pid),
-            NewHistory = merge_pid_conflict_add(I, History, Pid),
-            {MonitorsN,
-             NodeMonitorsN} = monitor_remote(Pid, GroupName,
-                                             Monitors0, NodeMonitors0),
+            RemoteNew = merge_pid_conflict_add(I, Remote, Pid),
+            HistoryNew = merge_pid_conflict_add(I, History, Pid),
+            {MonitorsNew,
+             NodeMonitorsNew} = monitor_remote(Pid, PidNode, GroupName,
+                                               Monitors, NodeMonitors),
             merge_pid_conflict(Pids_X,
                                GroupData#cpg_data{
                                    remote_count = RemoteI + I,
-                                   remote = NewRemote,
-                                   history = NewHistory},
+                                   remote = RemoteNew,
+                                   history = HistoryNew},
                                History_X, GroupName,
-                               DictI, GroupsData, MonitorsN, NodeMonitorsN,
-                               Callbacks, Node);
+                               DictI, GroupsData, MonitorsNew, NodeMonitorsNew,
+                               Callbacks, Node, NodesConnected);
         I < 0 ->
             % remove
             cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
                                        leave_remote, I * -1),
-            NewRemote = merge_pid_conflict_remove(I, Remote, Pid),
-            NewHistory = merge_pid_conflict_remove(I, History, Pid),
+            RemoteNew = merge_pid_conflict_remove(I, Remote, Pid),
+            HistoryNew = merge_pid_conflict_remove(I, History, Pid),
             merge_pid_conflict(Pids_X,
                                GroupData#cpg_data{
                                    remote_count = RemoteI + I,
-                                   remote = NewRemote,
-                                   history = NewHistory},
+                                   remote = RemoteNew,
+                                   history = HistoryNew},
                                History_X, GroupName,
-                               DictI, GroupsData, Monitors0, NodeMonitors0,
-                               Callbacks, Node);
+                               DictI, GroupsData, Monitors, NodeMonitors,
+                               Callbacks, Node, NodesConnected);
         true ->
             merge_pid_conflict(Pids_X, GroupData, History_X, GroupName,
-                               DictI, GroupsData, Monitors0, NodeMonitors0,
-                               Callbacks, Node)
+                               DictI, GroupsData, Monitors, NodeMonitors,
+                               Callbacks, Node, NodesConnected)
     end.
 
 merge_pid_conflict_add(0, Pids, _) ->
@@ -3456,92 +3510,135 @@ merge_pid_conflict_remove(I, [Pid | Pids], Pid) ->
 merge_pid_conflict_remove(I, [P | Pids], Pid) ->
     [P | merge_pid_conflict_remove(I, Pids, Pid)].
 
-merge_pid_new([],
-              #cpg_data{local = Local,
-                        remote = Remote} = GroupData, GroupName,
-              DictI, GroupsData, Monitors0, NodeMonitors0, _, _) ->
-    Monitors2 = lists:foldl(fun(PidLocal, Monitors1) ->
-        monitor_local(PidLocal, GroupName, Monitors1)
-    end, Monitors0, lists:usort(Local)),
-    {MonitorsN,
-     NodeMonitorsN} = lists:foldl(fun(PidRemote, {Monitors3, NodeMonitors1}) ->
-        monitor_remote(PidRemote, GroupName, Monitors3, NodeMonitors1)
-    end, {Monitors2, NodeMonitors0}, lists:usort(Remote)),
-    {DictI:store(GroupName, GroupData, GroupsData),
-     MonitorsN,
-     NodeMonitorsN};
-merge_pid_new([Pid | Pids_X],
-              #cpg_data{% history already set from remote data
-                        local_count = LocalI,
-                        local = Local,
-                        remote_count = RemoteI,
-                        remote = Remote} = GroupData, GroupName,
-              DictI, GroupsData, Monitors, NodeMonitors, Callbacks, Node) ->
-    Reason = if
-        node(Pid) =:= Node ->
-            % could get here if cpg was restarted on the local node
-            join_local;
+merge_pid_new([], _,
+              #cpg_data{history = History} = GroupData, GroupName,
+              DictI, GroupsData, Monitors, NodeMonitors, _, _, _) ->
+    GroupsDataNew = if
+        History == [] ->
+            GroupsData;
         true ->
-            join_remote
+            DictI:store(GroupName, GroupData, GroupsData)
     end,
-    cpg_callbacks:notify_join(Callbacks, GroupName, Pid, Reason),
+    {GroupsDataNew, Monitors, NodeMonitors};
+merge_pid_new([Pid | Pids_X], PidsMonitored,
+              #cpg_data{history = History} = GroupData, GroupName,
+              DictI, GroupsData, Monitors, NodeMonitors,
+              Callbacks, Node, NodesConnected) ->
+    PidNode = node(Pid),
     if
-        Reason =:= join_local ->
-            merge_pid_new(Pids_X,
-                          GroupData#cpg_data{
-                              local_count = LocalI + 1,
-                              local = [Pid | Local]}, GroupName,
-                          DictI, GroupsData, Monitors, NodeMonitors,
-                          Callbacks, Node);
-        Reason =:= join_remote ->
-            merge_pid_new(Pids_X,
-                          GroupData#cpg_data{
-                              remote_count = RemoteI + 1,
-                              remote = [Pid | Remote]}, GroupName,
-                          DictI, GroupsData, Monitors, NodeMonitors,
-                          Callbacks, Node)
+        PidNode =:= Node ->
+            merge_pid_new_local(Pid, Pids_X, PidsMonitored,
+                                GroupData, GroupName,
+                                DictI, GroupsData, Monitors, NodeMonitors,
+                                Callbacks, Node, NodesConnected);
+        true ->
+            case sets:is_element(PidNode, NodesConnected) of
+                true ->
+                    merge_pid_new_remote(Pid, PidNode, Pids_X, PidsMonitored,
+                                         GroupData, GroupName,
+                                         DictI, GroupsData,
+                                         Monitors, NodeMonitors,
+                                         Callbacks, Node, NodesConnected);
+                false ->
+                    HistoryNew = delete_all(Pid, History),
+                    merge_pid_new(delete_all(Pid, Pids_X), PidsMonitored,
+                                  GroupData#cpg_data{history = HistoryNew},
+                                  GroupName,
+                                  DictI, GroupsData,
+                                  Monitors, NodeMonitors,
+                                  Callbacks, Node, NodesConnected)
+            end
     end.
 
-merge_pids([], _, GroupsData, Monitors, NodeMonitors, _, _) ->
+merge_pid_new_local(Pid, Pids_X, PidsMonitored,
+                    #cpg_data{% history already set from remote data
+                              local_count = LocalI,
+                              local = Local} = GroupData, GroupName,
+                    DictI, GroupsData, Monitors, NodeMonitors,
+                    Callbacks, Node, NodesConnected) ->
+    % (could get here if cpg was restarted on the local node)
+    cpg_callbacks:notify_join(Callbacks, GroupName, Pid, join_local),
+    {PidsMonitoredNew,
+     MonitorsNew} = case sets:is_element(Pid, PidsMonitored) of
+        true ->
+            {PidsMonitored, Monitors};
+        false ->
+            {sets:add_element(Pid, PidsMonitored),
+             monitor_local(Pid, GroupName, Monitors)}
+    end,
+    merge_pid_new(Pids_X, PidsMonitoredNew,
+                  GroupData#cpg_data{
+                      local_count = LocalI + 1,
+                      local = [Pid | Local]}, GroupName,
+                  DictI, GroupsData, MonitorsNew, NodeMonitors,
+                  Callbacks, Node, NodesConnected).
+
+merge_pid_new_remote(Pid, PidNode, Pids_X, PidsMonitored,
+                     #cpg_data{% history already set from remote data
+                               remote_count = RemoteI,
+                               remote = Remote} = GroupData, GroupName,
+                     DictI, GroupsData, Monitors, NodeMonitors,
+                     Callbacks, Node, NodesConnected) ->
+    cpg_callbacks:notify_join(Callbacks, GroupName, Pid, join_remote),
+    {PidsMonitoredNew,
+     {MonitorsNew,
+      NodeMonitorsNew}} = case sets:is_element(Pid, PidsMonitored) of
+        true ->
+            {PidsMonitored, {Monitors, NodeMonitors}};
+        false ->
+            {sets:add_element(Pid, PidsMonitored),
+             monitor_remote(Pid, PidNode, GroupName,
+                            Monitors, NodeMonitors)}
+    end,
+    merge_pid_new(Pids_X, PidsMonitoredNew,
+                  GroupData#cpg_data{
+                      remote_count = RemoteI + 1,
+                      remote = [Pid | Remote]}, GroupName,
+                  DictI, GroupsData, MonitorsNew, NodeMonitorsNew,
+                  Callbacks, Node, NodesConnected).
+
+merge_pids([], _, GroupsData, Monitors, NodeMonitors, _, _, _) ->
     {GroupsData,
      Monitors,
      NodeMonitors};
 merge_pids([{GroupName, History_X} | HistoryL_X],
            DictI, GroupsData, Monitors, NodeMonitors,
-           Callbacks, Node) ->
-    {NewGroupsData,
-     NewMonitors,
-     NewNodeMonitors} = case DictI:find(GroupName, GroupsData) of
+           Callbacks, Node, NodesConnected) ->
+    {GroupsDataNew,
+     MonitorsNew,
+     NodeMonitorsNew} = case DictI:find(GroupName, GroupsData) of
         {ok, GroupData} ->
             % merge the external group in
             merge_pid_conflict(lists:usort(History_X),
                                GroupData, History_X, GroupName,
                                DictI, GroupsData, Monitors, NodeMonitors,
-                               Callbacks, Node);
+                               Callbacks, Node, NodesConnected);
         error ->
             % create the new external group as an internal group
-            merge_pid_new(lists:reverse(History_X),
+            merge_pid_new(lists:reverse(History_X), sets:new(),
                           #cpg_data{history = History_X}, GroupName,
                           DictI, GroupsData, Monitors, NodeMonitors,
-                          Callbacks, Node)
+                          Callbacks, Node, NodesConnected)
     end,
     merge_pids(HistoryL_X,
-               DictI, NewGroupsData, NewMonitors, NewNodeMonitors,
-               Callbacks, Node).
+               DictI, GroupsDataNew, MonitorsNew, NodeMonitorsNew,
+               Callbacks, Node, NodesConnected).
 
 merge(HistoryL_X,
       #state{groups = {DictI, GroupsData},
              monitors = Monitors,
              node_monitors = NodeMonitors,
-             callbacks = Callbacks} = State) ->
-    {NewGroupsData,
-     NewMonitors,
-     NewNodeMonitors} = merge_pids(HistoryL_X,
+             callbacks = Callbacks,
+             listen = Listen} = State) ->
+    {GroupsDataNew,
+     MonitorsNew,
+     NodeMonitorsNew} = merge_pids(HistoryL_X,
                                    DictI, GroupsData, Monitors, NodeMonitors,
-                                   Callbacks, node()),
-    State#state{groups = {DictI, NewGroupsData},
-                monitors = NewMonitors,
-                node_monitors = NewNodeMonitors}.
+                                   Callbacks, node(),
+                                   sets:from_list(listen_nodes(Listen))),
+    State#state{groups = {DictI, GroupsDataNew},
+                monitors = MonitorsNew,
+                node_monitors = NodeMonitorsNew}.
 
 merge_start(Node,
             #state{scope = Scope,
@@ -3559,9 +3656,9 @@ merge_start(Node,
 member_died_local(Pid, Reason,
                   #state{monitors = Monitors} = State) ->
     case maps:take(Pid, Monitors) of
-        {#state_monitor{names = GroupNameList}, NewMonitors} ->
+        {#state_monitor{names = GroupNameList}, MonitorsNew} ->
             leave_all_local(GroupNameList, Pid, Reason,
-                            State#state{monitors = NewMonitors});
+                            State#state{monitors = MonitorsNew});
         error ->
             State
     end.
@@ -3571,69 +3668,73 @@ members_died_remote([], State) ->
 members_died_remote([{Pid, Reason} | PidReasons],
                     #state{monitors = Monitors} = State) ->
     case maps:take(Pid, Monitors) of
-        {#state_monitor{names = GroupNameList}, NewMonitors} ->
-            NewState = State#state{monitors = NewMonitors},
+        {#state_monitor{names = GroupNameList}, MonitorsNew} ->
+            StateNew = State#state{monitors = MonitorsNew},
             members_died_remote(PidReasons,
                                 leave_all_remote(GroupNameList,
-                                                 Pid, Reason, NewState));
+                                                 Pid, Reason, StateNew));
         error ->
             members_died_remote(PidReasons, State)
     end.
 
-node_died([], _, State) ->
-    State;
-node_died([Pid | Pids], Reason,
+node_died([], _, PidReasonsL, State) ->
+    node_died_related(PidReasonsL, State);
+node_died([Pid | Pids], Reason, PidReasonsL,
           #state{monitors = Monitors} = State) ->
     case maps:take(Pid, Monitors) of
-        {#state_monitor{names = GroupNameList}, NewMonitors} ->
-            NewState = State#state{monitors = NewMonitors},
-            node_died(Pids, Reason,
+        {#state_monitor{names = GroupNameList}, MonitorsNew} ->
+            StateNew = State#state{monitors = MonitorsNew},
+            node_died(Pids, Reason, PidReasonsL,
                       leave_all_remote(GroupNameList,
-                                       Pid, Reason, NewState));
+                                       Pid, Reason, StateNew));
         error ->
-            node_died(Pids, Reason, State)
+            node_died(Pids, Reason, PidReasonsL, State)
     end.
 
-monitor_local(Pid, GroupName, OldMonitors) ->
-    case maps:find(Pid, OldMonitors) of
-        {ok, #state_monitor{names = OldGroupNameList} = OldStateMonitor} ->
-            GroupNameList = lists:umerge(OldGroupNameList, [GroupName]),
+node_died_related([], State) ->
+    State;
+node_died_related([PidReasons | PidReasonsL], State) ->
+    node_died_related(PidReasonsL, members_died_remote(PidReasons, State)).
+
+monitor_local(Pid, GroupName, MonitorsOld) ->
+    case maps:find(Pid, MonitorsOld) of
+        {ok, #state_monitor{names = GroupNameListOld} = StateMonitorOld} ->
+            GroupNameList = lists:umerge(GroupNameListOld, [GroupName]),
             maps:put(Pid,
-                     OldStateMonitor#state_monitor{names = GroupNameList},
-                     OldMonitors);
+                     StateMonitorOld#state_monitor{names = GroupNameList},
+                     MonitorsOld);
         error ->
             MonitorRef = erlang:monitor(process, Pid),
             maps:put(Pid,
                      #state_monitor{monitor = MonitorRef,
                                     names = [GroupName]},
-                     OldMonitors)
+                     MonitorsOld)
     end.
 
-monitor_remote(Pid, GroupName, OldMonitors, OldNodeMonitors) ->
-    case maps:find(Pid, OldMonitors) of
-        {ok, #state_monitor{names = OldGroupNameList} = OldStateMonitor} ->
-            GroupNameList = lists:umerge(OldGroupNameList, [GroupName]),
+monitor_remote(Pid, PidNode, GroupName, MonitorsOld, NodeMonitorsOld) ->
+    case maps:find(Pid, MonitorsOld) of
+        {ok, #state_monitor{names = GroupNameListOld} = StateMonitorOld} ->
+            GroupNameList = lists:umerge(GroupNameListOld, [GroupName]),
             {maps:put(Pid,
-                      OldStateMonitor#state_monitor{names = GroupNameList},
-                      OldMonitors),
-             OldNodeMonitors};
+                      StateMonitorOld#state_monitor{names = GroupNameList},
+                      MonitorsOld),
+             NodeMonitorsOld};
         error ->
-            Node = node(Pid),
             {MonitorProcess,
-             NextNodeMonitors} = case maps:find(Node, OldNodeMonitors) of
-                {ok, OldMonitorProcess} ->
-                    ok = cpg_node_monitor:add(OldMonitorProcess, Pid),
-                    {OldMonitorProcess, OldNodeMonitors};
+             NodeMonitorsNext} = case maps:find(PidNode, NodeMonitorsOld) of
+                {ok, MonitorProcessOld} ->
+                    ok = cpg_node_monitor:add(MonitorProcessOld, Pid),
+                    {MonitorProcessOld, NodeMonitorsOld};
                 error ->
-                    {ok, NewMonitorProcess} = cpg_node_monitor:start_link(Pid),
-                    {NewMonitorProcess,
-                     maps:put(Node, NewMonitorProcess, OldNodeMonitors)}
+                    {ok, MonitorProcessNew} = cpg_node_monitor:start_link(Pid),
+                    {MonitorProcessNew,
+                     maps:put(PidNode, MonitorProcessNew, NodeMonitorsOld)}
             end,
             {maps:put(Pid,
                       #state_monitor{monitor = MonitorProcess,
                                      names = [GroupName]},
-                      OldMonitors),
-             NextNodeMonitors}
+                      MonitorsOld),
+             NodeMonitorsNext}
     end.
 
 whereis_name_random(1, [Pid]) ->
@@ -3654,6 +3755,13 @@ prepend(_, 0, List) ->
     List;
 prepend(Elem, Count, List) ->
     prepend(Elem, Count - 1, [Elem | List]).
+
+delete_all(_, []) ->
+    [];
+delete_all(Elem, [Elem | T]) ->
+    delete_all(Elem, T);
+delete_all(Elem, [H | T]) ->
+    [H | delete_all(Elem, T)].
 
 -compile({inline, [{random,1}]}).
 

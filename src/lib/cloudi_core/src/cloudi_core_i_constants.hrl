@@ -3,7 +3,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -169,6 +169,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Safe to tune without causing major internal problems                       %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% UUID v1 variant for service ids and transaction ids
+-define(UUID_V1_VARIANT_DEFAULT, rfc4122).
 
 % recv_async null UUID strategy
 -define(RECV_ASYNC_STRATEGY, recv_async_select_oldest).

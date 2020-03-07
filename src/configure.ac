@@ -380,6 +380,30 @@ AC_ARG_WITH([long-test-timeout],
 AC_MSG_RESULT([$CLOUDI_LONG_TEST_TIMEOUT])
 AC_SUBST(CLOUDI_LONG_TEST_TIMEOUT)
 
+AC_MSG_CHECKING([the CloudI UUID v1 variant])
+AC_ARG_WITH([uuid-variant],
+    [AS_HELP_STRING([--with-uuid-variant@<:@=ARG@:>@],
+        [The UUID v1 variant used for service ids and transaction ids
+         can use the format defined in RFC4122 (ARG=rfc4122),
+         or use the future definition variant
+         to get lexicographical ordering among UUIDs
+         (for database locality and performance when UUIDs
+          are used as primary keys, ARG=ordered)
+         @<:@ARG=rfc4122@:>@ ])],
+    [
+    if test "x$withval" = "xrfc4122"; then
+        CLOUDI_UUID_V1_VARIANT="rfc4122"
+    elif test "x$withval" = "xordered"; then
+        CLOUDI_UUID_V1_VARIANT="ordered"
+    else
+        AC_MSG_ERROR([--with-uuid-variant needs rfc4122 or ordered,
+                      not $withval])
+    fi
+    ],
+    [CLOUDI_UUID_V1_VARIANT="rfc4122"])
+AC_MSG_RESULT([$CLOUDI_UUID_V1_VARIANT])
+AC_SUBST(CLOUDI_UUID_V1_VARIANT)
+
 # C requirements
 # setrlimit resource values:
 # IEEE Std 1003.1-2008 (“POSIX.1”)

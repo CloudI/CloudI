@@ -8,5 +8,8 @@
 
 % how long to wait for remote pid monitor deaths before sending a list of them
 % (within cpg_node_monitor)
--define(MONITORS_ACCUMULATE_DELAY, 0). % milliseconds
+-define(MONITORS_SEND_DELAY, 0). % milliseconds
+
+% how long to wait for flushing accumulated monitor data from cpg_node_monitor
+-define(MONITORS_FLUSH_DELAY, 0). % milliseconds
 

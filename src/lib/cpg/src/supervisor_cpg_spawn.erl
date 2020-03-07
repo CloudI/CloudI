@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supervisor_cpg_spawn).
@@ -205,11 +205,11 @@ handle_cast({restart_nomad_child,
     NomadChildSpec = {Id, StartFunc, temporary, Shutdown, Type, Modules},
     case supervisor:start_child(ChildSup, NomadChildSpec) of
         {ok, NomadChild} ->
-            NewNomadState = NomadState#state_nomad{pid = NomadChild},
+            NomadStateNew = NomadState#state_nomad{pid = NomadChild},
             MonitorRef = erlang:monitor(process, NomadChild),
             {noreply,
              State#state{nomads = dict:store(MonitorRef,
-                                             NewNomadState,
+                                             NomadStateNew,
                                              Nomads)}};
         {error, Reason} ->
             report_error(start_error, Reason,
@@ -333,19 +333,19 @@ nomad_restart(_Reason,
                            max_r = MaxR,
                            max_t = MaxT} = NomadState) ->
     Now = timestamp(),
-    NewRestarts = lists:dropwhile(fun(T) ->
+    RestartsNew = lists:dropwhile(fun(T) ->
         timer:now_diff(Now, T) / 1000000 > MaxT
     end, Restarts) ++ [Now],
-    NextSupPid = cpg_random_pid(Name, self()),
+    SupPidNext = cpg_random_pid(Name, self()),
     if
-        erlang:length(NewRestarts) > MaxR ->
+        erlang:length(RestartsNew) > MaxR ->
             report_error(shutdown, reached_max_restart_intensity, NomadState);
-        NextSupPid =:= undefined ->
+        SupPidNext =:= undefined ->
             report_error(restart_error, noproc, NomadState);
         true ->
-            gen_server:cast(NextSupPid,
+            gen_server:cast(SupPidNext,
                 {restart_nomad_child,
-                 NomadState#state_nomad{restarts = NewRestarts}})
+                 NomadState#state_nomad{restarts = RestartsNew}})
     end.
 
 % based on OTP supervisor code
