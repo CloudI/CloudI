@@ -304,7 +304,8 @@
 -type error_reason_nodes_remove() ::
     error_reason_nodes_remove_configuration().
 -type error_reason_nodes_set() ::
-    error_reason_nodes_set_configuration().
+    error_reason_nodes_set_configuration() |
+    cloudi_core_i_configurator:error_reason_nodes_set().
 -type error_reason_logging_set() ::
     error_reason_logging_set_configuration().
 -type error_reason_logging_syslog_set() ::
@@ -450,7 +451,7 @@ load(Data) ->
 -spec acl_add(Value :: list({atom(), cloudi_service_api:acl()}),
               Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_acl_add()}.
+    {error, error_reason_acl_add_configuration()}.
 
 acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
@@ -472,7 +473,7 @@ acl_add(Value, _) ->
 -spec acl_remove(Value :: list(atom()),
                  Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_acl_remove()}.
+    {error, error_reason_acl_remove_configuration()}.
 
 acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
@@ -644,7 +645,7 @@ services_resume(Value, _, _) ->
        cloudi_core_i_configurator:error_reason_service_update()},
       nonempty_list(nonempty_list(cloudi_service_api:service_id()))},
      #config{}} |
-    {error, error_reason_services_update()}.
+    {error, error_reason_services_update_configuration()}.
 
 services_update([_ | _] = Plan,
                 #config{services = Services, acl = ACL} = Config, Timeout) ->
@@ -1227,7 +1228,7 @@ service_options_copy(OptionsKeys,
 -spec nodes_set(Value :: cloudi_service_api:nodes_proplist(),
                 Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_nodes_set()}.
+    {error, error_reason_nodes_set_configuration()}.
 
 nodes_set([_ | _] = Value, #config{} = Config) ->
     case nodes_proplist(Value) of
@@ -1351,7 +1352,7 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
 -spec nodes_add(Value :: list(node()),
                 Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_nodes_add()}.
+    {error, error_reason_nodes_add_configuration()}.
 
 nodes_add([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
@@ -1373,7 +1374,7 @@ nodes_add(Value, _) ->
 -spec nodes_remove(Value :: list(node()),
                    Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_nodes_remove()}.
+    {error, error_reason_nodes_remove_configuration()}.
 
 nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
@@ -1410,7 +1411,7 @@ logging_level_highest([_ | _] = Levels) ->
 -spec logging_set(Value :: cloudi_service_api:logging_proplist(),
                   Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_logging_set()}.
+    {error, error_reason_logging_set_configuration()}.
 
 logging_set([_ | _] = Value, #config{} = Config) ->
     case logging_proplist(Value) of
@@ -1431,7 +1432,7 @@ logging_set([_ | _] = Value, #config{} = Config) ->
                                   undefined,
                          Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_logging_syslog_set()}.
+    {error, error_reason_logging_syslog_set_configuration()}.
 
 logging_syslog_set(Value, #config{logging = OldLogging} = Config)
     when is_list(Value) orelse (Value =:= undefined) ->
@@ -1456,7 +1457,7 @@ logging_syslog_set(Value, #config{logging = OldLogging} = Config)
                                       undefined,
                              Config :: #config{}) ->
     {ok, #config{}} |
-    {error, error_reason_logging_formatters_set()}.
+    {error, error_reason_logging_formatters_set_configuration()}.
 
 logging_formatters_set(Value, #config{logging = OldLogging} = Config)
     when is_list(Value) orelse (Value =:= undefined) ->

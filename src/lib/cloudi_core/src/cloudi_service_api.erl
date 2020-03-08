@@ -802,27 +802,32 @@
 -type node_reconnect_delay_seconds() ::
     period_seconds().
 -export_type([node_reconnect_delay_seconds/0]).
+-type nodes_properties() ::
+    node() |
+    {nodes, list(node())} |
+    {reconnect_start, node_reconnect_delay_seconds()} |
+    {reconnect_delay, node_reconnect_delay_seconds()} |
+    {listen, visible | all} |
+    {connect, visible | hidden} |
+    {timestamp_type, erlang | os | warp} |
+    {discovery,
+     list({ec2, list({address, inet:ip_address()} |
+                     {port, inet:port_number()} |
+                     {ttl, non_neg_integer()})} |
+          {multicast, list({access_key_id, string()} |
+                           {secret_access_key, string()} |
+                           {ec2_host, string()} |
+                           {groups, list(string())} |
+                           {tags, list({string(), string()} |
+                                       string())})})} |
+    {cost, list({node() | default, float()})} |
+    {cost_precision, 0..253} |
+    {log_reconnect, loglevel()}.
 -type nodes_proplist() ::
-    nonempty_list(node() |
-                  {nodes, list(node())} |
-                  {reconnect_start, node_reconnect_delay_seconds()} |
-                  {reconnect_delay, node_reconnect_delay_seconds()} |
-                  {listen, visible | all} |
-                  {connect, visible | hidden} |
-                  {timestamp_type, erlang | os} |
-                  {discovery,
-                   list({ec2, list({address, inet:ip_address()} |
-                                   {port, inet:port_number()} |
-                                   {ttl, non_neg_integer()})} |
-                        {multicast, list({access_key_id, string()} |
-                                         {secret_access_key, string()} |
-                                         {ec2_host, string()} |
-                                         {groups, list(string())} |
-                                         {tags, list({string(), string()} |
-                                                     string())})})} |
-                  {cost, list({node() | default, float()})} |
-                  {cost_precision, 0..253} |
-                  {log_reconnect, loglevel()}).
+    nonempty_list(nodes_properties()).
+-type nodes_set_proplist() ::
+    nonempty_list({set, local | all} |
+                  nodes_properties()).
 -type node_status() ::
     nonempty_list(% local node
                   {uptime, nonempty_string()} |
@@ -850,6 +855,7 @@
                   {availability_month, nonempty_string()} |
                   {availability_year, nonempty_string()}).
 -export_type([nodes_proplist/0,
+              nodes_set_proplist/0,
               node_status/0]).
 
 -type aspect_log_f() ::
@@ -1365,7 +1371,7 @@ services(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nodes_set(L :: nodes_proplist(),
+-spec nodes_set(L :: nodes_set_proplist(),
                 Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,

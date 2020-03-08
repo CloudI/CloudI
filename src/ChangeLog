@@ -7,6 +7,8 @@
       UUID v1 variant from rfc4122 (default) to ordered
     * Improvements for using the CloudI Service API nodes_set
       listen set to all and connect set to hidden
+    * Add CloudI Service API nodes_set options {set, all | local}
+      to control the nodes where the set operation occurs
     * Update cpg
     * Update uuid
 

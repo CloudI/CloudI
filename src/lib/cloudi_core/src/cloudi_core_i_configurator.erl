@@ -123,6 +123,8 @@
      service_external_update_failed, any()}.
 -type error_reason_services_search() ::
     service_scope_invalid.
+-type error_reason_nodes_set() ::
+    {set_invalid, any()}.
 -type error_reason_code_status() ::
     {file, {file:filename(), file:posix() | badarg}}.
 -export_type([error_reason_service_start/0,
@@ -132,6 +134,7 @@
               error_reason_service_resume/0,
               error_reason_service_update/0,
               error_reason_services_search/0,
+              error_reason_nodes_set/0,
               error_reason_code_status/0]).
 
 -record(state,
@@ -524,7 +527,7 @@ handle_call(services, _,
     {reply, {ok, cloudi_core_i_configuration:services(Config)}, State};
 
 handle_call({nodes_set, _, _} = Request, _, State) ->
-    nodes_call(Request, State);
+    nodes_set_call(Request, State);
 
 handle_call(nodes_get, _,
             #state{configuration = Config} = State) ->
@@ -1282,7 +1285,8 @@ nodes_call_remote_result_replies([{_, ok} | Replies], Output) ->
 nodes_call_remote_result_replies([{_, _} = Error | Replies], Output) ->
     nodes_call_remote_result_replies(Replies, [Error | Output]).
 
-nodes_call_remote({_, _, remote}, _) ->
+nodes_call_remote({_, _, CallType}, _)
+    when CallType =:= remote; CallType =:= local_only ->
     ok;
 nodes_call_remote({F, L, local}, Connect) ->
     Nodes = if
@@ -1296,10 +1300,11 @@ nodes_call_remote({F, L, local}, Connect) ->
                               {F, L, remote}, infinity)
     end)).
 
-nodes_call({F, L, _} = Request,
+nodes_call({F, L, CallType} = Request,
            #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:F(L, Config) of
-        {ok, Config} ->
+        {ok, Config}
+            when CallType =:= remote; CallType =:= local_only ->
             {reply, ok, State};
         {ok, #config{nodes = #config_nodes{connect = Connect}} = ConfigNew} ->
             Result = nodes_call_remote(Request, Connect),
@@ -1311,6 +1316,23 @@ nodes_call({F, L, _} = Request,
             end;
         {error, _} = Error ->
             {reply, Error, State}
+    end.
+
+nodes_set_call({nodes_set, _, remote} = Request, State) ->
+    nodes_call(Request, State);
+nodes_set_call({nodes_set, L0, local} = Request, State) ->
+    case lists:keytake(set, 1, L0) of
+        false ->
+            nodes_call(Request, State);
+        {value, {set, Value}, LN} ->
+            if
+                Value =:= all ->
+                    nodes_call({nodes_set, LN, local}, State);
+                Value =:= local ->
+                    nodes_call({nodes_set, LN, local_only}, State);
+                true ->
+                    {error, {set_invalid, Value}}
+            end
     end.
 
 service_terminated_remove([] = Services, _) ->
