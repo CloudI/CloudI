@@ -154,6 +154,7 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
             ok
     end,
     NodesUp = #{Node => {erlang:system_info(start_time), undefined, 0}},
+    ok = connect_nodes(Connect, Nodes),
     discovery_start(Discovery),
     ReconnectInterval = ReconnectDelay * 1000,
     ReconnectTimer = erlang:send_after(ReconnectStart * 1000,
@@ -363,10 +364,7 @@ handle_info(reconnect,
     if
         NodesDead /= [] ->
             ?LOG(LogReconnect, "currently dead nodes ~p", [NodesDead]),
-            pforeach(fun(Node) ->
-                % avoid the possibly long synchronous call here
-                connect_node(Connect, Node)
-            end, NodesDead);
+            ok = connect_nodes(Connect, NodesDead);
         true ->
             ok
     end,
@@ -781,6 +779,13 @@ cpg_scopes_reset() ->
     lists:foreach(fun(Scope) ->
         cloudi_x_cpg:reset(Scope)
     end, cpg_scopes()).
+
+connect_nodes(Connect, Nodes) ->
+    pforeach(fun(Node) ->
+        % avoid the possibly long synchronous call here
+        connect_node(Connect, Node)
+    end, Nodes),
+    ok.
 
 connect_node(visible, Node) ->
     net_kernel:connect_node(Node);

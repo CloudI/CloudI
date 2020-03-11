@@ -475,7 +475,13 @@ updates_gather(false, false,
 
 update_nodes(Nodes,
              #state{connect = Connect} = State) ->
-    ConnectNodes = lists:subtract(Nodes, nodes()),
+    NodesConnected = if
+        Connect =:= visible ->
+            nodes(visible);
+        Connect =:= hidden ->
+            nodes(connected)
+    end,
+    ConnectNodes = lists:subtract(Nodes, NodesConnected),
     pforeach(fun(Node) ->
         % avoid the possibly long synchronous call here
         connect_node(Connect, Node)

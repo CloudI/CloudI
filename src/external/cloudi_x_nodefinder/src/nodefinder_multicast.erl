@@ -36,7 +36,7 @@
 -include("nodefinder_logging.hrl").
 
 -define(MULTICAST_MESSAGE_NAME, "ERLANG/NODEFINDER").
--define(MULTICAST_MESSAGE_PROTOCOL_VERSION, "4").
+-define(MULTICAST_MESSAGE_PROTOCOL_VERSION, "5").
 
 % how much time synchronization error to handle between nodes
 % (need to have ntpd running when using this source code)
@@ -122,15 +122,18 @@ code_change(_OldVsn, State, _Extra) ->
 send_discover(#state{socket_send = SocketSend,
                      address = Address,
                      port = Port,
+                     connect = Connect,
                      node = NodeBin,
                      key_v4 = KeyV4}) ->
     Seconds = seconds_v4(),
     SecondsBin = <<Seconds:64>>,
     Identifier = identifier_v4([SecondsBin, NodeBin], KeyV4),
+    ConnectInteger = connect_to_integer(Connect),
     Message = <<?MULTICAST_MESSAGE_NAME " "
                 ?MULTICAST_MESSAGE_PROTOCOL_VERSION " ",
                 Identifier:32/binary, " ",
                 SecondsBin:8/binary, " ",
+                ConnectInteger:8/unsigned-integer, " ",
                 NodeBin/binary>>,
     case gen_udp:send(SocketSend, Address, Port, Message) of
         ok ->
@@ -143,12 +146,38 @@ send_discover(#state{socket_send = SocketSend,
 
 process_packet(<<?MULTICAST_MESSAGE_NAME " "
                  ?MULTICAST_MESSAGE_PROTOCOL_VERSION " ",
+                 Identifier:32/binary, " ",
+                 SecondsBin:8/binary, " ",
+                 ConnectInteger:8/unsigned-integer, " ",
+                 NodeBin/binary>>, IP,
+               #state{timeout = Timeout,
+                      key_v4 = KeyV4}) ->
+    IdentifierExpected = identifier_v4([SecondsBin, NodeBin], KeyV4),
+    if
+        Identifier /= IdentifierExpected ->
+            ok; % ignored, different cookie
+        true ->
+            <<Seconds:64>> = SecondsBin,
+            Delta = seconds_v4() - Seconds,
+            if
+                Delta >= (-1 * ?MULTICAST_MESSAGE_VALID_SECONDS),
+                Delta < Timeout ->
+                    Node = erlang:binary_to_atom(NodeBin, utf8),
+                    connect_node(integer_to_connect(ConnectInteger), Node);
+                true ->
+                    ?LOG_WARN("expired multicast from ~s (~p)",
+                              [NodeBin, IP])
+            end
+    end,
+    ok;
+process_packet(<<"ERLANG/NODEFINDER 4 ",
                  Identifier:32/binary, " ", 
                  SecondsBin:8/binary, " ",
                  NodeBin/binary>>, IP,
                #state{timeout = Timeout,
                       connect = Connect,
                       key_v4 = KeyV4}) ->
+    % nodefinder 1.8.0 support
     IdentifierExpected = identifier_v4([SecondsBin, NodeBin], KeyV4),
     if
         Identifier /= IdentifierExpected ->
@@ -253,6 +282,16 @@ seconds_v3() ->
 
 seconds_v2() ->
     calendar:datetime_to_gregorian_seconds(calendar:universal_time()).
+
+connect_to_integer(visible) ->
+    1;
+connect_to_integer(hidden) ->
+    2.
+
+integer_to_connect(1) ->
+    visible;
+integer_to_connect(2) ->
+    hidden.
 
 send_socket(Interface, TTL) ->
     SendOpts = [{ip, Interface},

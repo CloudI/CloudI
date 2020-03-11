@@ -3,9 +3,12 @@
 
 2020-03-10 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Always have CloudI attempt connections with nodes in the nodes list
+      upon startup, before node discovery is started
     * Improvements for using the CloudI Service API nodes_set
       listen set to all
     * Update cpg
+    * Update nodefinder
 
 2020-03-07 Michael Truog   <mjtruog at protonmail dot com>
 
