@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -65,6 +65,7 @@
 
 -record(state,
     {
+        node_name :: string(),
         nodes_alive = [] :: list(node()),
         nodes_dead :: list(node()),
         nodes :: list(node()),
@@ -82,6 +83,7 @@
         log_reconnect :: cloudi_service_api:loglevel()
     }).
 
+-define(NODETOOL_SUFFIX, "_script_process").
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
@@ -128,9 +130,12 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                     cost = Cost,
                                     cost_precision = CostPrecision,
                                     log_reconnect = LogReconnect}}]) ->
+    Node = node(),
+    [NodeName, _] = cloudi_string:split("@", erlang:atom_to_list(Node)),
+    false = cloudi_string:findl(?NODETOOL_SUFFIX, NodeName),
     monitor_nodes(true, Listen),
     NodeLoggerNew = if
-        NodeLogger == node(); NodeLogger =:= undefined ->
+        NodeLogger =:= Node; NodeLogger =:= undefined ->
             undefined;
         true ->
             NodeLogger
@@ -148,12 +153,13 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
         true ->
             ok
     end,
-    NodesUp = #{node() => {erlang:system_info(start_time), undefined, 0}},
+    NodesUp = #{Node => {erlang:system_info(start_time), undefined, 0}},
     discovery_start(Discovery),
     ReconnectInterval = ReconnectDelay * 1000,
     ReconnectTimer = erlang:send_after(ReconnectStart * 1000,
                                        self(), reconnect),
-    {ok, #state{nodes_dead = Nodes,
+    {ok, #state{node_name = NodeName,
+                nodes_dead = Nodes,
                 nodes = Nodes,
                 nodes_up = NodesUp,
                 logging_redirect = NodeLoggerNew,
@@ -310,26 +316,42 @@ handle_cast(Request, State) ->
     {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
 
 handle_info({nodeup, Node, InfoList},
-            #state{logging_redirect = NodeLogger} = State) ->
-    if
-        Node == NodeLogger ->
-            cloudi_core_i_logger:redirect_update(NodeLogger);
-        true ->
-            ok
+            #state{node_name = NodeNameLocal,
+                   logging_redirect = NodeLogger} = State) ->
+    Ignore = ignore_node(NodeNameLocal, Node, InfoList),
+    StateNew = if
+        Ignore =:= true ->
+            State;
+        Ignore =:= false ->
+            if
+                Node =:= NodeLogger ->
+                    cloudi_core_i_logger:redirect_update(NodeLogger);
+                true ->
+                    ok
+            end,
+            ?LOG_INFO("nodeup ~p~n ~p", [Node, InfoList]),
+            track_nodeup(Node, State)
     end,
-    ?LOG_INFO("nodeup ~p~n ~p", [Node, InfoList]),
-    {noreply, track_nodeup(Node, State)};
+    {noreply, StateNew};
 
 handle_info({nodedown, Node, InfoList},
-            #state{logging_redirect = NodeLogger} = State) ->
-    if
-        Node == NodeLogger ->
-            cloudi_core_i_logger:redirect_update(undefined);
-        true ->
-            ok
+            #state{node_name = NodeNameLocal,
+                   logging_redirect = NodeLogger} = State) ->
+    Ignore = ignore_node(NodeNameLocal, Node, InfoList),
+    StateNew = if
+        Ignore =:= true ->
+            State;
+        Ignore =:= false ->
+            if
+                Node =:= NodeLogger ->
+                    cloudi_core_i_logger:redirect_update(undefined);
+                true ->
+                    ok
+            end,
+            ?LOG_INFO("nodedown ~p~n ~p", [Node, InfoList]),
+            track_nodedown(Node, State)
     end,
-    ?LOG_INFO("nodedown ~p~n ~p", [Node, InfoList]),
-    {noreply, track_nodedown(Node, State)};
+    {noreply, StateNew};
 
 handle_info(reconnect,
             #state{nodes_dead = NodesDead,
@@ -383,6 +405,15 @@ monitor_nodes_switch(ListenOld, ListenNew) ->
     % may cause duplicate nodeup/nodedown messages to avoid ignoring events
     monitor_nodes(true, ListenNew),
     monitor_nodes(false, ListenOld).
+
+ignore_node(NodeNameLocal, Node, InfoList) ->
+    case lists:keyfind(node_type, 1, InfoList) of
+        {node_type, hidden} ->
+            [NodeName, _] = cloudi_string:split("@", erlang:atom_to_list(Node)),
+            lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName);
+        {node_type, visible} ->
+            false
+    end.
 
 track_nodeup(Node,
              #state{nodes_alive = NodesAlive,

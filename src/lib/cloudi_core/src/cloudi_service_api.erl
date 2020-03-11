@@ -826,7 +826,7 @@
 -type nodes_proplist() ::
     nonempty_list(nodes_properties()).
 -type nodes_set_proplist() ::
-    nonempty_list({set, local | all} |
+    nonempty_list({set, all | local} |
                   nodes_properties()).
 -type node_status() ::
     nonempty_list(% local node

@@ -125,7 +125,7 @@ node_canonical(Node) ->
 
 node_script(Node) ->
     {Name, Host} = node_split(Node),
-    NameUnique = Name ++ unique(),
+    NameUnique = Name ++ "_script_process" ++ unique(),
     if
         Host == [] ->
             erlang:list_to_atom(NameUnique);

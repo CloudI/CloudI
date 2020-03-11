@@ -1961,6 +1961,10 @@ resume_pids(PidList, DurationsSuspend, DurationsUpdate, ServiceId) ->
         {ok, undefined} ->
             {ok, DurationsSuspend};
         {ok, Duration} ->
+            % track the duration of time suspended minus the
+            % duration of time updating (if any updating occurred)
+            % so the processing time can be calculated accurately
+            % based on the running time
             {ok,
              cloudi_core_i_status:
              durations_store_difference([ServiceId], Duration,

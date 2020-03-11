@@ -200,6 +200,7 @@
 
 -record(state,
     {
+        node_name :: string(),
         scope :: scope(), % locally registered process name
         groups :: cpg_data:state(), % GroupName -> #cpg_data{}
         monitors = #{} :: #{pid() := #state_monitor{}},
@@ -214,6 +215,7 @@
            {leave_impl, 4},
            {leave_counts_impl, 4}]}).
 
+-define(NODETOOL_SUFFIX, "_script_process").
 -define(DEFAULT_TIMEOUT, 5000). % from gen_server:call/2
 
 %%%------------------------------------------------------------------------
@@ -2663,11 +2665,13 @@ remove_leave_callback(Scope, GroupName, F)
 %% @end
 
 init([Scope]) ->
+    {NodeName, _} = node_split(node()),
     Listen = cpg_app:listen_type(),
     ok = monitor_nodes(true, Listen),
     ok = gather_groups(listen_nodes(Listen), Scope),
     ok = quickrand:seed(),
-    {ok, #state{scope = Scope,
+    {ok, #state{node_name = NodeName,
+                scope = Scope,
                 groups = cpg_data:get_empty_groups(),
                 listen = Listen}}.
 
@@ -3033,8 +3037,15 @@ handle_info({'DOWN', _MonitorRef, process, Pid, Info}, State) ->
 handle_info({'DOWNS', PidReasons}, State) ->
     {noreply, members_died_remote(PidReasons, State)};
 
-handle_info({nodeup, Node, _}, State) ->
-    ok = merge_start(Node, State),
+handle_info({nodeup, Node, InfoList},
+            #state{node_name = NodeNameLocal} = State) ->
+    Ignore = ignore_node(NodeNameLocal, Node, InfoList),
+    if
+        Ignore =:= true ->
+            ok;
+        Ignore =:= false ->
+            ok = merge_start(Node, State)
+    end,
     {noreply, State};
 
 handle_info({nodedown, Node, InfoList},
@@ -3147,6 +3158,15 @@ listen_reset_visible([HiddenNode | HiddenNodes], HiddenNodeInfo, Scope) ->
 listen_reset_visible(HiddenNodes, Scope) ->
     HiddenNodeInfo = [{nodedown_reason, cpg_reset}, {node_type, hidden}],
     listen_reset_visible(HiddenNodes, HiddenNodeInfo, Scope).
+
+ignore_node(NodeNameLocal, Node, InfoList) ->
+    case lists:keyfind(node_type, 1, InfoList) of
+        {node_type, hidden} ->
+            {NodeName, _} = node_split(Node),
+            lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName);
+        {node_type, visible} ->
+            false
+    end.
 
 join_group_local(Count, GroupName, Pid,
                  #state{groups = {DictI, GroupsDataOld},
@@ -3736,6 +3756,16 @@ monitor_remote(Pid, PidNode, GroupName, MonitorsOld, NodeMonitorsOld) ->
                       MonitorsOld),
              NodeMonitorsNext}
     end.
+
+node_split(Node) when is_atom(Node) ->
+    node_split(erlang:atom_to_list(Node), []).
+
+node_split([], Name) ->
+    {lists:reverse(Name), []};
+node_split([$@ | NodeStr], Name) ->
+    {lists:reverse(Name), NodeStr};
+node_split([C | NodeStr], Name) ->
+    node_split(NodeStr, [C | Name]).
 
 whereis_name_random(1, [Pid]) ->
     Pid;
