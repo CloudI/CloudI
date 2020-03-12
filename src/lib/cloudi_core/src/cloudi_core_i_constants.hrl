@@ -166,6 +166,10 @@
         convert(cloudi_math:ceil(?NANOSECONDS_IN_YEAR), nanosecond, native)).
 -define(AVAILABILITY_ZERO, "0 %").
 
+% suffix added to the node name used by the nodetool script
+% (called by the cloudi script)
+-define(NODETOOL_SUFFIX, "_script_process").
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Safe to tune without causing major internal problems                       %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -124,10 +124,10 @@ send_discover(#state{socket_send = SocketSend,
                      port = Port,
                      connect = Connect,
                      node = NodeBin,
-                     key_v4 = KeyV4}) ->
-    Seconds = seconds_v4(),
+                     key_v4 = KeyV5}) ->
+    Seconds = seconds_v5(),
     SecondsBin = <<Seconds:64>>,
-    Identifier = identifier_v4([SecondsBin, NodeBin], KeyV4),
+    Identifier = identifier_v5([SecondsBin, NodeBin], KeyV5),
     ConnectInteger = connect_to_integer(Connect),
     Message = <<?MULTICAST_MESSAGE_NAME " "
                 ?MULTICAST_MESSAGE_PROTOCOL_VERSION " ",
@@ -151,19 +151,21 @@ process_packet(<<?MULTICAST_MESSAGE_NAME " "
                  ConnectInteger:8/unsigned-integer, " ",
                  NodeBin/binary>>, IP,
                #state{timeout = Timeout,
-                      key_v4 = KeyV4}) ->
-    IdentifierExpected = identifier_v4([SecondsBin, NodeBin], KeyV4),
+                      connect = Connect,
+                      key_v4 = KeyV5}) ->
+    IdentifierExpected = identifier_v5([SecondsBin, NodeBin], KeyV5),
     if
         Identifier /= IdentifierExpected ->
             ok; % ignored, different cookie
         true ->
             <<Seconds:64>> = SecondsBin,
-            Delta = seconds_v4() - Seconds,
+            Delta = seconds_v5() - Seconds,
             if
                 Delta >= (-1 * ?MULTICAST_MESSAGE_VALID_SECONDS),
                 Delta < Timeout ->
                     Node = erlang:binary_to_atom(NodeBin, utf8),
-                    connect_node(integer_to_connect(ConnectInteger), Node);
+                    ConnectRemote = integer_to_connect(ConnectInteger, Connect),
+                    connect_node(ConnectRemote, Node);
                 true ->
                     ?LOG_WARN("expired multicast from ~s (~p)",
                               [NodeBin, IP])
@@ -251,6 +253,9 @@ process_packet(<<"DISCOVERV2 ",
 process_packet(_Packet, _IP, _State) -> 
     ok.
 
+identifier_v5(Message, KeyV5) ->
+    identifier_v4(Message, KeyV5).
+
 identifier_v4(Message, KeyV4) ->
     hmac_sha256(KeyV4, Message).
 
@@ -268,6 +273,9 @@ key_v3() ->
 
 key_v2() ->
     crypto:hash(sha, erlang:term_to_binary(erlang:get_cookie())).
+
+seconds_v5() ->
+    seconds_v3().
 
 seconds_v4() ->
     seconds_v3().
@@ -288,9 +296,9 @@ connect_to_integer(visible) ->
 connect_to_integer(hidden) ->
     2.
 
-integer_to_connect(1) ->
-    visible;
-integer_to_connect(2) ->
+integer_to_connect(1, Connect) ->
+    Connect;
+integer_to_connect(2, _) ->
     hidden.
 
 send_socket(Interface, TTL) ->

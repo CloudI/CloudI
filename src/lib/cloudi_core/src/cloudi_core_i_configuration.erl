@@ -5455,12 +5455,23 @@ validate_aspects_f([{{M, F}} = Entry | AspectsOld], AspectsNew,
 validate_aspects_f([Entry | _], _, _, _) ->
     {error, Entry}.
 
-validate_node(A) ->
-    case lists:member($@, erlang:atom_to_list(A)) of
-        true ->
+validate_node(Node) ->
+    Valid = case cloudi_string:split("@", erlang:atom_to_list(Node)) of
+        [NodeName, _] ->
+            case cloudi_string:findl(?NODETOOL_SUFFIX, NodeName) of
+                false ->
+                    true;
+                _ ->
+                    false
+            end;
+        _ ->
+            false
+    end,
+    if
+        Valid =:= true ->
             ok;
-        false ->
-            {error, {node_invalid, A}}
+        Valid =:= false ->
+            {error, {node_invalid, Node}}
     end.
 
 -type eval_value() :: number() | atom() | list().

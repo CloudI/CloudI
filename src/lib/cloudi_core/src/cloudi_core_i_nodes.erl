@@ -83,7 +83,6 @@
         log_reconnect :: cloudi_service_api:loglevel()
     }).
 
--define(NODETOOL_SUFFIX, "_script_process").
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 

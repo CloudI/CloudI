@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-03-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve CloudI Service API nodes_set validation of nodes
+    * Update nodefinder
+
 2020-03-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Always have CloudI attempt connections with nodes in the nodes list
