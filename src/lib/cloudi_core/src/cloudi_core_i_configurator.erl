@@ -1289,12 +1289,7 @@ nodes_call_remote({_, _, CallType}, _)
     when CallType =:= remote; CallType =:= local_only ->
     ok;
 nodes_call_remote({F, L, local}, Connect) ->
-    Nodes = if
-        Connect =:= visible ->
-            nodes();
-        Connect =:= hidden ->
-            nodes(connected)
-    end,
+    Nodes = cloudi_core_i_nodes:connected(Connect),
     nodes_call_remote_result(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {F, L, remote}, infinity)

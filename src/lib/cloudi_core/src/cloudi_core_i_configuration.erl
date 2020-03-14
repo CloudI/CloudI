@@ -224,7 +224,6 @@
      node_reconnect_start_min |
      node_reconnect_delay_invalid |
      node_reconnect_delay_min |
-     node_listen_invalid |
      node_connect_invalid |
      node_timestamp_type_invalid |
      node_discovery_invalid |
@@ -456,8 +455,8 @@ load(Data) ->
 acl_add([{A, [_ | _]} | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
     case acl_lookup_add(Value, ACL) of
-        {ok, NewACL} ->
-            {ok, Config#config{acl = NewACL}};
+        {ok, ACLNew} ->
+            {ok, Config#config{acl = ACLNew}};
         {error, _} = Error ->
             Error
     end;
@@ -477,8 +476,8 @@ acl_add(Value, _) ->
 
 acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
-    NewACL = lists:foldl(fun(E, D) -> maps:remove(E, D) end, ACL, Value),
-    {ok, Config#config{acl = NewACL}};
+    ACLNew = lists:foldl(fun(E, D) -> maps:remove(E, D) end, ACL, Value),
+    {ok, Config#config{acl = ACLNew}};
 acl_remove(Value, _) ->
     {error, {acl_invalid, Value}}.
 
@@ -516,16 +515,16 @@ services_add([T | _] = Value,
     case services_validate(Value, UUID) of
         {ok, ValidatedServices, IDs} ->
             case services_acl_expand(ValidatedServices, ACL) of
-                {ok, NextServices} ->
-                    case services_add_service(NextServices, Timeout) of
-                        {ok, NewServices} ->
+                {ok, ServicesNext} ->
+                    case services_add_service(ServicesNext, Timeout) of
+                        {ok, ServicesNew} ->
                             {ok, IDs,
                              Config#config{services = Services ++
-                                                      NewServices}};
-                        {error, Reason, NewServices} ->
+                                                      ServicesNew}};
+                        {error, Reason, ServicesNew} ->
                             {error, Reason,
                              Config#config{services = Services ++
-                                                      NewServices}}
+                                                      ServicesNew}}
                     end;
                 {error, Reason} ->
                     {error, Reason, Config}
@@ -552,8 +551,8 @@ services_remove([ID | _] = Value,
                 #config{services = Services} = Config, Timeout)
     when is_binary(ID), byte_size(ID) == 16 ->
     case services_remove_uuid(Value, Services, Timeout) of
-        {ok, NewServices} ->
-            {ok, Config#config{services = NewServices}};
+        {ok, ServicesNew} ->
+            {ok, Config#config{services = ServicesNew}};
         {error, _} = Error ->
             Error
     end;
@@ -650,8 +649,8 @@ services_resume(Value, _, _) ->
 services_update([_ | _] = Plan,
                 #config{services = Services, acl = ACL} = Config, Timeout) ->
     case services_update_plan(Plan, Services, ACL, Timeout) of
-        {ok, Result, NewServices} ->
-            {ok, Result, Config#config{services = NewServices}};
+        {ok, Result, ServicesNew} ->
+            {ok, Result, Config#config{services = ServicesNew}};
         {error, _} = Error ->
             Error
     end;
@@ -1205,19 +1204,19 @@ services_format_options_external(Options) ->
 %%-------------------------------------------------------------------------
 
 -spec service_options_copy(OptionsKeys :: list(atom()),
-                           OldOptions0 :: #config_service_options{},
-                           NewOptions :: #config_service_options{}) ->
+                           Options0Old :: #config_service_options{},
+                           OptionsNew :: #config_service_options{}) ->
     #config_service_options{}.
 
 service_options_copy(OptionsKeys,
-                     #config_service_options{} = OldOptions0,
-                     #config_service_options{} = NewOptions) ->
+                     #config_service_options{} = Options0Old,
+                     #config_service_options{} = OptionsNew) ->
     Fields = [undefined | record_info(fields, config_service_options)],
-    OldOptionsN = lists:foldl(fun(OptionsKey, OldOptions1) ->
+    OptionsNOld = lists:foldl(fun(OptionsKey, Options1Old) ->
         Index = cloudi_lists:index(OptionsKey, Fields),
-        erlang:setelement(Index, OldOptions1, element(Index, NewOptions))
-    end, OldOptions0, OptionsKeys),
-    OldOptionsN.
+        erlang:setelement(Index, Options1Old, element(Index, OptionsNew))
+    end, Options0Old, OptionsKeys),
+    OptionsNOld.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1250,7 +1249,6 @@ nodes_set([_ | _] = Value, #config{} = Config) ->
 nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                                         reconnect_start = ReconnectStart,
                                         reconnect_delay = ReconnectDelay,
-                                        listen = Listen,
                                         connect = Connect,
                                         timestamp_type = TimestampType,
                                         discovery = Discovery,
@@ -1278,27 +1276,21 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
             [{reconnect_delay, ReconnectDelay} | NodesList2]
     end,
     NodesList4 = if
-        Listen == Defaults#config_nodes.listen ->
+        Connect == Defaults#config_nodes.connect ->
             NodesList3;
         true ->
-            [{listen, Listen} | NodesList3]
+            [{connect, Connect} | NodesList3]
     end,
     NodesList5 = if
-        Connect == Defaults#config_nodes.connect ->
+        TimestampType == Defaults#config_nodes.timestamp_type ->
             NodesList4;
         true ->
-            [{connect, Connect} | NodesList4]
-    end,
-    NodesList6 = if
-        TimestampType == Defaults#config_nodes.timestamp_type ->
-            NodesList5;
-        true ->
-            [{timestamp_type, TimestampType} | NodesList5]
+            [{timestamp_type, TimestampType} | NodesList4]
     end,
     undefined = Defaults#config_nodes.discovery,
-    NodesList7 = case Discovery of
+    NodesList6 = case Discovery of
         undefined ->
-            NodesList6;
+            NodesList5;
         #config_nodes_discovery{start_a = [MulticastInterface,
                                            MulticastAddress,
                                            MulticastPort,
@@ -1309,7 +1301,7 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                 [{interface, MulticastInterface},
                  {address, MulticastAddress},
                  {port, MulticastPort},
-                 {ttl, MulticastTTL}]}]} | NodesList6];
+                 {ttl, MulticastTTL}]}]} | NodesList5];
         #config_nodes_discovery{start_a = [EC2AccessKeyId,
                                            EC2SecretAccessKey,
                                            EC2Host, EC2Groups, EC2Tags],
@@ -1321,27 +1313,27 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                  {secret_access_key, EC2SecretAccessKey},
                  {host, EC2Host},
                  {groups, EC2Groups},
-                 {tags, EC2Tags}]}]} | NodesList6]
+                 {tags, EC2Tags}]}]} | NodesList5]
+    end,
+    NodesList7 = if
+        Cost == Defaults#config_nodes.cost ->
+            NodesList6;
+        true ->
+            [{cost, Cost} | NodesList6]
     end,
     NodesList8 = if
-        Cost == Defaults#config_nodes.cost ->
+        CostPrecision == Defaults#config_nodes.cost_precision ->
             NodesList7;
         true ->
-            [{cost, Cost} | NodesList7]
+            [{cost_precision, CostPrecision} | NodesList7]
     end,
     NodesList9 = if
-        CostPrecision == Defaults#config_nodes.cost_precision ->
+        LogReconnect == Defaults#config_nodes.log_reconnect ->
             NodesList8;
         true ->
-            [{cost_precision, CostPrecision} | NodesList8]
+            [{log_reconnect, LogReconnect} | NodesList8]
     end,
-    NodesList10 = if
-        LogReconnect == Defaults#config_nodes.log_reconnect ->
-            NodesList9;
-        true ->
-            [{log_reconnect, LogReconnect} | NodesList9]
-    end,
-    lists:reverse(NodesList10).
+    lists:reverse(NodesList9).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1356,9 +1348,9 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
 
 nodes_add([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
-    case nodes_elements_add(lists:delete(node(), Value), NodesConfig) of
-        {ok, NewNodesConfig} ->
-            {ok, Config#config{nodes = NewNodesConfig}};
+    case nodes_elements_add(Value, NodesConfig) of
+        {ok, NodesConfigNew} ->
+            {ok, Config#config{nodes = NodesConfigNew}};
         {error, _} = Error ->
             Error
     end;
@@ -1379,8 +1371,8 @@ nodes_add(Value, _) ->
 nodes_remove([A | _] = Value, #config{nodes = NodesConfig} = Config)
     when is_atom(A) ->
     case nodes_elements_remove(Value, NodesConfig) of
-        {ok, NewNodesConfig} ->
-            {ok, Config#config{nodes = NewNodesConfig}};
+        {ok, NodesConfigNew} ->
+            {ok, Config#config{nodes = NodesConfigNew}};
         {error, _} = Error ->
             Error
     end;
@@ -1434,13 +1426,13 @@ logging_set([_ | _] = Value, #config{} = Config) ->
     {ok, #config{}} |
     {error, error_reason_logging_syslog_set_configuration()}.
 
-logging_syslog_set(Value, #config{logging = OldLogging} = Config)
+logging_syslog_set(Value, #config{logging = LoggingOld} = Config)
     when is_list(Value) orelse (Value =:= undefined) ->
     case logging_validate_syslog(Value) of
         {ok, SyslogConfig} ->
             {ok,
              Config#config{
-                 logging = OldLogging#config_logging{
+                 logging = LoggingOld#config_logging{
                      syslog = SyslogConfig}}};
         {error, _} = Error ->
             Error
@@ -1459,13 +1451,13 @@ logging_syslog_set(Value, #config{logging = OldLogging} = Config)
     {ok, #config{}} |
     {error, error_reason_logging_formatters_set_configuration()}.
 
-logging_formatters_set(Value, #config{logging = OldLogging} = Config)
+logging_formatters_set(Value, #config{logging = LoggingOld} = Config)
     when is_list(Value) orelse (Value =:= undefined) ->
     case logging_validate_formatters(Value) of
         {ok, FormattersConfig} ->
             {ok,
              Config#config{
-                 logging = OldLogging#config_logging{
+                 logging = LoggingOld#config_logging{
                      formatters = FormattersConfig}}};
         {error, _} = Error ->
             Error
@@ -1722,8 +1714,8 @@ load_verify(Terms) ->
 
 new([], #config{services = Services, acl = ACL} = Config) ->
     case services_acl_expand(Services, ACL) of
-        {ok, NewServices} ->
-            {ok, Config#config{services = NewServices}};
+        {ok, ServicesNew} ->
+            {ok, Config#config{services = ServicesNew}};
         {error, _} = Error ->
             Error
     end;
@@ -1733,8 +1725,8 @@ new([{'services', [T | _] = Value} | Terms],
     #config{uuid_generator = UUID} = Config)
     when is_record(T, internal); is_record(T, external); is_list(T) ->
     case services_validate(Value, UUID) of
-        {ok, NewServices, _IDs} ->
-            new(Terms, Config#config{services = NewServices});
+        {ok, ServicesNew, _IDs} ->
+            new(Terms, Config#config{services = ServicesNew});
         {error, _} = Error ->
             Error
     end;
@@ -1742,8 +1734,8 @@ new([{'acl', []} | Terms], Config) ->
     new(Terms, Config);
 new([{'acl', [_ | _] = Value} | Terms], Config) ->
     case acl_lookup_new(Value) of
-        {ok, NewACL} ->
-            new(Terms, Config#config{acl = NewACL});
+        {ok, ACLNew} ->
+            new(Terms, Config#config{acl = ACLNew});
         {error, _} = Error ->
             Error
     end;
@@ -1779,15 +1771,15 @@ uuid_generator() ->
                                {mac_address, MacAddress},
                                {variant, Variant}]).
 
-services_add_service(NextServices, Timeout) ->
-    services_add_service(NextServices, [], Timeout).
+services_add_service(ServicesNext, Timeout) ->
+    services_add_service(ServicesNext, [], Timeout).
 
 services_add_service([], Added, _) ->
     {ok, lists:reverse(Added)};
 services_add_service([Service | Services], Added, Timeout) ->
     case cloudi_core_i_configurator:service_start(Service, Timeout) of
-        {ok, NewService} ->
-            services_add_service(Services, [NewService | Added], Timeout);
+        {ok, ServiceNew} ->
+            services_add_service(Services, [ServiceNew | Added], Timeout);
         {error, Reason} ->
             {error, Reason, lists:reverse(Added)}
     end.
@@ -1987,8 +1979,8 @@ services_validate([#internal{
         ok ->
             case services_validate_options_internal(Options, CountProcess,
                                                     MaxR, MaxT) of
-                {ok, TimeoutTermValue, NewOptions} ->
-                    {ID, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+                {ok, TimeoutTermValue, OptionsNew} ->
+                    {ID, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
                     services_validate(L,
                                       [#config_service_internal{
                                            prefix = Prefix,
@@ -2005,10 +1997,10 @@ services_validate([#internal{
                                            count_process = CountProcess,
                                            max_r = MaxR,
                                            max_t = MaxT,
-                                           options = NewOptions,
+                                           options = OptionsNew,
                                            uuid = ID} | Output],
                                       [ID | IDs],
-                                      NewUUID);
+                                      UUIDNew);
                 {error, _} = Error ->
                     Error
             end;
@@ -2147,20 +2139,20 @@ services_validate([#external{
                        max_t = MaxT,
                        options = Options} | L],
                   Output, IDs, UUID) ->
-    NewProtocol = if
+    ProtocolNew = if
         Protocol =:= default ->
             local;
         true ->
             Protocol
     end,
-    NewBufferSize = if
+    BufferSizeNew = if
         BufferSize =:= default ->
             if
-                NewProtocol =:= tcp ->
+                ProtocolNew =:= tcp ->
                     ?DEFAULT_BUFFER_SIZE_TCP;
-                NewProtocol =:= udp ->
+                ProtocolNew =:= udp ->
                     ?DEFAULT_BUFFER_SIZE_UDP;
-                NewProtocol =:= local ->
+                ProtocolNew =:= local ->
                     ?DEFAULT_BUFFER_SIZE_LOCAL
             end;
         true ->
@@ -2173,8 +2165,8 @@ services_validate([#external{
         ok ->
             case services_validate_options_external(Options, CountProcess,
                                                     MaxR, MaxT) of
-                {ok, TimeoutTermValue, NewOptions} ->
-                    {ID, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+                {ok, TimeoutTermValue, OptionsNew} ->
+                    {ID, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
                     services_validate(L,
                                       [#config_service_external{
                                            prefix = Prefix,
@@ -2182,8 +2174,8 @@ services_validate([#external{
                                            args = Args,
                                            env = Env,
                                            dest_refresh = DestRefresh,
-                                           protocol = NewProtocol,
-                                           buffer_size = NewBufferSize,
+                                           protocol = ProtocolNew,
+                                           buffer_size = BufferSizeNew,
                                            timeout_init = TimeoutInitValue,
                                            timeout_async = TimeoutAsyncValue,
                                            timeout_sync = TimeoutSyncValue,
@@ -2194,10 +2186,10 @@ services_validate([#external{
                                            count_thread = CountThread,
                                            max_r = MaxR,
                                            max_t = MaxT,
-                                           options = NewOptions,
+                                           options = OptionsNew,
                                            uuid = ID} | Output],
                                       [ID | IDs],
-                                      NewUUID);
+                                      UUIDNew);
                 {error, _} = Error ->
                     Error
             end;
@@ -2371,7 +2363,7 @@ pid_options_format(OptionsList0) ->
                                          MaxT :: cloudi_service_api:seconds() |
                                                  undefined) ->
     {ok,
-     NewTimeoutTerminate ::
+     TimeoutTerminateNew ::
          cloudi_service_api:timeout_terminate_value_milliseconds(),
      #config_service_options{}} |
     {error,
@@ -2700,7 +2692,7 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
          DuoMode, Hibernate, Reload]
         when not ((DuoMode =:= true) andalso
                   (InfoPidUses =/= infinity)) ->
-            NewQueueSize = if
+            QueueSizeNew = if
                 QueueSize =:= undefined ->
                     undefined;
                 is_integer(QueueSize) ->
@@ -2729,34 +2721,34 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                 MaxT,
                 AutomaticLoading) of
                 {ok,
-                 NewRateRequestMax,
-                 NewCountProcessDynamic,
-                 NewTimeoutTerminate,
-                 NewRestartDelay,
-                 NewMonkeyLatency,
-                 NewMonkeyChaos,
-                 NewDispatcherPidOptions,
-                 NewInitPidOptions,
-                 NewRequestPidOptions,
-                 NewInfoPidOptions,
-                 NewHibernate,
-                 NewAspectsInitAfter,
-                 NewAspectsRequestBefore,
-                 NewAspectsRequestAfter,
-                 NewAspectsInfoBefore,
-                 NewAspectsInfoAfter,
-                 NewAspectsTerminateBefore} ->
+                 RateRequestMaxNew,
+                 CountProcessDynamicNew,
+                 TimeoutTerminateNew,
+                 RestartDelayNew,
+                 MonkeyLatencyNew,
+                 MonkeyChaosNew,
+                 DispatcherPidOptionsNew,
+                 InitPidOptionsNew,
+                 RequestPidOptionsNew,
+                 InfoPidOptionsNew,
+                 HibernateNew,
+                 AspectsInitAfterNew,
+                 AspectsRequestBeforeNew,
+                 AspectsRequestAfterNew,
+                 AspectsInfoBeforeNew,
+                 AspectsInfoAfterNew,
+                 AspectsTerminateBeforeNew} ->
                     {ok,
-                     NewTimeoutTerminate,
+                     TimeoutTerminateNew,
                      Options#config_service_options{
                          priority_default =
                              PriorityDefault,
                          queue_limit =
                              QueueLimit,
                          queue_size =
-                             NewQueueSize,
+                             QueueSizeNew,
                          rate_request_max =
-                             NewRateRequestMax,
+                             RateRequestMaxNew,
                          dest_refresh_start =
                              DestRefreshStart,
                          dest_refresh_delay =
@@ -2774,49 +2766,49 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                              ?LIMIT_ASSIGN(ResponseTimeoutImmediateMax,
                                            0, ?TIMEOUT_MAX_ERLANG),
                          count_process_dynamic =
-                             NewCountProcessDynamic,
+                             CountProcessDynamicNew,
                          timeout_terminate =
                              TimeoutTerminate,
                          restart_delay =
-                             NewRestartDelay,
+                             RestartDelayNew,
                          scope =
                              ?SCOPE_ASSIGN(Scope),
                          monkey_latency =
-                             NewMonkeyLatency,
+                             MonkeyLatencyNew,
                          monkey_chaos =
-                             NewMonkeyChaos,
+                             MonkeyChaosNew,
                          automatic_loading =
                              AutomaticLoading,
                          dispatcher_pid_options =
-                             NewDispatcherPidOptions,
+                             DispatcherPidOptionsNew,
                          aspects_init_after =
-                             NewAspectsInitAfter,
+                             AspectsInitAfterNew,
                          aspects_request_before =
-                             NewAspectsRequestBefore,
+                             AspectsRequestBeforeNew,
                          aspects_request_after =
-                             NewAspectsRequestAfter,
+                             AspectsRequestAfterNew,
                          aspects_info_before =
-                             NewAspectsInfoBefore,
+                             AspectsInfoBeforeNew,
                          aspects_info_after =
-                             NewAspectsInfoAfter,
+                             AspectsInfoAfterNew,
                          aspects_terminate_before =
-                             NewAspectsTerminateBefore,
+                             AspectsTerminateBeforeNew,
                          application_name =
                              ApplicationName,
                          init_pid_options =
-                             NewInitPidOptions,
+                             InitPidOptionsNew,
                          request_pid_uses =
                              RequestPidUses,
                          request_pid_options =
-                             NewRequestPidOptions,
+                             RequestPidOptionsNew,
                          info_pid_uses =
                              InfoPidUses,
                          info_pid_options =
-                             NewInfoPidOptions,
+                             InfoPidOptionsNew,
                          duo_mode =
                              DuoMode,
                          hibernate =
-                             NewHibernate,
+                             HibernateNew,
                          reload =
                              Reload}};
                 {error, _} = Error ->
@@ -2863,23 +2855,23 @@ services_validate_options_internal_checks(RateRequestMax,
                                                  MaxR,
                                                  MaxT) of
         {ok,
-         NewRateRequestMax,
-         NewCountProcessDynamic,
-         NewTimeoutTerminate,
-         NewRestartDelay,
-         NewMonkeyLatency,
-         NewMonkeyChaos} ->
+         RateRequestMaxNew,
+         CountProcessDynamicNew,
+         TimeoutTerminateNew,
+         RestartDelayNew,
+         MonkeyLatencyNew,
+         MonkeyChaosNew} ->
             case services_validate_option_pid_options(DispatcherPidOptions,
                                                       InitPidOptions,
                                                       RequestPidOptions,
                                                       InfoPidOptions) of
-                {ok, NewDispatcherPidOptions,
-                     NewInitPidOptions,
-                     NewRequestPidOptions,
-                     NewInfoPidOptions} ->
+                {ok, DispatcherPidOptionsNew,
+                     InitPidOptionsNew,
+                     RequestPidOptionsNew,
+                     InfoPidOptionsNew} ->
                     case cloudi_core_i_rate_based_configuration:
                          hibernate_validate(Hibernate) of
-                        {ok, NewHibernate} ->
+                        {ok, HibernateNew} ->
                             case services_validate_option_aspects_internal(
                                 AspectsInitAfter,
                                 AspectsRequestBefore,
@@ -2889,30 +2881,30 @@ services_validate_options_internal_checks(RateRequestMax,
                                 AspectsTerminateBefore,
                                 AutomaticLoading) of
                                 {ok,
-                                 NewAspectsInitAfter,
-                                 NewAspectsRequestBefore,
-                                 NewAspectsRequestAfter,
-                                 NewAspectsInfoBefore,
-                                 NewAspectsInfoAfter,
-                                 NewAspectsTerminateBefore} ->
+                                 AspectsInitAfterNew,
+                                 AspectsRequestBeforeNew,
+                                 AspectsRequestAfterNew,
+                                 AspectsInfoBeforeNew,
+                                 AspectsInfoAfterNew,
+                                 AspectsTerminateBeforeNew} ->
                                     {ok,
-                                     NewRateRequestMax,
-                                     NewCountProcessDynamic,
-                                     NewTimeoutTerminate,
-                                     NewRestartDelay,
-                                     NewMonkeyLatency,
-                                     NewMonkeyChaos,
-                                     NewDispatcherPidOptions,
-                                     NewInitPidOptions,
-                                     NewRequestPidOptions,
-                                     NewInfoPidOptions,
-                                     NewHibernate,
-                                     NewAspectsInitAfter,
-                                     NewAspectsRequestBefore,
-                                     NewAspectsRequestAfter,
-                                     NewAspectsInfoBefore,
-                                     NewAspectsInfoAfter,
-                                     NewAspectsTerminateBefore};
+                                     RateRequestMaxNew,
+                                     CountProcessDynamicNew,
+                                     TimeoutTerminateNew,
+                                     RestartDelayNew,
+                                     MonkeyLatencyNew,
+                                     MonkeyChaosNew,
+                                     DispatcherPidOptionsNew,
+                                     InitPidOptionsNew,
+                                     RequestPidOptionsNew,
+                                     InfoPidOptionsNew,
+                                     HibernateNew,
+                                     AspectsInitAfterNew,
+                                     AspectsRequestBeforeNew,
+                                     AspectsRequestAfterNew,
+                                     AspectsInfoBeforeNew,
+                                     AspectsInfoAfterNew,
+                                     AspectsTerminateBeforeNew};
                                 {error, _} = Error ->
                                     Error
                             end;
@@ -2935,7 +2927,7 @@ services_validate_options_internal_checks(RateRequestMax,
                                          MaxT :: cloudi_service_api:seconds() |
                                                  undefined) ->
     {ok,
-     NewTimeoutTerminate ::
+     TimeoutTerminateNew ::
          cloudi_service_api:timeout_terminate_value_milliseconds(),
      #config_service_options{}} |
     {error,
@@ -3187,7 +3179,7 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
          AspectsInitAfter, AspectsRequestBefore,
          AspectsRequestAfter, AspectsTerminateBefore,
          Limit, Owner, Nice, CGroup, Chroot, Directory] ->
-            NewQueueSize = if
+            QueueSizeNew = if
                 QueueSize =:= undefined ->
                     undefined;
                 is_integer(QueueSize) ->
@@ -3207,16 +3199,16 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                                                            Owner,
                                                            CGroup) of
                 {ok,
-                 NewRateRequestMax,
-                 NewCountProcessDynamic,
-                 NewTimeoutTerminate,
-                 NewRestartDelay,
-                 NewMonkeyLatency,
-                 NewMonkeyChaos,
-                 NewDispatcherPidOptions,
-                 NewLimit,
-                 NewOwner,
-                 NewCGroup} ->
+                 RateRequestMaxNew,
+                 CountProcessDynamicNew,
+                 TimeoutTerminateNew,
+                 RestartDelayNew,
+                 MonkeyLatencyNew,
+                 MonkeyChaosNew,
+                 DispatcherPidOptionsNew,
+                 LimitNew,
+                 OwnerNew,
+                 CGroupNew} ->
                     case services_validate_option_aspects_external(
                         AspectsInitAfter,
                         AspectsRequestBefore,
@@ -3224,21 +3216,21 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                         AspectsTerminateBefore,
                         AutomaticLoading) of
                         {ok,
-                         NewAspectsInitAfter,
-                         NewAspectsRequestBefore,
-                         NewAspectsRequestAfter,
-                         NewAspectsTerminateBefore} ->
+                         AspectsInitAfterNew,
+                         AspectsRequestBeforeNew,
+                         AspectsRequestAfterNew,
+                         AspectsTerminateBeforeNew} ->
                             {ok,
-                             NewTimeoutTerminate,
+                             TimeoutTerminateNew,
                              Options#config_service_options{
                                  priority_default =
                                      PriorityDefault,
                                  queue_limit =
                                      QueueLimit,
                                  queue_size =
-                                     NewQueueSize,
+                                     QueueSizeNew,
                                  rate_request_max =
-                                     NewRateRequestMax,
+                                     RateRequestMaxNew,
                                  dest_refresh_start =
                                      DestRefreshStart,
                                  dest_refresh_delay =
@@ -3256,37 +3248,37 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                                      ?LIMIT_ASSIGN(ResponseTimeoutImmediateMax,
                                                    0, ?TIMEOUT_MAX_ERLANG),
                                  count_process_dynamic =
-                                     NewCountProcessDynamic,
+                                     CountProcessDynamicNew,
                                  timeout_terminate =
                                      TimeoutTerminate,
                                  restart_delay =
-                                     NewRestartDelay,
+                                     RestartDelayNew,
                                  scope =
                                      ?SCOPE_ASSIGN(Scope),
                                  monkey_latency =
-                                     NewMonkeyLatency,
+                                     MonkeyLatencyNew,
                                  monkey_chaos =
-                                     NewMonkeyChaos,
+                                     MonkeyChaosNew,
                                  automatic_loading =
                                      AutomaticLoading,
                                  dispatcher_pid_options =
-                                     NewDispatcherPidOptions,
+                                     DispatcherPidOptionsNew,
                                  aspects_init_after =
-                                     NewAspectsInitAfter,
+                                     AspectsInitAfterNew,
                                  aspects_request_before =
-                                     NewAspectsRequestBefore,
+                                     AspectsRequestBeforeNew,
                                  aspects_request_after =
-                                     NewAspectsRequestAfter,
+                                     AspectsRequestAfterNew,
                                  aspects_terminate_before =
-                                     NewAspectsTerminateBefore,
+                                     AspectsTerminateBeforeNew,
                                  limit =
-                                     NewLimit,
+                                     LimitNew,
                                  owner =
-                                     NewOwner,
+                                     OwnerNew,
                                  nice =
                                      Nice,
                                  cgroup =
-                                     NewCGroup,
+                                     CGroupNew,
                                  chroot =
                                      Chroot,
                                  directory =
@@ -3325,12 +3317,12 @@ services_validate_options_external_checks(RateRequestMax,
                                                  MaxR,
                                                  MaxT) of
         {ok,
-         NewRateRequestMax,
-         NewCountProcessDynamic,
-         NewTimeoutTerminate,
-         NewRestartDelay,
-         NewMonkeyLatency,
-         NewMonkeyChaos} ->
+         RateRequestMaxNew,
+         CountProcessDynamicNew,
+         TimeoutTerminateNew,
+         RestartDelayNew,
+         MonkeyLatencyNew,
+         MonkeyChaosNew} ->
             case eval([{DispatcherPidOptions,
                         fun services_validate_option_pid_options/1},
                        {Limit,
@@ -3340,21 +3332,21 @@ services_validate_options_external_checks(RateRequestMax,
                        {CGroup,
                         fun cloudi_core_i_os_process:cgroup_validate/1}]) of
                 {ok,
-                 NewDispatcherPidOptions,
-                 NewLimit,
-                 NewOwner,
-                 NewCGroup} ->
+                 DispatcherPidOptionsNew,
+                 LimitNew,
+                 OwnerNew,
+                 CGroupNew} ->
                     {ok,
-                     NewRateRequestMax,
-                     NewCountProcessDynamic,
-                     NewTimeoutTerminate,
-                     NewRestartDelay,
-                     NewMonkeyLatency,
-                     NewMonkeyChaos,
-                     NewDispatcherPidOptions,
-                     NewLimit,
-                     NewOwner,
-                     NewCGroup};
+                     RateRequestMaxNew,
+                     CountProcessDynamicNew,
+                     TimeoutTerminateNew,
+                     RestartDelayNew,
+                     MonkeyLatencyNew,
+                     MonkeyChaosNew,
+                     DispatcherPidOptionsNew,
+                     LimitNew,
+                     OwnerNew,
+                     CGroupNew};
                 {error, _} = Error ->
                     Error
             end;
@@ -4008,14 +4000,14 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
             case services_update_plan_internal(Module, ModuleState,
                                                DestListDeny, DestListAllow,
                                                Options, ID, Services, ACL) of
-                {ok, UpdateModule, IDs, NewModuleState,
-                 NewDestListDeny, NewDestListAllow,
-                 OptionsKeys, NewOptions, ModuleVersion, ReloadStop} ->
-                    NewUpdatePlans =
+                {ok, UpdateModule, IDs, ModuleStateNew,
+                 DestListDenyNew, DestListAllowNew,
+                 OptionsKeys, OptionsNew, ModuleVersion, ReloadStop} ->
+                    UpdatePlansNew =
                         [UpdatePlan#config_service_update{
                              type = internal,
                              module = UpdateModule,
-                             module_state = NewModuleState,
+                             module_state = ModuleStateNew,
                              sync = Sync,
                              modules_load = ModulesLoad,
                              modules_unload = ModulesUnload,
@@ -4025,15 +4017,15 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                              timeout_init = TimeoutInitValue,
                              timeout_async = TimeoutAsyncValue,
                              timeout_sync = TimeoutSyncValue,
-                             dest_list_deny = NewDestListDeny,
-                             dest_list_allow = NewDestListAllow,
+                             dest_list_deny = DestListDenyNew,
+                             dest_list_allow = DestListAllowNew,
                              options_keys = OptionsKeys,
-                             options = NewOptions,
+                             options = OptionsNew,
                              uuids = IDs,
                              module_version_old = ModuleVersion,
                              reload_stop = ReloadStop} |
                          UpdatePlans],
-                    services_update_plan(L, NewUpdatePlans,
+                    services_update_plan(L, UpdatePlansNew,
                                          Services, ACL, Timeout);
                 {error, _} = Error ->
                     Error
@@ -4053,9 +4045,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
             case services_update_plan_external(FilePath, Args, Env,
                                                DestListDeny, DestListAllow,
                                                Options, ID, Services, ACL) of
-                {ok, NewDestListDeny, NewDestListAllow,
-                 OptionsKeys, NewOptions, SpawnOsProcess} ->
-                    NewUpdatePlans =
+                {ok, DestListDenyNew, DestListAllowNew,
+                 OptionsKeys, OptionsNew, SpawnOsProcess} ->
+                    UpdatePlansNew =
                         [UpdatePlan#config_service_update{
                              type = external,
                              file_path = FilePath,
@@ -4070,14 +4062,14 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                              timeout_init = TimeoutInitValue,
                              timeout_async = TimeoutAsyncValue,
                              timeout_sync = TimeoutSyncValue,
-                             dest_list_deny = NewDestListDeny,
-                             dest_list_allow = NewDestListAllow,
+                             dest_list_deny = DestListDenyNew,
+                             dest_list_allow = DestListAllowNew,
                              options_keys = OptionsKeys,
-                             options = NewOptions,
+                             options = OptionsNew,
                              uuids = [ID],
                              spawn_os_process = SpawnOsProcess} |
                          UpdatePlans],
-                    services_update_plan(L, NewUpdatePlans,
+                    services_update_plan(L, UpdatePlansNew,
                                          Services, ACL, Timeout);
                 {error, _} = Error ->
                     Error
@@ -4133,21 +4125,21 @@ services_update_plan_internal(Module, ModuleState,
     if
         UpdateValid =:= true ->
             case services_update_plan_module_state(ModuleState) of
-                {ok, NewModuleState} ->
+                {ok, ModuleStateNew} ->
                     case service_acl_expand_lists(DestListDeny,
                                                   DestListAllow,
                                                   ACL) of
-                        {ok, NewDestListDeny, NewDestListAllow} ->
+                        {ok, DestListDenyNew, DestListAllowNew} ->
                             case services_update_plan_options_internal(Options) of
-                                {ok, NewOptions} ->
+                                {ok, OptionsNew} ->
                                     OptionsKeys = [Key || {Key, _} <- Options],
                                     ModuleVersion =
                                         cloudi_x_reltool_util:
                                         module_version(UpdateModule),
                                     {ok, UpdateModule, UpdateIDs,
-                                     NewModuleState,
-                                     NewDestListDeny, NewDestListAllow,
-                                     OptionsKeys, NewOptions,
+                                     ModuleStateNew,
+                                     DestListDenyNew, DestListAllowNew,
+                                     OptionsKeys, OptionsNew,
                                      ModuleVersion, ReloadStop};
                                 {error, _} = Error ->
                                     Error
@@ -4182,16 +4174,16 @@ services_update_plan_external(FilePath, Args, Env,
             case service_acl_expand_lists(DestListDeny,
                                           DestListAllow,
                                           ACL) of
-                {ok, NewDestListDeny, NewDestListAllow} ->
+                {ok, DestListDenyNew, DestListAllowNew} ->
                     case services_update_plan_options_external(Options) of
-                        {ok, NewOptions} ->
+                        {ok, OptionsNew} ->
                             OptionsKeys = [Key || {Key, _} <- Options],
                             SpawnOsProcess =
                                 not ((FilePath =:= undefined) andalso
                                      (Args =:= undefined) andalso
                                      (Env =:= undefined)),
-                            {ok, NewDestListDeny, NewDestListAllow,
-                             OptionsKeys, NewOptions, SpawnOsProcess};
+                            {ok, DestListDenyNew, DestListAllowNew,
+                             OptionsKeys, OptionsNew, SpawnOsProcess};
                         {error, _} = Error ->
                             Error
                     end;
@@ -4300,11 +4292,11 @@ services_update_all([UpdatePlan | UpdatePlans], ServiceIdLists,
                     Services, Timeout) ->
     case cloudi_core_i_configurator:service_update(UpdatePlan, Timeout) of
         {ok, ServiceIdList} ->
-            NewServices = service_update_done(ServiceIdList,
+            ServicesNew = service_update_done(ServiceIdList,
                                               UpdatePlan,
                                               Services),
             services_update_all(UpdatePlans, [ServiceIdList | ServiceIdLists],
-                                NewServices, Timeout);
+                                ServicesNew, Timeout);
         {error, ServiceIdList, Reason} ->
             Error = {error,
                      {ServiceIdList, Reason},
@@ -4364,7 +4356,7 @@ service_update_done_common(Service0,
                                dest_list_deny = DestListDeny,
                                dest_list_allow = DestListAllow,
                                options_keys = OptionsKeys,
-                               options = NewOptions}) ->
+                               options = OptionsNew}) ->
     Service1 = if
         DestRefresh =:= undefined ->
             Service0;
@@ -4434,18 +4426,18 @@ service_update_done_common(Service0,
     ServiceN = if
         Type =:= internal ->
             #config_service_internal{
-                options = OldOptions} = Service6,
+                options = OptionsOld} = Service6,
             Service6#config_service_internal{
                 options = service_options_copy(OptionsKeys,
-                                               OldOptions,
-                                               NewOptions)};
+                                               OptionsOld,
+                                               OptionsNew)};
         Type =:= external ->
             #config_service_external{
-                options = OldOptions} = Service6,
+                options = OptionsOld} = Service6,
             Service6#config_service_external{
                 options = service_options_copy(OptionsKeys,
-                                               OldOptions,
-                                               NewOptions)}
+                                               OptionsOld,
+                                               OptionsNew)}
     end,
     ServiceN.
 
@@ -4458,8 +4450,8 @@ services_acl_expand([], Output, _) ->
     {ok, lists:reverse(Output)};
 services_acl_expand([Service | Services], Output, ACL) ->
     case service_acl_expand(Service, ACL) of
-        {ok, NewService} ->
-            services_acl_expand(Services, [NewService | Output], ACL);
+        {ok, ServiceNew} ->
+            services_acl_expand(Services, [ServiceNew | Output], ACL);
         {error, _} = Error ->
             Error
     end.
@@ -4470,10 +4462,10 @@ service_acl_expand(#config_service_internal{
                        dest_list_allow = DestListAllow} = Service,
                    ACL) ->
     case service_acl_expand_lists(DestListDeny, DestListAllow, ACL) of
-        {ok, NewDestListDeny, NewDestListAllow} ->
+        {ok, DestListDenyNew, DestListAllowNew} ->
             {ok, Service#config_service_internal{
-                     dest_list_deny = NewDestListDeny,
-                     dest_list_allow = NewDestListAllow}};
+                     dest_list_deny = DestListDenyNew,
+                     dest_list_allow = DestListAllowNew}};
         {error, _} = Error ->
             Error
     ).
@@ -4488,10 +4480,10 @@ service_acl_expand(#config_service_external{
                        dest_list_allow = DestListAllow} = Service,
                    ACL) ->
     case service_acl_expand_lists(DestListDeny, DestListAllow, ACL) of
-        {ok, NewDestListDeny, NewDestListAllow} ->
+        {ok, DestListDenyNew, DestListAllowNew} ->
             {ok, Service#config_service_external{
-                     dest_list_deny = NewDestListDeny,
-                     dest_list_allow = NewDestListAllow}};
+                     dest_list_deny = DestListDenyNew,
+                     dest_list_allow = DestListAllowNew}};
         {error, _} = Error ->
             Error
     end).
@@ -4502,10 +4494,10 @@ service_acl_expand(#config_service_external{
 
 service_acl_expand_lists(DestListDeny, DestListAllow, ACL) ->
     case service_acl_expand_list(DestListDeny, [], ACL) of
-        {ok, NewDestListDeny} ->
+        {ok, DestListDenyNew} ->
             case service_acl_expand_list(DestListAllow, [], ACL) of
-                {ok, NewDestListAllow} ->
-                    {ok, NewDestListDeny, NewDestListAllow};
+                {ok, DestListAllowNew} ->
+                    {ok, DestListDenyNew, DestListAllowNew};
                 {error, _} = Error ->
                     Error
             end;
@@ -4540,10 +4532,10 @@ service_acl_expand_list([E | L], Output, ACL)
 acl_lookup_new(L) ->
     acl_lookup_add(L, #{}).
 
-acl_lookup_add(L, OldACL) ->
-    case acl_store(L, OldACL) of
-        {ok, NewACL} ->
-            acl_update(L, OldACL, NewACL);
+acl_lookup_add(L, ACLOld) ->
+    case acl_store(L, ACLOld) of
+        {ok, ACLNew} ->
+            acl_update(L, ACLOld, ACLNew);
         {error, _} = Error ->
             Error
     end.
@@ -4560,8 +4552,8 @@ acl_update([], ACLFinal, _) ->
     {ok, ACLFinal};
 acl_update([{Key, Value} | L], ACLFinal, ACLConfig) ->
     case acl_update_values(Value, [], [], Key, ACLConfig) of
-        {ok, NewValue} ->
-            acl_update(L, maps:put(Key, NewValue, ACLFinal),
+        {ok, ValueNew} ->
+            acl_update(L, maps:put(Key, ValueNew, ACLFinal),
                        ACLConfig);
         {error, _} = Error ->
             Error
@@ -4581,8 +4573,8 @@ acl_update_values([E | L], Output, Path, Key, ACL)
                 {ok, OtherL} ->
                     case acl_update_values(OtherL, Output,
                                            [E | Path], Key, ACL) of
-                        {ok, NewOutput} ->
-                            acl_update_values(L, NewOutput, Path, Key, ACL);
+                        {ok, OutputNew} ->
+                            acl_update_values(L, OutputNew, Path, Key, ACL);
                         {error, _} = Error ->
                             Error
                     end
@@ -4631,9 +4623,9 @@ nodes_elements_add([A | As], #config_nodes{nodes = Nodes} = NodesConfig)
     when is_atom(A) ->
     case validate_node(A) of
         ok ->
-            NewNodes = lists:umerge(Nodes, [A]),
+            NodesNew = lists:umerge(Nodes, [A]),
             nodes_elements_add(As,
-                               NodesConfig#config_nodes{nodes = NewNodes});
+                               NodesConfig#config_nodes{nodes = NodesNew});
         {error, _} = Error ->
             Error
     end;
@@ -4650,9 +4642,9 @@ nodes_elements_remove([A | As], #config_nodes{nodes = Nodes} = NodesConfig)
     case cloudi_lists:delete_checked(A, Nodes) of
         false ->
             {error, {node_not_found, A}};
-        NewNodes ->
+        NodesNew ->
             nodes_elements_remove(As,
-                                  NodesConfig#config_nodes{nodes = NewNodes})
+                                  NodesConfig#config_nodes{nodes = NodesNew})
     end;
 nodes_elements_remove([A | _], _) ->
     {error, {node_invalid, A}}.
@@ -4829,8 +4821,6 @@ nodes_options(Nodes0, Value) ->
          NodesConfig#config_nodes.reconnect_start},
         {reconnect_delay,
          NodesConfig#config_nodes.reconnect_delay},
-        {listen,
-         NodesConfig#config_nodes.listen},
         {connect,
          NodesConfig#config_nodes.connect},
         {timestamp_type,
@@ -4845,62 +4835,57 @@ nodes_options(Nodes0, Value) ->
          NodesConfig#config_nodes.log_reconnect}],
     ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() + 500) div 1000,
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Nodes1, _, _, _, _, _, _, _, _, _]
+        [Nodes1, _, _, _, _, _, _, _, _]
             when not is_list(Nodes1) ->
             {error, {node_invalid,
                      Nodes1}};
-        [_, ReconnectStart, _, _, _, _, _, _, _, _]
+        [_, ReconnectStart, _, _, _, _, _, _, _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0) andalso
                       (ReconnectStart =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_start_invalid,
                      ReconnectStart}};
-        [_, ReconnectStart, _, _, _, _, _, _, _, _]
+        [_, ReconnectStart, _, _, _, _, _, _, _]
             when not (ReconnectStart >= ConnectTimeSeconds) ->
             {error, {node_reconnect_start_min,
                      ConnectTimeSeconds}};
-        [_, _, ReconnectDelay, _, _, _, _, _, _, _]
+        [_, _, ReconnectDelay, _, _, _, _, _, _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0) andalso
                       (ReconnectDelay =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_delay_invalid,
                      ReconnectDelay}};
-        [_, _, ReconnectDelay, _, _, _, _, _, _, _]
+        [_, _, ReconnectDelay, _, _, _, _, _, _]
             when not (ReconnectDelay >= ConnectTimeSeconds) ->
             {error, {node_reconnect_delay_min,
                      ConnectTimeSeconds}};
-        [_, _, _, Listen, _, _, _, _, _, _]
-            when not ((Listen =:= visible) orelse
-                      (Listen =:= all)) ->
-            {error, {node_listen_invalid,
-                     Listen}};
-        [_, _, _, _, Connect, _, _, _, _, _]
+        [_, _, _, Connect, _, _, _, _, _]
             when not ((Connect =:= visible) orelse
                       (Connect =:= hidden)) ->
             {error, {node_connect_invalid,
                      Connect}};
-        [_, _, _, _, _, TimestampType, _, _, _, _]
+        [_, _, _, _, TimestampType, _, _, _, _]
             when not ((TimestampType =:= erlang) orelse
                       (TimestampType =:= os) orelse
                       (TimestampType =:= warp)) ->
             {error, {node_timestamp_type_invalid,
                      TimestampType}};
-        [_, _, _, _, _, _, Discovery, _, _, _]
+        [_, _, _, _, _, Discovery, _, _, _]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
             {error, {node_discovery_invalid,
                      Discovery}};
-        [_, _, _, _, _, _, _, Cost, _, _]
+        [_, _, _, _, _, _, Cost, _, _]
             when not is_list(Cost) ->
             {error, {node_cost_invalid,
                      Cost}};
-        [_, _, _, _, _, _, _, _, CostPrecision, _]
+        [_, _, _, _, _, _, _, CostPrecision, _]
             when not (is_integer(CostPrecision) andalso
                       (CostPrecision >= 0) andalso
                       (CostPrecision =< 253)) ->
             {error, {node_cost_precision_invalid,
                      CostPrecision}};
-        [_, _, _, _, _, _, _, _, _, LogReconnect]
+        [_, _, _, _, _, _, _, _, LogReconnect]
             when not ((LogReconnect =:= fatal) orelse
                       (LogReconnect =:= error) orelse
                       (LogReconnect =:= warn) orelse
@@ -4911,9 +4896,15 @@ nodes_options(Nodes0, Value) ->
             {error, {node_log_reconnect_invalid,
                      LogReconnect}};
         [Nodes1, ReconnectStart, ReconnectDelay,
-         Listen, Connect, TimestampType, Discovery, Cost, CostPrecision,
+         Connect, TimestampType, Discovery, Cost, CostPrecision,
          LogReconnect] ->
-            accum([{lists:delete(node(), Nodes1),
+            Listen = if
+                Connect =:= visible ->
+                    visible;
+                Connect =:= hidden ->
+                    all
+            end,
+            accum([{Nodes1,
                     fun nodes_elements_add/2},
                    {Discovery,
                     fun nodes_discovery_options/2},
@@ -4928,7 +4919,7 @@ nodes_options(Nodes0, Value) ->
                       timestamp_type = TimestampType,
                       cost_precision = CostPrecision,
                       log_reconnect = LogReconnect});
-        [_, _, _, _, _, _, _, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {node_invalid, Extra}}
     end.
 
@@ -4993,13 +4984,13 @@ logging_proplist(Value) ->
                      LogTimeOffset}};
         [Level, File, Stdout, Redirect, Syslog, Formatters,
          LogTimeOffset, AspectsLogBefore, AspectsLogAfter] ->
-            NewFile = if
+            FileNew = if
                 Level =:= undefined ->
                     undefined;
                 true ->
                     File
             end,
-            NewLevel = if
+            LevelNew = if
                 File =:= undefined ->
                     undefined;
                 true ->
@@ -5008,18 +4999,18 @@ logging_proplist(Value) ->
             case logging_validate(Redirect, Syslog, Formatters,
                                   AspectsLogBefore, AspectsLogAfter) of
                 {ok, Redirect, SyslogConfig, FormattersConfig,
-                     NewAspectsLogBefore, NewAspectsLogAfter} ->
-                    NewLogging = Logging#config_logging{
-                                     level = NewLevel,
-                                     file = NewFile,
+                     AspectsLogBeforeNew, AspectsLogAfterNew} ->
+                    LoggingNew = Logging#config_logging{
+                                     level = LevelNew,
+                                     file = FileNew,
                                      stdout = Stdout,
                                      redirect = Redirect,
                                      syslog = SyslogConfig,
                                      formatters = FormattersConfig,
                                      log_time_offset = LogTimeOffset,
-                                     aspects_log_before = NewAspectsLogBefore,
-                                     aspects_log_after = NewAspectsLogAfter},
-                    {ok, NewLogging};
+                                     aspects_log_before = AspectsLogBeforeNew,
+                                     aspects_log_after = AspectsLogAfterNew},
+                    {ok, LoggingNew};
                 {error, _} = Error ->
                     Error
             end;
@@ -5168,13 +5159,13 @@ logging_validate_formatters([{any, Options} | L], Levels,
     case logging_validate_formatter(any, Options) of
         {ok, #config_logging_formatter{level = Level,
                                        output = Output} = Formatter} ->
-            NewLevels = if
+            LevelsNew = if
                 Output =:= undefined ->
                     Levels;
                 true ->
                     [Level | Levels]
             end,
-            logging_validate_formatters(L, NewLevels,
+            logging_validate_formatters(L, LevelsNew,
                 FormattersConfig#config_logging_formatters{
                     default = Formatter});
         {error, _} = Error ->
@@ -5190,17 +5181,17 @@ logging_validate_formatters([{[_ | _] = Modules, Options} | L], Levels,
             case logging_validate_formatter(Modules, Options) of
                 {ok, #config_logging_formatter{level = Level,
                                                output = Output} = Formatter} ->
-                    NewLookup = cloudi_x_keys1value:
+                    LookupNew = cloudi_x_keys1value:
                                 store(Modules, Formatter, Lookup),
-                    NewLevels = if
+                    LevelsNew = if
                         Output =:= undefined ->
                             Levels;
                         true ->
                             [Level | Levels]
                     end,
-                    logging_validate_formatters(L, NewLevels,
+                    logging_validate_formatters(L, LevelsNew,
                         FormattersConfig#config_logging_formatters{
-                            lookup = NewLookup});
+                            lookup = LookupNew});
                 {error, _} = Error ->
                     Error
             end;
@@ -5243,7 +5234,7 @@ logging_formatter_level(Invalid) ->
     {error, {logging_formatter_level_invalid, Invalid}}.
 
 logging_validate_formatter(Key, Value) ->
-    NewValue = lists:map(fun(A) ->
+    ValueNew = lists:map(fun(A) ->
         % handle lager logging level atoms in the proplist
         if
             is_atom(A) ->
@@ -5268,7 +5259,7 @@ logging_validate_formatter(Key, Value) ->
          FormatterConfig#config_logging_formatter.formatter},
         {formatter_config,
          FormatterConfig#config_logging_formatter.formatter_config}],
-    case cloudi_proplists:take_values(Defaults, NewValue) of
+    case cloudi_proplists:take_values(Defaults, ValueNew) of
         [Level, _, _, _, _, _, _ ]
             when not is_atom(Level) ->
             {error, {logging_formatter_level_invalid,
@@ -5302,25 +5293,25 @@ logging_validate_formatter(Key, Value) ->
         [Level, Output, OutputArgs, OutputMaxR, OutputMaxT,
          Formatter, Config] ->
             case logging_formatter_level(Level) of
-                {ok, NewLevel} ->
-                    NewOutputArgs = if
+                {ok, LevelNew} ->
+                    OutputArgsNew = if
                         Output =:= undefined ->
                             OutputArgs;
                         true ->
                             LagerLevel = if
-                                NewLevel =:= fatal ->
+                                LevelNew =:= fatal ->
                                     emergency;
-                                NewLevel =:= error ->
+                                LevelNew =:= error ->
                                     error;
-                                NewLevel =:= warn ->
+                                LevelNew =:= warn ->
                                     warning;
-                                NewLevel =:= info ->
+                                LevelNew =:= info ->
                                     info;
-                                NewLevel =:= debug ->
+                                LevelNew =:= debug ->
                                     debug;
-                                NewLevel =:= trace ->
+                                LevelNew =:= trace ->
                                     debug;
-                                NewLevel =:= off ->
+                                LevelNew =:= off ->
                                     none
                             end,
                             [{level, LagerLevel} | OutputArgs]
@@ -5330,17 +5321,17 @@ logging_validate_formatter(Key, Value) ->
                             undefined;
                         true ->
                             Instance = erlang:phash2({Key,
-                                                      NewOutputArgs,
+                                                      OutputArgsNew,
                                                       OutputMaxR, OutputMaxT,
                                                       Formatter, Config}),
                             ?LOGGING_FORMATTER_OUTPUT_ASSIGN(Output, Instance)
                     end,
                     {ok,
                      FormatterConfig#config_logging_formatter{
-                         level = NewLevel,
+                         level = LevelNew,
                          output = Output,
                          output_name = OutputName,
-                         output_args = NewOutputArgs,
+                         output_args = OutputArgsNew,
                          output_max_r = OutputMaxR,
                          output_max_t = OutputMaxT,
                          formatter = Formatter,

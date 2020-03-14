@@ -46,7 +46,8 @@
          dead/1,
          nodes/1,
          status/2,
-         logging_redirect_set/1]).
+         logging_redirect_set/1,
+         connected/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -114,6 +115,11 @@ status(NodesSelection, Timeout) ->
 
 logging_redirect_set(Node) when is_atom(Node) ->
     gen_server:cast(?MODULE, {logging_redirect_set, Node}).
+
+connected(visible) ->
+    erlang:nodes(visible);
+connected(hidden) ->
+    erlang:nodes(connected).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -189,12 +195,7 @@ handle_call({reconfigure,
                    listen = ListenOld,
                    connect = ConnectOld,
                    discovery = DiscoveryOld} = State) ->
-    ConnectedNodes = if
-        Connect =:= visible ->
-            erlang:nodes();
-        Connect =:= hidden ->
-            erlang:nodes(connected)
-    end,
+    ConnectedNodes = connected(Connect),
     NodesNew = lists:usort(Nodes ++ ConnectedNodes),
     NodesDeadNew = lists:foldl(fun(N, L0) ->
         case cloudi_lists:delete_checked(N, L0) of
