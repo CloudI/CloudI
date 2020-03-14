@@ -1204,19 +1204,19 @@ services_format_options_external(Options) ->
 %%-------------------------------------------------------------------------
 
 -spec service_options_copy(OptionsKeys :: list(atom()),
-                           Options0Old :: #config_service_options{},
+                           OptionsOld0 :: #config_service_options{},
                            OptionsNew :: #config_service_options{}) ->
     #config_service_options{}.
 
 service_options_copy(OptionsKeys,
-                     #config_service_options{} = Options0Old,
+                     #config_service_options{} = OptionsOld0,
                      #config_service_options{} = OptionsNew) ->
     Fields = [undefined | record_info(fields, config_service_options)],
-    OptionsNOld = lists:foldl(fun(OptionsKey, Options1Old) ->
+    OptionsOldN = lists:foldl(fun(OptionsKey, OptionsOld1) ->
         Index = cloudi_lists:index(OptionsKey, Fields),
-        erlang:setelement(Index, Options1Old, element(Index, OptionsNew))
-    end, Options0Old, OptionsKeys),
-    OptionsNOld.
+        erlang:setelement(Index, OptionsOld1, element(Index, OptionsNew))
+    end, OptionsOld0, OptionsKeys),
+    OptionsOldN.
 
 %%-------------------------------------------------------------------------
 %% @doc
