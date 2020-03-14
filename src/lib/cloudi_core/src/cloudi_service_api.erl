@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
+%%% @copyright 2011-2020 Michael Truog
 %%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -190,15 +190,15 @@
          Timeout :: timeout_initialize_value_milliseconds(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
-        {ok, NewState :: any()} |
-        {stop, Reason :: any(), NewState :: any()}).
+        {ok, StateNew :: any()} |
+        {stop, Reason :: any(), StateNew :: any()}).
 -type aspect_init_after_external_f() ::
     fun((CommandLine :: list(string()),
          Prefix :: cloudi:service_name_pattern(),
          Timeout :: timeout_initialize_value_milliseconds(),
          State :: any()) ->
-        {ok, NewState :: any()} |
-        {stop, Reason :: any(), NewState :: any()}).
+        {ok, StateNew :: any()} |
+        {stop, Reason :: any(), StateNew :: any()}).
 -type aspect_init_after_internal() ::
     aspect_init_after_internal_f() |
     {Module :: module(), Function :: atom()} |
@@ -223,8 +223,8 @@
          Source :: cloudi_service:source(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
-        {ok, NewState :: any()} |
-        {stop, Reason :: any(), NewState :: any()}).
+        {ok, StateNew :: any()} |
+        {stop, Reason :: any(), StateNew :: any()}).
 -type aspect_request_before_external_f() ::
     fun((RequestType :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
@@ -236,8 +236,8 @@
          TransId :: cloudi_service:trans_id(),
          Source :: cloudi_service:source(),
          State :: any()) ->
-        {ok, NewState :: any()} |
-        {stop, Reason :: any(), NewState :: any()}).
+        {ok, StateNew :: any()} |
+        {stop, Reason :: any(), StateNew :: any()}).
 -type aspect_request_after_internal_f() ::
     fun((RequestType :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
@@ -251,8 +251,8 @@
          Result :: cloudi_service:request_result(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
-        {ok, NewState :: any()} |
-        {stop, Reason :: any(), NewState :: any()}).
+        {ok, StateNew :: any()} |
+        {stop, Reason :: any(), StateNew :: any()}).
 -type aspect_request_after_external_f() ::
     fun((RequestType :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
@@ -265,8 +265,8 @@
          Source :: cloudi_service:source(),
          Result :: cloudi_service:request_result(),
          State :: any()) ->
-        {ok, NewState :: any()} |
-        {stop, Reason :: any(), NewState :: any()}).
+        {ok, StateNew :: any()} |
+        {stop, Reason :: any(), StateNew :: any()}).
 -type aspect_request_before_internal() ::
     aspect_request_before_internal_f() |
     {Module :: module(), Function :: atom()} |
@@ -295,8 +295,8 @@
     fun((Request :: any(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
-        {ok, NewState :: any()} |
-        {stop, Reason :: any(), NewState :: any()}).
+        {ok, StateNew :: any()} |
+        {stop, Reason :: any(), StateNew :: any()}).
 -type aspect_info_internal() ::
     aspect_info_internal_f() |
     {Module :: module(), Function :: atom()} |
@@ -642,10 +642,10 @@
 
 -type module_version() :: list(any()).
 -type module_state_internal_f() ::
-    fun((OldModuleVersion :: module_version(),
-         NewModuleVersion :: module_version(),
-         OldState :: any()) ->
-        {ok, NewState :: any()} |
+    fun((ModuleVersionOld :: module_version(),
+         ModuleVersionNew :: module_version(),
+         StateOld :: any()) ->
+        {ok, StateNew :: any()} |
         {error, Reason :: any()}).
 -type module_state_internal() ::
     module_state_internal_f() |
@@ -1341,8 +1341,8 @@ services_update([_ | _] = L, Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     case service_ids_convert_update(L) of
-        {ok, NewL} ->
-            cloudi_core_i_configurator:services_update(NewL, Timeout);
+        {ok, LNew} ->
+            cloudi_core_i_configurator:services_update(LNew, Timeout);
         {error, _} = Error ->
             Error
     end.

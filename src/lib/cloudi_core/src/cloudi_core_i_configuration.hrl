@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -522,10 +522,10 @@
         % Extra variable (due to the function existing only for the upgrade).
         module_state = undefined
             :: undefined |
-               fun((OldModuleVerson :: cloudi_service_api:module_version(),
-                    NewModuleVerson :: cloudi_service_api:module_version(),
-                    OldState :: any()) ->
-                   {ok, NewState :: any()} | {error, Reason :: any()} | any()),
+               fun((ModuleVersonOld :: cloudi_service_api:module_version(),
+                    ModuleVersonNew :: cloudi_service_api:module_version(),
+                    StateOld :: any()) ->
+                   {ok, StateNew :: any()} | {error, Reason :: any()} | any()),
 
         % external service update configuration
 
