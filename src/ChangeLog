@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_shell request handling
+      (shell interpretation of exec was previously only
+       evaluating the first command)
+
 2020-03-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Deprecate the CloudI Service API nodes_set listen value

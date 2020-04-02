@@ -227,7 +227,8 @@ request(Exec, #state{file_path = FilePath,
                      user = User,
                      su = SUPath,
                      login = Login}) ->
-    ShellInput0 = ["exec ", unicode:characters_to_binary(Exec, utf8), $\n],
+    ShellInput0 = [unicode:characters_to_binary(Exec, utf8), "\n"
+                   "exit $?\n"],
     PortOptions0 = [stream, binary, stderr_to_stdout, exit_status],
     {ShellInputN, PortOptionsN} = if
         EnvPort =:= true ->
