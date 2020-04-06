@@ -224,6 +224,7 @@
      node_reconnect_start_min |
      node_reconnect_delay_invalid |
      node_reconnect_delay_min |
+     node_listen_invalid |
      node_connect_invalid |
      node_timestamp_type_invalid |
      node_discovery_invalid |
@@ -1249,6 +1250,7 @@ nodes_set([_ | _] = Value, #config{} = Config) ->
 nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                                         reconnect_start = ReconnectStart,
                                         reconnect_delay = ReconnectDelay,
+                                        listen = Listen,
                                         connect = Connect,
                                         timestamp_type = TimestampType,
                                         discovery = Discovery,
@@ -1276,21 +1278,28 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
             [{reconnect_delay, ReconnectDelay} | NodesList2]
     end,
     NodesList4 = if
-        Connect == Defaults#config_nodes.connect ->
+        (Listen =:= visible) andalso (Connect =:= visible);
+        (Listen =:= all) andalso (Connect =:= hidden) ->
             NodesList3;
         true ->
-            [{connect, Connect} | NodesList3]
+            [{listen, Listen} | NodesList3]
     end,
     NodesList5 = if
-        TimestampType == Defaults#config_nodes.timestamp_type ->
+        Connect == Defaults#config_nodes.connect ->
             NodesList4;
         true ->
-            [{timestamp_type, TimestampType} | NodesList4]
+            [{connect, Connect} | NodesList4]
+    end,
+    NodesList6 = if
+        TimestampType == Defaults#config_nodes.timestamp_type ->
+            NodesList5;
+        true ->
+            [{timestamp_type, TimestampType} | NodesList5]
     end,
     undefined = Defaults#config_nodes.discovery,
-    NodesList6 = case Discovery of
+    NodesList7 = case Discovery of
         undefined ->
-            NodesList5;
+            NodesList6;
         #config_nodes_discovery{start_a = [MulticastInterface,
                                            MulticastAddress,
                                            MulticastPort,
@@ -1301,7 +1310,7 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                 [{interface, MulticastInterface},
                  {address, MulticastAddress},
                  {port, MulticastPort},
-                 {ttl, MulticastTTL}]}]} | NodesList5];
+                 {ttl, MulticastTTL}]}]} | NodesList6];
         #config_nodes_discovery{start_a = [EC2AccessKeyId,
                                            EC2SecretAccessKey,
                                            EC2Host, EC2Groups, EC2Tags],
@@ -1313,27 +1322,27 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                  {secret_access_key, EC2SecretAccessKey},
                  {host, EC2Host},
                  {groups, EC2Groups},
-                 {tags, EC2Tags}]}]} | NodesList5]
-    end,
-    NodesList7 = if
-        Cost == Defaults#config_nodes.cost ->
-            NodesList6;
-        true ->
-            [{cost, Cost} | NodesList6]
+                 {tags, EC2Tags}]}]} | NodesList6]
     end,
     NodesList8 = if
-        CostPrecision == Defaults#config_nodes.cost_precision ->
+        Cost == Defaults#config_nodes.cost ->
             NodesList7;
         true ->
-            [{cost_precision, CostPrecision} | NodesList7]
+            [{cost, Cost} | NodesList7]
     end,
     NodesList9 = if
-        LogReconnect == Defaults#config_nodes.log_reconnect ->
+        CostPrecision == Defaults#config_nodes.cost_precision ->
             NodesList8;
         true ->
-            [{log_reconnect, LogReconnect} | NodesList8]
+            [{cost_precision, CostPrecision} | NodesList8]
     end,
-    lists:reverse(NodesList9).
+    NodesList10 = if
+        LogReconnect == Defaults#config_nodes.log_reconnect ->
+            NodesList9;
+        true ->
+            [{log_reconnect, LogReconnect} | NodesList9]
+    end,
+    lists:reverse(NodesList10).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -4614,6 +4623,20 @@ nodes_validate([A | As])
 nodes_validate([A | _]) ->
     {error, {node_invalid, A}}.
 
+nodes_listen(undefined, #config_nodes{connect = Connect} = NodesConfig) ->
+    Listen = if
+        Connect =:= visible ->
+            visible;
+        Connect =:= hidden ->
+            all
+    end,
+    {ok, NodesConfig#config_nodes{listen = Listen}};
+nodes_listen(visible, #config_nodes{connect = hidden}) ->
+    {error, {node_listen_invalid, visible}};
+nodes_listen(Listen, NodesConfig) ->
+    true = (Listen =:= visible) orelse (Listen =:= all),
+    {ok, NodesConfig#config_nodes{listen = Listen}}.
+
 nodes_elements_add([], NodesConfig) ->
     {ok, NodesConfig};
 nodes_elements_add([A | As], NodesConfig)
@@ -4821,6 +4844,8 @@ nodes_options(Nodes0, Value) ->
          NodesConfig#config_nodes.reconnect_start},
         {reconnect_delay,
          NodesConfig#config_nodes.reconnect_delay},
+        {listen,
+         undefined},
         {connect,
          NodesConfig#config_nodes.connect},
         {timestamp_type,
@@ -4835,57 +4860,63 @@ nodes_options(Nodes0, Value) ->
          NodesConfig#config_nodes.log_reconnect}],
     ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() + 500) div 1000,
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Nodes1, _, _, _, _, _, _, _, _]
+        [Nodes1, _, _, _, _, _, _, _, _, _]
             when not is_list(Nodes1) ->
             {error, {node_invalid,
                      Nodes1}};
-        [_, ReconnectStart, _, _, _, _, _, _, _]
+        [_, ReconnectStart, _, _, _, _, _, _, _, _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0) andalso
                       (ReconnectStart =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_start_invalid,
                      ReconnectStart}};
-        [_, ReconnectStart, _, _, _, _, _, _, _]
+        [_, ReconnectStart, _, _, _, _, _, _, _, _]
             when not (ReconnectStart >= ConnectTimeSeconds) ->
             {error, {node_reconnect_start_min,
                      ConnectTimeSeconds}};
-        [_, _, ReconnectDelay, _, _, _, _, _, _]
+        [_, _, ReconnectDelay, _, _, _, _, _, _, _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0) andalso
                       (ReconnectDelay =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_delay_invalid,
                      ReconnectDelay}};
-        [_, _, ReconnectDelay, _, _, _, _, _, _]
+        [_, _, ReconnectDelay, _, _, _, _, _, _, _]
             when not (ReconnectDelay >= ConnectTimeSeconds) ->
             {error, {node_reconnect_delay_min,
                      ConnectTimeSeconds}};
-        [_, _, _, Connect, _, _, _, _, _]
+        [_, _, _, Listen, _, _, _, _, _, _]
+            when not ((Listen =:= visible) orelse
+                      (Listen =:= all) orelse
+                      (Listen =:= undefined)) ->
+            {error, {node_listen_invalid,
+                     Listen}};
+        [_, _, _, _, Connect, _, _, _, _, _]
             when not ((Connect =:= visible) orelse
                       (Connect =:= hidden)) ->
             {error, {node_connect_invalid,
                      Connect}};
-        [_, _, _, _, TimestampType, _, _, _, _]
+        [_, _, _, _, _, TimestampType, _, _, _, _]
             when not ((TimestampType =:= erlang) orelse
                       (TimestampType =:= os) orelse
                       (TimestampType =:= warp)) ->
             {error, {node_timestamp_type_invalid,
                      TimestampType}};
-        [_, _, _, _, _, Discovery, _, _, _]
+        [_, _, _, _, _, _, Discovery, _, _, _]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
             {error, {node_discovery_invalid,
                      Discovery}};
-        [_, _, _, _, _, _, Cost, _, _]
+        [_, _, _, _, _, _, _, Cost, _, _]
             when not is_list(Cost) ->
             {error, {node_cost_invalid,
                      Cost}};
-        [_, _, _, _, _, _, _, CostPrecision, _]
+        [_, _, _, _, _, _, _, _, CostPrecision, _]
             when not (is_integer(CostPrecision) andalso
                       (CostPrecision >= 0) andalso
                       (CostPrecision =< 253)) ->
             {error, {node_cost_precision_invalid,
                      CostPrecision}};
-        [_, _, _, _, _, _, _, _, LogReconnect]
+        [_, _, _, _, _, _, _, _, _, LogReconnect]
             when not ((LogReconnect =:= fatal) orelse
                       (LogReconnect =:= error) orelse
                       (LogReconnect =:= warn) orelse
@@ -4896,15 +4927,11 @@ nodes_options(Nodes0, Value) ->
             {error, {node_log_reconnect_invalid,
                      LogReconnect}};
         [Nodes1, ReconnectStart, ReconnectDelay,
-         Connect, TimestampType, Discovery, Cost, CostPrecision,
+         Listen, Connect, TimestampType, Discovery, Cost, CostPrecision,
          LogReconnect] ->
-            Listen = if
-                Connect =:= visible ->
-                    visible;
-                Connect =:= hidden ->
-                    all
-            end,
-            accum([{Nodes1,
+            accum([{Listen,
+                    fun nodes_listen/2},
+                   {Nodes1,
                     fun nodes_elements_add/2},
                    {Discovery,
                     fun nodes_discovery_options/2},
@@ -4914,12 +4941,11 @@ nodes_options(Nodes0, Value) ->
                       nodes = Nodes0,
                       reconnect_start = ReconnectStart,
                       reconnect_delay = ReconnectDelay,
-                      listen = Listen,
                       connect = Connect,
                       timestamp_type = TimestampType,
                       cost_precision = CostPrecision,
                       log_reconnect = LogReconnect});
-        [_, _, _, _, _, _, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {node_invalid, Extra}}
     end.
 

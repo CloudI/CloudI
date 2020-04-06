@@ -649,6 +649,11 @@
         reconnect_delay = ?DEFAULT_NODE_RECONNECT_DELAY
             :: cloudi_service_api:node_reconnect_delay_seconds(),
         % how should node connections be monitored
+        % (inferred from connect value if it is not set,
+        %  if connect is visible
+        %  then listen is visible unless set to all for hidden node connections
+        %  if connect is hidden
+        %  then listen needs to be all)
         listen = visible
             :: visible | all,
         % how should node connections be created

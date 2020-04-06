@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the CloudI Service API nodes_set listen value
+      back with more validation
+
 2020-04-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_shell request handling
@@ -9,7 +14,7 @@
 
 2020-03-14 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Deprecate the CloudI Service API nodes_set listen value
+    * Temporarily remove the CloudI Service API nodes_set listen value
       to instead infer the value from the connect value
 
 2020-03-11 Michael Truog   <mjtruog at protonmail dot com>
