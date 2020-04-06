@@ -5,6 +5,7 @@
 
     * Add the CloudI Service API nodes_set listen value
       back with more validation
+    * Fix remote_console cloudi executable command
 
 2020-04-01 Michael Truog   <mjtruog at protonmail dot com>
 

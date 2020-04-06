@@ -109,7 +109,7 @@ command_line([?CMD_ARGS_REMSH],
             "-name"
     end,
     NodeRemsh = node_remsh(NodeScript),
-    io:format("~s ~s -remsh ~s -setcookie '~s'\n",
+    io:format("~s ~s -remsh ~s -setcookie ~w\n",
               [NameArg, NodeRemsh, Node, Cookie]);
 command_line(_, State) ->
     exit_error(1, help(), State).
