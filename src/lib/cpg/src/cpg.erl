@@ -3037,9 +3037,9 @@ handle_info({'DOWN', _MonitorRef, process, Pid, Info}, State) ->
 handle_info({'DOWNS', PidReasons}, State) ->
     {noreply, members_died_remote(PidReasons, State)};
 
-handle_info({nodeup, Node, InfoList},
+handle_info({nodeup, Node, _InfoList},
             #state{node_name = NodeNameLocal} = State) ->
-    Ignore = ignore_node(NodeNameLocal, Node, InfoList),
+    Ignore = ignore_node(NodeNameLocal, Node),
     if
         Ignore =:= true ->
             ok;
@@ -3159,14 +3159,9 @@ listen_reset_visible(HiddenNodes, Scope) ->
     HiddenNodeInfo = [{nodedown_reason, cpg_reset}, {node_type, hidden}],
     listen_reset_visible(HiddenNodes, HiddenNodeInfo, Scope).
 
-ignore_node(NodeNameLocal, Node, InfoList) ->
-    case lists:keyfind(node_type, 1, InfoList) of
-        {node_type, hidden} ->
-            {NodeName, _} = node_split(Node),
-            lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName);
-        {node_type, visible} ->
-            false
-    end.
+ignore_node(NodeNameLocal, Node) ->
+    {NodeName, _} = node_split(Node),
+    lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName).
 
 join_group_local(Count, GroupName, Pid,
                  #state{groups = {DictI, GroupsDataOld},

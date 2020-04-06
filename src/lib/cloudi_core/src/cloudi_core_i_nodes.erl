@@ -319,7 +319,7 @@ handle_cast(Request, State) ->
 handle_info({nodeup, Node, InfoList},
             #state{node_name = NodeNameLocal,
                    logging_redirect = NodeLogger} = State) ->
-    Ignore = ignore_node(NodeNameLocal, Node, InfoList),
+    Ignore = ignore_node(NodeNameLocal, Node),
     StateNew = if
         Ignore =:= true ->
             State;
@@ -338,7 +338,7 @@ handle_info({nodeup, Node, InfoList},
 handle_info({nodedown, Node, InfoList},
             #state{node_name = NodeNameLocal,
                    logging_redirect = NodeLogger} = State) ->
-    Ignore = ignore_node(NodeNameLocal, Node, InfoList),
+    Ignore = ignore_node(NodeNameLocal, Node),
     StateNew = if
         Ignore =:= true ->
             State;
@@ -408,14 +408,9 @@ monitor_nodes_switch(ListenOld, ListenNew) ->
     monitor_nodes(true, ListenNew),
     monitor_nodes(false, ListenOld).
 
-ignore_node(NodeNameLocal, Node, InfoList) ->
-    case lists:keyfind(node_type, 1, InfoList) of
-        {node_type, hidden} ->
-            [NodeName, _] = cloudi_string:split("@", erlang:atom_to_list(Node)),
-            lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName);
-        {node_type, visible} ->
-            false
-    end.
+ignore_node(NodeNameLocal, Node) ->
+    [NodeName, _] = cloudi_string:split("@", erlang:atom_to_list(Node)),
+    lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName).
 
 track_nodeup(Node,
              #state{nodes_alive = NodesAlive,
