@@ -189,7 +189,7 @@ case "$1" in
         export ERL_LIBS
         export ERL_COMPILER_OPTIONS
 
-        exec "$BINDIR/erl" $REMSH
+        eval exec "$BINDIR/erl" $REMSH
         ;;
     console)
         BOOTFILE="$PROGNAME"

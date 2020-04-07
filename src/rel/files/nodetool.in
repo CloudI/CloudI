@@ -109,8 +109,8 @@ command_line([?CMD_ARGS_REMSH],
             "-name"
     end,
     NodeRemsh = node_remsh(NodeScript),
-    io:format("~s ~s -remsh ~s -setcookie ~w\n",
-              [NameArg, NodeRemsh, Node, Cookie]);
+    io:format("~s ~s -remsh ~s -setcookie ~s\n",
+              [NameArg, NodeRemsh, Node, shell_atom(Cookie)]);
 command_line(_, State) ->
     exit_error(1, help(), State).
 
@@ -208,7 +208,7 @@ shell_output(Shell, Output) ->
 vmarg_to_atom(String) ->
     erlang:list_to_atom(unquote(vmarg(String))).
 
-unquote([H | T] = L) when H =:= $'; H =:= $" ->
+unquote([H | T] = L) when H == $'; H == $" ->
     case lists:reverse(T) of
         [H | Unquoted] ->
             lists:reverse(Unquoted);
@@ -227,7 +227,7 @@ vmarg(L0) ->
             [H0 | L1]
     end.
 
-vmarg_left([H | T]) when H =:= $\s; H =:= $\t; H =:= $\r; H =:= $\n ->
+vmarg_left([H | T]) when H == $\s; H == $\t; H == $\r; H == $\n ->
     vmarg_left(T);
 vmarg_left(L) ->
     L.
@@ -243,12 +243,27 @@ vmarg_middle(space_merge, L) ->
 
 vmarg_middle_space_merge([$\t | T]) ->
     vmarg_middle_space_merge([$\s | T]);
-vmarg_middle_space_merge([$\s, H | T]) when (H =:= $\s); (H =:= $\t) ->
+vmarg_middle_space_merge([$\s, H | T]) when H == $\s; H == $\t ->
     vmarg_middle_space_merge([$\s | T]);
 vmarg_middle_space_merge([H | T]) ->
     [H | vmarg_middle_space_merge(T)];
 vmarg_middle_space_merge(L) ->
     L.
+
+shell_atom(A) ->
+    shell_atom_escape(erlang:atom_to_list(A)).
+
+shell_atom_escape([] = L) ->
+    L;
+shell_atom_escape([H | T])
+    when (H >= $a) andalso (H =< $z);
+         (H >= $A) andalso (H =< $Z);
+         (H >= $0) andalso (H =< $9);
+         H == $,; H == $.; H == $_; H == $+; H == $:;
+         H == $@; H == $%; H == $/; H == $- ->
+    [H | shell_atom_escape(T)];
+shell_atom_escape([H | T]) ->
+    [$\\, H | shell_atom_escape(T)].
 
 node_split(Node) when is_atom(Node) ->
     node_split(erlang:atom_to_list(Node), []).
