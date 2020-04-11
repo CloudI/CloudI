@@ -70,7 +70,7 @@
         node_name :: string(),
         nodes_alive = [] :: list(node()),
         nodes_dead :: list(node()),
-        nodes :: list(node()),
+        nodes_all :: list(node()),
         nodes_state :: nodes_state(),
         nodes_down_durations = cloudi_core_i_status:durations_new()
             :: cloudi_core_i_status:durations(node()),
@@ -168,7 +168,7 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                        self(), reconnect),
     {ok, #state{node_name = NodeName,
                 nodes_dead = Nodes,
-                nodes = Nodes,
+                nodes_all = Nodes,
                 nodes_state = NodesState,
                 logging_redirect = NodeLoggerNew,
                 reconnect_interval = ReconnectInterval,
@@ -199,7 +199,7 @@ handle_call({reconfigure,
                    discovery = DiscoveryOld} = State) ->
     {NodesAlive,
      NodesDead,
-     Nodes,
+     NodesAll,
      NodesState,
      NodesDownDurations} = reconfigure_nodes(NodesAliveOld,
                                              Nodes,
@@ -225,7 +225,7 @@ handle_call({reconfigure,
     end,
     {reply, ok, State#state{nodes_alive = NodesAlive,
                             nodes_dead = NodesDead,
-                            nodes = Nodes,
+                            nodes_all = NodesAll,
                             nodes_state = NodesState,
                             nodes_down_durations = NodesDownDurations,
                             reconnect_interval = ReconnectInterval,
@@ -244,11 +244,11 @@ handle_call(dead, _,
     {reply, {ok, NodesDead}, State};
 
 handle_call(nodes, _,
-            #state{nodes = Nodes} = State) ->
-    {reply, {ok, Nodes}, State};
+            #state{nodes_all = NodesAll} = State) ->
+    {reply, {ok, NodesAll}, State};
 
 handle_call({status, NodesSelection}, _,
-            #state{nodes = Nodes,
+            #state{nodes_all = NodesAll,
                    nodes_state = NodesState,
                    nodes_down_durations = NodesDownDurations,
                    cost = Cost,
@@ -256,7 +256,7 @@ handle_call({status, NodesSelection}, _,
     TimeNow = cloudi_timestamp:native_monotonic(),
     NodesSelectionNew = if
         NodesSelection == [] ->
-            lists:umerge(Nodes, [node()]);
+            lists:umerge(NodesAll, [node()]);
         true ->
             NodesSelection
     end,
@@ -397,16 +397,16 @@ monitor_nodes_switch(ListenOld, ListenNew) ->
     monitor_nodes(true, ListenNew),
     monitor_nodes(false, ListenOld).
 
-reconfigure_nodes(NodesAliveOld, NodesOld,
+reconfigure_nodes(NodesAliveOld, Nodes,
                   NodesStateOld, NodesDownDurationsOld, Connect) ->
     ConnectedNodes = connected(Connect),
-    Nodes = lists:usort(NodesOld ++ ConnectedNodes),
-    NodesDead = reconfigure_nodes_dead(NodesAliveOld, Nodes),
-    NodesAlive = reconfigure_nodes_alive(NodesDead, Nodes),
-    NodesState = maps:with([node() | Nodes], NodesStateOld),
+    NodesAll = lists:usort(Nodes ++ ConnectedNodes),
+    NodesDead = reconfigure_nodes_dead(NodesAliveOld, NodesAll),
+    NodesAlive = reconfigure_nodes_alive(NodesDead, NodesAll),
+    NodesState = maps:with([node() | NodesAll], NodesStateOld),
     NodesDownDurations = cloudi_core_i_status:
-                         durations_copy(Nodes, NodesDownDurationsOld),
-    {NodesAlive, NodesDead, Nodes, NodesState, NodesDownDurations}.
+                         durations_copy(NodesAll, NodesDownDurationsOld),
+    {NodesAlive, NodesDead, NodesAll, NodesState, NodesDownDurations}.
 
 reconfigure_nodes_dead([], Nodes) ->
     Nodes;
@@ -450,7 +450,7 @@ ignore_node(NodeNameLocal, Node) ->
 track_nodeup(Node, NodeConnect,
              #state{nodes_alive = NodesAlive,
                     nodes_dead = NodesDead,
-                    nodes = Nodes,
+                    nodes_all = NodesAll,
                     nodes_state = NodesState,
                     nodes_down_durations = NodesDownDurations} = State) ->
     TimeConnect = cloudi_timestamp:native_monotonic(),
@@ -472,7 +472,7 @@ track_nodeup(Node, NodeConnect,
     end,
     State#state{nodes_alive = lists:umerge(NodesAlive, NodeL),
                 nodes_dead = lists:delete(Node, NodesDead),
-                nodes = lists:umerge(Nodes, NodeL),
+                nodes_all = lists:umerge(NodesAll, NodeL),
                 nodes_state = NodesStateNew,
                 nodes_down_durations = NodesDownDurationsNew}.
 
