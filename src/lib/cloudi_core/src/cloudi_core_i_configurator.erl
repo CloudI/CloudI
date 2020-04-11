@@ -1288,8 +1288,8 @@ nodes_call_remote_result_replies([{_, _} = Error | Replies], Output) ->
 nodes_call_remote({_, _, CallType}, _)
     when CallType =:= remote; CallType =:= local_only ->
     ok;
-nodes_call_remote({F, L, local}, Connect) ->
-    Nodes = cloudi_core_i_nodes:connected(Connect),
+nodes_call_remote({F, L, local}, Listen) ->
+    Nodes = cloudi_core_i_nodes:connected(Listen),
     nodes_call_remote_result(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
                               {F, L, remote}, infinity)
@@ -1301,8 +1301,8 @@ nodes_call({F, L, CallType} = Request,
         {ok, Config}
             when CallType =:= remote; CallType =:= local_only ->
             {reply, ok, State};
-        {ok, #config{nodes = #config_nodes{connect = Connect}} = ConfigNew} ->
-            Result = nodes_call_remote(Request, Connect),
+        {ok, #config{nodes = #config_nodes{listen = Listen}} = ConfigNew} ->
+            Result = nodes_call_remote(Request, Listen),
             case cloudi_core_i_nodes:reconfigure(ConfigNew, infinity) of
                 ok ->
                     {reply, Result, State#state{configuration = ConfigNew}};

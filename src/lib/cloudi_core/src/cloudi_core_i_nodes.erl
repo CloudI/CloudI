@@ -61,7 +61,7 @@
 -type nodes_state() ::
     #{node() :=
       {TimeStart :: cloudi_timestamp:native_monotonic(),
-       NodeConnect :: visible | hidden | undefined,
+       ConnectNode :: visible | hidden | undefined,
        TimeDisconnect :: undefined | cloudi_timestamp:native_monotonic(),
        Disconnects :: non_neg_integer()}}.
 
@@ -117,8 +117,8 @@ status(NodesSelection, Timeout) ->
 logging_redirect_set(Node) when is_atom(Node) ->
     gen_server:cast(?MODULE, {logging_redirect_set, Node}).
 
-connected(Connect) ->
-    connected_nodes(Connect).
+connected(Listen) ->
+    connected_nodes(Listen).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -190,7 +190,6 @@ handle_call({reconfigure,
                                            cost_precision = CostPrecision,
                                            log_reconnect = LogReconnect}}}, _,
             #state{node_name = NodeNameLocal,
-                   nodes_alive = NodesAliveOld,
                    nodes_state = NodesStateOld,
                    nodes_down_durations = NodesDownDurationsOld,
                    listen = ListenOld,
@@ -201,11 +200,10 @@ handle_call({reconfigure,
      NodesAll,
      NodesState,
      NodesDownDurations} = reconfigure_nodes(NodeNameLocal,
-                                             NodesAliveOld,
                                              Nodes,
                                              NodesStateOld,
                                              NodesDownDurationsOld,
-                                             Connect),
+                                             Listen),
     ReconnectInterval = ReconnectDelay * 1000,
     logging_redirect_set(NodeLogger),
     applications_set(Listen, Connect, TimestampType),
@@ -324,8 +322,8 @@ handle_info({nodeup, Node, InfoList},
                     ok
             end,
             ?LOG_INFO("nodeup ~p~n ~p", [Node, InfoList]),
-            {node_type, NodeConnect} = lists:keyfind(node_type, 1, InfoList),
-            track_nodeup(Node, NodeConnect, State)
+            {node_type, ConnectNode} = lists:keyfind(node_type, 1, InfoList),
+            track_nodeup(Node, ConnectNode, State)
     end,
     {noreply, StateNew};
 
@@ -397,11 +395,11 @@ monitor_nodes_switch(ListenOld, ListenNew) ->
     monitor_nodes(true, ListenNew),
     monitor_nodes(false, ListenOld).
 
-reconfigure_nodes(NodeNameLocal, NodesAliveOld, Nodes,
-                  NodesStateOld, NodesDownDurationsOld, Connect) ->
-    ConnectedNodes = connected_nodes(NodeNameLocal, Connect),
-    NodesAll = lists:usort(Nodes ++ ConnectedNodes),
-    NodesDead = reconfigure_nodes_dead(NodesAliveOld, NodesAll),
+reconfigure_nodes(NodeNameLocal, Nodes,
+                  NodesStateOld, NodesDownDurationsOld, Listen) ->
+    ConnectedNodes = connected_nodes(NodeNameLocal, Listen),
+    NodesAll = lists:usort(ConnectedNodes ++ Nodes),
+    NodesDead = reconfigure_nodes_dead(ConnectedNodes, NodesAll),
     NodesAlive = reconfigure_nodes_alive(NodesDead, NodesAll),
     NodesState = maps:with([node() | NodesAll], NodesStateOld),
     NodesDownDurations = cloudi_core_i_status:
@@ -436,8 +434,8 @@ reconnect_node([], _, _) ->
     ok;
 reconnect_node([NodeDead | NodesDead], NodesState, Connect) ->
     case maps:find(NodeDead, NodesState) of
-        {ok, {_, NodeConnect, _, _}} ->
-            ok = connect_node_async(NodeConnect, NodeDead);
+        {ok, {_, ConnectNode, _, _}} ->
+            ok = connect_node_async(ConnectNode, NodeDead);
         error ->
             ok = connect_node_async(Connect, NodeDead)
     end,
@@ -447,7 +445,7 @@ ignore_node(NodeNameLocal, Node) ->
     [NodeName, _] = cloudi_string:split("@", erlang:atom_to_list(Node)),
     lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName).
 
-track_nodeup(Node, NodeConnect,
+track_nodeup(Node, ConnectNode,
              #state{nodes_alive = NodesAlive,
                     nodes_dead = NodesDead,
                     nodes_all = NodesAll,
@@ -460,13 +458,13 @@ track_nodeup(Node, NodeConnect,
         {ok, {_, _, undefined, _}} ->
             {NodesState, NodesDownDurations}; % duplicate nodeup
         {ok, {TimeStart, _, TimeDisconnect, Disconnects}} ->
-            NodeState = {TimeStart, NodeConnect, undefined, Disconnects},
+            NodeState = {TimeStart, ConnectNode, undefined, Disconnects},
             Duration = {TimeDisconnect, TimeConnect},
             {maps:put(Node, NodeState, NodesState),
              cloudi_core_i_status:
              durations_store(NodeL, Duration, NodesDownDurations)};
         error ->
-            NodeState = {TimeConnect, NodeConnect, undefined, 0},
+            NodeState = {TimeConnect, ConnectNode, undefined, 0},
             {maps:put(Node, NodeState, NodesState),
              NodesDownDurations}
     end,
@@ -482,8 +480,8 @@ track_nodedown(Node,
                       nodes_state = NodesState} = State) ->
     TimeDisconnect = cloudi_timestamp:native_monotonic(),
     NodesStateNew = case maps:find(Node, NodesState) of
-        {ok, {TimeStart, NodeConnect, undefined, Disconnects}} ->
-            NodeState = {TimeStart, NodeConnect,
+        {ok, {TimeStart, ConnectNode, undefined, Disconnects}} ->
+            NodeState = {TimeStart, ConnectNode,
                          TimeDisconnect, Disconnects + 1},
             maps:put(Node, NodeState, NodesState);
         _ ->
@@ -512,7 +510,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
              NodesDownDurations, NodesState,
              Cost, CostDefault, CostPrecision) ->
     case maps:find(Node, NodesState) of
-        {ok, {TimeStart, NodeConnect, TimeDisconnect, Disconnects}} ->
+        {ok, {TimeStart, ConnectNode, TimeDisconnect, Disconnects}} ->
             LocalNode = Node =:= node(),
             {Disconnected,
              NodesDownDurationsTmp} = if
@@ -639,7 +637,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 LocalNode =:= true ->
                     Status8;
                 LocalNode =:= false ->
-                    [{connection, NodeConnect},
+                    [{connection, ConnectNode},
                      {tracked_disconnects,
                       erlang:integer_to_list(Disconnects)},
                      {disconnected, Disconnected} | Status8]
@@ -829,18 +827,18 @@ connected_node([Node | Nodes], NodeNameLocal) ->
             [Node | connected_node(Nodes, NodeNameLocal)]
     end.
 
-connected_nodes(NodeNameLocal, Connect) ->
+connected_nodes(NodeNameLocal, Listen) ->
     Nodes = if
-        Connect =:= visible ->
+        Listen =:= visible ->
             erlang:nodes(visible);
-        Connect =:= hidden ->
+        Listen =:= all ->
             erlang:nodes(connected)
     end,
     connected_node(Nodes, NodeNameLocal).
 
-connected_nodes(Connect) ->
+connected_nodes(Listen) ->
     [NodeNameLocal, _] = cloudi_string:split("@", erlang:atom_to_list(node())),
-    connected_nodes(NodeNameLocal, Connect).
+    connected_nodes(NodeNameLocal, Listen).
 
 connect_nodes([], _) ->
     ok;
