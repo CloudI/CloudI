@@ -824,7 +824,7 @@
     {cost_precision, 0..253} |
     {log_reconnect, loglevel()}.
 -type nodes_proplist() ::
-    nonempty_list(nodes_properties()).
+    list(nodes_properties()).
 -type nodes_set_proplist() ::
     nonempty_list({set, all | local} |
                   nodes_properties()).

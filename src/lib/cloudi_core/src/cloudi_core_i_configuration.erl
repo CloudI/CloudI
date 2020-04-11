@@ -1230,7 +1230,7 @@ service_options_copy(OptionsKeys,
     {ok, #config{}} |
     {error, error_reason_nodes_set_configuration()}.
 
-nodes_set([_ | _] = Value, #config{} = Config) ->
+nodes_set(Value, #config{} = Config) ->
     case nodes_proplist(Value) of
         {ok, NodesConfig} ->
             {ok, Config#config{nodes = NodesConfig}};

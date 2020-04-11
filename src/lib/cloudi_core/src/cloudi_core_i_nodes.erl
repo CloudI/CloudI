@@ -117,10 +117,8 @@ status(NodesSelection, Timeout) ->
 logging_redirect_set(Node) when is_atom(Node) ->
     gen_server:cast(?MODULE, {logging_redirect_set, Node}).
 
-connected(visible) ->
-    erlang:nodes(visible);
-connected(hidden) ->
-    erlang:nodes(connected).
+connected(Connect) ->
+    connected_nodes(Connect).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -137,8 +135,8 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                     cost_precision = CostPrecision,
                                     log_reconnect = LogReconnect}}]) ->
     Node = node(),
-    [NodeName, _] = cloudi_string:split("@", erlang:atom_to_list(Node)),
-    false = cloudi_string:findl(?NODETOOL_SUFFIX, NodeName),
+    [NodeNameLocal, _] = cloudi_string:split("@", erlang:atom_to_list(Node)),
+    false = cloudi_string:findl(?NODETOOL_SUFFIX, NodeNameLocal),
     monitor_nodes(true, Listen),
     NodeLoggerNew = if
         NodeLogger =:= Node; NodeLogger =:= undefined ->
@@ -166,7 +164,7 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
     ReconnectInterval = ReconnectDelay * 1000,
     ReconnectTimer = erlang:send_after(ReconnectStart * 1000,
                                        self(), reconnect),
-    {ok, #state{node_name = NodeName,
+    {ok, #state{node_name = NodeNameLocal,
                 nodes_dead = Nodes,
                 nodes_all = Nodes,
                 nodes_state = NodesState,
@@ -191,7 +189,8 @@ handle_call({reconfigure,
                                            cost = Cost,
                                            cost_precision = CostPrecision,
                                            log_reconnect = LogReconnect}}}, _,
-            #state{nodes_alive = NodesAliveOld,
+            #state{node_name = NodeNameLocal,
+                   nodes_alive = NodesAliveOld,
                    nodes_state = NodesStateOld,
                    nodes_down_durations = NodesDownDurationsOld,
                    listen = ListenOld,
@@ -201,7 +200,8 @@ handle_call({reconfigure,
      NodesDead,
      NodesAll,
      NodesState,
-     NodesDownDurations} = reconfigure_nodes(NodesAliveOld,
+     NodesDownDurations} = reconfigure_nodes(NodeNameLocal,
+                                             NodesAliveOld,
                                              Nodes,
                                              NodesStateOld,
                                              NodesDownDurationsOld,
@@ -397,9 +397,9 @@ monitor_nodes_switch(ListenOld, ListenNew) ->
     monitor_nodes(true, ListenNew),
     monitor_nodes(false, ListenOld).
 
-reconfigure_nodes(NodesAliveOld, Nodes,
+reconfigure_nodes(NodeNameLocal, NodesAliveOld, Nodes,
                   NodesStateOld, NodesDownDurationsOld, Connect) ->
-    ConnectedNodes = connected(Connect),
+    ConnectedNodes = connected_nodes(NodeNameLocal, Connect),
     NodesAll = lists:usort(Nodes ++ ConnectedNodes),
     NodesDead = reconfigure_nodes_dead(NodesAliveOld, NodesAll),
     NodesAlive = reconfigure_nodes_alive(NodesDead, NodesAll),
@@ -817,6 +817,30 @@ cpg_scopes_reset() ->
     lists:foreach(fun(Scope) ->
         cloudi_x_cpg:reset(Scope)
     end, cpg_scopes()).
+
+connected_node([] = L, _) ->
+    L;
+connected_node([Node | Nodes], NodeNameLocal) ->
+    Ignore = ignore_node(NodeNameLocal, Node),
+    if
+        Ignore =:= true ->
+            connected_node(Nodes, NodeNameLocal);
+        Ignore =:= false ->
+            [Node | connected_node(Nodes, NodeNameLocal)]
+    end.
+
+connected_nodes(NodeNameLocal, Connect) ->
+    Nodes = if
+        Connect =:= visible ->
+            erlang:nodes(visible);
+        Connect =:= hidden ->
+            erlang:nodes(connected)
+    end,
+    connected_node(Nodes, NodeNameLocal).
+
+connected_nodes(Connect) ->
+    [NodeNameLocal, _] = cloudi_string:split("@", erlang:atom_to_list(node())),
+    connected_nodes(NodeNameLocal, Connect).
 
 connect_nodes([], _) ->
     ok;
