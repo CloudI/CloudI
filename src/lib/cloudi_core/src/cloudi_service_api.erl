@@ -843,6 +843,7 @@
                   {tracked_cost_week, nonempty_string()} |
                   {tracked_cost_month, nonempty_string()} |
                   {tracked_cost_year, nonempty_string()} |
+                  {connection, visible | hidden} |
                   {tracked_disconnects, nonempty_string()} |
                   {disconnected, boolean()} |
                   {downtime_day_disconnected, nonempty_string()} |

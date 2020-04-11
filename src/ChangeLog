@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix node reconnect so the previous connection type
+      (visible or hidden) is used for the reconnect attempt
+    * Add connection to the CloudI Service API nodes_status output
+
 2020-04-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve remote_console cloudi executable command
