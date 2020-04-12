@@ -139,6 +139,7 @@
 
 -record(state,
     {
+        node_name :: nonempty_string(),
         time_start :: cloudi_timestamp:native_monotonic(),
         configuration :: #config{}
     }).
@@ -399,7 +400,10 @@ service_terminated(ID)
 %%%------------------------------------------------------------------------
 
 init([Config]) ->
-    {ok, #state{time_start = cloudi_timestamp:native_monotonic(),
+    TimeStart = cloudi_timestamp:native_monotonic(),
+    NodeName = cloudi_core_i_nodes:node_name(node()),
+    {ok, #state{node_name = NodeName,
+                time_start = TimeStart,
                 configuration = Config}}.
 
 handle_call(configure, _, State) ->
@@ -1285,24 +1289,30 @@ nodes_call_remote_result_replies([{_, ok} | Replies], Output) ->
 nodes_call_remote_result_replies([{_, _} = Error | Replies], Output) ->
     nodes_call_remote_result_replies(Replies, [Error | Output]).
 
-nodes_call_remote({_, _, CallType}, _)
+nodes_call_remote({_, _, CallType}, _, _)
     when CallType =:= remote; CallType =:= local_only ->
     ok;
-nodes_call_remote({F, L, local}, Listen) ->
-    Nodes = cloudi_core_i_nodes:connected(Listen),
-    nodes_call_remote_result(global:trans({{?MODULE, L}, self()}, fun() ->
-        gen_server:multi_call(Nodes, ?MODULE,
-                              {F, L, remote}, infinity)
-    end)).
+nodes_call_remote({F, L, local}, Listen, NodeName) ->
+    case cloudi_x_cpg:listen_nodes(Listen, NodeName) of
+        [] ->
+            ok;
+        [_ | _] = Nodes ->
+            GlobalId = {{?MODULE, L}, self()},
+            nodes_call_remote_result(global:trans(GlobalId, fun() ->
+                gen_server:multi_call(Nodes, ?MODULE,
+                                      {F, L, remote}, infinity)
+            end))
+    end.
 
 nodes_call({F, L, CallType} = Request,
-           #state{configuration = Config} = State) ->
+           #state{node_name = NodeName,
+                  configuration = Config} = State) ->
     case cloudi_core_i_configuration:F(L, Config) of
         {ok, Config}
             when CallType =:= remote; CallType =:= local_only ->
             {reply, ok, State};
         {ok, #config{nodes = #config_nodes{listen = Listen}} = ConfigNew} ->
-            Result = nodes_call_remote(Request, Listen),
+            Result = nodes_call_remote(Request, Listen, NodeName),
             case cloudi_core_i_nodes:reconfigure(ConfigNew, infinity) of
                 ok ->
                     {reply, Result, State#state{configuration = ConfigNew}};

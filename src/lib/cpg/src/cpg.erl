@@ -140,6 +140,10 @@
          get_remote_newest_pid/3,
          get_remote_newest_pid/4,
          reset/1,
+         listen_nodes/2,
+         visible_nodes/1,
+         hidden_nodes/1,
+         ignore_node/2,
          add_join_callback/2,
          add_join_callback/3,
          add_leave_callback/2,
@@ -174,6 +178,8 @@
                     {scope(), name()} |
                     {name(), pos_integer()} |
                     name(). % for OTP behaviors
+-type listen() :: visible |
+                  all.
 -type reason_join() :: join_local |
                        join_remote.
 -type reason_leave() :: leave_local |
@@ -188,6 +194,7 @@
 -export_type([scope/0,
               name/0,
               via_name/0,
+              listen/0,
               callback_join/0,
               callback_leave/0,
               callback/0]).
@@ -200,7 +207,7 @@
 
 -record(state,
     {
-        node_name :: string(),
+        node_name :: nonempty_string(),
         scope :: scope(), % locally registered process name
         groups :: cpg_data:state(), % GroupName -> #cpg_data{}
         monitors = #{} :: #{pid() := #state_monitor{}},
@@ -495,19 +502,24 @@ join_counts(Scope, Counts, Pid, Timeout)
 join_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {join, GroupName, Pid},
-    ok = gen_server:call(Scope, Request, Timeout),
-    gen_server:abcast(nodes(), Scope, Request),
+    {ok, VisibleNodes} = gen_server:call(Scope, Request, Timeout),
+    abcast = gen_server:abcast(VisibleNodes, Scope, Request),
     ok.
 
 join_counts_impl(Scope, Counts, Pid, Timeout)
     when node(Pid) =:= node() ->
-    Request = {join_counts, Counts, Pid},
-    case gen_server:call(Scope, Request, Timeout) of
-        ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+    if
+        Counts == [] ->
             ok;
-        error ->
-            error
+        true ->
+            Request = {join_counts, Counts, Pid},
+            case gen_server:call(Scope, Request, Timeout) of
+                {ok, VisibleNodes} ->
+                    abcast = gen_server:abcast(VisibleNodes, Scope, Request),
+                    ok;
+                error ->
+                    error
+            end
     end.
 
 %%-------------------------------------------------------------------------
@@ -686,8 +698,8 @@ leave_impl(Scope, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {leave, Pid},
     case gen_server:call(Scope, Request, Timeout) of
-        ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+        {ok, VisibleNodes} ->
+            abcast = gen_server:abcast(VisibleNodes, Scope, Request),
             ok;
         error ->
             error
@@ -697,8 +709,8 @@ leave_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {leave, GroupName, Pid},
     case gen_server:call(Scope, Request, Timeout) of
-        ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+        {ok, VisibleNodes} ->
+            abcast = gen_server:abcast(VisibleNodes, Scope, Request),
             ok;
         error ->
             error
@@ -706,13 +718,18 @@ leave_impl(Scope, GroupName, Pid, Timeout)
 
 leave_counts_impl(Scope, Counts, Pid, Timeout)
     when node(Pid) =:= node() ->
-    Request = {leave_counts, Counts, Pid},
-    case gen_server:call(Scope, Request, Timeout) of
-        ok ->
-            gen_server:abcast(nodes(), Scope, Request),
+    if
+        Counts == [] ->
             ok;
-        error ->
-            error
+        true ->
+            Request = {leave_counts, Counts, Pid},
+            case gen_server:call(Scope, Request, Timeout) of
+                {ok, VisibleNodes} ->
+                    abcast = gen_server:abcast(VisibleNodes, Scope, Request),
+                    ok;
+                error ->
+                    error
+            end
     end.
 
 %%-------------------------------------------------------------------------
@@ -2542,6 +2559,65 @@ reset(Scope)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Get the monitored listen nodes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec listen_nodes(listen(),
+                   nonempty_string()) ->
+    list(node()).
+
+listen_nodes(Listen, [_ | _] = NodeNameLocal) ->
+    Nodes = if
+        Listen =:= visible ->
+            erlang:nodes(visible);
+        Listen =:= all ->
+            erlang:nodes(connected)
+    end,
+    monitored_nodes(Nodes, NodeNameLocal).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the visible nodes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec visible_nodes(nonempty_string()) ->
+    list(node()).
+
+visible_nodes([_ | _] = NodeNameLocal) ->
+    monitored_nodes(erlang:nodes(visible), NodeNameLocal).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the hidden nodes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec hidden_nodes(nonempty_string()) ->
+    list(node()).
+
+hidden_nodes([_ | _] = NodeNameLocal) ->
+    monitored_nodes(erlang:nodes(hidden), NodeNameLocal).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if a node is ignored.===
+%% Nodes that connect periodically for running operations commands are
+%% ignored by this function.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec ignore_node(node(),
+                  nonempty_string()) ->
+    boolean().
+
+ignore_node(Node, [_ | _] = NodeNameLocal) ->
+    {NodeName, _} = node_split(Node),
+    lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Add a join callback.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -2665,12 +2741,12 @@ remove_leave_callback(Scope, GroupName, F)
 %% @end
 
 init([Scope]) ->
-    {NodeName, _} = node_split(node()),
+    {[_ | _] = NodeNameLocal, _} = node_split(node()),
     Listen = cpg_app:listen_type(),
     ok = monitor_nodes(true, Listen),
-    ok = gather_groups(listen_nodes(Listen), Scope),
+    ok = gather_groups(listen_nodes(Listen, NodeNameLocal), Scope),
     ok = quickrand:seed(),
-    {ok, #state{node_name = NodeName,
+    {ok, #state{node_name = NodeNameLocal,
                 scope = Scope,
                 groups = cpg_data:get_empty_groups(),
                 listen = Listen}}.
@@ -2679,34 +2755,45 @@ init([Scope]) ->
 %% @doc
 %% @end
 
-handle_call({join, GroupName, Pid} = Request, _, State) ->
-    abcast_hidden_nodes(Request, State),
-    {reply, ok, join_group_local(1, GroupName, Pid, State)};
+handle_call({join, GroupName, Pid} = Request, _,
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
+                   listen = Listen} = State) ->
+    ok = abcast_hidden_nodes(Request, Listen, Scope, NodeNameLocal),
+    VisibleNodes = visible_nodes(NodeNameLocal),
+    {reply, {ok, VisibleNodes},
+     join_group_local(1, GroupName, Pid, State)};
 
-handle_call({join_counts, Counts, Pid} = Request, _, State0) ->
+handle_call({join_counts, Counts, Pid} = Request, _,
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
+                   listen = Listen} = State) ->
     Valid = lists:all(fun({_, Count}) ->
         is_integer(Count) andalso (Count > 0)
     end, Counts),
     if
         Valid =:= true ->
-            abcast_hidden_nodes(Request, State0),
-            StateN = lists:foldl(fun({GroupName, Count}, State1) ->
-                join_group_local(Count, GroupName, Pid, State1)
-            end, State0, Counts),
-            {reply, ok, StateN};
+            ok = abcast_hidden_nodes(Request, Listen, Scope, NodeNameLocal),
+            VisibleNodes = visible_nodes(NodeNameLocal),
+            {reply, {ok, VisibleNodes},
+             join_groups_local(Counts, Pid, State)};
         Valid =:= false ->
-            {reply, error, State0}
+            {reply, error, State}
     end;
 
 handle_call({leave, Pid} = Request, _,
-            #state{monitors = Monitors} = State) ->
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
+                   listen = Listen,
+                   monitors = Monitors} = State) ->
     case maps:take(Pid, Monitors) of
         {#state_monitor{monitor = MonitorRef,
                         names = GroupNameList}, MonitorsNew} ->
             true = is_reference(MonitorRef),
             true = erlang:demonitor(MonitorRef, [flush]),
-            abcast_hidden_nodes(Request, State),
-            {reply, ok,
+            ok = abcast_hidden_nodes(Request, Listen, Scope, NodeNameLocal),
+            VisibleNodes = visible_nodes(NodeNameLocal),
+            {reply, {ok, VisibleNodes},
              leave_all_local(GroupNameList, Pid, leave_local,
                              State#state{monitors = MonitorsNew})};
         error ->
@@ -2714,15 +2801,21 @@ handle_call({leave, Pid} = Request, _,
     end;
 
 handle_call({leave, GroupName, Pid} = Request, _,
-            #state{monitors = Monitors} = State) ->
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
+                   listen = Listen,
+                   monitors = Monitors} = State) ->
     case maps:find(Pid, Monitors) of
         {ok, #state_monitor{monitor = MonitorRef,
                             names = GroupNameList}} ->
             true = is_reference(MonitorRef),
             case lists:member(GroupName, GroupNameList) of
                 true ->
-                    abcast_hidden_nodes(Request, State),
-                    {reply, ok, leave_group_local(1, GroupName, Pid, State)};
+                    ok = abcast_hidden_nodes(Request, Listen,
+                                             Scope, NodeNameLocal),
+                    VisibleNodes = visible_nodes(NodeNameLocal),
+                    {reply, {ok, VisibleNodes},
+                     leave_group_local(1, GroupName, Pid, State)};
                 false ->
                     {reply, error, State}
             end;
@@ -2731,7 +2824,10 @@ handle_call({leave, GroupName, Pid} = Request, _,
     end;
 
 handle_call({leave_counts, Counts, Pid} = Request, _,
-            #state{monitors = Monitors} = State0) ->
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
+                   listen = Listen,
+                   monitors = Monitors} = State) ->
     case maps:find(Pid, Monitors) of
         {ok, #state_monitor{monitor = MonitorRef,
                             names = GroupNameList}} ->
@@ -2742,16 +2838,16 @@ handle_call({leave_counts, Counts, Pid} = Request, _,
             end, Counts),
             if
                 Valid =:= true ->
-                    abcast_hidden_nodes(Request, State0),
-                    StateN = lists:foldl(fun({GroupName, Count}, State1) ->
-                        leave_group_local(Count, GroupName, Pid, State1)
-                    end, State0, Counts),
-                    {reply, ok, StateN};
+                    ok = abcast_hidden_nodes(Request, Listen,
+                                             Scope, NodeNameLocal),
+                    VisibleNodes = visible_nodes(NodeNameLocal),
+                    {reply, {ok, VisibleNodes},
+                     leave_groups_local(Counts, Pid, State)};
                 Valid =:= false ->
-                    {reply, error, State0}
+                    {reply, error, State}
             end;
         error ->
-            {reply, error, State0}
+            {reply, error, State}
     end;
 
 handle_call({join_count, GroupName, Pid}, _,
@@ -2931,18 +3027,25 @@ handle_call(Request, _, State) ->
 %% @end
 
 handle_cast({exchange, Node, HistoryL},
-            #state{scope = Scope} = State) ->
-    ?LOG_INFO("scope ~p received state from ~p", [Scope, Node]),
-    {noreply, merge(HistoryL, State)};
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
+                   listen = Listen} = State) ->
+    {MonitoredNode,
+     ListenNodes} = monitored_node(Node, Listen, NodeNameLocal),
+    StateNew = if
+        MonitoredNode =:= true ->
+            ?LOG_INFO("scope ~p received state from ~p", [Scope, Node]),
+            merge(HistoryL, ListenNodes, State);
+        MonitoredNode =:= false ->
+            State
+    end,
+    {noreply, StateNew};
 
 handle_cast({join, GroupName, Pid}, State) ->
     {noreply, join_group_remote(1, GroupName, Pid, State)};
 
-handle_cast({join_counts, Counts, Pid}, State0) ->
-    StateN = lists:foldl(fun({GroupName, Count}, State1) ->
-        join_group_remote(Count, GroupName, Pid, State1)
-    end, State0, Counts),
-    {noreply, StateN};
+handle_cast({join_counts, Counts, Pid}, State) ->
+    {noreply, join_groups_remote(Counts, Pid, State)};
 
 handle_cast({leave, Pid},
             #state{monitors = Monitors} = State) ->
@@ -2975,7 +3078,7 @@ handle_cast({leave, GroupName, Pid},
     end;
 
 handle_cast({leave_counts, Counts, Pid},
-            #state{monitors = Monitors} = State0) ->
+            #state{monitors = Monitors} = State) ->
     case maps:find(Pid, Monitors) of
         {ok, #state_monitor{monitor = MonitorProcess,
                             names = GroupNameList}} ->
@@ -2985,22 +3088,20 @@ handle_cast({leave_counts, Counts, Pid},
             end, Counts),
             if
                 Valid =:= true ->
-                    StateN = lists:foldl(fun({GroupName, Count}, State1) ->
-                        leave_group_remote(Count, GroupName, Pid, State1)
-                    end, State0, Counts),
-                    {noreply, StateN};
+                    {noreply, leave_groups_remote(Counts, Pid, State)};
                 Valid =:= false ->
-                    {noreply, State0}
+                    {noreply, State}
             end;
         error ->
-            {noreply, State0}
+            {noreply, State}
     end;
 
 handle_cast(reset,
-            #state{scope = Scope,
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
                    listen = ListenOld} = State) ->
     ListenNew = cpg_app:listen_type(),
-    ok = listen_reset(ListenNew, ListenOld, Scope),
+    ok = listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal),
     {noreply, State#state{listen = ListenNew}};
 
 handle_cast({add_join_callback, GroupName, F},
@@ -3039,7 +3140,7 @@ handle_info({'DOWNS', PidReasons}, State) ->
 
 handle_info({nodeup, Node, _InfoList},
             #state{node_name = NodeNameLocal} = State) ->
-    Ignore = ignore_node(NodeNameLocal, Node),
+    Ignore = ignore_node(Node, NodeNameLocal),
     if
         Ignore =:= true ->
             ok;
@@ -3103,6 +3204,38 @@ code_change(_, State, _) ->
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}, nodedown_reason]).
 
+monitored_nodes([] = L, _) ->
+    L;
+monitored_nodes([Node | Nodes], NodeNameLocal) ->
+    Ignore = ignore_node(Node, NodeNameLocal),
+    if
+        Ignore =:= true ->
+            monitored_nodes(Nodes, NodeNameLocal);
+        Ignore =:= false ->
+            [Node | monitored_nodes(Nodes, NodeNameLocal)]
+    end.
+
+monitored_node(Node, visible, NodeNameLocal) ->
+    ListenNodes = listen_nodes(visible, NodeNameLocal),
+    Visible = lists:member(Node, ListenNodes),
+    if
+        Visible =:= true ->
+            ok;
+        Visible =:= false ->
+            All = lists:member(Node, listen_nodes(all, NodeNameLocal)),
+            if
+                All =:= true ->
+                    ?LOG_ERROR("listen should be 'all' for ~p monitoring",
+                               [Node]);
+                All =:= false ->
+                    ok
+            end
+    end,
+    {Visible, ListenNodes};
+monitored_node(Node, all, NodeNameLocal) ->
+    ListenNodes = listen_nodes(all, NodeNameLocal),
+    {lists:member(Node, ListenNodes), ListenNodes}.
+
 gather_groups([], _, _) ->
     ok;
 gather_groups([RemoteNode | RemoteNodes], Node, Scope) ->
@@ -3113,27 +3246,22 @@ gather_groups([RemoteNode | RemoteNodes], Node, Scope) ->
 gather_groups(RemoteNodes, Scope) ->
     gather_groups(RemoteNodes, node(), Scope).
 
-abcast_hidden_nodes(_, #state{listen = visible}) ->
+abcast_hidden_nodes(_, visible, _, _) ->
     ok;
-abcast_hidden_nodes(Request, #state{scope = Scope,
-                                    listen = all}) ->
-    case nodes(hidden) of
+abcast_hidden_nodes(Request, all, Scope, NodeNameLocal) ->
+    case hidden_nodes(NodeNameLocal) of
         [] ->
             ok;
         [_ | _] = HiddenNodes ->
-            gen_server:abcast(HiddenNodes, Scope, Request)
+            abcast = gen_server:abcast(HiddenNodes, Scope, Request),
+            ok
     end.
 
-listen_nodes(visible) ->
-    nodes(visible);
-listen_nodes(all) ->
-    nodes(connected).
-
-listen_reset(Listen, Listen, _) ->
+listen_reset(Listen, Listen, _, _) ->
     ok;
-listen_reset(ListenNew, ListenOld, Scope) ->
+listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal) ->
     ok = monitor_nodes(true, ListenNew),
-    HiddenNodesBefore = nodes(hidden),
+    HiddenNodesBefore = hidden_nodes(NodeNameLocal),
     ok = monitor_nodes(false, ListenOld),
     if
         ListenNew =:= all ->
@@ -3141,7 +3269,8 @@ listen_reset(ListenNew, ListenOld, Scope) ->
             ok = listen_reset_all(HiddenNodesBefore, Scope);
         ListenNew =:= visible ->
             all = ListenOld,
-            HiddenNodesAfter = lists:usort(nodes(hidden) ++ HiddenNodesBefore),
+            HiddenNodesAfter = lists:usort(hidden_nodes(NodeNameLocal) ++
+                                           HiddenNodesBefore),
             ok = listen_reset_visible(HiddenNodesAfter, Scope)
     end,
     ok.
@@ -3159,9 +3288,11 @@ listen_reset_visible(HiddenNodes, Scope) ->
     HiddenNodeInfo = [{nodedown_reason, cpg_reset}, {node_type, hidden}],
     listen_reset_visible(HiddenNodes, HiddenNodeInfo, Scope).
 
-ignore_node(NodeNameLocal, Node) ->
-    {NodeName, _} = node_split(Node),
-    lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName).
+join_groups_local([], _, State) ->
+    State;
+join_groups_local([{GroupName, Count} | Counts], Pid, State) ->
+    join_groups_local(Counts, Pid,
+                      join_group_local(Count, GroupName, Pid, State)).
 
 join_group_local(Count, GroupName, Pid,
                  #state{groups = {DictI, GroupsDataOld},
@@ -3185,6 +3316,12 @@ join_group_local(Count, GroupName, Pid,
     GroupsData = DictI:store(GroupName, GroupData, GroupsDataOld),
     State#state{groups = {DictI, GroupsData},
                 monitors = monitor_local(Pid, GroupName, MonitorsOld)}.
+
+join_groups_remote([], _, State) ->
+    State;
+join_groups_remote([{GroupName, Count} | Counts], Pid, State) ->
+    join_groups_remote(Counts, Pid,
+                       join_group_remote(Count, GroupName, Pid, State)).
 
 join_group_remote(Count, GroupName, Pid,
                   #state{groups = {DictI, GroupsDataOld},
@@ -3213,6 +3350,12 @@ join_group_remote(Count, GroupName, Pid,
     State#state{groups = {DictI, GroupsData},
                 monitors = Monitors,
                 node_monitors = NodeMonitors}.
+
+leave_groups_local([], _, State) ->
+    State;
+leave_groups_local([{GroupName, Count} | Counts], Pid, State) ->
+    leave_groups_local(Counts, Pid,
+                       leave_group_local(Count, GroupName, Pid, State)).
 
 leave_group_local(Count, GroupName, Pid,
                   #state{groups = {DictI, GroupsDataOld},
@@ -3259,6 +3402,12 @@ leave_group_local(Count, GroupName, Pid,
     end,
     State#state{groups = {DictI, GroupsData},
                 monitors = Monitors}.
+
+leave_groups_remote([], _, State) ->
+    State;
+leave_groups_remote([{GroupName, Count} | Counts], Pid, State) ->
+    leave_groups_remote(Counts, Pid,
+                        leave_group_remote(Count, GroupName, Pid, State)).
 
 leave_group_remote(Count, GroupName, Pid,
                    #state{groups = {DictI, GroupsDataOld},
@@ -3639,18 +3788,17 @@ merge_pids([{GroupName, History_X} | HistoryL_X],
                DictI, GroupsDataNew, MonitorsNew, NodeMonitorsNew,
                Callbacks, Node, NodesConnected).
 
-merge(HistoryL_X,
+merge(HistoryL_X, ListenNodes,
       #state{groups = {DictI, GroupsData},
              monitors = Monitors,
              node_monitors = NodeMonitors,
-             callbacks = Callbacks,
-             listen = Listen} = State) ->
+             callbacks = Callbacks} = State) ->
     {GroupsDataNew,
      MonitorsNew,
      NodeMonitorsNew} = merge_pids(HistoryL_X,
                                    DictI, GroupsData, Monitors, NodeMonitors,
                                    Callbacks, node(),
-                                   sets:from_list(listen_nodes(Listen))),
+                                   sets:from_list(ListenNodes)),
     State#state{groups = {DictI, GroupsDataNew},
                 monitors = MonitorsNew,
                 node_monitors = NodeMonitorsNew}.

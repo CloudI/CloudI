@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Log an error if a hidden node connection causes a node to
+      receive service subscriptions without having listen set to all
+      (error is logged on the receive node and
+       the received service subscriptions are ignored)
+    * Improve CloudI node monitoring
+    * Update cpg
+
 2020-04-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix node reconnect so the previous connection type
