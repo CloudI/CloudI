@@ -404,23 +404,27 @@ reconfigure_nodes(NodeName, NodesAliveOld, Nodes,
     ListenNodes = cloudi_x_cpg:listen_nodes(Listen, NodeName),
     ListenNodesOld = lists:usort(ListenNodes ++ NodesAliveOld),
     NodesAll = lists:usort(ListenNodes ++ Nodes),
-    NodesDead = reconfigure_nodes_dead(ListenNodesOld, NodesAll),
+    NodesDead = reconfigure_nodes_dead(ListenNodesOld, NodesAll,
+                                       NodesStateOld, Listen),
     NodesAlive = reconfigure_nodes_alive(NodesDead, NodesAll),
     NodesState = maps:with([node() | NodesAll], NodesStateOld),
     NodesDownDurations = cloudi_core_i_status:
                          durations_copy(NodesAll, NodesDownDurationsOld),
     {NodesAlive, NodesDead, NodesAll, NodesState, NodesDownDurations}.
 
-reconfigure_nodes_dead([], Nodes) ->
+reconfigure_nodes_dead([], Nodes, _, _) ->
     Nodes;
-reconfigure_nodes_dead([NodeAliveOld | NodesAliveOld], Nodes) ->
+reconfigure_nodes_dead([NodeAliveOld | NodesAliveOld], Nodes,
+                       NodesStateOld, Listen) ->
     case cloudi_lists:delete_checked(NodeAliveOld, Nodes) of
         false ->
             % node is alive, but is no longer configured
-            _ = net_kernel:disconnect(NodeAliveOld),
-            reconfigure_nodes_dead(NodesAliveOld, Nodes);
+            ok = disconnect_node(Listen, NodeAliveOld, NodesStateOld),
+            reconfigure_nodes_dead(NodesAliveOld, Nodes,
+                                   NodesStateOld, Listen);
         NodesNew ->
-            reconfigure_nodes_dead(NodesAliveOld, NodesNew)
+            reconfigure_nodes_dead(NodesAliveOld, NodesNew,
+                                   NodesStateOld, Listen)
     end.
 
 reconfigure_nodes_alive([], Nodes) ->
@@ -831,4 +835,24 @@ connect_node(visible, Node) ->
     net_kernel:connect_node(Node);
 connect_node(hidden, Node) ->
     net_kernel:hidden_connect_node(Node).
+
+disconnect_node(Listen, Node, NodesState) ->
+    Disconnect = case maps:find(Node, NodesState) of
+        {ok, {_, ConnectNode, _, _}} ->
+            if
+                Listen =:= visible, ConnectNode =:= hidden ->
+                    false;
+                true ->
+                    true
+            end;
+        error ->
+            true
+    end,
+    if
+        Disconnect =:= true ->
+            _ = net_kernel:disconnect(Node),
+            ok;
+        Disconnect =:= false ->
+            ok
+    end.
 
