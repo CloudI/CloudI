@@ -193,7 +193,6 @@ handle_call({reconfigure,
                                            cost_precision = CostPrecision,
                                            log_reconnect = LogReconnect}}}, _,
             #state{node_name = NodeName,
-                   nodes_alive = NodesAliveOld,
                    nodes_state = NodesStateOld,
                    nodes_down_durations = NodesDownDurationsOld,
                    listen = ListenOld,
@@ -204,7 +203,6 @@ handle_call({reconfigure,
      NodesAll,
      NodesState,
      NodesDownDurations} = reconfigure_nodes(NodeName,
-                                             NodesAliveOld,
                                              Nodes,
                                              NodesStateOld,
                                              NodesDownDurationsOld,
@@ -401,33 +399,21 @@ monitor_nodes_switch(ListenOld, ListenNew) ->
     monitor_nodes(true, ListenNew),
     monitor_nodes(false, ListenOld).
 
-reconfigure_nodes(NodeName, NodesAliveOld, Nodes,
+reconfigure_nodes(NodeName, Nodes,
                   NodesStateOld, NodesDownDurationsOld, Listen) ->
     ListenNodes = cloudi_x_cpg:listen_nodes(Listen, NodeName),
-    ListenNodesOld = lists:usort(ListenNodes ++ NodesAliveOld),
     NodesAll = lists:usort(ListenNodes ++ Nodes),
-    NodesDead = reconfigure_nodes_dead(ListenNodesOld, NodesAll,
-                                       NodesStateOld, Listen),
+    NodesDead = reconfigure_nodes_dead(ListenNodes, NodesAll),
     NodesAlive = reconfigure_nodes_alive(NodesDead, NodesAll),
     NodesState = maps:with([node() | NodesAll], NodesStateOld),
     NodesDownDurations = cloudi_core_i_status:
                          durations_copy(NodesAll, NodesDownDurationsOld),
     {NodesAlive, NodesDead, NodesAll, NodesState, NodesDownDurations}.
 
-reconfigure_nodes_dead([], Nodes, _, _) ->
+reconfigure_nodes_dead([], Nodes) ->
     Nodes;
-reconfigure_nodes_dead([NodeAliveOld | NodesAliveOld], Nodes,
-                       NodesStateOld, Listen) ->
-    case cloudi_lists:delete_checked(NodeAliveOld, Nodes) of
-        false ->
-            % node is alive, but is no longer configured
-            ok = disconnect_node(Listen, NodeAliveOld, NodesStateOld),
-            reconfigure_nodes_dead(NodesAliveOld, Nodes,
-                                   NodesStateOld, Listen);
-        NodesNew ->
-            reconfigure_nodes_dead(NodesAliveOld, NodesNew,
-                                   NodesStateOld, Listen)
-    end.
+reconfigure_nodes_dead([NodeAlive | NodesAlive], Nodes) ->
+    reconfigure_nodes_dead(NodesAlive, lists:delete(NodeAlive, Nodes)).
 
 reconfigure_nodes_alive([], Nodes) ->
     Nodes;
@@ -838,24 +824,4 @@ connect_node(visible, Node) ->
     net_kernel:connect_node(Node);
 connect_node(hidden, Node) ->
     net_kernel:hidden_connect_node(Node).
-
-disconnect_node(Listen, Node, NodesState) ->
-    Disconnect = case maps:find(Node, NodesState) of
-        {ok, {_, ConnectNode, _, _}} ->
-            if
-                Listen =:= visible, ConnectNode =:= hidden ->
-                    false;
-                true ->
-                    true
-            end;
-        error ->
-            true
-    end,
-    if
-        Disconnect =:= true ->
-            _ = net_kernel:disconnect(Node),
-            ok;
-        Disconnect =:= false ->
-            ok
-    end.
 
