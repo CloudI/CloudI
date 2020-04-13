@@ -432,7 +432,7 @@ load([I | _] = Path) when is_integer(I) ->
                                    [Path, Reason]),
             Error
     end;
-load([T | _] = Terms) when is_tuple(T) ->
+load(Terms) when is_list(Terms) ->
     case load_verify(Terms) of
         ok ->
             new(Terms, #config{uuid_generator = uuid_generator()});
