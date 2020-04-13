@@ -140,6 +140,7 @@
          get_remote_newest_pid/3,
          get_remote_newest_pid/4,
          reset/1,
+         reset_all/1,
          listen_nodes/2,
          visible_nodes/1,
          hidden_nodes/1,
@@ -2555,7 +2556,22 @@ get_remote_newest_pid(Scope, GroupName, Exclude, Timeout)
 
 reset(Scope)
     when is_atom(Scope) ->
-    gen_server:cast(Scope, reset).
+    reset_all([Scope]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reset internal scopes state.===
+%% Updates cpg application node_type monitoring
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec reset_all(list(scope())) ->
+    ok.
+
+reset_all(Scopes)
+    when is_list(Scopes) ->
+    ok = reset_all_send(Scopes, self()),
+    reset_all_recv(Scopes).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -3096,14 +3112,6 @@ handle_cast({leave_counts, Counts, Pid},
             {noreply, State}
     end;
 
-handle_cast(reset,
-            #state{node_name = NodeNameLocal,
-                   scope = Scope,
-                   listen = ListenOld} = State) ->
-    ListenNew = cpg_app:listen_type(),
-    ok = listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal),
-    {noreply, State#state{listen = ListenNew}};
-
 handle_cast({add_join_callback, GroupName, F},
             #state{callbacks = Callbacks} = State) ->
     CallbacksNew = cpg_callbacks:add_join(Callbacks, GroupName, F),
@@ -3172,6 +3180,15 @@ handle_info({cpg_data, From},
             #state{groups = Groups} = State) ->
     From ! {cloudi_cpg_data, Groups},
     {noreply, State};
+
+handle_info({reset, From},
+            #state{node_name = NodeNameLocal,
+                   scope = Scope,
+                   listen = ListenOld} = State) ->
+    ListenNew = cpg_app:listen_type(),
+    ok = listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal),
+    From ! {cloudi_cpg_reset, Scope},
+    {noreply, State#state{listen = ListenNew}};
 
 handle_info(Request, State) ->
     {stop, lists:flatten(io_lib:format("Unknown info \"~w\"", [Request])),
@@ -3256,6 +3273,21 @@ abcast_hidden_nodes(Request, all, Scope, NodeNameLocal) ->
             abcast = gen_server:abcast(HiddenNodes, Scope, Request),
             ok
     end.
+
+reset_all_send([], _) ->
+    ok;
+reset_all_send([Scope | Scopes], Pid) ->
+    Scope ! {reset, Pid},
+    reset_all_send(Scopes, Pid).
+
+reset_all_recv([]) ->
+    ok;
+reset_all_recv([Scope | Scopes]) ->
+    receive
+        {cloudi_cpg_reset, Scope} ->
+            ok
+    end,
+    reset_all_recv(Scopes).
 
 listen_reset(Listen, Listen, _, _) ->
     ok;

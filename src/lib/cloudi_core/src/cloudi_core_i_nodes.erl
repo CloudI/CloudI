@@ -182,6 +182,7 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
 
 handle_call({reconfigure,
              #config{logging = #config_logging{redirect = NodeLogger},
+                     services = Services,
                      nodes = #config_nodes{nodes = Nodes,
                                            reconnect_delay = ReconnectDelay,
                                            listen = Listen,
@@ -214,7 +215,7 @@ handle_call({reconfigure,
     if
         ListenOld /= Listen ->
             monitor_nodes_switch(ListenOld, Listen),
-            cpg_scopes_reset();
+            cpg_scopes_reset(Services);
         true ->
             ok
     end,
@@ -231,6 +232,7 @@ handle_call({reconfigure,
                             nodes_state = NodesState,
                             nodes_down_durations = NodesDownDurations,
                             reconnect_interval = ReconnectInterval,
+                            listen = Listen,
                             connect = Connect,
                             discovery = Discovery,
                             cost = maps:from_list(Cost),
@@ -807,19 +809,20 @@ discovery_update(#config_nodes_discovery{} = DiscoveryOld,
     discovery_stop(DiscoveryOld),
     discovery_start(DiscoveryNew).
 
-cpg_scopes() ->
-    % due to settings in cloudi_core_i_constants.hrl of
-    % SCOPE_CUSTOM_PREFIX and SCOPE_DEFAULT
-    CustomScopes = lists:filter(fun(RegisteredName) ->
-        lists:prefix(?SCOPE_CUSTOM_PREFIX,
-                     erlang:atom_to_list(RegisteredName))
-    end, erlang:registered()),
-    [?SCOPE_DEFAULT | CustomScopes].
+cpg_scopes([], ScopesSet) ->
+    sets:to_list(ScopesSet);
+cpg_scopes([#config_service_internal{options = Options} | Services],
+           ScopesSet) ->
+    #config_service_options{scope = Scope} = Options,
+    cpg_scopes(Services, sets:add_element(Scope, ScopesSet));
+cpg_scopes([#config_service_external{options = Options} | Services],
+           ScopesSet) ->
+    #config_service_options{scope = Scope} = Options,
+    cpg_scopes(Services, sets:add_element(Scope, ScopesSet)).
 
-cpg_scopes_reset() ->
-    lists:foreach(fun(Scope) ->
-        cloudi_x_cpg:reset(Scope)
-    end, cpg_scopes()).
+cpg_scopes_reset(Services) ->
+    Scopes = cpg_scopes(Services, sets:from_list([?SCOPE_DEFAULT])),
+    cloudi_x_cpg:reset_all(Scopes).
 
 connect_nodes([], _) ->
     ok;
