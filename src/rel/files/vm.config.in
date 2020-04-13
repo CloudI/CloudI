@@ -54,7 +54,7 @@
   ]},
  {cloudi_x_cpg, [
     {group_storage, cloudi_x_trie},
-    {scope, []}
+    {scope, [cpg_default_scope]}
   ]},
  {cloudi_core, [
     {uuid_v1_variant, @CLOUDI_UUID_V1_VARIANT@},

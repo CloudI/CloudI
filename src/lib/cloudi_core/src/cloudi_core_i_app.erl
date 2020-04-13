@@ -94,10 +94,7 @@ start(_, _) ->
         undefined ->
             % default configuration
             % (it is better to not use this, to have everything fail-fast)
-            [{acl, []},
-             {services, []},
-             {nodes, []},
-             {logging, [{file, "cloudi.log"}]}]
+            []
     end,
     case cloudi_core_i_configuration:load(PathOrData) of
         {ok, Config} ->
