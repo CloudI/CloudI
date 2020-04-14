@@ -145,6 +145,7 @@
          visible_nodes/1,
          hidden_nodes/1,
          ignore_node/2,
+         valid_node/1,
          add_join_callback/2,
          add_join_callback/3,
          add_leave_callback/2,
@@ -224,6 +225,7 @@
            {leave_counts_impl, 4}]}).
 
 -define(NODETOOL_SUFFIX, "_script_process").
+-define(NODETOOL_SUFFIX_LENGTH, length(?NODETOOL_SUFFIX)).
 -define(DEFAULT_TIMEOUT, 5000). % from gen_server:call/2
 
 %%%------------------------------------------------------------------------
@@ -2629,8 +2631,38 @@ hidden_nodes([_ | _] = NodeNameLocal) ->
     boolean().
 
 ignore_node(Node, [_ | _] = NodeNameLocal) ->
-    {NodeName, _} = node_split(Node),
+    {NodeName, _, _} = node_split(Node),
     lists:prefix(NodeNameLocal ++ ?NODETOOL_SUFFIX, NodeName).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if a node is valid.===
+%% If the node name is not ignored.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec valid_node(node()) ->
+    boolean().
+
+valid_node(Node) ->
+    {NodeName, Length, Host} = node_split(Node),
+    if
+        Length == 0; Host == [] ->
+            false;
+        Length > 0 ->
+            valid_node(NodeName, Length)
+    end.
+
+valid_node(_, Length)
+    when Length < ?NODETOOL_SUFFIX_LENGTH ->
+    true;
+valid_node([_ | T] = NodeName, Length) ->
+    case lists:prefix(?NODETOOL_SUFFIX, NodeName) of
+        true ->
+            false;
+        false ->
+            valid_node(T, Length - 1)
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -2757,7 +2789,7 @@ remove_leave_callback(Scope, GroupName, F)
 %% @end
 
 init([Scope]) ->
-    {[_ | _] = NodeNameLocal, _} = node_split(node()),
+    {[_ | _] = NodeNameLocal, _, _} = node_split(node()),
     Listen = cpg_app:listen_type(),
     ok = monitor_nodes(true, Listen),
     ok = gather_groups(listen_nodes(Listen, NodeNameLocal), Scope),
@@ -3242,7 +3274,7 @@ monitored_node(Node, visible, NodeNameLocal) ->
             All = lists:member(Node, listen_nodes(all, NodeNameLocal)),
             if
                 All =:= true ->
-                    ?LOG_ERROR("listen should be 'all' for ~p monitoring",
+                    ?LOG_ERROR("listen should be 'all' for monitoring ~p",
                                [Node]);
                 All =:= false ->
                     ok
@@ -3292,6 +3324,7 @@ reset_all_recv([Scope | Scopes]) ->
 listen_reset(Listen, Listen, _, _) ->
     ok;
 listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal) ->
+    % may cause duplicate nodeup/nodedown messages to avoid ignoring events
     ok = monitor_nodes(true, ListenNew),
     HiddenNodesBefore = hidden_nodes(NodeNameLocal),
     ok = monitor_nodes(false, ListenOld),
@@ -3301,9 +3334,10 @@ listen_reset(ListenNew, ListenOld, Scope, NodeNameLocal) ->
             ok = listen_reset_all(HiddenNodesBefore, Scope);
         ListenNew =:= visible ->
             all = ListenOld,
-            HiddenNodesAfter = lists:usort(hidden_nodes(NodeNameLocal) ++
-                                           HiddenNodesBefore),
-            ok = listen_reset_visible(HiddenNodesAfter, Scope)
+            HiddenNodesAfter = hidden_nodes(NodeNameLocal),
+            ok = listen_reset_visible(lists:usort(HiddenNodesBefore ++
+                                                  HiddenNodesAfter),
+                                      Scope)
     end,
     ok.
 
@@ -3933,14 +3967,14 @@ monitor_remote(Pid, PidNode, GroupName, MonitorsOld, NodeMonitorsOld) ->
     end.
 
 node_split(Node) when is_atom(Node) ->
-    node_split(erlang:atom_to_list(Node), []).
+    node_split(erlang:atom_to_list(Node), [], 0).
 
-node_split([], Name) ->
-    {lists:reverse(Name), []};
-node_split([$@ | NodeStr], Name) ->
-    {lists:reverse(Name), NodeStr};
-node_split([C | NodeStr], Name) ->
-    node_split(NodeStr, [C | Name]).
+node_split([], Name, Length) ->
+    {lists:reverse(Name), Length, []};
+node_split([$@ | NodeStr], Name, Length) ->
+    {lists:reverse(Name), Length, NodeStr};
+node_split([C | NodeStr], Name, Length) ->
+    node_split(NodeStr, [C | Name], Length + 1).
 
 whereis_name_random(1, [Pid]) ->
     Pid;

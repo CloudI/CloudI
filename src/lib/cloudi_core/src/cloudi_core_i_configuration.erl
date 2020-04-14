@@ -5473,17 +5473,7 @@ validate_aspects_f([Entry | _], _, _, _) ->
     {error, Entry}.
 
 validate_node(Node) ->
-    Valid = case cloudi_string:split("@", erlang:atom_to_list(Node)) of
-        [NodeName, _] ->
-            case cloudi_string:findl(?NODETOOL_SUFFIX, NodeName) of
-                false ->
-                    true;
-                _ ->
-                    false
-            end;
-        _ ->
-            false
-    end,
+    Valid = cloudi_x_cpg:valid_node(Node),
     if
         Valid =:= true ->
             ok;

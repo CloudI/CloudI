@@ -96,7 +96,7 @@ start_link(#config{nodes = #config_nodes{listen = Listen,
                                          connect = Connect,
                                          timestamp_type = TimestampType}} =
            Config) ->
-    applications_set(Listen, Connect, TimestampType),
+    ok = applications_set(Listen, Connect, TimestampType),
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
 reconfigure(Config, Timeout) ->
@@ -137,9 +137,9 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                     cost_precision = CostPrecision,
                                     log_reconnect = LogReconnect}}]) ->
     Node = node(),
+    true = cloudi_x_cpg:valid_node(Node),
     NodeName = node_name(Node),
-    false = cloudi_string:findl(?NODETOOL_SUFFIX, NodeName),
-    monitor_nodes(true, Listen),
+    ok = monitor_nodes(true, Listen),
     NodeLoggerNew = if
         NodeLogger =:= Node; NodeLogger =:= undefined ->
             undefined;
@@ -181,61 +181,50 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                 log_reconnect = LogReconnect}}.
 
 handle_call({reconfigure,
-             #config{logging = #config_logging{redirect = NodeLogger},
-                     services = Services,
-                     nodes = #config_nodes{nodes = Nodes,
-                                           reconnect_delay = ReconnectDelay,
-                                           listen = Listen,
-                                           connect = Connect,
-                                           timestamp_type = TimestampType,
-                                           discovery = Discovery,
-                                           cost = Cost,
-                                           cost_precision = CostPrecision,
-                                           log_reconnect = LogReconnect}}}, _,
+             #config{logging = #config_logging{redirect = NodeLoggerNew},
+                     services = ServicesNew,
+                     nodes = #config_nodes{nodes = NodesNew,
+                                           reconnect_delay = ReconnectDelayNew,
+                                           listen = ListenNew,
+                                           connect = ConnectNew,
+                                           timestamp_type = TimestampTypeNew,
+                                           discovery = DiscoveryNew,
+                                           cost = CostNew,
+                                           cost_precision = CostPrecisionNew,
+                                           log_reconnect = LogReconnectNew}}},
+            _,
             #state{node_name = NodeName,
                    nodes_state = NodesStateOld,
                    nodes_down_durations = NodesDownDurationsOld,
                    listen = ListenOld,
                    connect = ConnectOld,
                    discovery = DiscoveryOld} = State) ->
-    {NodesAlive,
-     NodesDead,
-     NodesAll,
-     NodesState,
-     NodesDownDurations} = reconfigure_nodes(NodeName,
-                                             Nodes,
-                                             NodesStateOld,
-                                             NodesDownDurationsOld,
-                                             Listen),
-    ReconnectInterval = ReconnectDelay * 1000,
-    logging_redirect_set(NodeLogger),
-    applications_set(Listen, Connect, TimestampType),
-    if
-        ListenOld /= Listen ->
-            monitor_nodes_switch(ListenOld, Listen),
-            cpg_scopes_reset(Services);
-        true ->
-            ok
-    end,
-    if
-        ConnectOld /= Connect ->
-            discovery_stop(DiscoveryOld),
-            discovery_start(Discovery);
-        true ->
-            discovery_update(DiscoveryOld, Discovery)
-    end,
-    {reply, ok, State#state{nodes_alive = NodesAlive,
-                            nodes_dead = NodesDead,
-                            nodes_all = NodesAll,
-                            nodes_state = NodesState,
-                            nodes_down_durations = NodesDownDurations,
-                            reconnect_interval = ReconnectInterval,
-                            listen = Listen,
-                            connect = Connect,
-                            discovery = Discovery,
-                            cost = maps:from_list(Cost),
-                            cost_precision = CostPrecision,
-                            log_reconnect = LogReconnect}};
+    {NodesAliveNew,
+     NodesDeadNew,
+     NodesAllNew,
+     NodesStateNew,
+     NodesDownDurationsNew} = reconfigure_nodes(NodeName,
+                                                NodesNew,
+                                                NodesStateOld,
+                                                NodesDownDurationsOld,
+                                                ListenNew),
+    ReconnectIntervalNew = ReconnectDelayNew * 1000,
+    logging_redirect_set(NodeLoggerNew),
+    ok = applications_set(ListenNew, ConnectNew, TimestampTypeNew),
+    ok = listen_reset(ListenOld, ListenNew, ServicesNew, NodeName),
+    ok = connect_reset(ConnectOld, ConnectNew, DiscoveryOld, DiscoveryNew),
+    {reply, ok, State#state{nodes_alive = NodesAliveNew,
+                            nodes_dead = NodesDeadNew,
+                            nodes_all = NodesAllNew,
+                            nodes_state = NodesStateNew,
+                            nodes_down_durations = NodesDownDurationsNew,
+                            reconnect_interval = ReconnectIntervalNew,
+                            listen = ListenNew,
+                            connect = ConnectNew,
+                            discovery = DiscoveryNew,
+                            cost = maps:from_list(CostNew),
+                            cost_precision = CostPrecisionNew,
+                            log_reconnect = LogReconnectNew}};
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
@@ -394,21 +383,17 @@ applications_set(Listen, Connect, TimestampType) ->
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}, nodedown_reason]).
 
-monitor_nodes_switch(ListenOld, ListenNew) ->
-    % may cause duplicate nodeup/nodedown messages to avoid ignoring events
-    monitor_nodes(true, ListenNew),
-    monitor_nodes(false, ListenOld).
-
-reconfigure_nodes(NodeName, Nodes,
-                  NodesStateOld, NodesDownDurationsOld, Listen) ->
-    ListenNodes = cloudi_x_cpg:listen_nodes(Listen, NodeName),
-    NodesAll = lists:usort(ListenNodes ++ Nodes),
-    NodesDead = reconfigure_nodes_dead(ListenNodes, NodesAll),
-    NodesAlive = reconfigure_nodes_alive(NodesDead, NodesAll),
-    NodesState = maps:with([node() | NodesAll], NodesStateOld),
-    NodesDownDurations = cloudi_core_i_status:
-                         durations_copy(NodesAll, NodesDownDurationsOld),
-    {NodesAlive, NodesDead, NodesAll, NodesState, NodesDownDurations}.
+reconfigure_nodes(NodeName, NodesNew,
+                  NodesStateOld, NodesDownDurationsOld, ListenNew) ->
+    ListenNodes = cloudi_x_cpg:listen_nodes(ListenNew, NodeName),
+    NodesAllNew = lists:usort(ListenNodes ++ NodesNew),
+    NodesDeadNew = reconfigure_nodes_dead(ListenNodes, NodesAllNew),
+    NodesAliveNew = reconfigure_nodes_alive(NodesDeadNew, NodesAllNew),
+    NodesStateNew = maps:with([node() | NodesAllNew], NodesStateOld),
+    NodesDownDurationsNew = cloudi_core_i_status:
+                            durations_copy(NodesAllNew, NodesDownDurationsOld),
+    {NodesAliveNew, NodesDeadNew, NodesAllNew,
+     NodesStateNew, NodesDownDurationsNew}.
 
 reconfigure_nodes_dead([], Nodes) ->
     Nodes;
@@ -782,9 +767,9 @@ discovery_stop(#config_nodes_discovery{module = Module,
 discovery_update(undefined, undefined) ->
     ok;
 discovery_update(undefined, #config_nodes_discovery{} = DiscoveryNew) ->
-    discovery_start(DiscoveryNew);
+    ok = discovery_start(DiscoveryNew);
 discovery_update(#config_nodes_discovery{} = DiscoveryOld, undefined) ->
-    discovery_stop(DiscoveryOld);
+    ok = discovery_stop(DiscoveryOld);
 discovery_update(#config_nodes_discovery{start_f = StartF,
                                          start_a = StartA},
                  #config_nodes_discovery{start_f = StartF,
@@ -792,8 +777,45 @@ discovery_update(#config_nodes_discovery{start_f = StartF,
     ok;
 discovery_update(#config_nodes_discovery{} = DiscoveryOld,
                  #config_nodes_discovery{} = DiscoveryNew) ->
-    discovery_stop(DiscoveryOld),
-    discovery_start(DiscoveryNew).
+    ok = discovery_stop(DiscoveryOld),
+    ok = discovery_start(DiscoveryNew).
+
+listen_reset(Listen, Listen, _, _) ->
+    ok;
+listen_reset(ListenOld, ListenNew, ServicesNew, NodeName) ->
+    % may cause duplicate nodeup/nodedown messages to avoid ignoring events
+    ok = monitor_nodes(true, ListenNew),
+    HiddenNodesBefore = cloudi_x_cpg:hidden_nodes(NodeName),
+    ok = monitor_nodes(false, ListenOld),
+    if
+        ListenNew =:= all ->
+            visible = ListenOld,
+            ok = listen_reset_all(HiddenNodesBefore);
+        ListenNew =:= visible ->
+            all = ListenOld,
+            HiddenNodesAfter = cloudi_x_cpg:hidden_nodes(NodeName),
+            ok = listen_reset_visible(lists:usort(HiddenNodesBefore ++
+                                                  HiddenNodesAfter))
+    end,
+    ok = cpg_scopes_reset(ServicesNew).
+
+listen_reset_all([]) ->
+    ok;
+listen_reset_all([HiddenNode | HiddenNodes]) ->
+    ?MODULE ! {nodeup, HiddenNode, [{node_type, hidden}]},
+    listen_reset_all(HiddenNodes).
+
+listen_reset_visible([]) ->
+    ok;
+listen_reset_visible(HiddenNodes) ->
+    ?LOG_ERROR("listen should be 'all' for monitoring:~n    ~p",
+               [HiddenNodes]).
+
+connect_reset(Connect, Connect, DiscoveryOld, DiscoveryNew) ->
+    ok = discovery_update(DiscoveryOld, DiscoveryNew);
+connect_reset(_, _, DiscoveryOld, DiscoveryNew) ->
+    ok = discovery_stop(DiscoveryOld),
+    ok = discovery_start(DiscoveryNew).
 
 cpg_scopes([], ScopesSet) ->
     sets:to_list(ScopesSet);
