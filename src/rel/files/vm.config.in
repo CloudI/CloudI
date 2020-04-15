@@ -53,6 +53,7 @@
     {path_mounts, "/proc/mounts"}
   ]},
  {cloudi_x_cpg, [
+    {node_type, all},
     {group_storage, cloudi_x_trie},
     {scope, [cpg_default_scope]}
   ]},

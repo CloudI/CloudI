@@ -92,11 +92,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(#config{nodes = #config_nodes{listen = Listen,
-                                         connect = Connect,
-                                         timestamp_type = TimestampType}} =
-           Config) ->
-    ok = applications_set(Listen, Connect, TimestampType),
+start_link(Config) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
 reconfigure(Config, Timeout) ->
@@ -130,8 +126,9 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
               nodes = #config_nodes{nodes = Nodes,
                                     reconnect_start = ReconnectStart,
                                     reconnect_delay = ReconnectDelay,
-                                    listen = Listen,
+                                    listen = ListenNew,
                                     connect = Connect,
+                                    timestamp_type = TimestampType,
                                     discovery = Discovery,
                                     cost = Cost,
                                     cost_precision = CostPrecision,
@@ -139,7 +136,14 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
     Node = node(),
     true = cloudi_x_cpg:valid_node(Node),
     NodeName = node_name(Node),
-    ok = monitor_nodes(true, Listen),
+
+    % cpg is already running as an application dependency,
+    % so update the listen value
+    {ok, ListenOld} = application:get_env(cloudi_x_cpg, node_type),
+    ok = monitor_nodes(true, ListenOld),
+    ok = applications_set(ListenNew, Connect, TimestampType),
+    ok = listen_reset(ListenOld, ListenNew, [], NodeName),
+
     NodeLoggerNew = if
         NodeLogger =:= Node; NodeLogger =:= undefined ->
             undefined;
@@ -162,7 +166,7 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
     NodesState = #{Node => {erlang:system_info(start_time), undefined,
                             undefined, 0}},
     ok = connect_nodes(Nodes, Connect),
-    discovery_start(Discovery),
+    ok = discovery_start(Discovery),
     ReconnectInterval = ReconnectDelay * 1000,
     ReconnectTimer = erlang:send_after(ReconnectStart * 1000,
                                        self(), reconnect),
@@ -173,7 +177,7 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                 logging_redirect = NodeLoggerNew,
                 reconnect_interval = ReconnectInterval,
                 reconnect_timer = ReconnectTimer,
-                listen = Listen,
+                listen = ListenNew,
                 connect = Connect,
                 discovery = Discovery,
                 cost = maps:from_list(Cost),

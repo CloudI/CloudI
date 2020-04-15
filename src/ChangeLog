@@ -3,6 +3,7 @@
 
 2020-04-14 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Fix cpg listen initialization at CloudI startup
     * Update backward-cpp
 
 2020-04-13 Michael Truog   <mjtruog at protonmail dot com>
