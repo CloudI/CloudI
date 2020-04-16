@@ -10,8 +10,8 @@ C++ `backward-cpp`
 `for creating a backtrace in C++`
 
 - `https://github.com/bombela/backward-cpp`
-- `commit 83da75636cef3ee6e0c83cf8651e2929e1b87261 (v1.5)`
-- `Tue Apr 14 19:52:04 UTC 2020`
+- `commit cc475eb3b0fed934ea0897e96578f712048c3b53`
+- `Wed Apr 15 16:02:20 UTC 2020`
 - `MIT`
 
 C++ `booster (only booster/backtrace.h)`

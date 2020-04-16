@@ -92,8 +92,15 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Config) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
+start_link(#config{
+               nodes = #config_nodes{
+                   listen = ListenNew,
+                   connect = Connect,
+                   timestamp_type = TimestampType}} = Config) ->
+    {ok, ListenOld} = application:get_env(cloudi_x_cpg, node_type),
+    ok = applications_set(ListenNew, Connect, TimestampType),
+    gen_server:start_link({local, ?MODULE}, ?MODULE,
+                          [ListenOld, Config], []).
 
 reconfigure(Config, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, {reconfigure, Config}, Timeout)).
@@ -122,26 +129,27 @@ node_name(Node) ->
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([#config{logging = #config_logging{redirect = NodeLogger},
-              nodes = #config_nodes{nodes = Nodes,
-                                    reconnect_start = ReconnectStart,
-                                    reconnect_delay = ReconnectDelay,
-                                    listen = ListenNew,
-                                    connect = Connect,
-                                    timestamp_type = TimestampType,
-                                    discovery = Discovery,
-                                    cost = Cost,
-                                    cost_precision = CostPrecision,
-                                    log_reconnect = LogReconnect}}]) ->
+init([ListenOld,
+      #config{
+          logging = #config_logging{
+              redirect = NodeLogger},
+          nodes = #config_nodes{
+              nodes = Nodes,
+              reconnect_start = ReconnectStart,
+              reconnect_delay = ReconnectDelay,
+              listen = ListenNew,
+              connect = Connect,
+              discovery = Discovery,
+              cost = Cost,
+              cost_precision = CostPrecision,
+              log_reconnect = LogReconnect}}]) ->
     Node = node(),
     true = cloudi_x_cpg:valid_node(Node),
     NodeName = node_name(Node),
 
     % cpg is already running as an application dependency,
     % so update the listen value
-    {ok, ListenOld} = application:get_env(cloudi_x_cpg, node_type),
     ok = monitor_nodes(true, ListenOld),
-    ok = applications_set(ListenNew, Connect, TimestampType),
     ok = listen_reset(ListenOld, ListenNew, [], NodeName),
 
     NodeLoggerNew = if
@@ -185,18 +193,20 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                 log_reconnect = LogReconnect}}.
 
 handle_call({reconfigure,
-             #config{logging = #config_logging{redirect = NodeLoggerNew},
-                     services = ServicesNew,
-                     nodes = #config_nodes{nodes = NodesNew,
-                                           reconnect_delay = ReconnectDelayNew,
-                                           listen = ListenNew,
-                                           connect = ConnectNew,
-                                           timestamp_type = TimestampTypeNew,
-                                           discovery = DiscoveryNew,
-                                           cost = CostNew,
-                                           cost_precision = CostPrecisionNew,
-                                           log_reconnect = LogReconnectNew}}},
-            _,
+             #config{
+                 logging = #config_logging{
+                     redirect = NodeLoggerNew},
+                 services = ServicesNew,
+                 nodes = #config_nodes{
+                     nodes = NodesNew,
+                     reconnect_delay = ReconnectDelayNew,
+                     listen = ListenNew,
+                     connect = ConnectNew,
+                     timestamp_type = TimestampTypeNew,
+                     discovery = DiscoveryNew,
+                     cost = CostNew,
+                     cost_precision = CostPrecisionNew,
+                     log_reconnect = LogReconnectNew}}}, _,
             #state{node_name = NodeName,
                    nodes_state = NodesStateOld,
                    nodes_down_durations = NodesDownDurationsOld,
