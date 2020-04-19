@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-19 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add a limit to scheduling hint waiting messages
+      (used by internal services with duo_mode == true)
+
 2020-04-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix scheduling of internal service use of
