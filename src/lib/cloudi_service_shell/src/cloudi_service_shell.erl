@@ -79,7 +79,7 @@
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
 -type module_response(Result) ::
     {{ok, Result}, AgentNew :: agent()} |
-    {{error, cloudi:error_reason_sync()}, AgentNew :: agent()}.
+    {{error, cloudi:error_reason()}, AgentNew :: agent()}.
 
 -spec exec(Agent :: agent(),
            Prefix :: service_name(),

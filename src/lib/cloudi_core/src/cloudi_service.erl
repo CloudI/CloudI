@@ -59,7 +59,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -80,8 +80,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -199,9 +199,7 @@
               source/0]).
 
 -type error_reason() :: timeout.
--type error_reason_sync() :: error_reason().
--export_type([error_reason/0,
-              error_reason_sync/0]).
+-export_type([error_reason/0]).
 
 % for cloudi_service_api:aspect_request_after_internal() and
 % cloudi_service_api:aspect_request_after_external() and
@@ -1326,7 +1324,7 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
                 Request :: request()) ->
     {ok, ResponseInfo :: response_info(), Response :: response()} |
     {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason()}.
 
 send_sync(Dispatcher, [NameC | _] = Name, Request)
     when is_pid(Dispatcher), is_integer(NameC) ->
@@ -1345,7 +1343,7 @@ send_sync(Dispatcher, [NameC | _] = Name, Request)
                 Timeout :: timeout_milliseconds()) ->
     {ok, ResponseInfo :: response_info(), Response :: response()} |
     {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason()}.
 
 send_sync(Dispatcher, [NameC | _] = Name, Request, undefined)
     when is_pid(Dispatcher), is_integer(NameC) ->
@@ -1382,7 +1380,7 @@ send_sync(Dispatcher, [NameC | _] = Name, Request, Timeout)
                 PatternPid :: pattern_pid() | undefined) ->
     {ok, ResponseInfo :: response_info(), Response :: response()} |
     {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason()}.
 
 send_sync(Dispatcher, [NameC | _] = Name, Request, undefined, undefined)
     when is_pid(Dispatcher), is_integer(NameC) ->
@@ -1436,7 +1434,7 @@ send_sync(Dispatcher, [NameC | _] = Name, Request, Timeout, PatternPid)
                 Priority :: priority()) ->
     {ok, ResponseInfo :: response_info(), Response :: response()} |
     {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason()}.
 
 send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, undefined)
@@ -1504,7 +1502,7 @@ send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                 PatternPid :: pattern_pid() | undefined) ->
     {ok, ResponseInfo :: response_info(), Response :: response()} |
     {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason()}.
 
 send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, undefined, undefined)
@@ -2163,7 +2161,7 @@ return_nothrow(Dispatcher, 'send_sync',
 -spec recv_async(Dispatcher :: dispatcher()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason() | duo_mode}.
 
 recv_async(Dispatcher)
     when is_pid(Dispatcher) ->
@@ -2182,7 +2180,7 @@ recv_async(Dispatcher)
                  timeout_milliseconds() | trans_id()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason() | duo_mode}.
 
 recv_async(Dispatcher, TransId)
     when is_pid(Dispatcher), is_binary(TransId) ->
@@ -2223,7 +2221,7 @@ recv_async(Dispatcher, Timeout)
                  trans_id() | boolean()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason() | duo_mode}.
 
 recv_async(Dispatcher, undefined, TransId)
     when is_pid(Dispatcher), is_binary(TransId) ->
@@ -2270,7 +2268,7 @@ recv_async(Dispatcher, TransId, Consume)
                  Consume :: boolean()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason() | duo_mode}.
 
 recv_async(Dispatcher, undefined, TransId, Consume)
     when is_pid(Dispatcher), is_binary(TransId), is_boolean(Consume) ->
@@ -2303,7 +2301,7 @@ recv_async(Dispatcher, Timeout, TransId, Consume)
                   TransIdList :: list(trans_id())) ->
     {ok, list({ResponseInfo :: response_info(),
                Response :: response(), TransId :: trans_id()})} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason() | duo_mode}.
 
 recv_asyncs(Dispatcher, [_ | _] = TransIdList)
     when is_pid(Dispatcher), is_list(TransIdList) ->
@@ -2323,7 +2321,7 @@ recv_asyncs(Dispatcher, [_ | _] = TransIdList)
                   TransIdList :: list(trans_id())) ->
     {ok, list({ResponseInfo :: response_info(), Response :: response(),
                TransId :: trans_id()})} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason() | duo_mode}.
 
 recv_asyncs(Dispatcher, undefined, [_ | _] = TransIdList)
     when is_pid(Dispatcher), is_list(TransIdList) ->
@@ -2362,7 +2360,7 @@ recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
                   Consume :: boolean()) ->
     {ok, list({ResponseInfo :: response_info(), Response :: response(),
                TransId :: trans_id()})} |
-    {error, Reason :: error_reason_sync()}.
+    {error, Reason :: error_reason() | duo_mode}.
 
 recv_asyncs(Dispatcher, immediate, TransIdList, Consume) ->
     recv_asyncs(Dispatcher, limit_min, TransIdList, Consume);

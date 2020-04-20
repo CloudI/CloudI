@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2019-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_batch).
@@ -116,7 +116,7 @@
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
 -type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
-    {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
+    {{error, cloudi:error_reason()}, NewAgent :: agent()}.
 
 -spec services_add(Agent :: agent(),
                    Prefix :: service_name(),

@@ -3,8 +3,13 @@
 
 2020-04-19 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Add a limit to scheduling hint waiting messages
-      (used by internal services with duo_mode == true)
+    * Block the use of recv_async and recv_asyncs in internal services
+      that use the service configuration option duo_mode == true
+      to encourage the use of send_async_active and mcast_async_active
+      for efficiency that is also reliable
+    * Remove the types cloudi_service:error_reason_sync/0
+      and cloudi:error_reason_sync/0
+    * Remove the scheduling hint messages and priority adjustments
 
 2020-04-18 Michael Truog   <mjtruog at protonmail dot com>
 

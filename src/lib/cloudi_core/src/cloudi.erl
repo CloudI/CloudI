@@ -110,10 +110,7 @@
               pattern_pid/0]).
 
 -type error_reason() :: timeout.
--type error_reason_sync() :: error_reason() |
-                             cloudi_service:error_reason_sync().
--export_type([error_reason/0,
-              error_reason_sync/0]).
+-export_type([error_reason/0]).
 
 -type dest_refresh_delay_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
@@ -815,7 +812,7 @@ send_async_passive(Context, Name, RequestInfo, Request,
                 Request :: request()) ->
     {{ok, ResponseInfo :: response_info(), Response :: response()} |
      {ok, Response :: response()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 send_sync(Dispatcher, Name, Request)
     when is_pid(Dispatcher) ->
@@ -837,7 +834,7 @@ send_sync(Context, Name, Request) ->
                 Timeout :: timeout_milliseconds()) ->
     {{ok, ResponseInfo :: response_info(), Response :: response()} |
      {ok, Response :: response()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 send_sync(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher) ->
@@ -861,7 +858,7 @@ send_sync(Context, Name, Request, Timeout) ->
                 PatternPid :: pattern_pid() | undefined) ->
     {{ok, ResponseInfo :: response_info(), Response :: response()} |
      {ok, Response :: response()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 send_sync(Dispatcher, Name, Request, Timeout, PatternPid)
     when is_pid(Dispatcher) ->
@@ -886,7 +883,7 @@ send_sync(Context, Name, Request, Timeout, PatternPid) ->
                 Priority :: priority()) ->
     {{ok, ResponseInfo :: response_info(), Response :: response()} |
      {ok, Response :: response()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, Priority)
@@ -914,7 +911,7 @@ send_sync(Context, Name, RequestInfo, Request,
                 PatternPid :: pattern_pid() | undefined) ->
     {{ok, ResponseInfo :: response_info(), Response :: response()} |
      {ok, Response :: response()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, Priority, PatternPid)
@@ -1191,7 +1188,7 @@ mcast_async_passive(Context, Name, RequestInfo, Request,
 -spec recv_async(Context :: agent()) ->
     {{ok, ResponseInfo :: response_info(), Response :: response(),
       TransId :: trans_id()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 recv_async(Dispatcher)
     when is_pid(Dispatcher) ->
@@ -1213,7 +1210,7 @@ recv_async(Context) ->
                  trans_id() | timeout_milliseconds()) ->
     {{ok, ResponseInfo :: response_info(), Response :: response(),
       TransId :: trans_id()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 recv_async(Dispatcher, TransId_Timeout)
     when is_pid(Dispatcher) ->
@@ -1253,7 +1250,7 @@ recv_async(Context, Timeout)
                  TransId :: trans_id()) ->
     {{ok, ResponseInfo :: response_info(), Response :: response(),
       TransId :: trans_id()} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher) ->
@@ -1306,7 +1303,7 @@ recv_async(#cloudi_context{receiver = Receiver} = Context,
                   TransIdList :: list(trans_id())) ->
     {{ok, list({ResponseInfo :: response_info(), Response :: response(),
                 TransId :: trans_id()})} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 recv_asyncs(Dispatcher, TransIdList)
     when is_pid(Dispatcher) ->
@@ -1326,7 +1323,7 @@ recv_asyncs(Context, TransIdList) ->
                   TransIdList :: list(trans_id())) ->
     {{ok, list({ResponseInfo :: response_info(), Response :: response(),
                 TransId :: trans_id()})} |
-     {error, Reason :: error_reason_sync()}, agent()}.
+     {error, Reason :: error_reason()}, agent()}.
 
 recv_asyncs(Dispatcher, Timeout, TransIdList)
     when is_pid(Dispatcher) ->

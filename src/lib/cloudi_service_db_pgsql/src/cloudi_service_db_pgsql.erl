@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2009-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -119,7 +119,7 @@
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
 -type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
-    {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
+    {{error, cloudi:error_reason()}, NewAgent :: agent()}.
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -715,22 +715,15 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
             #state{async_responses = AsyncResponses,
                    duo_mode_pid = DuoModePid} = State) ->
     hibernate_check(if
+        is_pid(DuoModePid) ->
+            {reply, {error, duo_mode}, State};
         TransId == <<0:128>> ->
             case maps:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    Wait = ?SCHEDULE_MESSAGES_MODULUS(Timeout,
-                                                      ?RECV_ASYNC_INTERVAL),
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume, 1, Wait, Client}),
-                    if
-                        DuoModePid =:= undefined ->
-                            ok;
-                        is_pid(DuoModePid) ->
-                            _ = erlang:process_flag(priority, low),
-                            DuoModePid ! 'cloudi_service_recv_async_waiting'
-                    end,
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 [] ->
                     {reply, {error, timeout}, State};
@@ -752,19 +745,10 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
         true ->
             case maps:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    Wait = ?SCHEDULE_MESSAGES_MODULUS(Timeout,
-                                                      ?RECV_ASYNC_INTERVAL),
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume, 1, Wait, Client}),
-                    if
-                        DuoModePid =:= undefined ->
-                            ok;
-                        is_pid(DuoModePid) ->
-                            _ = erlang:process_flag(priority, low),
-                            DuoModePid ! 'cloudi_service_recv_async_waiting'
-                    end,
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 error ->
                     {reply, {error, timeout}, State};
@@ -787,30 +771,27 @@ handle_call({'recv_asyncs', Results, Consume}, Client,
 handle_call({'recv_asyncs', Timeout, Results, Consume}, Client,
             #state{async_responses = AsyncResponses,
                    duo_mode_pid = DuoModePid} = State) ->
-    hibernate_check(case recv_asyncs_pick(Results, Consume, AsyncResponses) of
-        {true, _, ResultsNew, AsyncResponsesNew} ->
-            {reply, {ok, ResultsNew},
-             State#state{async_responses = AsyncResponsesNew}};
-        {false, _, ResultsNew, AsyncResponsesNew}
-            when Timeout >= ?RECV_ASYNC_INTERVAL ->
-            Wait = ?SCHEDULE_MESSAGES_MODULUS(Timeout, ?RECV_ASYNC_INTERVAL),
-            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                              {'cloudi_service_recv_asyncs_retry',
-                               Timeout - ?RECV_ASYNC_INTERVAL,
-                               ResultsNew, Consume, 1, Wait, Client}),
-            if
-                DuoModePid =:= undefined ->
-                    ok;
-                is_pid(DuoModePid) ->
-                    _ = erlang:process_flag(priority, low),
-                    DuoModePid ! 'cloudi_service_recv_asyncs_waiting'
-            end,
-            {noreply, State#state{async_responses = AsyncResponsesNew}};
-        {false, false, ResultsNew, AsyncResponsesNew} ->
-            {reply, {ok, ResultsNew},
-             State#state{async_responses = AsyncResponsesNew}};
-        {false, true, _, _} ->
-            {reply, {error, timeout}, State}
+    hibernate_check(if
+        is_pid(DuoModePid) ->
+            {reply, {error, duo_mode}, State};
+        true ->
+            case recv_asyncs_pick(Results, Consume, AsyncResponses) of
+                {true, _, ResultsNew, AsyncResponsesNew} ->
+                    {reply, {ok, ResultsNew},
+                     State#state{async_responses = AsyncResponsesNew}};
+                {false, _, ResultsNew, AsyncResponsesNew}
+                    when Timeout >= ?RECV_ASYNC_INTERVAL ->
+                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
+                                      {'cloudi_service_recv_asyncs_retry',
+                                       Timeout - ?RECV_ASYNC_INTERVAL,
+                                       ResultsNew, Consume, Client}),
+                    {noreply, State#state{async_responses = AsyncResponsesNew}};
+                {false, false, ResultsNew, AsyncResponsesNew} ->
+                    {reply, {ok, ResultsNew},
+                     State#state{async_responses = AsyncResponsesNew}};
+                {false, true, _, _} ->
+                    {reply, {error, timeout}, State}
+            end
     end);
 
 handle_call(prefix, _,
@@ -1122,33 +1103,16 @@ handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
     hibernate_check({noreply, State});
 
 handle_info({'cloudi_service_recv_async_retry',
-             Timeout, TransId, Consume, WaitI, Wait, Client},
-            #state{async_responses = AsyncResponses,
-                   duo_mode_pid = DuoModePid} = State) ->
-    if
-        DuoModePid =:= undefined ->
-            ok;
-        is_pid(DuoModePid) ->
-            _ = erlang:process_flag(priority, normal)
-    end,
+             Timeout, TransId, Consume, Client},
+            #state{async_responses = AsyncResponses} = State) ->
     hibernate_check(if
         TransId == <<0:128>> ->
             case maps:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    WaitINext = WaitI rem Wait,
-                    WaitINew = WaitINext + 1,
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume,
-                                       WaitINew, Wait, Client}),
-                    if
-                        is_pid(DuoModePid), WaitINext == 0 ->
-                            _ = erlang:process_flag(priority, low),
-                            DuoModePid ! 'cloudi_service_recv_async_waiting';
-                        true ->
-                            ok
-                    end,
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 [] ->
                     gen_server:reply(Client, {error, timeout}),
@@ -1173,20 +1137,10 @@ handle_info({'cloudi_service_recv_async_retry',
         true ->
             case maps:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    WaitINext = WaitI rem Wait,
-                    WaitINew = WaitINext + 1,
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
                                        Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume,
-                                       WaitINew, Wait, Client}),
-                    if
-                        is_pid(DuoModePid), WaitINext == 0 ->
-                            _ = erlang:process_flag(priority, low),
-                            DuoModePid ! 'cloudi_service_recv_async_waiting';
-                        true ->
-                            ok
-                    end,
+                                       TransId, Consume, Client}),
                     {noreply, State};
                 error ->
                     gen_server:reply(Client, {error, timeout}),
@@ -1205,35 +1159,18 @@ handle_info({'cloudi_service_recv_async_retry',
     end);
 
 handle_info({'cloudi_service_recv_asyncs_retry',
-             Timeout, Results, Consume, WaitI, Wait, Client},
-            #state{async_responses = AsyncResponses,
-                   duo_mode_pid = DuoModePid} = State) ->
-    if
-        DuoModePid =:= undefined ->
-            ok;
-        is_pid(DuoModePid) ->
-            _ = erlang:process_flag(priority, normal)
-    end,
+             Timeout, Results, Consume, Client},
+            #state{async_responses = AsyncResponses} = State) ->
     hibernate_check(case recv_asyncs_pick(Results, Consume, AsyncResponses) of
         {true, _, ResultsNew, AsyncResponsesNew} ->
             gen_server:reply(Client, {ok, ResultsNew}),
             {noreply, State#state{async_responses = AsyncResponsesNew}};
         {false, _, ResultsNew, AsyncResponsesNew}
             when Timeout >= ?RECV_ASYNC_INTERVAL ->
-            WaitINext = WaitI rem Wait,
-            WaitINew = WaitINext + 1,
             erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                               {'cloudi_service_recv_asyncs_retry',
                                Timeout - ?RECV_ASYNC_INTERVAL,
-                               ResultsNew, Consume,
-                               WaitINew, Wait, Client}),
-            if
-                is_pid(DuoModePid), WaitINext == 0 ->
-                    _ = erlang:process_flag(priority, low),
-                    DuoModePid ! 'cloudi_service_recv_asyncs_waiting';
-                true ->
-                    ok
-            end,
+                               ResultsNew, Consume, Client}),
             {noreply, State#state{async_responses = AsyncResponsesNew}};
         {false, false, ResultsNew, AsyncResponsesNew} ->
             gen_server:reply(Client, {ok, ResultsNew}),
@@ -4145,12 +4082,6 @@ duo_handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
         ProcessBusy =:= false ->
             {noreply, duo_process_update(StateNew)}
     end;
-
-duo_handle_info(Waiting, State)
-    when Waiting =:= 'cloudi_service_recv_async_waiting';
-         Waiting =:= 'cloudi_service_recv_asyncs_waiting' ->
-    % messages required for the scheduler to schedule the DuoModePid
-    {noreply, State};
 
 duo_handle_info({system, From, Msg},
                 #state_duo{dispatcher = Dispatcher} = State) ->

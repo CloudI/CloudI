@@ -205,14 +205,6 @@
 % interval at which asynchronous forwarded messages are sent
 -define(FORWARD_ASYNC_INTERVAL, 500). % milliseconds
 
-% max number of "waiting" messages used as a hint to the scheduler,
-% for scheduling the DuoModePid of an internal service, for sending a message
--define(SCHEDULE_MESSAGES_MAX, 10).
--define(SCHEDULE_MESSAGES_MODULUS(Timeout, Interval),
-        erlang:max(Interval, Timeout div
-                   erlang:min(Timeout div Interval,
-                              ?SCHEDULE_MESSAGES_MAX)) div Interval).
-
 % interval at which count_process_dynamic checks the service's incoming queue
 % before terminating a service process when reducing the number of service
 % processes due to an incoming service request rate lower than required
