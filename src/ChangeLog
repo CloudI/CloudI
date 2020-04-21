@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-20 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Do not block the use of recv_async and recv_asyncs in internal services
+      that use the service configuration option duo_mode == true.
+      More testing determined reliability suffered due to usage of hibernate
+      (with the service configuration option hibernate == true),
+      making the internal service dispatcher process less responsive during
+      the timeout time period.
+
 2020-04-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Block the use of recv_async and recv_asyncs in internal services

@@ -2161,7 +2161,7 @@ return_nothrow(Dispatcher, 'send_sync',
 -spec recv_async(Dispatcher :: dispatcher()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason() | duo_mode}.
+    {error, Reason :: error_reason()}.
 
 recv_async(Dispatcher)
     when is_pid(Dispatcher) ->
@@ -2180,7 +2180,7 @@ recv_async(Dispatcher)
                  timeout_milliseconds() | trans_id()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason() | duo_mode}.
+    {error, Reason :: error_reason()}.
 
 recv_async(Dispatcher, TransId)
     when is_pid(Dispatcher), is_binary(TransId) ->
@@ -2221,7 +2221,7 @@ recv_async(Dispatcher, Timeout)
                  trans_id() | boolean()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason() | duo_mode}.
+    {error, Reason :: error_reason()}.
 
 recv_async(Dispatcher, undefined, TransId)
     when is_pid(Dispatcher), is_binary(TransId) ->
@@ -2268,7 +2268,7 @@ recv_async(Dispatcher, TransId, Consume)
                  Consume :: boolean()) ->
     {ok, ResponseInfo :: response_info(), Response :: response(),
      TransId :: trans_id()} |
-    {error, Reason :: error_reason() | duo_mode}.
+    {error, Reason :: error_reason()}.
 
 recv_async(Dispatcher, undefined, TransId, Consume)
     when is_pid(Dispatcher), is_binary(TransId), is_boolean(Consume) ->
@@ -2301,7 +2301,7 @@ recv_async(Dispatcher, Timeout, TransId, Consume)
                   TransIdList :: list(trans_id())) ->
     {ok, list({ResponseInfo :: response_info(),
                Response :: response(), TransId :: trans_id()})} |
-    {error, Reason :: error_reason() | duo_mode}.
+    {error, Reason :: error_reason()}.
 
 recv_asyncs(Dispatcher, [_ | _] = TransIdList)
     when is_pid(Dispatcher), is_list(TransIdList) ->
@@ -2321,7 +2321,7 @@ recv_asyncs(Dispatcher, [_ | _] = TransIdList)
                   TransIdList :: list(trans_id())) ->
     {ok, list({ResponseInfo :: response_info(), Response :: response(),
                TransId :: trans_id()})} |
-    {error, Reason :: error_reason() | duo_mode}.
+    {error, Reason :: error_reason()}.
 
 recv_asyncs(Dispatcher, undefined, [_ | _] = TransIdList)
     when is_pid(Dispatcher), is_list(TransIdList) ->
@@ -2360,7 +2360,7 @@ recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
                   Consume :: boolean()) ->
     {ok, list({ResponseInfo :: response_info(), Response :: response(),
                TransId :: trans_id()})} |
-    {error, Reason :: error_reason() | duo_mode}.
+    {error, Reason :: error_reason()}.
 
 recv_asyncs(Dispatcher, immediate, TransIdList, Consume) ->
     recv_asyncs(Dispatcher, limit_min, TransIdList, Consume);
