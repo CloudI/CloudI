@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-22 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Reduce the frequency of hibernation in the internal service dispatcher
+      process when messages will be received after a short delay
+      (when the hibernate service configuration option is used)
+
 2020-04-20 Michael Truog   <mjtruog at protonmail dot com>
 
     * Do not block the use of recv_async and recv_asyncs in internal services

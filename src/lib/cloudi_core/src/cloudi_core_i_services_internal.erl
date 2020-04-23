@@ -319,13 +319,13 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                               dispatcher = Dispatcher,
                                               options = ConfigOptionsNew})
             end, InfoPidOptions);
-        true ->
+        DuoMode =:= false ->
             undefined
     end,
     ReceiverPid = if
         is_pid(DuoModePid) ->
             DuoModePid;
-        true ->
+        DuoModePid =:= undefined ->
             Dispatcher
     end,
     Variant = application:get_env(cloudi_core, uuid_v1_variant,
@@ -711,79 +711,18 @@ handle_call({'recv_async', TransId, Consume}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'recv_async', TimeoutSync, TransId, Consume}, Client, State);
 
-handle_call({'recv_async', Timeout, TransId, Consume}, Client,
-            #state{async_responses = AsyncResponses} = State) ->
-    hibernate_check(if
-        TransId == <<0:128>> ->
-            case maps:to_list(AsyncResponses) of
-                [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                                      {'cloudi_service_recv_async_retry',
-                                       Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume, Client}),
-                    {noreply, State};
-                [] ->
-                    {reply, {error, timeout}, State};
-                L when Consume =:= true ->
-                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = maps:get(TransIdPick,
-                                                        AsyncResponses),
-                    {reply, {ok, ResponseInfo, Response, TransIdPick},
-                     State#state{
-                         async_responses = maps:remove(TransIdPick,
-                                                       AsyncResponses)}};
-                L when Consume =:= false ->
-                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = maps:get(TransIdPick,
-                                                        AsyncResponses),
-                    {reply, {ok, ResponseInfo, Response, TransIdPick},
-                     State}
-            end;
-        true ->
-            case maps:find(TransId, AsyncResponses) of
-                error when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                                      {'cloudi_service_recv_async_retry',
-                                       Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume, Client}),
-                    {noreply, State};
-                error ->
-                    {reply, {error, timeout}, State};
-                {ok, {ResponseInfo, Response}} when Consume =:= true ->
-                    {reply, {ok, ResponseInfo, Response, TransId},
-                     State#state{
-                         async_responses = maps:remove(TransId,
-                                                       AsyncResponses)}};
-                {ok, {ResponseInfo, Response}} when Consume =:= false ->
-                    {reply, {ok, ResponseInfo, Response, TransId},
-                     State}
-            end
-    end);
+handle_call({'recv_async', Timeout, TransId, Consume}, Client, State) ->
+    hibernate_check(handle_recv_async(Timeout, TransId, Consume,
+                                      Client, State));
 
 handle_call({'recv_asyncs', Results, Consume}, Client,
             #state{timeout_sync = TimeoutSync} = State) ->
     handle_call({'recv_asyncs', TimeoutSync, Results, Consume},
                 Client, State);
 
-handle_call({'recv_asyncs', Timeout, Results, Consume}, Client,
-            #state{async_responses = AsyncResponses} = State) ->
-    hibernate_check(case recv_asyncs_pick(Results, Consume, AsyncResponses) of
-        {true, _, ResultsNew, AsyncResponsesNew} ->
-            {reply, {ok, ResultsNew},
-             State#state{async_responses = AsyncResponsesNew}};
-        {false, _, ResultsNew, AsyncResponsesNew}
-            when Timeout >= ?RECV_ASYNC_INTERVAL ->
-            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                              {'cloudi_service_recv_asyncs_retry',
-                               Timeout - ?RECV_ASYNC_INTERVAL,
-                               ResultsNew, Consume, Client}),
-            {noreply, State#state{async_responses = AsyncResponsesNew}};
-        {false, false, ResultsNew, AsyncResponsesNew} ->
-            {reply, {ok, ResultsNew},
-             State#state{async_responses = AsyncResponsesNew}};
-        {false, true, _, _} ->
-            {reply, {error, timeout}, State}
-    end);
+handle_call({'recv_asyncs', Timeout, Results, Consume}, Client, State) ->
+    hibernate_check(handle_recv_asyncs(Timeout, Results, Consume,
+                                       Client, State));
 
 handle_call(prefix, _,
             #state{prefix = Prefix} = State) ->
@@ -1001,12 +940,12 @@ handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
                        response_timeout_immediate_max =
                            ResponseTimeoutImmediateMax,
                        scope = Scope}} = State) ->
-    case destination_allowed(NameNext, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(NameNext, DestDeny, DestAllow) of
         true ->
             case destination_get(DestRefresh, Scope, NameNext, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
-                    ok;
+                    {noreply, State};
                 {error, _} when RequestNameLookup =:= async ->
                     if
                         Timeout >= ResponseTimeoutImmediateMax ->
@@ -1016,7 +955,7 @@ handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
                         true ->
                             ok
                     end,
-                    ok;
+                    {noreply, State};
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_async_retry',
@@ -1024,22 +963,23 @@ handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
                                        NameNext, RequestInfoNext, RequestNext,
                                        Timeout - ?FORWARD_ASYNC_INTERVAL,
                                        Priority, TransId, Source}),
-                    ok;
+                    {nohibernate,
+                     {noreply, State}};
                 {error, _} ->
-                    ok;
+                    {noreply, State};
                 {ok, PatternNext, PidNext} when Timeout >= ?FORWARD_DELTA ->
                     PidNext ! {'cloudi_service_send_async',
                                NameNext, PatternNext,
                                RequestInfoNext, RequestNext,
                                Timeout - ?FORWARD_DELTA,
-                               Priority, TransId, Source};
+                               Priority, TransId, Source},
+                    {noreply, State};
                 _ ->
-                    ok
+                    {noreply, State}
             end;
         false ->
-            ok
-    end,
-    hibernate_check({noreply, State});
+            {noreply, State}
+    end);
 
 handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
              NameNext, RequestInfoNext, RequestNext,
@@ -1053,12 +993,12 @@ handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
                        response_timeout_immediate_max =
                            ResponseTimeoutImmediateMax,
                        scope = Scope}} = State) ->
-    case destination_allowed(NameNext, DestDeny, DestAllow) of
+    hibernate_check(case destination_allowed(NameNext, DestDeny, DestAllow) of
         true ->
             case destination_get(DestRefresh, Scope, NameNext, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
-                    ok;
+                    {noreply, State};
                 {error, _} when RequestNameLookup =:= async ->
                     if
                         Timeout >= ResponseTimeoutImmediateMax ->
@@ -1068,7 +1008,7 @@ handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
                         true ->
                             ok
                     end,
-                    ok;
+                    {noreply, State};
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_sync_retry',
@@ -1076,100 +1016,33 @@ handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
                                        NameNext, RequestInfoNext, RequestNext,
                                        Timeout - ?FORWARD_SYNC_INTERVAL,
                                        Priority, TransId, Source}),
-                    ok;
+                    {nohibernate,
+                     {noreply, State}};
                 {error, _} ->
-                    ok;
+                    {noreply, State};
                 {ok, PatternNext, PidNext} when Timeout >= ?FORWARD_DELTA ->
                     PidNext ! {'cloudi_service_send_sync',
                                NameNext, PatternNext,
                                RequestInfoNext, RequestNext,
                                Timeout - ?FORWARD_DELTA,
-                               Priority, TransId, Source};
+                               Priority, TransId, Source},
+                    {noreply, State};
                 _ ->
-                    ok
+                    {noreply, State}
             end;
         false ->
-            ok
-    end,
-    hibernate_check({noreply, State});
-
-handle_info({'cloudi_service_recv_async_retry',
-             Timeout, TransId, Consume, Client},
-            #state{async_responses = AsyncResponses} = State) ->
-    hibernate_check(if
-        TransId == <<0:128>> ->
-            case maps:to_list(AsyncResponses) of
-                [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                                      {'cloudi_service_recv_async_retry',
-                                       Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume, Client}),
-                    {noreply, State};
-                [] ->
-                    gen_server:reply(Client, {error, timeout}),
-                    {noreply, State};
-                L when Consume =:= true ->
-                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = maps:get(TransIdPick,
-                                                        AsyncResponses),
-                    gen_server:reply(Client,
-                                     {ok, ResponseInfo, Response, TransIdPick}),
-                    {noreply, State#state{
-                        async_responses = maps:remove(TransIdPick,
-                                                      AsyncResponses)}};
-                L when Consume =:= false ->
-                    TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = maps:get(TransIdPick,
-                                                        AsyncResponses),
-                    gen_server:reply(Client,
-                                     {ok, ResponseInfo, Response, TransIdPick}),
-                    {noreply, State}
-            end;
-        true ->
-            case maps:find(TransId, AsyncResponses) of
-                error when Timeout >= ?RECV_ASYNC_INTERVAL ->
-                    erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                                      {'cloudi_service_recv_async_retry',
-                                       Timeout - ?RECV_ASYNC_INTERVAL,
-                                       TransId, Consume, Client}),
-                    {noreply, State};
-                error ->
-                    gen_server:reply(Client, {error, timeout}),
-                    {noreply, State};
-                {ok, {ResponseInfo, Response}} when Consume =:= true ->
-                    gen_server:reply(Client,
-                                     {ok, ResponseInfo, Response, TransId}),
-                    {noreply, State#state{
-                        async_responses = maps:remove(TransId,
-                                                      AsyncResponses)}};
-                {ok, {ResponseInfo, Response}} when Consume =:= false ->
-                    gen_server:reply(Client,
-                                     {ok, ResponseInfo, Response, TransId}),
-                    {noreply, State}
-            end
-    end);
-
-handle_info({'cloudi_service_recv_asyncs_retry',
-             Timeout, Results, Consume, Client},
-            #state{async_responses = AsyncResponses} = State) ->
-    hibernate_check(case recv_asyncs_pick(Results, Consume, AsyncResponses) of
-        {true, _, ResultsNew, AsyncResponsesNew} ->
-            gen_server:reply(Client, {ok, ResultsNew}),
-            {noreply, State#state{async_responses = AsyncResponsesNew}};
-        {false, _, ResultsNew, AsyncResponsesNew}
-            when Timeout >= ?RECV_ASYNC_INTERVAL ->
-            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
-                              {'cloudi_service_recv_asyncs_retry',
-                               Timeout - ?RECV_ASYNC_INTERVAL,
-                               ResultsNew, Consume, Client}),
-            {noreply, State#state{async_responses = AsyncResponsesNew}};
-        {false, false, ResultsNew, AsyncResponsesNew} ->
-            gen_server:reply(Client, {ok, ResultsNew}),
-            {noreply, State#state{async_responses = AsyncResponsesNew}};
-        {false, true, _, _} ->
-            gen_server:reply(Client, {error, timeout}),
             {noreply, State}
     end);
+
+handle_info({'cloudi_service_recv_async_retry',
+             Timeout, TransId, Consume, Client}, State) ->
+    hibernate_check(handle_recv_async(Timeout, TransId, Consume,
+                                      Client, State));
+
+handle_info({'cloudi_service_recv_asyncs_retry',
+             Timeout, Results, Consume, Client}, State) ->
+    hibernate_check(handle_recv_asyncs(Timeout, Results, Consume,
+                                       Client, State));
 
 handle_info({'cloudi_service_send_async',
              Name, Pattern, RequestInfo, Request,
@@ -1566,7 +1439,8 @@ handle_info({'cloudi_service_send_async_minimal',
                                                Name, RequestInfo, Request,
                                                Timeout - ?SEND_ASYNC_INTERVAL,
                                                Destination, ReceiverPid}),
-                            {noreply, State};
+                            {nohibernate,
+                             {noreply, State}};
                         {error, _} ->
                             ReceiverPid ! {'cloudi_service_send_async_minimal',
                                            timeout},
@@ -1628,7 +1502,8 @@ handle_info({'cloudi_service_send_sync_minimal',
                                                Name, RequestInfo, Request,
                                                Timeout - ?SEND_SYNC_INTERVAL,
                                                Destination, ReceiverPid}),
-                            {noreply, State};
+                            {nohibernate,
+                             {noreply, State}};
                         {error, _} ->
                             ReceiverPid ! {'cloudi_service_send_sync_minimal',
                                            timeout},
@@ -2144,7 +2019,8 @@ handle_get_pid(Name, Timeout, Client,
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'cloudi_service_get_pid_retry',
                                Name, Timeout - ?SEND_SYNC_INTERVAL, Client}),
-            {noreply, State};
+            {nohibernate,
+             {noreply, State}};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
@@ -2172,7 +2048,8 @@ handle_get_pids(Name, Timeout, Client,
             erlang:send_after(?SEND_SYNC_INTERVAL, self(),
                               {'cloudi_service_get_pids_retry',
                                Name, Timeout - ?SEND_SYNC_INTERVAL, Client}),
-            {noreply, State};
+            {nohibernate,
+             {noreply, State}};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
@@ -2205,7 +2082,8 @@ handle_send_async(Name, RequestInfo, Request,
                                Name, RequestInfo, Request,
                                Timeout - ?SEND_ASYNC_INTERVAL,
                                Priority, Client}),
-            {noreply, State};
+            {nohibernate,
+             {noreply, State}};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
@@ -2255,7 +2133,8 @@ handle_send_async_active(Name, RequestInfo, Request,
                                Name, RequestInfo, Request,
                                Timeout - ?SEND_ASYNC_INTERVAL,
                                Priority, Client}),
-            {noreply, State};
+            {nohibernate,
+             {noreply, State}};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
@@ -2311,7 +2190,8 @@ handle_send_sync(Name, RequestInfo, Request,
                                Name, RequestInfo, Request,
                                Timeout - ?SEND_SYNC_INTERVAL,
                                Priority, Client}),
-            {noreply, State};
+            {nohibernate,
+             {noreply, State}};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
@@ -2384,7 +2264,8 @@ handle_mcast_async(Name, RequestInfo, Request,
                                Name, RequestInfo, Request,
                                Timeout - ?MCAST_ASYNC_INTERVAL,
                                Priority, Client}),
-            {noreply, State};
+            {nohibernate,
+             {noreply, State}};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
@@ -2441,7 +2322,8 @@ handle_mcast_async_active(Name, RequestInfo, Request,
                                Name, RequestInfo, Request,
                                Timeout - ?MCAST_ASYNC_INTERVAL,
                                Priority, Client}),
-            {noreply, State};
+            {nohibernate,
+             {noreply, State}};
         {error, _} ->
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
@@ -2450,6 +2332,82 @@ handle_mcast_async_active(Name, RequestInfo, Request,
              handle_mcast_async_pids_active(Name, Pattern, RequestInfo, Request,
                                             Timeout, Priority,
                                             [], PidList, Client, State)}
+    end.
+
+handle_recv_async(Timeout, <<0:128>> = TransId, Consume, Client,
+                  #state{async_responses = AsyncResponses} = State) ->
+    case maps:to_list(AsyncResponses) of
+        [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
+            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
+                              {'cloudi_service_recv_async_retry',
+                               Timeout - ?RECV_ASYNC_INTERVAL,
+                               TransId, Consume, Client}),
+            {nohibernate,
+             {noreply, State}};
+        [] ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        L when Consume =:= true ->
+            TransIdPick = ?RECV_ASYNC_STRATEGY(L),
+            {ResponseInfo, Response} = maps:get(TransIdPick,
+                                                AsyncResponses),
+            gen_server:reply(Client, {ok, ResponseInfo, Response, TransIdPick}),
+            {noreply,
+             State#state{
+                 async_responses = maps:remove(TransIdPick,
+                                               AsyncResponses)}};
+        L when Consume =:= false ->
+            TransIdPick = ?RECV_ASYNC_STRATEGY(L),
+            {ResponseInfo, Response} = maps:get(TransIdPick,
+                                                AsyncResponses),
+            gen_server:reply(Client, {ok, ResponseInfo, Response, TransIdPick}),
+            {noreply, State}
+    end;
+
+handle_recv_async(Timeout, TransId, Consume, Client,
+                  #state{async_responses = AsyncResponses} = State) ->
+    case maps:find(TransId, AsyncResponses) of
+        error when Timeout >= ?RECV_ASYNC_INTERVAL ->
+            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
+                              {'cloudi_service_recv_async_retry',
+                               Timeout - ?RECV_ASYNC_INTERVAL,
+                               TransId, Consume, Client}),
+            {nohibernate,
+             {noreply, State}};
+        error ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State};
+        {ok, {ResponseInfo, Response}} when Consume =:= true ->
+            gen_server:reply(Client, {ok, ResponseInfo, Response, TransId}),
+            {noreply,
+             State#state{
+                 async_responses = maps:remove(TransId,
+                                               AsyncResponses)}};
+        {ok, {ResponseInfo, Response}} when Consume =:= false ->
+            gen_server:reply(Client, {ok, ResponseInfo, Response, TransId}),
+            {noreply, State}
+    end.
+
+handle_recv_asyncs(Timeout, Results, Consume, Client,
+                   #state{async_responses = AsyncResponses} = State) ->
+    case recv_asyncs_pick(Results, Consume, AsyncResponses) of
+        {true, _, ResultsNew, AsyncResponsesNew} ->
+            gen_server:reply(Client, {ok, ResultsNew}),
+            {noreply, State#state{async_responses = AsyncResponsesNew}};
+        {false, _, ResultsNew, AsyncResponsesNew}
+            when Timeout >= ?RECV_ASYNC_INTERVAL ->
+            erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
+                              {'cloudi_service_recv_asyncs_retry',
+                               Timeout - ?RECV_ASYNC_INTERVAL,
+                               ResultsNew, Consume, Client}),
+            {nohibernate,
+             {noreply, State#state{async_responses = AsyncResponsesNew}}};
+        {false, false, ResultsNew, AsyncResponsesNew} ->
+            gen_server:reply(Client, {ok, ResultsNew}),
+            {noreply, State#state{async_responses = AsyncResponsesNew}};
+        {false, true, _, _} ->
+            gen_server:reply(Client, {error, timeout}),
+            {noreply, State}
     end.
 
 handle_module_request(Type, Name, Pattern, RequestInfo, Request,
@@ -3189,6 +3147,9 @@ process_queues(State) ->
 
 -compile({inline,
           [{hibernate_check, 1}]}).
+
+hibernate_check({nohibernate, NoHibernate}) ->
+    NoHibernate;
 
 hibernate_check({reply, _,
                  #state{options = #config_service_options{
