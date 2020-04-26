@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -62,7 +62,7 @@ Task.prototype.run = function () {
         Task._api.subscribe('g1', Task, Task.sequence3_g1, function () {
         Task._api.subscribe('sequence3', Task, Task.sequence3, function () {
         if (Task._api.process_index() == 0) {
-            Task._api.send_async(Task._api.prefix() + 'sequence1', 'start');
+            Task._api.send_async(Task._api.prefix() + 'sequence1', '1');
         }
         Task._api.poll(function (timeout) {
             assert(timeout == false);
@@ -184,8 +184,8 @@ Task.prototype.sequence1 = function (request_type, name, pattern,
             });
             return;
         }
-        CloudI.stdout_write('messaging sequence1 start javascript\n');
-        assert(request == 'start');
+        CloudI.stdout_write('messaging sequence1 start javascript (' +
+                            request + ')\n');
         Task._api.send_async(Task._api.prefix() + 'a/b/c/d',  'test1',
                              function (test1_id) {
         Task._api.send_async(Task._api.prefix() + 'a/b/c/z',  'test2',
@@ -293,9 +293,10 @@ Task.prototype.sequence1 = function (request_type, name, pattern,
             assert(test15_check.toString('binary') == 'test15');
             assert(test15_id_check.toString('binary') ==
                    test15_id.toString('binary'));
-        CloudI.stdout_write('messaging sequence1 end javascript\n');
+        CloudI.stdout_write('messaging sequence1 end javascript (' +
+                            request + ')\n');
         // start sequence2
-        Task._api.send_async(Task._api.prefix() + 'sequence2',  'start');
+        Task._api.send_async(Task._api.prefix() + 'sequence2', request);
         Task._api.return_(request_type, name, pattern,
                           '', 'end', timeout, trans_id, pid);
         });});});});});});});});});});});});});});});
@@ -355,8 +356,8 @@ Task.prototype.sequence2 = function (request_type, name, pattern,
                                      request_info, request,
                                      timeout, priority, trans_id, pid) {
     var Task = this;
-    CloudI.stdout_write('messaging sequence2 start javascript\n');
-    assert(request.toString('binary') == 'start');
+    CloudI.stdout_write('messaging sequence2 start javascript (' +
+                        request + ')\n');
     var loop;
     loop = function () {
         // the sending process is excluded from the services that receive
@@ -386,10 +387,11 @@ Task.prototype.sequence2 = function (request_type, name, pattern,
                 if (i == (e_ids.length - 1)) {
                     assert(e_check_buffer.toString('binary') ==
                            '111222333444555666777888');
-                    CloudI.stdout_write('messaging sequence2 end javascript\n');
+                    CloudI.stdout_write('messaging sequence2 end javascript (' +
+                                        request + ')\n');
                     // start sequence3
                     Task._api.send_async(Task._api.prefix() + 'sequence3',
-                                         'start');
+                                         request);
                     Task._api.return_(request_type, name, pattern,
                                       '', 'end', timeout, trans_id, pid);
                 }
@@ -451,8 +453,8 @@ Task.prototype.sequence3 = function (request_type, name, pattern,
                                      request_info, request,
                                      timeout, priority, trans_id, pid) {
     var Task = this;
-    CloudI.stdout_write('messaging sequence3 start javascript\n');
-    assert(request.toString('binary') == 'start');
+    CloudI.stdout_write('messaging sequence3 start javascript (' +
+                        request + ')\n');
     Task._api.send_async(Task._api.prefix() + 'f1', '0',
                          function (test1_id) {
     Task._api.recv_async(function (tmp, test1_check, test1_id_check) {
@@ -461,9 +463,14 @@ Task.prototype.sequence3 = function (request_type, name, pattern,
     Task._api.send_sync(Task._api.prefix() + 'g1', 'prefix_',
                         function (tmp, test2_check, test2_id_check) {
     assert(test2_check.toString('binary') == 'prefix_suffix');
-    CloudI.stdout_write('messaging sequence3 end javascript\n');
+    CloudI.stdout_write('messaging sequence3 end javascript (' +
+                        request + ')\n');
     // loop to find any infrequent problems, restart sequence1
-    Task._api.send_async(Task._api.prefix() + 'sequence1', 'start');
+    var iteration = parseInt(request) + 1;
+    if (iteration == 9007199254740991) {
+        iteration = 0;
+    }
+    Task._api.send_async(Task._api.prefix() + 'sequence1', '' + iteration);
     Task._api.return_(request_type, name, pattern,
                       '', 'end', timeout, trans_id, pid);
     });

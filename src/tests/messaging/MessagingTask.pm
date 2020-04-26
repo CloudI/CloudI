@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -76,7 +76,7 @@ sub run
         if ($self->{thread_index} == 0)
         {
             $self->{api}->send_async(
-                $self->{api}->prefix() . 'sequence1', 'start');
+                $self->{api}->prefix() . 'sequence1', '1');
         }
         my $result = $self->{api}->poll();
         assert($result == 0);
@@ -233,8 +233,7 @@ sub _sequence1
     {
         @end = $self->{api}->recv_async(1000);
     }
-    print "messaging sequence1 start perl\n";
-    assert($request eq 'start');
+    print "messaging sequence1 start perl ($request)\n";
     my $test1_id = $self->{api}->send_async(
         $self->{api}->prefix() . 'a/b/c/d',  'test1');
     my $test2_id = $self->{api}->send_async(
@@ -358,9 +357,9 @@ sub _sequence1
     ($tmp, $test15_check, $test15_id_check) = $self->{api}->recv_async();
     assert($test15_check eq 'test15');
     assert($test15_id_check eq $test15_id);
-    print "messaging sequence1 end perl\n";
+    print "messaging sequence1 end perl ($request)\n";
     # start sequence2
-    $self->{api}->send_async($self->{api}->prefix() . 'sequence2', 'start');
+    $self->{api}->send_async($self->{api}->prefix() . 'sequence2', $request);
     $self->{api}->return_($request_type, $name, $pattern,
                           '', 'end', $timeout, $trans_id, $pid);
 }
@@ -442,8 +441,7 @@ sub _sequence2
     my $self = shift;
     my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    print "messaging sequence2 start perl\n";
-    assert($request eq 'start');
+    print "messaging sequence2 start perl ($request)\n";
     while (1)
     {
         # the sending process is excluded from the services that receive
@@ -484,9 +482,9 @@ sub _sequence2
             assert($null[2] eq "\0" x 16);
         }
     }
-    print "messaging sequence2 end perl\n";
+    print "messaging sequence2 end perl ($request)\n";
     # start sequence3
-    $self->{api}->send_async($self->{api}->prefix() . 'sequence3', 'start');
+    $self->{api}->send_async($self->{api}->prefix() . 'sequence3', $request);
     $self->{api}->return_($request_type, $name, $pattern,
                           '', 'end', $timeout, $trans_id, $pid);
 }
@@ -531,8 +529,7 @@ sub _sequence3
     my $self = shift;
     my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    print "messaging sequence3 start perl\n";
-    assert($request eq 'start');
+    print "messaging sequence3 start perl ($request)\n";
     my $test1_id = $self->{api}->send_async(
         $self->{api}->prefix() . 'f1',  '0');
     my $tmp;
@@ -547,9 +544,14 @@ sub _sequence3
     ($tmp, $test2_check, $test2_id_check) = $self->{api}->send_sync(
         $self->{api}->prefix() . 'g1',  'prefix_');
     assert($test2_check eq 'prefix_suffix');
-    print "messaging sequence3 end perl\n";
+    print "messaging sequence3 end perl ($request)\n";
     # loop to find any infrequent problems, restart sequence1
-    $self->{api}->send_async($self->{api}->prefix() . 'sequence1', 'start');
+    my $iteration = $request + 1;
+    if ($iteration == 9007199254740992)
+    {
+        $iteration = 0;
+    }
+    $self->{api}->send_async($self->{api}->prefix() . 'sequence1', $iteration);
     $self->{api}->return_($request_type, $name, $pattern,
                           '', 'end', $timeout, $trans_id, $pid);
 }

@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Service for the messaging Test (sequence1)==
+%%% ==CloudI Service for the messaging Test==
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,13 +29,13 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2012-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_service_test_messaging_sequence1).
+-module(cloudi_service_test_messaging).
 -author('mjtruog at protonmail dot com').
--vsn("1.8.0").
+-vsn("1.8.1").
 
 -behaviour(cloudi_service).
 
@@ -46,19 +46,22 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--record(state, {
+-type sequence2_states() :: state1 | state2 | state3 | state4 |
+                            state5 | state6 | state7 | state8.
+-record(state,
+    {
+        prefix :: cloudi_service:service_name_pattern(),
+        variation :: nonempty_string(),
+        sequence2_state = state1 :: sequence2_states(),
+        sequence2_recv = recv_async :: recv_async | recv_asyncs
     }).
-
-%%%------------------------------------------------------------------------
-%%% External interface functions
-%%%------------------------------------------------------------------------
-
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
+    [[], Variation | _] = lists:reverse(cloudi_string:split("/", Prefix)),
     cloudi_service:subscribe(Dispatcher, "a/b/c/d"),
     cloudi_service:subscribe(Dispatcher, "a/b/c/*"),
     cloudi_service:subscribe(Dispatcher, "a/b/*/d"),
@@ -71,81 +74,150 @@ cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "*/d"),
     cloudi_service:subscribe(Dispatcher, "*"),
     cloudi_service:subscribe(Dispatcher, "sequence1"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "e"),
+    8 = cloudi_service:subscribe_count(Dispatcher, "e"),
+    cloudi_service:subscribe(Dispatcher, "sequence2"),
+    cloudi_service:subscribe(Dispatcher, "f1"),
+    cloudi_service:subscribe(Dispatcher, "f2"),
+    cloudi_service:subscribe(Dispatcher, "g1"),
+    cloudi_service:subscribe(Dispatcher, "sequence3"),
     case cloudi_service:process_index(Dispatcher) of
         0 ->
             ?LOG_TRACE("~p is sending", [?FUNCTION_NAME]),
             cloudi_service:send_async(Dispatcher,
-                                      Prefix ++ "sequence1", "start");
+                                      Prefix ++ "sequence1", "1");
         _ ->
             ok
     end,
-    {ok, #state{}}.
+    {ok, #state{prefix = Prefix,
+                variation = Variation}}.
 
 cloudi_service_handle_request(_RequestType, _Name, Pattern,
                               _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{} = State,
+                              #state{prefix = Prefix,
+                                     variation = Variation,
+                                     sequence2_state = Sequence2State,
+                                     sequence2_recv = Sequence2Recv} = State,
                               Dispatcher) ->
-    Prefix = cloudi_service:prefix(Dispatcher),
-    case Request of
-        "start" ->
+    case cloudi_service_name:suffix(Prefix, Pattern) of
+        "sequence1" ->
             consume_end_and_sleep(Dispatcher),
-            {memory, Memory} = erlang:process_info(self(), memory),
-            [$/ | PrefixSuffix0] = lists:reverse(Prefix),
-            PrefixSuffix1 = lists:reverse(
-                cloudi_string:beforel($/, PrefixSuffix0, empty)),
             ?LOG_INFO("messaging sequence1 start erlang"
-                      " ~s (memory = ~p)", [PrefixSuffix1, Memory]),
+                      " ~s (~s)", [Variation, Request]),
             sequence1(Dispatcher, Prefix),
-            ?LOG_INFO("messaging sequence1 end erlang", []),
+            ?LOG_INFO("messaging sequence1 end erlang"
+                      " ~s (~s)", [Variation, Request]),
             cloudi_service:send_async(Dispatcher,
-                                      Prefix ++ "sequence2", "start"),
-            {reply, "end", State#state{}};
-        <<"test1">> ->
+                                      Prefix ++ "sequence2", Request),
+            {reply, "end", State};
+        "a/b/c/d" ->
             true = Pattern == (Prefix ++ "a/b/c/d"),
+            true = Request == <<"test1">>,
             {reply, Request, State};
-        <<"test2">> ->
+        "a/b/c/*" ->
             true = Pattern == (Prefix ++ "a/b/c/*"),
+            true = (Request == <<"test2">>) orelse (Request == <<"test3">>),
             {reply, Request, State};
-        <<"test3">> ->
-            true = Pattern == (Prefix ++ "a/b/c/*"),
-            {reply, Request, State};
-        <<"test4">> ->
+        "a/b/*/d" ->
             true = Pattern == (Prefix ++ "a/b/*/d"),
+            true = (Request == <<"test4">>) orelse (Request == <<"test5">>),
             {reply, Request, State};
-        <<"test5">> ->
-            true = Pattern == (Prefix ++ "a/b/*/d"),
-            {reply, Request, State};
-        <<"test6">> ->
+        "a/*/c/d" ->
             true = Pattern == (Prefix ++ "a/*/c/d"),
+            true = (Request == <<"test6">>) orelse (Request == <<"test7">>),
             {reply, Request, State};
-        <<"test7">> ->
-            true = Pattern == (Prefix ++ "a/*/c/d"),
-            {reply, Request, State};
-        <<"test8">> ->
+        "*/b/c/d" ->
             true = Pattern == (Prefix ++ "*/b/c/d"),
+            true = (Request == <<"test8">>) orelse (Request == <<"test9">>),
             {reply, Request, State};
-        <<"test9">> ->
-            true = Pattern == (Prefix ++ "*/b/c/d"),
-            {reply, Request, State};
-        <<"test10">> ->
+        "a/b/*" ->
             true = Pattern == (Prefix ++ "a/b/*"),
+            true = Request == <<"test10">>,
             {reply, Request, State};
-        <<"test11">> ->
+        "a/*/d" ->
             true = Pattern == (Prefix ++ "a/*/d"),
+            true = Request == <<"test11">>,
             {reply, Request, State};
-        <<"test12">> ->
+        "*/c/d" ->
             true = Pattern == (Prefix ++ "*/c/d"),
+            true = Request == <<"test12">>,
             {reply, Request, State};
-        <<"test13">> ->
+        "a/*" ->
             true = Pattern == (Prefix ++ "a/*"),
+            true = Request == <<"test13">>,
             {reply, Request, State};
-        <<"test14">> ->
+        "*/d" ->
             true = Pattern == (Prefix ++ "*/d"),
+            true = Request == <<"test14">>,
             {reply, Request, State};
-        <<"test15">> ->
+        "*" ->
             true = Pattern == (Prefix ++ "*"),
-            {reply, Request, State}
+            true = Request == <<"test15">>,
+            {reply, Request, State};
+        "sequence2" ->
+            ?LOG_INFO("messaging sequence2 start erlang"
+                      " ~s (~s)", [Variation, Request]),
+            Sequence2RecvNew = sequence2(Dispatcher, Prefix, Sequence2Recv),
+            ?LOG_INFO("messaging sequence2 end erlang"
+                      " ~s (~s)", [Variation, Request]),
+            cloudi_service:send_async(Dispatcher,
+                                      Prefix ++ "sequence3", Request),
+            {reply, "end", State#state{sequence2_recv = Sequence2RecvNew}};
+        "e" ->
+            if
+                Sequence2State =:= state1 ->
+                    {reply, <<"1">>, State#state{sequence2_state = state2}};
+                Sequence2State =:= state2 ->
+                    {reply, <<"2">>, State#state{sequence2_state = state3}};
+                Sequence2State =:= state3 ->
+                    {reply, <<"3">>, State#state{sequence2_state = state4}};
+                Sequence2State =:= state4 ->
+                    {reply, <<"4">>, State#state{sequence2_state = state5}};
+                Sequence2State =:= state5 ->
+                    {reply, <<"5">>, State#state{sequence2_state = state6}};
+                Sequence2State =:= state6 ->
+                    {reply, <<"6">>, State#state{sequence2_state = state7}};
+                Sequence2State =:= state7 ->
+                    {reply, <<"7">>, State#state{sequence2_state = state8}};
+                Sequence2State =:= state8 ->
+                    {reply, <<"8">>, State#state{sequence2_state = state1}}
+            end;
+        "sequence3" ->
+            ?LOG_INFO("messaging sequence3 start erlang"
+                      " ~s (~s)", [Variation, Request]),
+            sequence3(Dispatcher, Prefix),
+            ?LOG_INFO("messaging sequence3 end erlang"
+                      " ~s (~s)", [Variation, Request]),
+            Iteration = erlang:list_to_integer(Request) + 1,
+            cloudi_service:send_async(Dispatcher,
+                                      Prefix ++ "sequence1",
+                                      erlang:integer_to_list(Iteration)),
+            {reply, "end", State};
+        "f1" ->
+            RequestI = erlang:list_to_integer(Request),
+            if
+                RequestI == 4 ->
+                    {reply, "done", State};
+                true ->
+                    RequestNew = RequestI + 2, % two steps forward
+                    {forward, Prefix ++ "f2", <<>>,
+                     cloudi_string:term_to_list(RequestNew), State}
+            end;
+        "f2" ->
+            RequestI = erlang:list_to_integer(Request),
+            RequestNew = RequestI - 1, % one step back
+            {forward, Prefix ++ "f1", <<>>,
+             cloudi_string:term_to_list(RequestNew), State};
+        "g1" ->
+            {reply, Request ++ "suffix", State}
     end.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
@@ -249,6 +321,64 @@ sequence1(Dispatcher, Prefix) ->
     {ok, <<>>, Test15Response, Test15Id} =
         cloudi_service:recv_async(Dispatcher),
     <<"test15">> = Test15Response,
+    ok.
+
+sequence2(Dispatcher, Prefix, Sequence2Recv) ->
+    % the sending process is excluded from the services that receive
+    % the asynchronous message, so in this case, the receiving process
+    % will not be called, despite the fact it has subscribed to 'e',
+    % to prevent a process from deadlocking with itself.
+    {ok, TransIds} = cloudi_service:mcast_async(Dispatcher, Prefix ++ "e", " "),
+    % 4 * 8 == 32, but only 3 out of 4 CloudI services can receive messages,
+    % since 1 CloudI service is sending the mcast_async, so 3 * 8 == 24
+    if
+        erlang:length(TransIds) == 24 ->
+            % all service processes have finished initialization
+            {Sequence2RecvNew,
+             L} = sequence2_recv(Sequence2Recv, TransIds, Dispatcher),
+            true = L == [<<"1">>, <<"1">>, <<"1">>,
+                         <<"2">>, <<"2">>, <<"2">>,
+                         <<"3">>, <<"3">>, <<"3">>,
+                         <<"4">>, <<"4">>, <<"4">>,
+                         <<"5">>, <<"5">>, <<"5">>,
+                         <<"6">>, <<"6">>, <<"6">>,
+                         <<"7">>, <<"7">>, <<"7">>,
+                         <<"8">>, <<"8">>, <<"8">>],
+            Sequence2RecvNew;
+        true ->
+            % service processes have not finished initialization
+            ?LOG_WARN("Waiting for ~p services to initialize",
+                      [4 - (erlang:length(TransIds) / 8)]),
+            {Sequence2RecvNew,
+             _} = sequence2_recv(Sequence2Recv, TransIds, Dispatcher),
+            % sleep
+            {error, timeout} = cloudi_service:recv_async(Dispatcher, 1000),
+            % retry
+            sequence2(Dispatcher, Prefix, Sequence2RecvNew)
+    end.
+
+sequence2_recv(recv_async, TransIds, Dispatcher) ->
+    L = lists:foldl(fun(TransId, Results) ->
+        {ok, <<>>, Result, _} =
+            cloudi_service:recv_async(Dispatcher, TransId),
+        lists:merge(Results, [Result])
+    end, [], TransIds),
+    {recv_asyncs, L};
+sequence2_recv(recv_asyncs, TransIds, Dispatcher) ->
+    {ok, Recvs} = cloudi_service:recv_asyncs(Dispatcher, TransIds),
+    L = lists:foldl(fun({<<>>, Result, _TransId}, Results) ->
+        lists:merge(Results, [Result])
+    end, [], Recvs),
+    {recv_async, L}.
+
+sequence3(Dispatcher, Prefix) ->
+    {ok, Test1Id} = cloudi_service:send_async(Dispatcher, Prefix ++ "f1", "0"),
+    {ok, <<>>,
+     Test1Check, Test1Id} = cloudi_service:recv_async(Dispatcher, Test1Id),
+    true = Test1Check == "done",
+    {ok, Test2Check} = cloudi_service:send_sync(Dispatcher,
+                                                Prefix ++ "g1", "prefix_"),
+    true = Test2Check == "prefix_suffix",
     ok.
 
 consume_end_and_sleep(Dispatcher) ->

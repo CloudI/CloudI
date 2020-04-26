@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-04-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Simplify the Erlang messaging integration test
+      by combining the 4 sequence modules into 1
+    * Add an iteration counter to the messaging integration tests in
+      C++, Java, Javascript, Perl, PHP, Python, Ruby
+
 2020-04-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Reduce the frequency of hibernation in the internal service dispatcher

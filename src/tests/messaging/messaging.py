@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -79,7 +79,7 @@ class Task(threading.Thread):
             if self.__thread_index == 0:
                 # start sequence1
                 self.__api.send_async(
-                    self.__api.prefix() + 'sequence1', b'start',
+                    self.__api.prefix() + 'sequence1', b'1',
                 )
 
             result = self.__api.poll()
@@ -212,8 +212,11 @@ class Task(threading.Thread):
         # by this service
         while self.__api.recv_async(timeout=1000)[1] == b'end':
             pass
-        print('messaging sequence1 start %s' % self.__name)
-        assert request == b'start'
+        iteration = int(request)
+        print('messaging sequence1 start %s (%d)' % (
+            self.__name,
+            iteration,
+        ))
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'a/b/c/d', b'test1'
         )
@@ -321,9 +324,12 @@ class Task(threading.Thread):
         (_, test15_check, test15_id_check) = self.__api.recv_async()
         assert test15_check == b'test15'
         assert test15_id_check == test15_id
-        print('messaging sequence1 end %s' % self.__name)
+        print('messaging sequence1 end %s (%d)' % (
+            self.__name,
+            iteration,
+        ))
         # start sequence2
-        self.__api.send_async(self.__api.prefix() + 'sequence2', b'start')
+        self.__api.send_async(self.__api.prefix() + 'sequence2', request)
         self.__api.return_(request_type, name, pattern,
                            b'', b'end', timeout, trans_id, pid)
 
@@ -398,8 +404,11 @@ class Task(threading.Thread):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
 
-        print('messaging sequence2 start %s' % self.__name)
-        assert request == b'start'
+        iteration = int(request)
+        print('messaging sequence2 start %s (%s)' % (
+            self.__name,
+            iteration,
+        ))
         while True:
             # the sending process is excluded from the services that receive
             # the asynchronous message, so in this case, the receiving thread
@@ -431,9 +440,12 @@ class Task(threading.Thread):
                     assert e_id == e_id_check
                 null_id = self.__api.recv_async(timeout=1000)[2]
                 assert null_id == b'\0' * 16
-        print('messaging sequence2 end %s' % self.__name)
+        print('messaging sequence2 end %s (%s)' % (
+            self.__name,
+            iteration,
+        ))
         # start sequence3
-        self.__api.send_async(self.__api.prefix() + 'sequence3', b'start')
+        self.__api.send_async(self.__api.prefix() + 'sequence3', request)
         self.__api.return_(request_type, name, pattern,
                            b'', b'end', timeout, trans_id, pid)
 
@@ -478,8 +490,11 @@ class Task(threading.Thread):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
-        print('messaging sequence3 start %s' % self.__name)
-        assert request == b'start'
+        iteration = int(request)
+        print('messaging sequence3 start %s (%s)' % (
+            self.__name,
+            iteration,
+        ))
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'f1', b'0'
         )
@@ -492,10 +507,15 @@ class Task(threading.Thread):
             self.__api.prefix() + 'g1', b'prefix_'
         )
         assert test2_check == b'prefix_suffix'
-        print('messaging sequence3 end %s' % self.__name)
+        print('messaging sequence3 end %s (%s)' % (
+            self.__name,
+            iteration,
+        ))
         # loop to find any infrequent problems, restart sequence1
+        iteration += 1
         self.__api.send_async(
-            self.__api.prefix() + 'sequence1', b'start',
+            self.__api.prefix() + 'sequence1',
+            ('%d' % iteration).encode('ascii'),
         )
         self.__api.return_(request_type, name, pattern,
                            b'', b'end', timeout, trans_id, pid)

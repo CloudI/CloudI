@@ -58,7 +58,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/erlang/src/cloudi_service_test_count.erl)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/erlang/src/cloudi_service_test_http_req.erl)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/erlang/src/cloudi_service_test_msg_size.erl)
-* `src/tests/messaging` Basic Messaging Test ([Sequence 1](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence1.erl), [Sequence 2](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence2.erl), [Sequence 3](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence3.erl), [Sequence 4](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence4.erl))
+* [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/erlang/src/cloudi_service_test_messaging.erl)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/erlang/src/cloudi_service_test_null.erl)
 * [Hexadecimal PI Fault-Tolerant Map/Reduce Test](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/erlang/src/cloudi_service_test_hexpi.erl)
 

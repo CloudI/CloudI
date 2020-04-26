@@ -4,7 +4,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -69,7 +69,7 @@ class Task //extends \Thread
             {
                 // start sequence1
                 $this->api->send_async(
-                    $this->api->prefix() . 'sequence1', 'start');
+                    $this->api->prefix() . 'sequence1', '1');
             }
             $result = $this->api->poll();
             assert($result === false);
@@ -203,8 +203,7 @@ class Task //extends \Thread
         list(, $old_request, ) = $this->api->recv_async(1000);
         while ($old_request == 'end')
             list(, $old_request, ) = $this->api->recv_async(1000);
-        echo "messaging sequence1 start php\n";
-        assert($request == 'start');
+        echo "messaging sequence1 start php ($request)\n";
         $test1_id = $this->api->send_async(
             $this->api->prefix() . 'a/b/c/d',  'test1');
         $test2_id = $this->api->send_async(
@@ -297,9 +296,9 @@ class Task //extends \Thread
         list(, $test15_check, $test15_id_check) = $this->api->recv_async();
         assert($test15_check == 'test15');
         assert($test15_id_check == $test15_id);
-        echo "messaging sequence1 end php\n";
+        echo "messaging sequence1 end php ($request)\n";
         // start sequence2
-        $this->api->send_async($this->api->prefix() . 'sequence2', 'start');
+        $this->api->send_async($this->api->prefix() . 'sequence2', $request);
         $this->api->return_($request_type, $name, $pattern,
                             '', 'end', $timeout, $trans_id, $pid);
     }
@@ -372,8 +371,7 @@ class Task //extends \Thread
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
     {
-        echo "messaging sequence2 start php\n";
-        assert($request == 'start');
+        echo "messaging sequence2 start php ($request)\n";
         while (true)
         {
             // the sending process is excluded from the services that receive
@@ -413,9 +411,9 @@ class Task //extends \Thread
                 assert($null_id == str_repeat("\0", 16));
             }
         }
-        echo "messaging sequence2 end php\n";
+        echo "messaging sequence2 end php ($request)\n";
         # start sequence3
-        $this->api->send_async($this->api->prefix() . 'sequence3', 'start');
+        $this->api->send_async($this->api->prefix() . 'sequence3', $request);
         $this->api->return_($request_type, $name, $pattern,
                             '', 'end', $timeout, $trans_id, $pid);
     }
@@ -458,8 +456,7 @@ class Task //extends \Thread
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
     {
-        echo "messaging sequence3 start php\n";
-        assert($request == 'start');
+        echo "messaging sequence3 start php ($request)\n";
         $test1_id = $this->api->send_async(
             $this->api->prefix() . 'f1', '0');
         list(, $test1_check,
@@ -470,8 +467,12 @@ class Task //extends \Thread
              $test2_id_check
              ) = $this->api->send_sync($this->api->prefix() . 'g1', 'prefix_');
         assert($test2_check == 'prefix_suffix');
-        echo "messaging sequence3 end php\n";
-        $this->api->send_async($this->api->prefix() . 'sequence1', 'start');
+        echo "messaging sequence3 end php ($request)\n";
+        $iteration = intval($request) + 1;
+        if ($iteration == 2147483647)
+            $iteration = 0;
+        $this->api->send_async($this->api->prefix() . 'sequence1',
+                               strval($iteration));
         $this->api->return_($request_type, $name, $pattern,
                             '', 'end', $timeout, $trans_id, $pid);
     }

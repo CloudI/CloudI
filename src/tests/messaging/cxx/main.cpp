@@ -31,6 +31,7 @@
 #include <iostream>
 #include <cstring>
 #include <sstream>
+#include <limits>
 #include "assert.hpp"
 
 class thread_data : public thread_pool_thread_data
@@ -155,7 +156,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
             if (m_thread_index == 0)
             {
                 result = m_api.send_async(std::string(m_api.prefix()) +
-                                          "sequence1", "start", 6);
+                                          "sequence1", "1", 2);
                 assert(result == CloudI::API::return_value::success);
             }
 
@@ -442,9 +443,9 @@ class task : public thread_pool_input<thread_data, task_output_data>
                 result = api.recv_async(1000);
                 assert(result == CloudI::API::return_value::success);
             }
-            std::cout << "messaging sequence1 start c++" << std::endl;
-            assert(request_size == 6);
-            assert(::memcmp(request, "start", 6) == 0);
+            std::cout << "messaging sequence1 start c++ (" <<
+                std::string(reinterpret_cast<char const *>(request),
+                            request_size) << ")" << std::endl;
 
             result = api.send_async(std::string(api.prefix()) + "a/b/c/d",
                                     "test1", 6);
@@ -689,10 +690,12 @@ class task : public thread_pool_input<thread_data, task_output_data>
             ::memcpy(test15_id_check, api.get_trans_id(), 16);
             assert(::memcmp(test15_check, "test15", 7) == 0);
             assert(::memcmp(test15_id_check, test15_id, 16) == 0);
-            std::cout << "messaging sequence1 end c++" << std::endl;
+            std::cout << "messaging sequence1 end c++ (" <<
+                std::string(reinterpret_cast<char const *>(request),
+                            request_size) << ")" << std::endl;
             // start sequence2
             result = api.send_async(std::string(api.prefix()) + "sequence2",
-                                    "start", 6);
+                                    request, request_size);
             assert(result == CloudI::API::return_value::success);
             api.return_(request_type, name, pattern, "", 0, "end", 4,
                         timeout, trans_id, pid, pid_size);
@@ -857,9 +860,9 @@ class task : public thread_pool_input<thread_data, task_output_data>
                        uint32_t const pid_size)
         {
             int result;
-            std::cout << "messaging sequence2 start c++" << std::endl;
-            assert(request_size == 6);
-            assert(::memcmp(request, "start", 6) == 0);
+            std::cout << "messaging sequence2 start c++ (" <<
+                std::string(reinterpret_cast<char const *>(request),
+                            request_size) << ")" << std::endl;
             // the sending process is excluded from the services that receive
             // the asynchronous message, so in this case, the receiving thread
             // will not be called, despite the fact it has subscribed to 'e',
@@ -893,10 +896,12 @@ class task : public thread_pool_input<thread_data, task_output_data>
             }
             assert(::memcmp(e_str_check,
                             "111222333444555666777888999", 24) == 0);
-            std::cout << "messaging sequence2 end c++" << std::endl;
+            std::cout << "messaging sequence2 end c++ (" <<
+                std::string(reinterpret_cast<char const *>(request),
+                            request_size) << ")" << std::endl;
             // start sequence3
             result = api.send_async(std::string(api.prefix()) + "sequence3",
-                                    "start", 6);
+                                    request, request_size);
             assert(result == CloudI::API::return_value::success);
             api.return_(request_type, name, pattern, "", 0, "end", 4,
                         timeout, trans_id, pid, pid_size);
@@ -997,9 +1002,9 @@ class task : public thread_pool_input<thread_data, task_output_data>
                        uint32_t const pid_size)
         {
             int result;
-            std::cout << "messaging sequence3 start c++" << std::endl;
-            assert(request_size == 6);
-            assert(::memcmp(request, "start", 6) == 0);
+            std::cout << "messaging sequence3 start c++ (" <<
+                std::string(reinterpret_cast<char const *>(request),
+                            request_size) << ")" << std::endl;
             result = api.send_async(std::string(api.prefix()) + "f1",
                                     "0", 2);
             assert(result == CloudI::API::return_value::success);
@@ -1015,10 +1020,21 @@ class task : public thread_pool_input<thread_data, task_output_data>
             assert(result == CloudI::API::return_value::success);
             assert(api.get_response_size() == 14);
             assert(::memcmp(api.get_response(), "prefix_suffix", 14) == 0);
-            std::cout << "messaging sequence3 end c++" << std::endl;
+            std::cout << "messaging sequence3 end c++ (" <<
+                std::string(reinterpret_cast<char const *>(request),
+                            request_size) << ")" << std::endl;
             // loop to find any infrequent problems, restart sequence1
+            long iteration =
+                ::strtol(reinterpret_cast<char const *>(request), 0, 10) + 1;
+            if (iteration == std::numeric_limits<long>::max())
+            {
+                iteration = 0;
+            }
+            std::stringstream request_new;
+            request_new << iteration;
+            std::string const & s = request_new.str();
             result = api.send_async(std::string(api.prefix()) +
-                                    "sequence1", "start", 6);
+                                    "sequence1", s.c_str(), s.size() + 1);
             assert(result == CloudI::API::return_value::success);
             api.return_(request_type, name, pattern, "", 0, "end", 4,
                         timeout, trans_id, pid, pid_size);

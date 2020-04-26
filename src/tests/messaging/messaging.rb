@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -68,7 +68,7 @@ if __FILE__ == $PROGRAM_NAME
                     @api.subscribe('sequence3', method(:sequence3))
                     if @thread_index == 0
                         # start sequence1
-                        @api.send_async(@api.prefix + 'sequence1', 'start')
+                        @api.send_async(@api.prefix + 'sequence1', '1')
                     end
     
                     result = @api.poll
@@ -193,8 +193,7 @@ if __FILE__ == $PROGRAM_NAME
                 while @api.recv_async(1000)[1] == 'end'
                     # consume "end" and sleep
                 end
-                $stdout.puts 'messaging sequence1 start ruby'
-                assert{request == 'start'}
+                $stdout.puts "messaging sequence1 start ruby (#{request})"
                 test1_id = @api.send_async("#{@api.prefix}a/b/c/d", 'test1')
                 test2_id = @api.send_async("#{@api.prefix}a/b/c/z", 'test2')
                 test3_id = @api.send_async("#{@api.prefix}a/b/c/dd", 'test3')
@@ -302,9 +301,9 @@ if __FILE__ == $PROGRAM_NAME
                 test15_id_check = test15[2]
                 assert{test15_check == 'test15'}
                 assert{test15_id_check == test15_id}
-                $stdout.puts 'messaging sequence1 end ruby'
+                $stdout.puts "messaging sequence1 end ruby (#{request})"
                 # start sequence2
-                @api.send_async("#{@api.prefix}sequence2", 'start')
+                @api.send_async("#{@api.prefix}sequence2", request)
                 @api.return_(request_type, name, pattern,
                              '', 'end', timeout, trans_id, pid)
             end
@@ -368,8 +367,7 @@ if __FILE__ == $PROGRAM_NAME
             def sequence2(request_type, name, pattern,
                           request_info, request,
                           timeout, priority, trans_id, pid)
-                $stdout.puts 'messaging sequence2 start ruby'
-                assert{request == 'start'}
+                $stdout.puts "messaging sequence2 start ruby (#{request})"
                 # the sending process is excluded from the services that
                 # receive the asynchronous message, so in this case, the
                 # receiving thread will not be called, despite the fact it
@@ -389,9 +387,9 @@ if __FILE__ == $PROGRAM_NAME
                 }
                 e_check_list.sort!
                 assert{e_check_list.join('') == '111222333444555666777888'}
-                $stdout.puts 'messaging sequence2 end ruby'
+                $stdout.puts "messaging sequence2 end ruby (#{request})"
                 # start sequence3
-                @api.send_async("#{@api.prefix}sequence3", 'start')
+                @api.send_async("#{@api.prefix}sequence3", request)
                 @api.return_(request_type, name, pattern,
                              '', 'end', timeout, trans_id, pid)
             end
@@ -429,8 +427,7 @@ if __FILE__ == $PROGRAM_NAME
             def sequence3(request_type, name, pattern,
                           request_info, request,
                           timeout, priority, trans_id, pid)
-                $stdout.puts 'messaging sequence3 start ruby'
-                assert{request == 'start'}
+                $stdout.puts "messaging sequence3 start ruby (#{request})"
                 test1_id = @api.send_async("#{@api.prefix}f1", '0')
                 tmp = @api.recv_async(nil, test1_id)
                 test1_check = tmp[1]
@@ -440,9 +437,10 @@ if __FILE__ == $PROGRAM_NAME
                 tmp = @api.send_sync("#{@api.prefix}g1", 'prefix_')
                 test2_check = tmp[1]
                 assert{test2_check == 'prefix_suffix'}
-                $stdout.puts 'messaging sequence3 end ruby'
+                $stdout.puts "messaging sequence3 end ruby (#{request})"
                 # loop to find any infrequent problems, restart sequence1
-                @api.send_async(@api.prefix + 'sequence1', 'start')
+                iteration = request.to_i + 1
+                @api.send_async(@api.prefix + 'sequence1', iteration.to_s)
                 @api.return_(request_type, name, pattern,
                              '', 'end', timeout, trans_id, pid)
             end
