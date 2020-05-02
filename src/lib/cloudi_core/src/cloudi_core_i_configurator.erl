@@ -1072,6 +1072,7 @@ service_start_internal(IndexProcess, Pids,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
                            options = #config_service_options{
+                               restart_all = RestartAll,
                                restart_delay = RestartDelay,
                                scope = Scope} = Options,
                            max_r = MaxR,
@@ -1086,7 +1087,8 @@ service_start_internal(IndexProcess, Pids,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
                  IndexProcess, CountProcess, 1, Scope,
-                 TimeoutTerm, RestartDelay, MaxR, MaxT, ID, Timeout) of
+                 TimeoutTerm, RestartAll, RestartDelay,
+                 MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
             service_start_internal(IndexProcess + 1, [P | Pids], Service,
@@ -1117,6 +1119,7 @@ service_start_external(IndexProcess, Pids,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
                            options = #config_service_options{
+                               restart_all = RestartAll,
                                restart_delay = RestartDelay,
                                scope = Scope} = Options,
                            max_r = MaxR,
@@ -1132,7 +1135,8 @@ service_start_external(IndexProcess, Pids,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
                  IndexProcess, CountProcess, CountThread, Scope,
-                 TimeoutTerm, RestartDelay, MaxR, MaxT, ID, Timeout) of
+                 TimeoutTerm, RestartAll, RestartDelay,
+                 MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
             service_start_external(IndexProcess + 1, [P | Pids], Service,

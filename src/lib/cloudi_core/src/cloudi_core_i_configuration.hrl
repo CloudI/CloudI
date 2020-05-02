@@ -238,6 +238,10 @@
         timeout_terminate = undefined
             :: undefined |
                cloudi_service_api:timeout_terminate_milliseconds(),
+        % should all processes be restarted when one process restarts
+        % (after one of its execution threads crashes)
+        restart_all = false
+            :: boolean(),
         % delay to wait after a service terminate but before the service
         % initialization of the new service instance, during a service restart
         restart_delay = false

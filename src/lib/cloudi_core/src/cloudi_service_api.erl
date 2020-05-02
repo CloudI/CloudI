@@ -400,6 +400,7 @@
                {count_min, number()}) | false} |
          {timeout_terminate,
           undefined | timeout_terminate_milliseconds()} |
+         {restart_all, boolean()} |
          {restart_delay,
           list({time_exponential_min, restart_delay_milliseconds()} |
                {time_exponential_max, restart_delay_milliseconds()} |
@@ -488,6 +489,7 @@
                {count_min, number()}) | false} |
          {timeout_terminate,
           undefined | timeout_terminate_milliseconds()} |
+         {restart_all, boolean()} |
          {restart_delay,
           list({time_exponential_min, restart_delay_milliseconds()} |
                {time_exponential_max, restart_delay_milliseconds()} |

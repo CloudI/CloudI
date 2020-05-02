@@ -43,7 +43,7 @@
 
 %% external interface
 -export([start_link/0,
-         monitor/13,
+         monitor/14,
          process_init_begin/1,
          process_init_end/1,
          process_init_end/2,
@@ -93,6 +93,7 @@
         restart_count = 0 :: non_neg_integer(),
         restart_times = [] :: list(cloudi_timestamp:seconds_monotonic()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
+        restart_all :: boolean(),
         restart_delay :: tuple() | false,
         % from the supervisor behavior documentation:
         % If more than MaxR restarts occur within MaxT seconds,
@@ -149,7 +150,6 @@
 
 -record(restart_stage2,
     {
-        pid :: pid(),
         time_terminate :: cloudi_timestamp:native_monotonic(),
         service_id :: cloudi_service_api:service_id(),
         service :: #service{}
@@ -157,7 +157,7 @@
 
 -record(restart_stage3,
     {
-        pid :: pid(),
+        pid :: undefined | pid(),
         time_terminate :: cloudi_timestamp:native_monotonic(),
         service_id :: cloudi_service_api:service_id(),
         service :: #service{}
@@ -198,6 +198,7 @@ start_link() ->
               Scope :: atom(),
               TimeoutTerm :: cloudi_service_api:
                              timeout_terminate_value_milliseconds(),
+              RestartAll :: boolean(),
               RestartDelay :: tuple() | false,
               MaxR :: non_neg_integer(),
               MaxT :: non_neg_integer(),
@@ -207,7 +208,8 @@ start_link() ->
     {error, any()}.
 
 monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
-        TimeoutTerm, RestartDelay, MaxR, MaxT, ServiceId, Timeout)
+        TimeoutTerm, RestartAll, RestartDelay,
+        MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
          is_integer(ProcessIndex), ProcessIndex >= 0,
          is_integer(CountProcess), CountProcess > 0,
@@ -215,14 +217,15 @@ monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
          is_integer(TimeoutTerm),
          TimeoutTerm >= ?TIMEOUT_TERMINATE_MIN,
          TimeoutTerm =< ?TIMEOUT_TERMINATE_MAX,
+         is_boolean(RestartAll),
          is_integer(MaxR), MaxR >= 0, is_integer(MaxT), MaxT >= 0,
          is_binary(ServiceId), byte_size(ServiceId) == 16 ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {monitor, M, F, A,
                                  ProcessIndex, CountProcess,
                                  CountThread, Scope,
-                                 TimeoutTerm, RestartDelay, MaxR, MaxT,
-                                 ServiceId},
+                                 TimeoutTerm, RestartAll, RestartDelay,
+                                 MaxR, MaxT, ServiceId},
                                 Timeout)).
 
 -spec process_init_begin(Pids :: list(pid() | nonempty_list(pid()))) ->
@@ -342,7 +345,8 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
-             TimeoutTerm, RestartDelay, MaxR, MaxT, ServiceId}, _,
+             TimeoutTerm, RestartAll, RestartDelay,
+             MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
     OSPid = undefined,
     TimeStart = cloudi_timestamp:native_monotonic(),
@@ -359,7 +363,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                                     CountThread, Scope, Pids, OSPid,
                                     erlang:monitor(process, Pid),
                                     TimeStart, TimeRestart, Restarts,
-                                    TimeoutTerm, RestartDelay,
+                                    TimeoutTerm, RestartAll, RestartDelay,
                                     MaxR, MaxT), Services),
             {reply, {ok, Pids}, State#state{services = ServicesNew}};
         {ok, [Pid | _] = Pids} = Success when is_pid(Pid) ->
@@ -370,7 +374,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                                         CountThread, Scope, Pids, OSPid,
                                         erlang:monitor(process, P),
                                         TimeStart, TimeRestart, Restarts,
-                                        TimeoutTerm, RestartDelay,
+                                        TimeoutTerm, RestartAll, RestartDelay,
                                         MaxR, MaxT), D)
             end, Services, Pids),
             {reply, Success, State#state{services = ServicesNew}};
@@ -570,13 +574,12 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
             {noreply, State}
     end;
 
-handle_info(#restart_stage2{pid = PidOld,
-                            time_terminate = TimeTerminate,
+handle_info(#restart_stage2{time_terminate = TimeTerminate,
                             service_id = ServiceId,
                             service = Service},
             State) ->
     {noreply,
-     restart_stage2(Service, ServiceId, TimeTerminate, PidOld, State)};
+     restart_stage2(Service, ServiceId, TimeTerminate, undefined, State)};
 
 handle_info(#restart_stage3{pid = PidOld,
                             time_terminate = TimeTerminate,
@@ -765,17 +768,26 @@ restart(#service{time_start = TimeStart,
     restart_stage1(Service#service{time_terminate = undefined},
                    ServiceId, TimeTerminateNew, PidOld, State).
 
-restart_stage1(#service{pids = Pids} = Service,
+restart_stage1(#service{pids = Pids,
+                        restart_all = false} = Service,
                ServiceId, TimeTerminate, PidOld, State) ->
+    StateNew = terminate_service(true, Pids, undefined,
+                                 Service, ServiceId, PidOld, State),
+    restart_stage2(Service#service{pids = [],
+                                   monitor = undefined},
+                   ServiceId, TimeTerminate, PidOld, StateNew);
+restart_stage1(#service{restart_all = true} = Service,
+               ServiceId, TimeTerminate, PidOld,
+               #state{services = Services} = State) ->
+    {Pids, _} = cloudi_x_key2value:fetch1(ServiceId, Services),
     StateNew = terminate_service(true, Pids, undefined,
                                  Service, ServiceId, PidOld, State),
     restart_stage2(Service#service{pids = [],
                                    monitor = undefined},
                    ServiceId, TimeTerminate, PidOld, StateNew).
 
-restart_stage2_async(Service, ServiceId, TimeTerminate, PidOld) ->
-    self() ! #restart_stage2{pid = PidOld,
-                             time_terminate = TimeTerminate,
+restart_stage2_async(Service, ServiceId, TimeTerminate) ->
+    self() ! #restart_stage2{time_terminate = TimeTerminate,
                              service_id = ServiceId,
                              service = Service},
     ok.
@@ -792,9 +804,31 @@ restart_stage2(#service{restart_count = 0,
                         max_r = 0} = Service,
                ServiceId, _, PidOld, State) ->
     % no restarts allowed
-    ?LOG_WARN_SYNC("max restarts (MaxR = 0) ~p~n ~p",
-                   [PidOld, service_id(ServiceId)]),
+    ok = restart_log_failure_maxr0(PidOld, service_id(ServiceId)),
     restart_failed(Service, ServiceId, State);
+restart_stage2(#service{restart_count = RestartCount,
+                        restart_times = RestartTimes,
+                        max_r = MaxR,
+                        max_t = MaxT} = Service,
+               ServiceId, TimeTerminate, PidOld, State)
+    when MaxR == RestartCount ->
+    % last restart? (must check this before a restart_delay occurs)
+    SecondsNow = cloudi_timestamp:seconds_monotonic(),
+    {RestartCountNew,
+     RestartTimesNew} = cloudi_timestamp:seconds_filter_monotonic(RestartTimes,
+                                                                  SecondsNow,
+                                                                  MaxT),
+    if
+        RestartCountNew < RestartCount ->
+            restart_stage2(Service#service{
+                               restart_count = RestartCountNew,
+                               restart_times = RestartTimesNew},
+                           ServiceId, TimeTerminate, PidOld, State);
+        true ->
+            ok = restart_log_failure_maxr(PidOld, MaxR, MaxT,
+                                          service_id(ServiceId)),
+            restart_failed(Service, ServiceId, State)
+    end;
 restart_stage2(#service{restart_times = RestartTimes,
                         restart_delay = RestartDelay,
                         max_t = MaxT} = Service,
@@ -820,182 +854,146 @@ restart_stage2(#service{restart_times = RestartTimes,
             State
     end.
 
-restart_stage3(#service{service_m = M,
-                        service_f = F,
-                        service_a = A,
-                        process_index = ProcessIndex,
-                        count_process = CountProcess,
-                        time_start = TimeStart,
-                        restart_count_total = Restarts,
-                        restart_count = 0,
-                        restart_times = []} = Service,
-               ServiceId, TimeTerminate, PidOld,
-               #state{services = Services,
-                      durations_restart = Durations} = State) ->
-    % first restart
-    TimeRestart = cloudi_timestamp:native_monotonic(),
-    SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
-    RestartTimes = [SecondsNow],
-    RestartsNew = Restarts + 1,
-    RestartCount = 1,
-    case erlang:apply(M, F, [ProcessIndex, CountProcess,
-                             TimeStart, TimeRestart, RestartsNew | A]) of
-        {ok, Pid} when is_pid(Pid) ->
-            ?LOG_WARN_SYNC("successful restart (R = 1)~n"
-                           "                   (~p is now ~p)~n"
-                           " ~p", [PidOld, Pid, service_id(ServiceId)]),
-            Pids = [Pid],
-            {TimeInitialized, OSPid,
-             [{MonitorRef, Pid}]} = initialize_wait(Pids),
-            DurationsNew = cloudi_core_i_status:
-                           durations_store([ServiceId],
-                                           {TimeTerminate, TimeInitialized},
-                                           Durations),
-            ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
-                Service#service{pids = Pids,
-                                os_pid = OSPid,
-                                monitor = MonitorRef,
-                                time_restart = TimeInitialized,
-                                restart_count_total = RestartsNew,
-                                restart_count = RestartCount,
-                                restart_times = RestartTimes}, Services),
-            State#state{services = ServicesNew,
-                        durations_restart = DurationsNew};
-        {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_WARN_SYNC("successful restart (R = 1)~n"
-                           "                   (~p is now one of ~p)~n"
-                           " ~p", [PidOld, Pids, service_id(ServiceId)]),
-            {TimeInitialized, OSPid,
-             MonitorPids} = initialize_wait(Pids),
-            DurationsNew = cloudi_core_i_status:
-                           durations_store([ServiceId],
-                                           {TimeTerminate, TimeInitialized},
-                                           Durations),
-            ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
-                cloudi_x_key2value:store(ServiceId, P,
-                    Service#service{pids = Pids,
-                                    os_pid = OSPid,
-                                    monitor = MonitorRef,
-                                    time_restart = TimeInitialized,
-                                    restart_count_total = RestartsNew,
-                                    restart_count = RestartCount,
-                                    restart_times = RestartTimes}, D)
-            end, Services, MonitorPids),
-            State#state{services = ServicesNew,
-                        durations_restart = DurationsNew};
-        {error, _} = Error ->
-            ?LOG_ERROR_SYNC("failed ~tp restart~n ~p",
-                            [Error, service_id(ServiceId)]),
-            restart_stage2_async(Service#service{
-                                     time_restart = TimeRestart,
-                                     restart_count_total = RestartsNew,
-                                     restart_count = RestartCount,
-                                     restart_times = RestartTimes},
-                                 ServiceId, TimeTerminate, PidOld),
-            State
-    end;
-restart_stage3(#service{restart_count = RestartCount,
-                        restart_times = RestartTimes,
-                        max_r = MaxR,
-                        max_t = MaxT} = Service,
-               ServiceId, TimeTerminate, PidOld, State)
-    when MaxR == RestartCount ->
-    % last restart?
-    SecondsNow = cloudi_timestamp:seconds_monotonic(),
-    {RestartCountNew,
-     RestartTimesNew} = cloudi_timestamp:seconds_filter_monotonic(RestartTimes,
-                                                                  SecondsNow,
-                                                                  MaxT),
-    if
-        RestartCountNew < RestartCount ->
-            restart_stage3(Service#service{
-                               restart_count = RestartCountNew,
-                               restart_times = RestartTimesNew},
-                           ServiceId, TimeTerminate, PidOld, State);
-        true ->
-            ?LOG_WARN_SYNC("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
-                           " ~p", [MaxR, MaxT, PidOld, service_id(ServiceId)]),
-            restart_failed(Service, ServiceId, State)
-    end;
-restart_stage3(#service{service_m = M,
-                        service_f = F,
-                        service_a = A,
-                        process_index = ProcessIndex,
-                        count_process = CountProcess,
-                        time_start = TimeStart,
-                        restart_count_total = Restarts,
+restart_stage3(#service{restart_count_total = Restarts,
                         restart_count = RestartCount,
-                        restart_times = RestartTimes} = Service,
-               ServiceId, TimeTerminate, PidOld,
-               #state{services = Services,
-                      durations_restart = Durations} = State) ->
-    % typical restart scenario
+                        restart_times = RestartTimes,
+                        restart_all = RestartAll} = Service,
+               ServiceId, TimeTerminate, PidOld, State) ->
     TimeRestart = cloudi_timestamp:native_monotonic(),
     SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
-    RestartTimesNew = [SecondsNow | RestartTimes],
     RestartsNew = Restarts + 1,
-    R = RestartCount + 1,
-    T = SecondsNow - lists:min(RestartTimes),
+    RestartCountNew = RestartCount + 1,
+    RestartTimesNew = [SecondsNow | RestartTimes],
+    ServiceNew =  Service#service{restart_count_total = RestartsNew,
+                                  restart_count = RestartCountNew,
+                                  restart_times = RestartTimesNew},
+    T = SecondsNow - lists:min(RestartTimesNew),
+    if
+        RestartAll =:= false ->
+            restart_stage3_one(T, TimeRestart, ServiceNew,
+                               ServiceId, TimeTerminate, PidOld, State);
+        RestartAll =:= true ->
+            restart_stage3_all(0, [], T, TimeRestart, ServiceNew,
+                               ServiceId, TimeTerminate, PidOld, State)
+    end.
+
+restart_stage3_one(T, TimeRestart,
+                   #service{service_m = M,
+                            service_f = F,
+                            service_a = A,
+                            process_index = ProcessIndex,
+                            count_process = CountProcess,
+                            time_start = TimeStart,
+                            restart_count_total = Restarts,
+                            restart_count = RestartCount} = Service,
+                   ServiceId, TimeTerminate, PidOld, State) ->
     case erlang:apply(M, F, [ProcessIndex, CountProcess,
-                             TimeStart, TimeRestart, RestartsNew | A]) of
+                             TimeStart, TimeRestart, Restarts | A]) of
         {ok, Pid} when is_pid(Pid) ->
-            ?LOG_WARN_SYNC("successful restart "
-                           "(R = ~p, T = ~p elapsed seconds)~n"
-                           "                   (~p is now ~p)~n"
-                           " ~p", [R, T, PidOld, Pid,
-                                   service_id(ServiceId)]),
-            Pids = [Pid],
-            {TimeInitialized, OSPid,
-             [{MonitorRef, Pid}]} = initialize_wait(Pids),
-            DurationsNew = cloudi_core_i_status:
-                           durations_store([ServiceId],
-                                           {TimeTerminate, TimeInitialized},
-                                           Durations),
-            ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
-                Service#service{pids = Pids,
-                                os_pid = OSPid,
-                                monitor = MonitorRef,
-                                time_restart = TimeInitialized,
-                                restart_count_total = RestartsNew,
-                                restart_count = R,
-                                restart_times = RestartTimesNew}, Services),
-            State#state{services = ServicesNew,
-                        durations_restart = DurationsNew};
+            ok = restart_log_success_one(PidOld, RestartCount, T,
+                                         Pid, service_id(ServiceId)),
+            restart_success_one(Service, ServiceId, TimeTerminate,
+                                [Pid], State);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
-            ?LOG_WARN_SYNC("successful restart "
-                           "(R = ~p, T = ~p elapsed seconds)~n"
-                           "                   (~p is now one of ~p)~n"
-                           " ~p", [R, T, PidOld, Pids,
-                                   service_id(ServiceId)]),
-            {TimeInitialized, OSPid,
-             MonitorPids} = initialize_wait(Pids),
-            DurationsNew = cloudi_core_i_status:
-                           durations_store([ServiceId],
-                                           {TimeTerminate, TimeInitialized},
-                                           Durations),
-            ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
-                cloudi_x_key2value:store(ServiceId, P,
-                    Service#service{pids = Pids,
-                                    os_pid = OSPid,
-                                    monitor = MonitorRef,
-                                    time_restart = TimeInitialized,
-                                    restart_count_total = RestartsNew,
-                                    restart_count = R,
-                                    restart_times = RestartTimesNew}, D)
-            end, Services, MonitorPids),
-            State#state{services = ServicesNew,
-                        durations_restart = DurationsNew};
+            ok = restart_log_success_one(PidOld, RestartCount, T,
+                                         Pids, service_id(ServiceId)),
+            restart_success_one(Service, ServiceId, TimeTerminate,
+                                Pids, State);
         {error, _} = Error ->
-            ?LOG_ERROR_SYNC("failed ~tp restart~n ~p",
-                            [Error, service_id(ServiceId)]),
-            restart_stage2_async(Service#service{
-                                     time_restart = TimeRestart,
-                                     restart_count_total = RestartsNew,
-                                     restart_count = R,
-                                     restart_times = RestartTimesNew},
-                                 ServiceId, TimeTerminate, PidOld),
+            ok = restart_log_failure(Error, service_id(ServiceId)),
+            restart_stage2_async(Service#service{time_restart = TimeRestart},
+                                 ServiceId, TimeTerminate),
             State
     end.
+
+restart_stage3_all(CountProcess, ProcessRestartsOld, T, _,
+                   #service{count_process = CountProcess,
+                            restart_count = RestartCount} = Service,
+                   ServiceId, TimeTerminate, PidOld, State) ->
+    ProcessRestarts = lists:reverse(ProcessRestartsOld),
+    ok = restart_log_success_all(PidOld, RestartCount, T,
+                                 ProcessRestarts, service_id(ServiceId)),
+    restart_success_all(0, lists:reverse(ProcessRestarts), TimeTerminate,
+                        Service, ServiceId, TimeTerminate, State);
+restart_stage3_all(ProcessIndex, ProcessRestarts, T, TimeRestart,
+                   #service{service_m = M,
+                            service_f = F,
+                            service_a = A,
+                            count_process = CountProcess,
+                            time_start = TimeStart,
+                            restart_count_total = Restarts} = Service,
+                   ServiceId, TimeTerminate, PidOld, State) ->
+    case erlang:apply(M, F, [ProcessIndex, CountProcess,
+                             TimeStart, TimeRestart, Restarts | A]) of
+        {ok, Pid} when is_pid(Pid) ->
+            restart_stage3_all(ProcessIndex + 1, [Pid | ProcessRestarts],
+                               T, TimeRestart, Service,
+                               ServiceId, TimeTerminate, PidOld, State);
+        {ok, [Pid | _] = Pids} when is_pid(Pid) ->
+            restart_stage3_all(ProcessIndex + 1, [Pids | ProcessRestarts],
+                               T, TimeRestart, Service,
+                               ServiceId, TimeTerminate, PidOld, State);
+        {error, _} = Error ->
+            ok = restart_log_failure(Error, service_id(ServiceId)),
+            Pids = lists:flatten(ProcessRestarts),
+            StateNew = terminate_service(true, Pids, undefined,
+                                         Service, ServiceId, undefined, State),
+            restart_stage2_async(Service#service{time_restart = TimeRestart},
+                                 ServiceId, TimeTerminate),
+            StateNew
+    end.
+
+restart_success_one(Service, ServiceId, TimeTerminate, Pids,
+                    #state{services = Services,
+                           durations_restart = Durations} = State) ->
+    {TimeInitialized, OSPid,
+     MonitorPids} = initialize_wait(Pids),
+    ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
+        cloudi_x_key2value:store(ServiceId, P,
+            Service#service{pids = Pids,
+                            os_pid = OSPid,
+                            monitor = MonitorRef,
+                            time_restart = TimeInitialized}, D)
+    end, Services, MonitorPids),
+    DurationsNew = cloudi_core_i_status:
+                   durations_store([ServiceId],
+                                   {TimeTerminate, TimeInitialized},
+                                   Durations),
+    State#state{services = ServicesNew,
+                durations_restart = DurationsNew}.
+
+restart_success_all(_, [], TimeInitialized, _, ServiceId, TimeTerminate,
+                    #state{durations_restart = Durations} = State) ->
+    DurationsNew = cloudi_core_i_status:
+                   durations_store([ServiceId],
+                                   {TimeTerminate, TimeInitialized},
+                                   Durations),
+    State#state{durations_restart = DurationsNew};
+restart_success_all(ProcessIndex,
+                    [ProcessRestart | ProcessRestarts], TimeInitialized,
+                    Service, ServiceId, TimeTerminate,
+                    #state{services = Services} = State) ->
+    Pids = if
+        is_pid(ProcessRestart) ->
+            [ProcessRestart];
+        is_list(ProcessRestart) ->
+            ProcessRestart
+    end,
+    {TimeInitializedProcess, OSPid,
+     MonitorPids} = initialize_wait(Pids),
+    ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
+        cloudi_x_key2value:store(ServiceId, P,
+            Service#service{process_index = ProcessIndex,
+                            pids = Pids,
+                            os_pid = OSPid,
+                            monitor = MonitorRef,
+                            time_restart = TimeInitializedProcess}, D)
+    end, Services, MonitorPids),
+    TimeInitializedNew = erlang:max(TimeInitialized, TimeInitializedProcess),
+    restart_success_all(ProcessIndex + 1,
+                        ProcessRestarts, TimeInitializedNew,
+                        Service, ServiceId, TimeTerminate,
+                        State#state{services = ServicesNew}).
 
 restart_failed(Service, ServiceId,
                #state{services = Services} = State) ->
@@ -1009,6 +1007,134 @@ restart_failed(Service, ServiceId,
             State
     end,
     terminated_service(true, ServiceId, StateNew).
+
+restart_log_success_one(PidOld, RestartCount, T,
+                        Pid, ServiceIdStr)
+    when is_pid(Pid) ->
+    if
+        RestartCount == 1 ->
+            if
+                PidOld =:= undefined ->
+                    ?LOG_WARN_SYNC("successful restart (R = 1)~n"
+                                   "    ~p~n"
+                                   " ~p",
+                                   [Pid, ServiceIdStr]);
+                is_pid(PidOld) ->
+                    ?LOG_WARN_SYNC("successful restart (R = 1)~n"
+                                   "    (~p is now ~p)~n"
+                                   " ~p",
+                                   [PidOld, Pid, ServiceIdStr])
+            end;
+        true ->
+            if
+                PidOld =:= undefined ->
+                    ?LOG_WARN_SYNC("successful restart "
+                                   "(R = ~p, T = ~p elapsed seconds)~n"
+                                   "    ~p~n"
+                                   " ~p",
+                                   [RestartCount, T,
+                                    Pid, ServiceIdStr]);
+                is_pid(PidOld) ->
+                    ?LOG_WARN_SYNC("successful restart "
+                                   "(R = ~p, T = ~p elapsed seconds)~n"
+                                   "    (~p is now ~p)~n"
+                                   " ~p",
+                                   [RestartCount, T, PidOld,
+                                    Pid, ServiceIdStr])
+            end
+    end;
+restart_log_success_one(PidOld, RestartCount, T,
+                        [_ | _] = Pids, ServiceIdStr) ->
+    if
+        RestartCount == 1 ->
+            if
+                PidOld =:= undefined ->
+                    ?LOG_WARN_SYNC("successful restart (R = 1)~n"
+                                   "    ~p~n"
+                                   " ~p",
+                                   [Pids, ServiceIdStr]);
+                is_pid(PidOld) ->
+                    ?LOG_WARN_SYNC("successful restart (R = 1)~n"
+                                   "    (~p is now one of ~p)~n"
+                                   " ~p",
+                                   [PidOld, Pids, ServiceIdStr])
+            end;
+        true ->
+            if
+                PidOld =:= undefined ->
+                    ?LOG_WARN_SYNC("successful restart "
+                                   "(R = ~p, T = ~p elapsed seconds)~n"
+                                   "    ~p~n"
+                                   " ~p",
+                                   [RestartCount, T,
+                                    Pids, ServiceIdStr]);
+                is_pid(PidOld) ->
+                    ?LOG_WARN_SYNC("successful restart "
+                                   "(R = ~p, T = ~p elapsed seconds)~n"
+                                   "    (~p is now one of ~p)~n"
+                                   " ~p",
+                                   [RestartCount, T, PidOld,
+                                    Pids, ServiceIdStr])
+            end
+    end.
+
+restart_log_success_all(PidOld, RestartCount, T,
+                        Pids, ServiceIdStr) ->
+    if
+        RestartCount == 1 ->
+            if
+                PidOld =:= undefined ->
+                    ?LOG_WARN_SYNC("successful restart_all (R = 1)~n"
+                                   "    ~p~n"
+                                   " ~p",
+                                   [Pids, ServiceIdStr]);
+                is_pid(PidOld) ->
+                    ?LOG_WARN_SYNC("successful restart_all (R = 1)~n"
+                                   "    (~p is now one of ~p)~n"
+                                   " ~p",
+                                   [PidOld, Pids, ServiceIdStr])
+            end;
+        true ->
+            if
+                PidOld =:= undefined ->
+                    ?LOG_WARN_SYNC("successful restart_all "
+                                   "(R = ~p, T = ~p elapsed seconds)~n"
+                                   "    ~p~n"
+                                   " ~p",
+                                   [RestartCount, T,
+                                    Pids, ServiceIdStr]);
+                is_pid(PidOld) ->
+                    ?LOG_WARN_SYNC("successful restart_all "
+                                   "(R = ~p, T = ~p elapsed seconds)~n"
+                                   "    (~p is now one of ~p)~n"
+                                   " ~p",
+                                   [RestartCount, T, PidOld,
+                                    Pids, ServiceIdStr])
+            end
+    end.
+
+restart_log_failure_maxr0(undefined, ServiceIdStr) ->
+    ?LOG_WARN_SYNC("max restarts (MaxR = 0)~n"
+                   " ~p",
+                   [ServiceIdStr]);
+restart_log_failure_maxr0(PidOld, ServiceIdStr) ->
+    ?LOG_WARN_SYNC("max restarts (MaxR = 0) ~p~n"
+                   " ~p",
+                   [PidOld, ServiceIdStr]).
+
+restart_log_failure_maxr(undefined, MaxR, MaxT, ServiceIdStr) ->
+    ?LOG_WARN_SYNC("max restarts (MaxR = ~p, MaxT = ~p seconds)~n"
+                   " ~p",
+                   [MaxR, MaxT, ServiceIdStr]);
+restart_log_failure_maxr(PidOld, MaxR, MaxT, ServiceIdStr) ->
+    ?LOG_WARN_SYNC("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
+                   " ~p",
+                   [MaxR, MaxT, PidOld, ServiceIdStr]).
+
+restart_log_failure({error, _} = Error, ServiceIdStr) ->
+    ?LOG_ERROR_SYNC("failed ~tp restart~n"
+                    " ~p",
+                    [Error, ServiceIdStr]).
 
 terminate_service(Block, Pids, Reason, Service, ServiceId, PidOld,
                   #state{services = Services,
@@ -1313,6 +1439,7 @@ pids_change_increase_loop(Count, ProcessIndex,
                                    time_restart = TimeRestart,
                                    restart_count_total = Restarts,
                                    timeout_term = TimeoutTerm,
+                                   restart_all = RestartAll,
                                    restart_delay = RestartDelay,
                                    max_r = MaxR,
                                    max_t = MaxT} = Service,
@@ -1332,7 +1459,7 @@ pids_change_increase_loop(Count, ProcessIndex,
                                     CountThread, Scope, Pids, OSPid,
                                     erlang:monitor(process, Pid),
                                     TimeStart, TimeRestart, Restarts,
-                                    TimeoutTerm, RestartDelay,
+                                    TimeoutTerm, RestartAll, RestartDelay,
                                     MaxR, MaxT), Services),
             ServicesNext;
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
@@ -1346,7 +1473,7 @@ pids_change_increase_loop(Count, ProcessIndex,
                                         CountThread, Scope, Pids, OSPid,
                                         erlang:monitor(process, P),
                                         TimeStart, TimeRestart, Restarts,
-                                        TimeoutTerm, RestartDelay,
+                                        TimeoutTerm, RestartAll, RestartDelay,
                                         MaxR, MaxT), D)
             end, Services, Pids),
             ServicesNext;
@@ -2240,7 +2367,8 @@ service_id(ID) ->
 new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
                     Scope, Pids, OSPid, MonitorRef,
                     TimeStart, TimeRestart, Restarts,
-                    TimeoutTerm, RestartDelay, MaxR, MaxT) ->
+                    TimeoutTerm, RestartAll, RestartDelay,
+                    MaxR, MaxT) ->
     #service{service_m = M,
              service_f = F,
              service_a = A,
@@ -2255,6 +2383,7 @@ new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
              time_restart = TimeRestart,
              restart_count_total = Restarts,
              timeout_term = TimeoutTerm,
+             restart_all = RestartAll,
              restart_delay = RestartDelay,
              max_r = MaxR,
              max_t = MaxT}.
