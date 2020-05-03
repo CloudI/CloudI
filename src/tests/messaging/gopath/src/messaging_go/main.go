@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -29,6 +29,7 @@ package main
 import (
 	"cloudi"
 	"fmt"
+	"math"
 	"os"
 	"reflect"
 	"sort"
@@ -170,7 +171,7 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 		return
 	}
 	if threadIndex == 0 {
-		_, err = api.SendAsync(api.Prefix()+"sequence1", []byte{}, []byte("start"))
+		_, err = api.SendAsync(api.Prefix()+"sequence1", []byte{}, []byte("1"))
 		if err != nil {
 			cloudi.ErrorWrite(os.Stderr, err)
 			return
@@ -271,8 +272,11 @@ func sequence1(requestType int, name, pattern string, requestInfo, request []byt
 		}
 		done = (string(response) != "end")
 	}
-	os.Stdout.WriteString("messaging sequence1 start go\n")
-	assert(request, []byte("start"))
+	iteration, err := strconv.ParseUint(string(request), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	os.Stdout.WriteString(fmt.Sprintf("messaging sequence1 start go (%d)\n", iteration))
 	var test1Id []byte
 	test1Id, err = api.SendAsync(api.Prefix()+"a/b/c/d", []byte{}, []byte("test1"))
 	if err != nil {
@@ -530,9 +534,9 @@ func sequence1(requestType int, name, pattern string, requestInfo, request []byt
 	}
 	assert(test15Check, []byte("test15"))
 	assert(test15Id, test15IdCheck)
-	os.Stdout.WriteString("messaging sequence1 end go\n")
+	os.Stdout.WriteString(fmt.Sprintf("messaging sequence1 end go (%d)\n", iteration))
 	// start sequence2
-	_, err = api.SendAsync(api.Prefix()+"sequence2", []byte{}, []byte("start"))
+	_, err = api.SendAsync(api.Prefix()+"sequence2", []byte{}, request)
 	return nil, []byte("end"), err
 }
 
@@ -569,9 +573,11 @@ func sequence2E8(requestType int, name, pattern string, requestInfo, request []b
 }
 
 func sequence2(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
-	os.Stdout.WriteString("messaging sequence2 start go\n")
-	assert(request, []byte("start"))
-	var err error
+	iteration, err := strconv.ParseUint(string(request), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	os.Stdout.WriteString(fmt.Sprintf("messaging sequence2 start go (%d)\n", iteration))
 	done := false
 	for !done {
 		var eIds [][]byte
@@ -609,8 +615,8 @@ func sequence2(requestType int, name, pattern string, requestInfo, request []byt
 			assert(nullId, []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"))
 		}
 	}
-	os.Stdout.WriteString("messaging sequence2 end go\n")
-	_, err = api.SendAsync(api.Prefix()+"sequence3", []byte{}, []byte("start"))
+	os.Stdout.WriteString(fmt.Sprintf("messaging sequence2 end go (%d)\n", iteration))
+	_, err = api.SendAsync(api.Prefix()+"sequence3", []byte{}, request)
 	return nil, []byte("end"), err
 }
 
@@ -642,8 +648,11 @@ func sequence3G1(requestType int, name, pattern string, requestInfo, request []b
 }
 
 func sequence3(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
-	os.Stdout.WriteString("messaging sequence3 start go\n")
-	assert(request, []byte("start"))
+	iteration, err := strconv.ParseUint(string(request), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	os.Stdout.WriteString(fmt.Sprintf("messaging sequence3 start go (%d)\n", iteration))
 	test1Id, err := api.SendAsync(api.Prefix()+"f1", []byte{}, []byte("0"))
 	if err != nil {
 		panic(err)
@@ -661,9 +670,13 @@ func sequence3(requestType int, name, pattern string, requestInfo, request []byt
 		panic(err)
 	}
 	assert(test2Check, []byte("prefix_suffix"))
-	os.Stdout.WriteString("messaging sequence3 end go\n")
+	os.Stdout.WriteString(fmt.Sprintf("messaging sequence3 end go (%d)\n", iteration))
 	// start sequence2
-	_, err = api.SendAsync(api.Prefix()+"sequence1", []byte{}, []byte("start"))
+	iteration++
+	if iteration == math.MaxUint64 {
+		iteration = 0
+	}
+	_, err = api.SendAsync(api.Prefix()+"sequence1", []byte{}, []byte(fmt.Sprintf("%d", iteration)))
 	return nil, []byte("end"), err
 }
 

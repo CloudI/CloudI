@@ -815,9 +815,10 @@ restart_stage2(#service{restart_count = RestartCount,
     % last restart? (must check this before a restart_delay occurs)
     SecondsNow = cloudi_timestamp:seconds_monotonic(),
     {RestartCountNew,
-     RestartTimesNew} = cloudi_timestamp:seconds_filter_monotonic(RestartTimes,
-                                                                  SecondsNow,
-                                                                  MaxT),
+     RestartTimesNew} = cloudi_timestamp:
+                        seconds_filter_monotonic(RestartTimes,
+                                                 SecondsNow,
+                                                 MaxT),
     if
         RestartCountNew < RestartCount ->
             restart_stage2(Service#service{
@@ -855,15 +856,18 @@ restart_stage2(#service{restart_times = RestartTimes,
     end.
 
 restart_stage3(#service{restart_count_total = Restarts,
-                        restart_count = RestartCount,
                         restart_times = RestartTimes,
-                        restart_all = RestartAll} = Service,
+                        restart_all = RestartAll,
+                        max_t = MaxT} = Service,
                ServiceId, TimeTerminate, PidOld, State) ->
     TimeRestart = cloudi_timestamp:native_monotonic(),
     SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
     RestartsNew = Restarts + 1,
-    RestartCountNew = RestartCount + 1,
-    RestartTimesNew = [SecondsNow | RestartTimes],
+    {RestartCountNew,
+     RestartTimesNew} = cloudi_timestamp:
+                        seconds_filter_monotonic([SecondsNow | RestartTimes],
+                                                 SecondsNow,
+                                                 MaxT),
     ServiceNew =  Service#service{restart_count_total = RestartsNew,
                                   restart_count = RestartCountNew,
                                   restart_times = RestartTimesNew},
@@ -1055,7 +1059,8 @@ restart_log_success_one(PidOld, RestartCount, T,
                                    [Pids, ServiceIdStr]);
                 is_pid(PidOld) ->
                     ?LOG_WARN_SYNC("successful restart (R = 1)~n"
-                                   "    (~p is now one of ~p)~n"
+                                   "    (~p is now one of~n"
+                                   "     ~p)~n"
                                    " ~p",
                                    [PidOld, Pids, ServiceIdStr])
             end;
@@ -1071,7 +1076,8 @@ restart_log_success_one(PidOld, RestartCount, T,
                 is_pid(PidOld) ->
                     ?LOG_WARN_SYNC("successful restart "
                                    "(R = ~p, T = ~p elapsed seconds)~n"
-                                   "    (~p is now one of ~p)~n"
+                                   "    (~p is now one of~n"
+                                   "     ~p)~n"
                                    " ~p",
                                    [RestartCount, T, PidOld,
                                     Pids, ServiceIdStr])
@@ -1090,7 +1096,8 @@ restart_log_success_all(PidOld, RestartCount, T,
                                    [Pids, ServiceIdStr]);
                 is_pid(PidOld) ->
                     ?LOG_WARN_SYNC("successful restart_all (R = 1)~n"
-                                   "    (~p is now one of ~p)~n"
+                                   "    (~p is now one of~n"
+                                   "     ~p)~n"
                                    " ~p",
                                    [PidOld, Pids, ServiceIdStr])
             end;
@@ -1106,7 +1113,8 @@ restart_log_success_all(PidOld, RestartCount, T,
                 is_pid(PidOld) ->
                     ?LOG_WARN_SYNC("successful restart_all "
                                    "(R = ~p, T = ~p elapsed seconds)~n"
-                                   "    (~p is now one of ~p)~n"
+                                   "    (~p is now one of~n"
+                                   "     ~p)~n"
                                    " ~p",
                                    [RestartCount, T, PidOld,
                                     Pids, ServiceIdStr])

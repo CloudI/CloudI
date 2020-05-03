@@ -180,8 +180,9 @@ sequence1 requestType name pattern _ request timeout _ transId pid _ api0 =
                         return api2
     in do
     api3 <- wait api0
-    putStrLn "messaging sequence1 start haskell"
-    let _ = assert (request == Char8.pack "start") ()
+    let iteration = read $ Char8.unpack request :: Int
+        requestNew = show iteration
+    putStrLn $ "messaging sequence1 start haskell (" ++ requestNew ++ ")"
     (test1Id, api4) <- sendAsync api3 "a/b/c/d" "test1"
     (test2Id, api5) <- sendAsync api4 "a/b/c/z" "test2"
     (test3Id, api6) <- sendAsync api5 "a/b/c/dd" "test3"
@@ -253,8 +254,8 @@ sequence1 requestType name pattern _ request timeout _ transId pid _ api0 =
     api50 <- recvAsyncAssert api49 test14Id (Char8.pack "test14")
     api51 <- recvAsyncWait api50 test15Id
     api52 <- recvAsyncAssert api51 test15Id (Char8.pack "test15")
-    putStrLn "messaging sequence1 end haskell"
-    (_, api53) <- sendAsync api52 "sequence2" "start"
+    putStrLn $ "messaging sequence1 end haskell (" ++ requestNew ++ ")"
+    (_, api53) <- sendAsync api52 "sequence2" requestNew
     let response = Char8.pack "end"
     return_ api53 requestType name pattern empty response timeout transId pid
 
@@ -318,9 +319,10 @@ sequence2 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
 sequence2 requestType name pattern _ request timeout _ transId pid _ api0 = do
-    putStrLn "messaging sequence2 start haskell"
-    let _ = assert (request == Char8.pack "start") ()
-        recvAsyncsLoop api1 = do
+    let iteration = read $ Char8.unpack request :: Int
+        requestNew = show iteration
+    putStrLn $ "messaging sequence2 start haskell (" ++ requestNew ++ ")"
+    let recvAsyncsLoop api1 = do
             {- the sending process is excluded from the services that receive
                the asynchronous message, so in this case, the receiving thread
                will not be called, despite the fact it has subscribed to 'e',
@@ -362,8 +364,8 @@ sequence2 requestType name pattern _ request timeout _ transId pid _ api0 = do
                         let transIdsLength = fromIntegral
                                 (iLast - iFirst + 1) :: Double
                             count = 4.0 - transIdsLength / 8.0 in do
-                        putStrLn ("Waiting for " ++ (show count) ++
-                            " services to initialize")
+                        putStrLn $ "Waiting for " ++ (show count) ++
+                            " services to initialize"
                         recvAsyncValue <- CloudI.recvAsync api5
                             (Just 1000) Nothing Nothing
                         case recvAsyncValue of
@@ -375,8 +377,8 @@ sequence2 requestType name pattern _ request timeout _ transId pid _ api0 = do
                                 else
                                     error "invalid!"
     api7 <- recvAsyncsLoop api0
-    putStrLn "messaging sequence2 end haskell"
-    (_, api8) <- sendAsync api7 "sequence3" "start"
+    putStrLn $ "messaging sequence2 end haskell (" ++ requestNew ++ ")"
+    (_, api8) <- sendAsync api7 "sequence3" requestNew
     let response = Char8.pack "end"
     return_ api8 requestType name pattern empty response timeout transId pid
 
@@ -420,8 +422,9 @@ sequence3 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
 sequence3 requestType name pattern _ request timeout _ transId pid _ api0 = do
-    putStrLn "messaging sequence3 start haskell"
-    let _ = assert (request == Char8.pack "start") ()
+    let iteration = read $ Char8.unpack request :: Int
+        requestOld = show iteration
+    putStrLn $ "messaging sequence3 start haskell (" ++ requestOld ++ ")"
     (test1Id, api1) <- sendAsync api0 "f1" "0"
     recvAsyncValue <- CloudI.recvAsync api1 Nothing (Just test1Id) Nothing
     case recvAsyncValue of
@@ -438,8 +441,15 @@ sequence3 requestType name pattern _ request timeout _ transId pid _ api0 = do
                     error err
                 Right (_, test2Check, _, api3) -> do
                     let _ = assert (test2Check == Char8.pack "prefix_suffix") ()
-                    putStrLn "messaging sequence3 end haskell"
-                    (_, api4) <- sendAsync api3 "sequence1" "start"
+                    putStrLn $ "messaging sequence3 end haskell (" ++
+                        requestOld ++ ")"
+                    let iterationNext = iteration + 1
+                        iterationNew =
+                            if iterationNext == maxBound then
+                                0
+                            else
+                                iterationNext
+                    (_, api4) <- sendAsync api3 "sequence1" (show iterationNew)
                     let response = Char8.pack "end"
                     return_ api4
                         requestType name pattern empty response
@@ -497,7 +507,7 @@ task threadIndex = do
                     prerr err
                 Right api3 -> do
                     api5 <- if threadIndex == 0 then do
-                            (_, api4) <- sendAsync api3 "sequence1" "start"
+                            (_, api4) <- sendAsync api3 "sequence1" "1"
                             return api4
                         else
                             return api3

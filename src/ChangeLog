@@ -7,6 +7,9 @@
       to have the failure of a single process cause
       the restart of all processes (defaults to false)
     * Fix C++ messaging integration test logging output
+    * Fix logging of restart T (elapsed time during R, the restart count)
+    * Add an iteration counter to the messaging integration tests in
+      Go, Haskell, OCaml
 
 2020-04-26 Michael Truog   <mjtruog at protonmail dot com>
 

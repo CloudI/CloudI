@@ -124,8 +124,7 @@ let sequence1 request_type name pattern _ request timeout _ trans_id pid _ api =
       ()
   in
   wait () ;
-  print_endline "messaging sequence1 start ocaml" ;
-  assert (request = "start") ;
+  print_endline ("messaging sequence1 start ocaml (" ^ request ^ ")") ;
   let test1_id = send_async api "a/b/c/d" "test1"
   and test2_id = send_async api "a/b/c/z" "test2"
   and test3_id = send_async api "a/b/c/dd" "test3"
@@ -197,9 +196,9 @@ let sequence1 request_type name pattern _ request timeout _ trans_id pid _ api =
   recv_async_assert api test14_id "test14" ;
   recv_async_wait api test15_id ;
   recv_async_assert api test15_id "test15" ;
-  print_endline "messaging sequence1 end ocaml" ;
+  print_endline ("messaging sequence1 end ocaml (" ^ request ^ ")") ;
   (* start sequence2 *)
-  let _ = send_async api "sequence2" "start" in
+  let _ = send_async api "sequence2" request in
   return api request_type name pattern "" "end" timeout trans_id pid
 
 let sequence2_e1 request_type name pattern _ _ timeout _ trans_id pid _ api =
@@ -227,8 +226,7 @@ let sequence2_e8 request_type name pattern _ _ timeout _ trans_id pid _ api =
   return api request_type name pattern "" "8" timeout trans_id pid
 
 let sequence2 request_type name pattern _ request timeout _ trans_id pid _ api =
-  print_endline "messaging sequence2 start ocaml" ;
-  assert (request = "start") ;
+  print_endline ("messaging sequence2 start ocaml (" ^ request ^ ")") ;
   let rec recv_asyncs_loop () =
     (* the sending process is excluded from the services that receive
       the asynchronous message, so in this case, the receiving thread
@@ -276,9 +274,9 @@ let sequence2 request_type name pattern _ request timeout _ trans_id pid _ api =
           raise Exit) ;
   in
   recv_asyncs_loop () ;
-  print_endline "messaging sequence2 end ocaml" ;
+  print_endline ("messaging sequence2 end ocaml (" ^ request ^ ")") ;
   (* start sequence3 *)
-  let _ = send_async api "sequence3" "start" in
+  let _ = send_async api "sequence3" request in
   return api request_type name pattern "" "end" timeout trans_id pid
 
 let forward api
@@ -316,8 +314,7 @@ let sequence3_g1
     request_type name pattern "" (request ^ "suffix") timeout trans_id pid
 
 let sequence3 request_type name pattern _ request timeout _ trans_id pid _ api =
-  print_endline "messaging sequence3 start ocaml" ;
-  assert (request = "start") ;
+  print_endline ("messaging sequence3 start ocaml (" ^ request ^ ")") ;
   let test1_id = send_async api "f1" "0" in
   match Cloudi.recv_async api ~trans_id:test1_id with
   | Error (error) ->
@@ -331,9 +328,16 @@ let sequence3 request_type name pattern _ request timeout _ trans_id pid _ api =
       raise Exit
     | Ok ((_, test2_check, _)) ->
       assert (test2_check = "prefix_suffix") ;
-      print_endline "messaging sequence3 end ocaml" ;
+      print_endline ("messaging sequence3 end ocaml (" ^ request ^ ")") ;
       (* loop to find any infrequent problems, restart sequence1 *)
-      let _ = send_async api "sequence1" "start" in
+      let iteration = (int_of_string request) + 1 in
+      let iteration_new =
+        if iteration = max_int then
+          0
+        else
+          iteration
+      in
+      let _ = send_async api "sequence1" (string_of_int iteration_new) in
       return api request_type name pattern "" "end" timeout trans_id pid)
   | Ok _ ->
     prerr_endline "timeout!" ;
@@ -380,7 +384,7 @@ let task thread_index =
     if thread_index = 0 then
       (* start sequence1 *)
       let _ = Cloudi.send_async api
-        ((Cloudi.prefix api) ^ "sequence1") "start" in
+        ((Cloudi.prefix api) ^ "sequence1") "1" in
       ()) ;
     match Cloudi.poll api (-1) with
     | Error (error) ->

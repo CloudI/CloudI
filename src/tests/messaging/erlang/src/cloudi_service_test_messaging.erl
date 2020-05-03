@@ -220,8 +220,9 @@ cloudi_service_handle_request(_RequestType, _Name, Pattern,
             {reply, Request ++ "suffix", State}
     end.
 
-cloudi_service_terminate(_Reason, _Timeout, _State) ->
-    ?LOG_INFO("terminate messaging 1 erlang", []),
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{variation = Variation}) ->
+    ?LOG_INFO("terminate messaging erlang ~s", [Variation]),
     ok.
 
 %%%------------------------------------------------------------------------
