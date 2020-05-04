@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-05-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Simplify external service handling of recv_async
+
 2020-05-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the restart_all service configuration option
