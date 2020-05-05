@@ -1068,8 +1068,9 @@
         5000, 10000, 10000, [api], undefined, 4, 5, 300,
         [{restart_all, true},
          {hibernate, true},
-         {duo_mode, false},
+         {duo_mode, true},
          {request_pid_options, [{priority, high}]},
+         {info_pid_options, [{priority, low}]},
          {dispatcher_pid_options, [{priority, low}]},
          {scope, cloudi_service_test_messaging_erlang_variation0}]},
     {internal,
@@ -1080,24 +1081,10 @@
         5000, 10000, 10000, [api], undefined, 4, 5, 300,
         [{restart_all, true},
          {hibernate, true},
-         {duo_mode, true},
+         {duo_mode, false},
          {request_pid_options, [{priority, high}]},
-         {info_pid_options, [{priority, high}]},
          {dispatcher_pid_options, [{priority, low}]},
-         {scope, cloudi_service_test_messaging_erlang_variation1}]},
-    {internal,
-        "/tests/messaging/erlang/variation2/",
-        cloudi_service_test_messaging,
-        [],
-        immediate_local,
-        5000, 10000, 10000, [api], undefined, 4, 5, 300,
-        [{restart_all, true},
-         {hibernate, true},
-         {duo_mode, true},
-         {request_pid_options, [{priority, high}]},
-         {info_pid_options, [{priority, low}]},
-         {dispatcher_pid_options, [{priority, low}]},
-         {scope, cloudi_service_test_messaging_erlang_variation2}]}
+         {scope, cloudi_service_test_messaging_erlang_variation1}]}
 ]}.
 % automatic node detection with a UDP multicast group
 {nodes, automatic}.
