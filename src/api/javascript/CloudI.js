@@ -36,6 +36,7 @@ var fs = require('fs');
 var assert = require('assert');
 
 var toNativeString = {}.toString;
+CloudI.nodejs_version_after = Erlang.nodejs_version_after;
 var bufferFrom;
 if (Erlang.nodejs_version_after('5.10.0',true)) {
     bufferFrom = Buffer.from;

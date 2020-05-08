@@ -27,6 +27,13 @@
 var CloudI = require('CloudI.js').CloudI;
 var assert = require('assert');
 
+var bufferAlloc;
+if (CloudI.nodejs_version_after('5.10.0',true)) {
+    bufferAlloc = Buffer.alloc;
+}
+else {
+    bufferAlloc = Buffer;
+}
 Task = function Task (thread_index) {
     var Task = this;
     Task._thread_index = thread_index;
@@ -370,7 +377,7 @@ Task.prototype.sequence2 = function (request_type, name, pattern,
         // 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
         // since 1 thread is sending the mcast_async, so 3 * 8 == 24
         if (e_ids.length == 24) {
-            e_check_buffer = new Buffer(24);
+            e_check_buffer = new bufferAlloc(24);
             e_check_buffer.fill(0);
             for (var i = 0; i < e_ids.length; i++) {
                 var cb = function (i) {
