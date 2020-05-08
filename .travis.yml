@@ -39,9 +39,9 @@ otp_release:
   - 20.3
   - 19.3
 python:
-  - "3.6"
+  - "3.8"
 rvm:
-  - 2.4.0
+  - 2.7.0
 services:
   - mysql
   - postgresql

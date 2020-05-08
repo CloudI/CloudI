@@ -21,7 +21,7 @@ description:     This package provides a pure interface for compressing and
                  tasks and for the few cases where more control is needed it
                  provides access to the full zlib feature set.
 build-type:      Simple
-tested-with:     GHC ==7.0.4, GHC ==7.2.2, GHC ==7.4.2, GHC ==7.6.3, GHC ==7.8.4, GHC ==7.10.3, GHC ==8.0.1, GHC==8.0.2, GHC ==8.2.2, GHC ==8.4.4, GHC==8.6.4
+tested-with:     GHC == 7.0.4, GHC == 7.2.2, GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1, GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1
 
 extra-source-files: changelog
                     -- zlib C sources (for Windows)
@@ -68,7 +68,7 @@ library
     other-extensions: DeriveGeneric
   if impl(ghc >= 7.6)
     other-extensions: CApiFFI
-  build-depends:   base >= 4 && < 4.14,
+  build-depends:   base >= 4 && < 4.15,
                    bytestring >= 0.9 && < 0.11
   if impl(ghc >= 7.2 && < 7.6)
     build-depends: ghc-prim

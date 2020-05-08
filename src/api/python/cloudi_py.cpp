@@ -44,6 +44,13 @@
     ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 4))
 #define PYTHON_VERSION_3_4_COMPATIBLE
 #endif
+#if (PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION == 8)
+#define PYTHON_VERSION_3_8
+#endif
+#if (PY_MAJOR_VERSION > 3) || \
+    ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 8))
+#define PYTHON_VERSION_3_8_COMPATIBLE
+#endif
 #include "cloudi.hpp"
 #include <limits>
 #include <string>
@@ -427,10 +434,10 @@ static PyTypeObject python_cloudi_instance_type = {
     sizeof(python_cloudi_instance_object),   // tp_basicsize
     0,                                       // tp_itemsize
     python_cloudi_instance_object_dealloc,   // tp_dealloc
-    0,                                       // tp_print
+    0,                                       // tp_vectorcall_offset
     0,                                       // tp_getattr
     0,                                       // tp_setattr
-    0,                                       // tp_compare (now tp_reserved)
+    0,                                       // tp_as_async
     0,                                       // tp_repr
     0,                                       // tp_as_number
     0,                                       // tp_as_sequence
@@ -473,8 +480,16 @@ static PyTypeObject python_cloudi_instance_type = {
     ,
     0                                        // tp_finalize
 #endif
+#ifdef PYTHON_VERSION_3_8_COMPATIBLE
+    ,
+    0                                        // tp_vectorcall
+#endif
+#ifdef PYTHON_VERSION_3_8
+    ,
+    0                                        // deprecated tp_print
+#endif
 #ifdef COUNT_ALLOCS
-     ,
+    ,
     0,                                       // tp_allocs
     0,                                       // tp_frees
     0,                                       // tp_maxalloc
