@@ -1078,7 +1078,7 @@
          {hibernate, false},
          {duo_mode, false},
          {request_pid_options, [{priority, high}]},
-         {dispatcher_pid_options, [{priority, normal}]},
+         {dispatcher_pid_options, [{message_queue_data, off_heap}]},
          {scope, cloudi_service_test_messaging_erlang_variation0}]},
     {internal,
         "/tests/messaging/erlang/variation1/",
@@ -1090,8 +1090,8 @@
          {hibernate, false},
          {duo_mode, true},
          {request_pid_options, [{priority, high}]},
-         {info_pid_options, [{priority, normal}]},
-         {dispatcher_pid_options, [{priority, normal}]},
+         {info_pid_options, [{message_queue_data, off_heap}]},
+         {dispatcher_pid_options, [{message_queue_data, off_heap}]},
          {scope, cloudi_service_test_messaging_erlang_variation1}]}
 ]}.
 % automatic node detection with a UDP multicast group

@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-05-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add Java CloudI API function info_key_value_new for
+      request_info key/value encoding using the text_pairs format
+
 2020-05-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Python 3.8 compatibility

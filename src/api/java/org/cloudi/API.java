@@ -33,12 +33,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.UUID;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.UUID;
 import java.text.SimpleDateFormat;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
@@ -1067,11 +1068,17 @@ public class API
                 }
                 else if (response.getClass() == byte[][].class)
                 {
-                    byte [][] response_array = (byte[][]) response;
+                    final byte [][] response_array = (byte[][]) response;
                     assert response_array.length == 2 : "invalid response";
+                    byte [] response_info_value = response_array[0];
+                    byte [] response_value = response_array[1];
+                    if (response_info_value == null)
+                        response_info_value = ("").getBytes();
+                    if (response_value == null)
+                        response_value = ("").getBytes();
                     return_async(name, pattern,
-                                 response_array[0],
-                                 response_array[1],
+                                 response_info_value,
+                                 response_value,
                                  timeout, trans_id, pid);
 
                 }
@@ -1151,11 +1158,17 @@ public class API
                 }
                 else if (response.getClass() == byte[][].class)
                 {
-                    byte [][] response_array = (byte[][]) response;
+                    final byte [][] response_array = (byte[][]) response;
                     assert response_array.length == 2 : "invalid response";
+                    byte [] response_info_value = response_array[0];
+                    byte [] response_value = response_array[1];
+                    if (response_info_value == null)
+                        response_info_value = ("").getBytes();
+                    if (response_value == null)
+                        response_value = ("").getBytes();
                     return_sync(name, pattern,
-                                response_array[0],
-                                response_array[1],
+                                response_info_value,
+                                response_value,
                                 timeout, trans_id, pid);
 
                 }
@@ -1540,7 +1553,7 @@ public class API
     /**
      * Shutdown the service successfully
      *
-     * @param  reason      the shutdown reason
+     * @param  reason  the shutdown reason
      */
     public void shutdown(final String reason)
     {
@@ -1552,8 +1565,34 @@ public class API
         send(shutdown);
     }
 
-    private HashMap<String,
-                    ArrayList<String>> binary_key_value_parse(final byte[] b)
+    private byte[] text_pairs_new(HashMap<String, ArrayList<String>> info)
+    {
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte[] delimiter_bytes = {0};
+        int offset = 0;
+
+        for (Map.Entry<String, ArrayList<String>> pair : info.entrySet())
+        {
+            byte[] key_bytes = pair.getKey().getBytes();
+
+            for (String value : pair.getValue())
+            {
+                byte[] value_bytes = value.getBytes();
+
+                result.write(key_bytes, offset, key_bytes.length);
+                offset += key_bytes.length;
+                result.write(delimiter_bytes, offset, delimiter_bytes.length);
+                offset += delimiter_bytes.length;
+                result.write(value_bytes, offset, value_bytes.length);
+                offset += value_bytes.length;
+                result.write(delimiter_bytes, offset, delimiter_bytes.length);
+                offset += delimiter_bytes.length;
+            }
+        }
+        return result.toByteArray();
+    }
+
+    private HashMap<String, ArrayList<String>> text_pairs_parse(final byte[] b)
     {
         HashMap<String, ArrayList<String> > result =
             new HashMap<String, ArrayList<String> >();
@@ -1590,10 +1629,27 @@ public class API
         return result;
     }
 
+    /**
+     * Encode request_info key/value data
+     *
+     * @param  info    request_info key/value map
+     * @return encoded binary
+     */
+    public byte[] info_key_value_new(HashMap<String, ArrayList<String>> info)
+    {
+        return text_pairs_new(info);
+    }
+
+    /**
+     * Decode request_info key/value data
+     *
+     * @param  info    encoded binary
+     * @return request_info key/value map
+     */
     public HashMap<String,
                    ArrayList<String>> info_key_value_parse(final byte[] info)
     {
-        return binary_key_value_parse(info);
+        return text_pairs_parse(info);
     }
 
     private void send(final OtpOutputStream command)
