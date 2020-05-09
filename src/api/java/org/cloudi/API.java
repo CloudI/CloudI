@@ -1567,7 +1567,7 @@ public class API
 
     private byte[] text_pairs_new(HashMap<String, ArrayList<String>> info)
     {
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        ByteArrayOutputStream result = new ByteArrayOutputStream(1024);
 
         for (Map.Entry<String, ArrayList<String>> pair : info.entrySet())
         {
