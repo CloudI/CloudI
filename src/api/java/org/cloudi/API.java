@@ -1568,8 +1568,6 @@ public class API
     private byte[] text_pairs_new(HashMap<String, ArrayList<String>> info)
     {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
-        byte[] delimiter_bytes = {0};
-        int offset = 0;
 
         for (Map.Entry<String, ArrayList<String>> pair : info.entrySet())
         {
@@ -1579,14 +1577,10 @@ public class API
             {
                 byte[] value_bytes = value.getBytes();
 
-                result.write(key_bytes, offset, key_bytes.length);
-                offset += key_bytes.length;
-                result.write(delimiter_bytes, offset, delimiter_bytes.length);
-                offset += delimiter_bytes.length;
-                result.write(value_bytes, offset, value_bytes.length);
-                offset += value_bytes.length;
-                result.write(delimiter_bytes, offset, delimiter_bytes.length);
-                offset += delimiter_bytes.length;
+                result.write(key_bytes, 0, key_bytes.length);
+                result.write(0);
+                result.write(value_bytes, 0, value_bytes.length);
+                result.write(0);
             }
         }
         return result.toByteArray();
