@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.text.SimpleDateFormat;
@@ -1565,11 +1566,11 @@ public class API
         send(shutdown);
     }
 
-    private byte[] text_pairs_new(HashMap<String, ArrayList<String>> info)
+    private byte[] text_pairs_new(Map<String, List<String>> info)
     {
         ByteArrayOutputStream result = new ByteArrayOutputStream(1024);
 
-        for (Map.Entry<String, ArrayList<String>> pair : info.entrySet())
+        for (Map.Entry<String, List<String>> pair : info.entrySet())
         {
             byte[] key_bytes = pair.getKey().getBytes();
 
@@ -1629,7 +1630,7 @@ public class API
      * @param  info    request_info key/value map
      * @return encoded binary
      */
-    public byte[] info_key_value_new(HashMap<String, ArrayList<String>> info)
+    public byte[] info_key_value_new(Map<String, List<String>> info)
     {
         return text_pairs_new(info);
     }

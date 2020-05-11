@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-05-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the Java CloudI API function info_key_value_new types
+
 2020-05-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Java CloudI API function info_key_value_new for
