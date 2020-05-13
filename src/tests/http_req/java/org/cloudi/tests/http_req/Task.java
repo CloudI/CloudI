@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -67,7 +67,7 @@ public class Task implements Runnable
                API.InvalidInputException
     {
         HashMap<String, ArrayList<String>> http_qs =
-            this.api.info_key_value_parse(request);
+            API.info_key_value_parse(request);
         final ArrayList<String> value = http_qs.remove("value");
         String response = null;
         if (value != null)
