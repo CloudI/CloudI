@@ -1831,47 +1831,6 @@ void cloudi_info_key_value_destroy(char const ** p)
 namespace CloudI
 {
 
-class pimpl_t
-{
-    public:
-        pimpl_t() : count(0)
-        {
-        }
-        ~pimpl_t()
-        {
-            cloudi_destroy(&api);
-        }
-
-        cloudi_instance_t api;
-        int count; // api shared reference count
-};
-
-API::impl_t::impl_t() :
-    m_p(new pimpl_t())
-{
-    reinterpret_cast<pimpl_t *>(m_p)->count++;
-}
-
-API::impl_t::impl_t(API::impl_t const & impl) :
-    m_p(impl.m_p)
-{
-    reinterpret_cast<pimpl_t *>(m_p)->count++;
-}
-
-API::impl_t::~impl_t()
-{
-    pimpl_t * p = reinterpret_cast<pimpl_t *>(m_p);
-    if (--(p->count) == 0)
-    {
-        delete p;
-    }
-}
-
-cloudi_instance_t * API::impl_t::api() const
-{
-    return &(reinterpret_cast<pimpl_t *>(m_p)->api);
-}
-
 API::API(unsigned int const thread_index,
          bool const terminate_return_value)
 {
@@ -1900,7 +1859,7 @@ unsigned int API::thread_count()
 }
 
 int API::subscribe(char const * const pattern,
-                   API::callback_function_generic * p) const
+                   callback_function_generic * p) const
 {
     return cloudi_subscribe_(m_impl.api(),
                              pattern,
@@ -2397,6 +2356,47 @@ void API::info_key_value_destroy(char const ** p) const
 std::string API::backtrace()
 {
     return backtrace_string();
+}
+
+class pimpl_t
+{
+    public:
+        pimpl_t() : count(0)
+        {
+        }
+        ~pimpl_t()
+        {
+            cloudi_destroy(&api);
+        }
+
+        cloudi_instance_t api;
+        int count; // api shared reference count
+};
+
+API::impl_t::impl_t() :
+    m_p(new pimpl_t())
+{
+    reinterpret_cast<pimpl_t *>(m_p)->count++;
+}
+
+API::impl_t::impl_t(API::impl_t const & impl) :
+    m_p(impl.m_p)
+{
+    reinterpret_cast<pimpl_t *>(m_p)->count++;
+}
+
+API::impl_t::~impl_t()
+{
+    pimpl_t * p = reinterpret_cast<pimpl_t *>(m_p);
+    if (--(p->count) == 0)
+    {
+        delete p;
+    }
+}
+
+cloudi_instance_t * API::impl_t::api() const
+{
+    return &(reinterpret_cast<pimpl_t *>(m_p)->api);
 }
 
 } // namespace CloudI
