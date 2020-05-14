@@ -120,7 +120,6 @@ class API
                                          uint32_t const) = 0;
         };
 
-    public:
         class callback_function_generic
         {
             public:
@@ -597,8 +596,6 @@ class API
 
         API(unsigned int const thread_index,
             bool const terminate_return_value = true);
-        ~API();
-        API(API const & object);
 
         static unsigned int thread_count();
 
@@ -1236,8 +1233,18 @@ class API
         void info_key_value_destroy(char const ** p) const;
 
     private:
-        cloudi_instance_t * const m_api;
-        int * const m_count; // m_api shared reference count
+        class impl_t
+        {
+            public:
+                impl_t();
+                impl_t(impl_t const & impl);
+                ~impl_t();
+                cloudi_instance_t * api() const;
+
+            private:
+                void * const m_p;
+        };
+        impl_t const m_impl;
 
     public:
         // enumeration namespace that is valid with the C++98 standard

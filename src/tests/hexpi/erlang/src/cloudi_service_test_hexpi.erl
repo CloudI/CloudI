@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2019 Michael Truog
+%%% @copyright 2012-2020 Michael Truog
 %%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -68,7 +68,8 @@
 
 -record(state,
     {
-        destination = "/tests/hexpi",
+        destination = "/tests/hexpi" :: cloudi_service:service_name(),
+        timeout_max :: cloudi_service:timeout_value_milliseconds(),
         index,
         index_start,
         index_end,
@@ -96,6 +97,7 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                               _Prefix, _Timeout, Dispatcher)
     when is_integer(IndexStart), is_integer(IndexEnd),
          is_pid(Dispatcher) ->
+    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
     IterationsMin = 1,
     IterationsMax = 1000000000,
     TargetTimeMin = 1.0 / 3600.0, % 1 second, in hours
@@ -107,7 +109,8 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                                     TargetTimeMin, TargetTimeMax),
     Queue = cloudi_queue:new([{retry, 3},
                               {failures_source_die, true}]),
-    {ok, setup(#state{index = IndexStart,
+    {ok, setup(#state{timeout_max = TimeoutMax,
+                      index = IndexStart,
                       index_start = IndexStart,
                       index_end = IndexEnd,
                       task_size = TaskSize,
@@ -145,6 +148,7 @@ cloudi_service_map_reduce_send(#state{destination = Name,
 cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
                                   Timeout, {_, OldPid}],
                                  #state{destination = Name,
+                                        timeout_max = TimeoutMax,
                                         task_size = TaskSize} =
                                  State) ->
 
@@ -157,7 +161,7 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
             ?LOG_INFO("index ~s result timeout (after ~p ms)",
                       [IndexStr, Timeout]),
             NewTaskSize = cloudi_task_size:reduce(OldPid, 0.9, TaskSize),
-            NewTimeout = erlang:min(Timeout * 2, 4294967195),
+            NewTimeout = erlang:min(Timeout * 2, TimeoutMax),
             {ok, [Dispatcher, Name, Request, NewTimeout, PatternPid],
              State#state{task_size = NewTaskSize}};
         {error, _} = Error ->

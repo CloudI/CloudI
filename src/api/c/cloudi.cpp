@@ -1831,41 +1831,63 @@ void cloudi_info_key_value_destroy(char const ** p)
 namespace CloudI
 {
 
-API::API(unsigned int const thread_index,
-         bool const terminate_return_value) :
-    m_api(new cloudi_instance_t()),
-    m_count(new int)
+class pimpl_t
 {
-    (*m_count) = 1;
-    int const result = cloudi_initialize(m_api, thread_index, 0);
+    public:
+        pimpl_t() : count(0)
+        {
+        }
+        ~pimpl_t()
+        {
+            cloudi_destroy(&api);
+        }
+
+        cloudi_instance_t api;
+        int count; // api shared reference count
+};
+
+API::impl_t::impl_t() :
+    m_p(new pimpl_t())
+{
+    reinterpret_cast<pimpl_t *>(m_p)->count++;
+}
+
+API::impl_t::impl_t(API::impl_t const & impl) :
+    m_p(impl.m_p)
+{
+    reinterpret_cast<pimpl_t *>(m_p)->count++;
+}
+
+API::impl_t::~impl_t()
+{
+    pimpl_t * p = reinterpret_cast<pimpl_t *>(m_p);
+    if (--(p->count) == 0)
+    {
+        delete p;
+    }
+}
+
+cloudi_instance_t * API::impl_t::api() const
+{
+    return &(reinterpret_cast<pimpl_t *>(m_p)->api);
+}
+
+API::API(unsigned int const thread_index,
+         bool const terminate_return_value)
+{
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_initialize(api, thread_index, 0);
     if (result == return_value::success)
     {
-        m_api->cxx_terminate_exception = (terminate_return_value == false);
+        api->cxx_terminate_exception = (terminate_return_value == false);
     }
     else
     {
         if (result == return_value::terminate)
-            throw terminate_exception(m_api->timeout_terminate);
+            throw terminate_exception(api->timeout_terminate);
         else
             throw invalid_input_exception(result);
     }
-}
-
-API::~API()
-{
-    if (--(*m_count) == 0)
-    {
-        cloudi_destroy(m_api);
-        delete m_api;
-        delete m_count;
-    }
-}
-
-API::API(API const & object) :
-    m_api(object.m_api),
-    m_count(object.m_count)
-{
-    ++(*m_count);
 }
 
 unsigned int API::thread_count()
@@ -1880,23 +1902,24 @@ unsigned int API::thread_count()
 int API::subscribe(char const * const pattern,
                    API::callback_function_generic * p) const
 {
-    return cloudi_subscribe_(m_api,
+    return cloudi_subscribe_(m_impl.api(),
                              pattern,
                              callback_function(p));
 }
 
 int API::subscribe_count(char const * const pattern) const
 {
-    int const result = cloudi_subscribe_count(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_subscribe_count(api,
                                               pattern);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 int API::unsubscribe(char const * const pattern) const
 {
-    return cloudi_unsubscribe(m_api,
+    return cloudi_unsubscribe(m_impl.api(),
                               pattern);
 }
 
@@ -1904,12 +1927,13 @@ int API::send_async(char const * const name,
                     void const * const request,
                     uint32_t const request_size) const
 {
-    int const result = cloudi_send_async(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_send_async(api,
                                          name,
                                          request,
                                          request_size);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
@@ -1921,7 +1945,8 @@ int API::send_async(char const * const name,
                     uint32_t timeout,
                     int8_t const priority) const
 {
-    int const result = cloudi_send_async_(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_send_async_(api,
                                           name,
                                           request_info,
                                           request_info_size,
@@ -1929,8 +1954,8 @@ int API::send_async(char const * const name,
                                           request_size,
                                           timeout,
                                           priority);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
@@ -1938,12 +1963,13 @@ int API::send_sync(char const * const name,
                    void const * const request,
                    uint32_t const request_size) const
 {
-    int const result = cloudi_send_sync(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_send_sync(api,
                                         name,
                                         request,
                                         request_size);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
@@ -1955,7 +1981,8 @@ int API::send_sync(char const * const name,
                    uint32_t timeout,
                    int8_t const priority) const
 {
-    int const result = cloudi_send_sync_(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_send_sync_(api,
                                          name,
                                          request_info,
                                          request_info_size,
@@ -1963,8 +1990,8 @@ int API::send_sync(char const * const name,
                                          request_size,
                                          timeout,
                                          priority);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
@@ -1972,12 +1999,13 @@ int API::mcast_async(char const * const name,
                      void const * const request,
                      uint32_t const request_size) const
 {
-    int const result = cloudi_mcast_async(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_mcast_async(api,
                                           name,
                                           request,
                                           request_size);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
@@ -1989,7 +2017,8 @@ int API::mcast_async(char const * const name,
                      uint32_t timeout,
                      int8_t const priority) const
 {
-    int const result = cloudi_mcast_async_(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_mcast_async_(api,
                                            name,
                                            request_info,
                                            request_info_size,
@@ -1997,41 +2026,42 @@ int API::mcast_async(char const * const name,
                                            request_size,
                                            timeout,
                                            priority);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 char const * API::get_response() const
 {
-    return m_api->response;
+    return m_impl.api()->response;
 }
 
 uint32_t API::get_response_size() const
 {
-    return m_api->response_size;
+    return m_impl.api()->response_size;
 }
 
 char const * API::get_response_info() const
 {
-    return m_api->response_info;
+    return m_impl.api()->response_info;
 }
 
 uint32_t API::get_response_info_size() const
 {
-    return m_api->response_info_size;
+    return m_impl.api()->response_info_size;
 }
 
 uint32_t API::get_trans_id_count() const
 {
-    return m_api->trans_id_count;
+    return m_impl.api()->trans_id_count;
 }
 
 char const * API::get_trans_id(unsigned int const i) const
 {
-    if (i >= m_api->trans_id_count)
+    cloudi_instance_t * const api = m_impl.api();
+    if (i >= api->trans_id_count)
         return 0;
-    return &(m_api->trans_id[i * 16]);
+    return &(api->trans_id[i * 16]);
 }
 
 bool API::get_trans_id_null(unsigned int const i) const
@@ -2044,7 +2074,7 @@ bool API::get_trans_id_null(unsigned int const i) const
 
 uint32_t API::get_subscribe_count() const
 {
-    return m_api->subscribe_count;
+    return m_impl.api()->subscribe_count;
 }
 
 int API::forward_(int const request_type,
@@ -2059,7 +2089,7 @@ int API::forward_(int const request_type,
                   char const * const pid,
                   uint32_t const pid_size) const
 {
-    return cloudi_forward(m_api,
+    return cloudi_forward(m_impl.api(),
                           request_type,
                           name,
                           request_info,
@@ -2084,7 +2114,7 @@ int API::forward_async(char const * const name,
                        char const * const pid,
                        uint32_t const pid_size) const
 {
-    return cloudi_forward_async(m_api,
+    return cloudi_forward_async(m_impl.api(),
                                 name,
                                 request_info,
                                 request_info_size,
@@ -2108,7 +2138,7 @@ int API::forward_sync(char const * const name,
                       char const * const pid,
                       uint32_t const pid_size) const
 {
-    return cloudi_forward_sync(m_api,
+    return cloudi_forward_sync(m_impl.api(),
                                name,
                                request_info,
                                request_info_size,
@@ -2133,7 +2163,7 @@ int API::return_(int const request_type,
                  char const * const pid,
                  uint32_t const pid_size) const
 {
-    return cloudi_return(m_api,
+    return cloudi_return(m_impl.api(),
                          request_type,
                          name,
                          pattern,
@@ -2158,7 +2188,7 @@ int API::return_async(char const * const name,
                       char const * const pid,
                       uint32_t const pid_size) const
 {
-    return cloudi_return_async(m_api,
+    return cloudi_return_async(m_impl.api(),
                                name,
                                pattern,
                                response_info,
@@ -2182,7 +2212,7 @@ int API::return_sync(char const * const name,
                      char const * const pid,
                      uint32_t const pid_size) const
 {
-    return cloudi_return_sync(m_api,
+    return cloudi_return_sync(m_impl.api(),
                               name,
                               pattern,
                               response_info,
@@ -2197,70 +2227,76 @@ int API::return_sync(char const * const name,
 
 int API::recv_async() const
 {
-    int const result = cloudi_recv_async(m_api,
-                                         m_api->timeout_sync,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_recv_async(api,
+                                         api->timeout_sync,
                                          0,
                                          1);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 int API::recv_async(uint32_t timeout) const
 {
-    int const result = cloudi_recv_async(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_recv_async(api,
                                          timeout,
                                          0,
                                          1);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 int API::recv_async(char const * const trans_id) const
 {
-    int const result = cloudi_recv_async(m_api,
-                                         m_api->timeout_sync,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_recv_async(api,
+                                         api->timeout_sync,
                                          trans_id,
                                          1);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 int API::recv_async(uint32_t timeout,
                     char const * const trans_id) const
 {
-    int const result = cloudi_recv_async(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_recv_async(api,
                                          timeout,
                                          trans_id,
                                          1);
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 int API::recv_async(uint32_t timeout,
                     bool consume) const
 {
-    int const result = cloudi_recv_async(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_recv_async(api,
                                          timeout,
                                          0,
                                          static_cast<int>(consume));
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 int API::recv_async(char const * const trans_id,
                     bool consume) const
 {
-    int const result = cloudi_recv_async(m_api,
-                                         m_api->timeout_sync,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_recv_async(api,
+                                         api->timeout_sync,
                                          trans_id,
                                          static_cast<int>(consume));
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
@@ -2268,80 +2304,81 @@ int API::recv_async(uint32_t timeout,
                     char const * const trans_id,
                     bool consume) const
 {
-    int const result = cloudi_recv_async(m_api,
+    cloudi_instance_t * const api = m_impl.api();
+    int const result = cloudi_recv_async(api,
                                          timeout,
                                          trans_id,
                                          static_cast<int>(consume));
-    if (result == return_value::terminate && m_api->cxx_terminate_exception)
-        throw terminate_exception(m_api->timeout_terminate);
+    if (result == return_value::terminate && api->cxx_terminate_exception)
+        throw terminate_exception(api->timeout_terminate);
     return result;
 }
 
 uint32_t API::process_index() const
 {
-    return m_api->process_index;
+    return m_impl.api()->process_index;
 }
 
 uint32_t API::process_count() const
 {
-    return m_api->process_count;
+    return m_impl.api()->process_count;
 }
 
 uint32_t API::process_count_max() const
 {
-    return m_api->process_count_max;
+    return m_impl.api()->process_count_max;
 }
 
 uint32_t API::process_count_min() const
 {
-    return m_api->process_count_min;
+    return m_impl.api()->process_count_min;
 }
 
 char const * API::prefix() const
 {
-    return m_api->prefix;
+    return m_impl.api()->prefix;
 }
 
 uint32_t API::timeout_initialize() const
 {
-    return m_api->timeout_initialize;
+    return m_impl.api()->timeout_initialize;
 }
 
 uint32_t API::timeout_async() const
 {
-    return m_api->timeout_async;
+    return m_impl.api()->timeout_async;
 }
 
 uint32_t API::timeout_sync() const
 {
-    return m_api->timeout_sync;
+    return m_impl.api()->timeout_sync;
 }
 
 uint32_t API::timeout_terminate() const
 {
-    return m_api->timeout_terminate;
+    return m_impl.api()->timeout_terminate;
 }
 
 int8_t API::priority_default() const
 {
-    return m_api->priority_default;
+    return m_impl.api()->priority_default;
 }
 
 int API::poll(int timeout) const
 {
-    return cloudi_poll(m_api,
+    return cloudi_poll(m_impl.api(),
                        timeout);
 }
 
 int API::shutdown() const
 {
-    return cloudi_shutdown(m_api,
+    return cloudi_shutdown(m_impl.api(),
                            "");
 }
 
 int API::shutdown(char const * const reason) const
 {
-    return cloudi_shutdown(m_api,
+    return cloudi_shutdown(m_impl.api(),
                            reason);
 }
 
