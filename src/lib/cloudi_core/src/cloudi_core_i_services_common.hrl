@@ -494,25 +494,27 @@ request_timeout_adjustment_f(true) ->
 request_timeout_adjustment_f(false) ->
     fun(T) -> T end.
 
-aspects_terminate([], _, _, ServiceState) ->
+aspects_terminate_before([], _, _, ServiceState) ->
     {ok, ServiceState};
-aspects_terminate([{M, F} = Aspect | L], Reason, TimeoutTerm, ServiceState) ->
+aspects_terminate_before([{M, F} = Aspect | L],
+                         Reason, TimeoutTerm, ServiceState) ->
     try {ok, _} = M:F(Reason, TimeoutTerm, ServiceState) of
         {ok, ServiceStateNew} ->
-            aspects_terminate(L, Reason, TimeoutTerm, ServiceStateNew)
+            aspects_terminate_before(L, Reason, TimeoutTerm, ServiceStateNew)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("aspect_terminate(~tp) ~tp ~tp~n~tp",
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
             {ok, ServiceState}
     end;
-aspects_terminate([F | L], Reason, TimeoutTerm, ServiceState) ->
+aspects_terminate_before([F | L],
+                         Reason, TimeoutTerm, ServiceState) ->
     try {ok, _} = F(Reason, TimeoutTerm, ServiceState) of
         {ok, ServiceStateNew} ->
-            aspects_terminate(L, Reason, TimeoutTerm, ServiceStateNew)
+            aspects_terminate_before(L, Reason, TimeoutTerm, ServiceStateNew)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("aspect_terminate(~tp) ~tp ~tp~n~tp",
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
             {ok, ServiceState}
     end.

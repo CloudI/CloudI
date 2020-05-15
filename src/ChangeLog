@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-05-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Isolate aspect function exception errors in the same way for
+      both internal and external services with the same logging.
+      Now aspects_init_after functions execution are included in
+      the initialization timeout time period.
+      The execution of aspects_request_before functions and
+      aspects_request_after functions are already included in the
+      service request timeout decrement
+      (when the service configuration option
+       request_timeout_adjustment is true).
+
 2020-05-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix problem when the Dispatcher variable is used in an

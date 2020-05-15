@@ -440,12 +440,14 @@ handle_event(EventType, EventContent, StateName, State) ->
                 options = #config_service_options{
                     scope = Scope,
                     aspects_init_after = Aspects}} = State) ->
-    % initialization is now complete because the CloudI API poll function
-    % has been called for the first time (i.e., by the service code)
-    cancel_timer_async(InitTimer),
-    case aspects_init(Aspects, CommandLine, Prefix, Timeout,
-                      ServiceState) of
+    case aspects_init_after(Aspects, CommandLine, Prefix, Timeout,
+                            ServiceState) of
         {ok, ServiceStateNew} ->
+            % initialization is now complete because the
+            % CloudI API poll function has been called for the
+            % first time (i.e., by the service code)
+            % and all the aspects_init_after functions have been called.
+            cancel_timer_async(InitTimer),
             ok = cloudi_core_i_services_monitor:
                  process_init_end(Dispatcher, OSPid),
             if
@@ -626,10 +628,10 @@ handle_event(EventType, EventContent, StateName, State) ->
     Result = {forward, NameNext,
               RequestInfoNext, RequestNext,
               TimeoutNext, PriorityNext},
-    try aspects_request_after(AspectsAfter, Type,
-                              Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, Source,
-                              Result, ServiceState) of
+    case aspects_request_after(AspectsAfter, Type,
+                               Name, Pattern, RequestInfo, Request,
+                               Timeout, Priority, TransId, Source,
+                               Result, ServiceState) of
         {ok, ServiceStateNew} ->
             TimeoutNew = if
                 TimeoutNext == Timeout ->
@@ -685,12 +687,6 @@ handle_event(EventType, EventContent, StateName, State) ->
             {stop, Reason,
              State#state{service_state = ServiceStateNew,
                          request_data = undefined}}
-    catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("request ~tp ~tp~n~tp",
-                       [ErrorType, Error, ErrorStackTrace]),
-            {stop, {ErrorType, {Error, ErrorStackTrace}},
-             State#state{request_data = undefined}}
     end;
 
 'HANDLE'(connection,
@@ -721,10 +717,10 @@ handle_event(EventType, EventContent, StateName, State) ->
     Type = send_sync,
     Result = {forward, NameNext, RequestInfoNext, RequestNext,
               TimeoutNext, PriorityNext},
-    try aspects_request_after(AspectsAfter, Type,
-                              Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, Source,
-                              Result, ServiceState) of
+    case aspects_request_after(AspectsAfter, Type,
+                               Name, Pattern, RequestInfo, Request,
+                               Timeout, Priority, TransId, Source,
+                               Result, ServiceState) of
         {ok, ServiceStateNew} ->
             TimeoutNew = if
                 TimeoutNext == Timeout ->
@@ -780,12 +776,6 @@ handle_event(EventType, EventContent, StateName, State) ->
             {stop, Reason,
              State#state{service_state = ServiceStateNew,
                          request_data = undefined}}
-    catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("request ~tp ~tp~n~tp",
-                       [ErrorType, Error, ErrorStackTrace]),
-            {stop, {ErrorType, {Error, ErrorStackTrace}},
-             State#state{request_data = undefined}}
     end;
 
 'HANDLE'(connection,
@@ -818,10 +808,10 @@ handle_event(EventType, EventContent, StateName, State) ->
         true ->
             {reply, ResponseInfo, Response}
     end,
-    try aspects_request_after(AspectsAfter, Type,
-                              Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, Source,
-                              Result, ServiceState) of
+    case aspects_request_after(AspectsAfter, Type,
+                               Name, Pattern, RequestInfo, Request,
+                               Timeout, Priority, TransId, Source,
+                               Result, ServiceState) of
         {ok, ServiceStateNew} ->
             TimeoutNew = if
                 TimeoutNext == Timeout ->
@@ -848,12 +838,6 @@ handle_event(EventType, EventContent, StateName, State) ->
             {stop, Reason,
              State#state{service_state = ServiceStateNew,
                          request_data = undefined}}
-    catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("request ~tp ~tp~n~tp",
-                       [ErrorType, Error, ErrorStackTrace]),
-            {stop, {ErrorType, {Error, ErrorStackTrace}},
-             State#state{request_data = undefined}}
     end;
 
 'HANDLE'(connection, {'recv_async', Timeout, TransId, Consume}, State) ->
@@ -1041,10 +1025,10 @@ handle_event(EventType, EventContent, StateName, State) ->
                 aspects_request_before = AspectsBefore} = ConfigOptionsNew,
             RequestTimeoutF =
                 request_timeout_adjustment_f(RequestTimeoutAdjustment),
-            try aspects_request_before(AspectsBefore, Type,
-                                       Name, Pattern, RequestInfo, Request,
-                                       Timeout, Priority, TransId, Source,
-                                       ServiceState) of
+            case aspects_request_before(AspectsBefore, Type,
+                                        Name, Pattern, RequestInfo, Request,
+                                        Timeout, Priority, TransId, Source,
+                                        ServiceState) of
                 {ok, ServiceStateNew} ->
                     if
                         SendType =:= 'cloudi_service_send_async' ->
@@ -1069,12 +1053,6 @@ handle_event(EventType, EventContent, StateName, State) ->
                     {stop, Reason,
                      State#state{service_state = ServiceStateNew,
                                  options = ConfigOptionsNew}}
-            catch
-                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                    ?LOG_ERROR("request ~tp ~tp~n~tp",
-                               [ErrorType, Error, ErrorStackTrace]),
-                    {stop, {ErrorType, {Error, ErrorStackTrace}},
-                     State#state{options = ConfigOptionsNew}}
             end;
         RateRequestOk =:= false ->
             if
@@ -1484,7 +1462,8 @@ terminate(Reason, _,
                      aspects_terminate_before = Aspects}} = State) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(Dispatcher, OSPid, Reason),
-    {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
+    {ok, _} = aspects_terminate_before(Aspects,
+                                       Reason, TimeoutTerm, ServiceState),
     ok = socket_close(Reason, socket_data_from_state(State)),
     ok.
 
@@ -2097,10 +2076,10 @@ process_queue(#state{dispatcher = Dispatcher,
                     RequestTimeoutAdjustment,
                 aspects_request_before =
                     AspectsBefore} = ConfigOptionsNew,
-            try aspects_request_before(AspectsBefore, Type,
-                                       Name, Pattern, RequestInfo, Request,
-                                       TimeoutOld, Priority, TransId, Source,
-                                       ServiceState) of
+            case aspects_request_before(AspectsBefore, Type,
+                                        Name, Pattern, RequestInfo, Request,
+                                        TimeoutOld, Priority, TransId, Source,
+                                        ServiceState) of
                 {ok, ServiceStateNew} ->
                     RecvTimer = maps:get(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
@@ -2130,13 +2109,6 @@ process_queue(#state{dispatcher = Dispatcher,
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
                     State#state{service_state = ServiceStateNew,
                                 options = ConfigOptionsNew}
-            catch
-                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                    ?LOG_ERROR("request ~tp ~tp~n~tp",
-                               [ErrorType, Error, ErrorStackTrace]),
-                    Reason = {ErrorType, {Error, ErrorStackTrace}},
-                    Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{options = ConfigOptionsNew}
             end;
         {{value,
           {Size,
@@ -2150,10 +2122,10 @@ process_queue(#state{dispatcher = Dispatcher,
                     RequestTimeoutAdjustment,
                 aspects_request_before =
                     AspectsBefore} = ConfigOptionsNew,
-            try aspects_request_before(AspectsBefore, Type,
-                                       Name, Pattern, RequestInfo, Request,
-                                       TimeoutOld, Priority, TransId, Source,
-                                       ServiceState) of
+            case aspects_request_before(AspectsBefore, Type,
+                                        Name, Pattern, RequestInfo, Request,
+                                        TimeoutOld, Priority, TransId, Source,
+                                        ServiceState) of
                 {ok, ServiceStateNew} ->
                     RecvTimer = maps:get(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
@@ -2183,13 +2155,6 @@ process_queue(#state{dispatcher = Dispatcher,
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
                     State#state{service_state = ServiceStateNew,
                                 options = ConfigOptionsNew}
-            catch
-                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                    ?LOG_ERROR("request ~tp ~tp~n~tp",
-                               [ErrorType, Error, ErrorStackTrace]),
-                    Reason = {ErrorType, {Error, ErrorStackTrace}},
-                    Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{options = ConfigOptionsNew}
             end
     end.
 
@@ -2232,14 +2197,14 @@ process_update(#state{dispatcher = Dispatcher,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
             erlang:exit(update_failed)
     end,
-    FinalState = StateNew#state{update_plan = undefined},
+    StateFinal = StateNew#state{update_plan = undefined},
     if
         OsProcessNew =:= true ->
             % wait to receive 'polling' to make sure initialization is complete
             % with the newly created OS process
-            FinalState;
+            StateFinal;
         OsProcessNew =:= false ->
-            process_queues(FinalState)
+            process_queues(StateFinal)
     end.
 
 process_queues(#state{dispatcher = Dispatcher,
@@ -2590,79 +2555,117 @@ socket_data_from_state(#state{protocol = Protocol,
                   os_pid = OSPid,
                   cgroup = CGroup}.
 
-aspects_init([], _, _, _, ServiceState) ->
+aspects_init_after([], _, _, _, ServiceState) ->
     {ok, ServiceState};
-aspects_init([{M, F} | L], CommandLine, Prefix, Timeout, ServiceState) ->
-    case M:F(CommandLine, Prefix, Timeout, ServiceState) of
+aspects_init_after([{M, F} = Aspect | L], CommandLine, Prefix, Timeout,
+                   ServiceState) ->
+    try M:F(CommandLine, Prefix, Timeout, ServiceState) of
         {ok, ServiceStateNew} ->
-            aspects_init(L, CommandLine, Prefix, Timeout, ServiceStateNew);
+            aspects_init_after(L, CommandLine, Prefix, Timeout,
+                               ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR_SYNC("aspect ~tp ~tp ~tp~n~tp",
+                            [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
-aspects_init([F | L], CommandLine, Prefix, Timeout, ServiceState) ->
-    case F(CommandLine, Prefix, Timeout, ServiceState) of
+aspects_init_after([F | L], CommandLine, Prefix, Timeout,
+                   ServiceState) ->
+    try F(CommandLine, Prefix, Timeout, ServiceState) of
         {ok, ServiceStateNew} ->
-            aspects_init(L, CommandLine, Prefix, Timeout, ServiceStateNew);
+            aspects_init_after(L, CommandLine, Prefix, Timeout,
+                               ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR_SYNC("aspect ~tp ~tp ~tp~n~tp",
+                            [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
 aspects_request_before([], _, _, _, _, _, _, _, _, _, ServiceState) ->
     {ok, ServiceState};
-aspects_request_before([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_before([{M, F} = Aspect | L],
+                       Type, Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Source,
                        ServiceState) ->
-    case M:F(Type, Name, Pattern, RequestInfo, Request,
-             Timeout, Priority, TransId, Source,
-             ServiceState) of
+    try M:F(Type, Name, Pattern, RequestInfo, Request,
+            Timeout, Priority, TransId, Source,
+            ServiceState) of
         {ok, ServiceStateNew} ->
             aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
                                    Timeout, Priority, TransId, Source,
                                    ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
-aspects_request_before([F | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_before([F | L],
+                       Type, Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Source,
                        ServiceState) ->
-    case F(Type, Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Source,
-           ServiceState) of
+    try F(Type, Name, Pattern, RequestInfo, Request,
+          Timeout, Priority, TransId, Source,
+          ServiceState) of
         {ok, ServiceStateNew} ->
             aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
                                    Timeout, Priority, TransId, Source,
                                    ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
 aspects_request_after([], _, _, _, _, _, _, _, _, _, _, ServiceState) ->
     {ok, ServiceState};
-aspects_request_after([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_after([{M, F} = Aspect | L],
+                      Type, Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, TransId, Source,
                       Result, ServiceState) ->
-    case M:F(Type, Name, Pattern, RequestInfo, Request,
-             Timeout, Priority, TransId, Source,
-             Result, ServiceState) of
+    try M:F(Type, Name, Pattern, RequestInfo, Request,
+            Timeout, Priority, TransId, Source,
+            Result, ServiceState) of
         {ok, ServiceStateNew} ->
             aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Source,
                                   Result, ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
-aspects_request_after([F | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_after([F | L],
+                      Type, Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, TransId, Source,
                       Result, ServiceState) ->
-    case F(Type, Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Source,
-           Result, ServiceState) of
+    try F(Type, Name, Pattern, RequestInfo, Request,
+          Timeout, Priority, TransId, Source,
+          Result, ServiceState) of
         {ok, ServiceStateNew} ->
             aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Source,
                                   Result, ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
 update(_, #config_service_update{type = Type})

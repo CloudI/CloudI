@@ -1815,8 +1815,8 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
     Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
                                             DispatcherProxy) of
         {ok, ServiceStateInit} ->
-            aspects_init(Aspects, Args, Prefix, Timeout,
-                         ServiceStateInit, DispatcherProxy);
+            aspects_init_after(Aspects, Args, Prefix, Timeout,
+                               ServiceStateInit, DispatcherProxy);
         {stop, _, _} = Stop ->
             Stop;
         {stop, _} = Stop ->
@@ -1898,8 +1898,9 @@ terminate(Reason,
                      aspects_terminate_before = Aspects}}) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(Dispatcher, Reason),
-    {ok, ServiceStateNew} = aspects_terminate(Aspects, Reason, TimeoutTerm,
-                                              ServiceState),
+    {ok, ServiceStateNew} = aspects_terminate_before(Aspects,
+                                                     Reason, TimeoutTerm,
+                                                     ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
     ok;
 
@@ -2418,10 +2419,10 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                           aspects_request_after =
                               AspectsAfter} = ConfigOptions) ->
     RequestTimeoutF = request_timeout_adjustment_f(RequestTimeoutAdjustment),
-    try aspects_request_before(AspectsBefore, Type,
-                               Name, Pattern, RequestInfo, Request,
-                               Timeout, Priority, TransId, Source,
-                               ServiceState, Dispatcher) of
+    case aspects_request_before(AspectsBefore, Type,
+                                Name, Pattern, RequestInfo, Request,
+                                Timeout, Priority, TransId, Source,
+                                ServiceState, Dispatcher) of
         {ok, ServiceStateNext} ->
             case handle_module_request_f(Type, Name, Pattern,
                                          RequestInfo, Request,
@@ -2436,14 +2437,14 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                 when ReturnType =:= 'cloudi_service_return_async';
                      ReturnType =:= 'cloudi_service_return_sync' ->
                     Result = {reply, ResponseInfo, Response},
-                    try aspects_request_after(AspectsAfter, Type,
-                                              Name, Pattern,
-                                              RequestInfo, Request,
-                                              Timeout, Priority,
-                                              TransId, Source,
-                                              Result, ServiceStateNew,
-                                              Dispatcher) of
-                        {ok, FinalServiceState} ->
+                    case aspects_request_after(AspectsAfter, Type,
+                                               Name, Pattern,
+                                               RequestInfo, Request,
+                                               Timeout, Priority,
+                                               TransId, Source,
+                                               Result, ServiceStateNew,
+                                               Dispatcher) of
+                        {ok, ServiceStateFinal} ->
                             TimeoutNew = if
                                 TimeoutNext == Timeout ->
                                     RequestTimeoutF(Timeout);
@@ -2454,15 +2455,10 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                              {ReturnType, NameNext, PatternNext,
                               ResponseInfo, Response,
                               TimeoutNew, TransId, Source},
-                             FinalServiceState};
-                        {stop, Reason, FinalServiceState} ->
+                             ServiceStateFinal};
+                        {stop, Reason, ServiceStateFinal} ->
                             {'cloudi_service_request_failure',
-                             stop, Reason, undefined, FinalServiceState}
-                    catch
-                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                            {'cloudi_service_request_failure',
-                             ErrorType, Error, ErrorStackTrace,
-                             ServiceStateNew}
+                             stop, Reason, undefined, ServiceStateFinal}
                     end;
                 {'cloudi_service_request_success',
                  {ForwardType, Name, Pattern,
@@ -2474,14 +2470,14 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                     Result = {forward, NameNext,
                               RequestInfoNext, RequestNext,
                               TimeoutNext, PriorityNext},
-                    try aspects_request_after(AspectsAfter, Type,
-                                              Name, Pattern,
-                                              RequestInfo, Request,
-                                              Timeout, Priority,
-                                              TransId, Source,
-                                              Result, ServiceStateNew,
-                                              Dispatcher) of
-                        {ok, FinalServiceState} ->
+                    case aspects_request_after(AspectsAfter, Type,
+                                               Name, Pattern,
+                                               RequestInfo, Request,
+                                               Timeout, Priority,
+                                               TransId, Source,
+                                               Result, ServiceStateNew,
+                                               Dispatcher) of
+                        {ok, ServiceStateFinal} ->
                             TimeoutNew = if
                                 TimeoutNext == Timeout ->
                                     RequestTimeoutF(Timeout);
@@ -2492,39 +2488,29 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                              {ForwardType, Name, Pattern,
                               NameNext, RequestInfoNext, RequestNext,
                               TimeoutNew, PriorityNext, TransId, Source},
-                             FinalServiceState};
-                        {stop, Reason, FinalServiceState} ->
+                             ServiceStateFinal};
+                        {stop, Reason, ServiceStateFinal} ->
                             {'cloudi_service_request_failure',
-                             stop, Reason, undefined, FinalServiceState}
-                    catch
-                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                            {'cloudi_service_request_failure',
-                             ErrorType, Error, ErrorStackTrace,
-                             ServiceStateNew}
+                             stop, Reason, undefined, ServiceStateFinal}
                     end;
                 {'cloudi_service_request_success',
                  undefined,
                  ServiceStateNew} ->
                     Result = noreply,
-                    try aspects_request_after(AspectsAfter, Type,
-                                              Name, Pattern,
-                                              RequestInfo, Request,
-                                              Timeout, Priority,
-                                              TransId, Source,
-                                              Result, ServiceStateNew,
-                                              Dispatcher) of
-                        {ok, FinalServiceState} ->
+                    case aspects_request_after(AspectsAfter, Type,
+                                               Name, Pattern,
+                                               RequestInfo, Request,
+                                               Timeout, Priority,
+                                               TransId, Source,
+                                               Result, ServiceStateNew,
+                                               Dispatcher) of
+                        {ok, ServiceStateFinal} ->
                             {'cloudi_service_request_success',
                              undefined,
-                             FinalServiceState};
-                        {stop, Reason, FinalServiceState} ->
+                             ServiceStateFinal};
+                        {stop, Reason, ServiceStateFinal} ->
                             {'cloudi_service_request_failure',
-                             stop, Reason, undefined, FinalServiceState}
-                    catch
-                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                            {'cloudi_service_request_failure',
-                             ErrorType, Error, ErrorStackTrace,
-                             ServiceStateNew}
+                             stop, Reason, undefined, ServiceStateFinal}
                     end;
                 {'cloudi_service_request_failure', _, _, _, _} = Error ->
                     Error
@@ -2532,10 +2518,6 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
         {stop, Reason, ServiceStateNext} ->
             {'cloudi_service_request_failure',
              stop, Reason, undefined, ServiceStateNext}
-    catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            {'cloudi_service_request_failure',
-             ErrorType, Error, ErrorStackTrace, ServiceState}
     end.
 
 handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
@@ -2838,27 +2820,22 @@ handle_module_info(Request, ServiceState, Dispatcher, Module,
                            AspectsBefore,
                        aspects_info_after =
                            AspectsAfter}) ->
-    try aspects_info(AspectsBefore,
-                     Request, ServiceState, Dispatcher) of
+    case aspects_info_before(AspectsBefore, Request,
+                             ServiceState, Dispatcher) of
         {ok, ServiceStateNext} ->
             try Module:cloudi_service_handle_info(Request,
                                                   ServiceStateNext,
                                                   Dispatcher) of
                 {noreply, ServiceStateNew} ->
-                    try aspects_info(AspectsAfter,
-                                     Request, ServiceStateNew, Dispatcher) of
-                        {ok, FinalServiceState} ->
+                    case aspects_info_after(AspectsAfter, Request,
+                                            ServiceStateNew, Dispatcher) of
+                        {ok, ServiceStateFinal} ->
                             {'cloudi_service_info_success',
-                             FinalServiceState};
-                        {stop, Reason, FinalServiceState} ->
+                             ServiceStateFinal};
+                        {stop, Reason, ServiceStateFinal} ->
                             {'cloudi_service_info_failure',
                              stop, Reason, undefined,
-                             FinalServiceState}
-                    catch
-                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                            {'cloudi_service_info_failure',
-                             ErrorType, Error, ErrorStackTrace,
-                             ServiceStateNew}
+                             ServiceStateFinal}
                     end;
                 {stop, Reason, ServiceStateNew} ->
                     {'cloudi_service_info_failure',
@@ -2871,10 +2848,6 @@ handle_module_info(Request, ServiceState, Dispatcher, Module,
         {stop, Reason, ServiceStateNext} ->
             {'cloudi_service_info_failure',
              stop, Reason, undefined, ServiceStateNext}
-    catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            {'cloudi_service_info_failure',
-             ErrorType, Error, ErrorStackTrace, ServiceState}
     end.
 
 send_async_active_timeout_start(Timeout, TransId, Pid,
@@ -3448,8 +3421,8 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
             Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
                                                     DispatcherProxy) of
                     {ok, ServiceStateInit} ->
-                        aspects_init(Aspects, Args, Prefix, Timeout,
-                                     ServiceStateInit, DispatcherProxy);
+                        aspects_init_after(Aspects, Args, Prefix, Timeout,
+                                           ServiceStateInit, DispatcherProxy);
                     {stop, _, _} = Stop ->
                         Stop;
                     {stop, _} = Stop ->
@@ -3573,8 +3546,9 @@ duo_mode_loop_terminate(Reason,
                                        aspects_terminate_before = Aspects}}) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(DuoModePid, Reason),
-    {ok, ServiceStateNew} = aspects_terminate(Aspects, Reason, TimeoutTerm,
-                                              ServiceState),
+    {ok, ServiceStateNew} = aspects_terminate_before(Aspects,
+                                                     Reason, TimeoutTerm,
+                                                     ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
     erlang:process_flag(trap_exit, false),
     erlang:exit(DuoModePid, Reason).
@@ -4241,106 +4215,177 @@ duo_process_queues(State) ->
             StateNew
     end.
 
-aspects_init([], _, _, _, ServiceState, _) ->
+aspects_init_after([], _, _, _, ServiceState, _) ->
     {ok, ServiceState};
-aspects_init([{M, F} = Aspect| L], Args, Prefix, Timeout,
-             ServiceState, Dispatcher) ->
+aspects_init_after([{M, F} = Aspect| L], Args, Prefix, Timeout,
+                   ServiceState, Dispatcher) ->
     try M:F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
-            aspects_init(L, Args, Prefix, Timeout,
-                         ServiceStateNew, Dispatcher);
+            aspects_init_after(L, Args, Prefix, Timeout,
+                               ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR_SYNC("aspect_init(~tp) ~tp ~tp~n~tp",
+            ?LOG_ERROR_SYNC("aspect ~tp ~tp ~tp~n~tp",
                             [Aspect, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
-aspects_init([F | L], Args, Prefix, Timeout, ServiceState, Dispatcher) ->
+aspects_init_after([F | L], Args, Prefix, Timeout,
+                   ServiceState, Dispatcher) ->
     try F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
-            aspects_init(L, Args, Prefix, Timeout, ServiceStateNew, Dispatcher);
+            aspects_init_after(L, Args, Prefix, Timeout,
+                               ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR_SYNC("aspect_init(~tp) ~tp ~tp~n~tp",
+            ?LOG_ERROR_SYNC("aspect ~tp ~tp ~tp~n~tp",
                             [F, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
 aspects_request_before([], _, _, _, _, _, _, _, _, _, ServiceState, _) ->
     {ok, ServiceState};
-aspects_request_before([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_before([{M, F} = Aspect | L],
+                       Type, Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Source,
                        ServiceState, Dispatcher) ->
-    case M:F(Type, Name, Pattern, RequestInfo, Request,
-             Timeout, Priority, TransId, Source, ServiceState, Dispatcher) of
+    try M:F(Type, Name, Pattern, RequestInfo, Request,
+            Timeout, Priority, TransId, Source, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
             aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
                                    Timeout, Priority, TransId, Source,
                                    ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
-aspects_request_before([F | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_before([F | L],
+                       Type, Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Source,
                        ServiceState, Dispatcher) ->
-    case F(Type, Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Source, ServiceState, Dispatcher) of
+    try F(Type, Name, Pattern, RequestInfo, Request,
+          Timeout, Priority, TransId, Source, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
             aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
                                    Timeout, Priority, TransId, Source,
                                    ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
 aspects_request_after([], _, _, _, _, _, _, _, _, _, _, ServiceState, _) ->
     {ok, ServiceState};
-aspects_request_after([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_after([{M, F} = Aspect | L],
+                      Type, Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, TransId, Source,
                       Result, ServiceState, Dispatcher) ->
-    case M:F(Type, Name, Pattern, RequestInfo, Request,
-             Timeout, Priority, TransId, Source,
-             Result, ServiceState, Dispatcher) of
+    try M:F(Type, Name, Pattern, RequestInfo, Request,
+            Timeout, Priority, TransId, Source,
+            Result, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
             aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Source,
                                   Result, ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
-aspects_request_after([F | L], Type, Name, Pattern, RequestInfo, Request,
+aspects_request_after([F | L],
+                      Type, Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, TransId, Source,
                       Result, ServiceState, Dispatcher) ->
-    case F(Type, Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Source,
-           Result, ServiceState, Dispatcher) of
+    try F(Type, Name, Pattern, RequestInfo, Request,
+          Timeout, Priority, TransId, Source,
+          Result, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
             aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Source,
                                   Result, ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
-aspects_info([], _, ServiceState, _) ->
+aspects_info_before([], _, ServiceState, _) ->
     {ok, ServiceState};
-aspects_info([{M, F} | L], Request, ServiceState, Dispatcher) ->
-    case M:F(Request, ServiceState, Dispatcher) of
+aspects_info_before([{M, F} = Aspect | L], Request,
+                    ServiceState, Dispatcher) ->
+    try M:F(Request, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
-            aspects_info(L, Request, ServiceStateNew, Dispatcher);
+            aspects_info_before(L, Request,
+                                ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
-aspects_info([F | L], Request, ServiceState, Dispatcher) ->
-    case F(Request, ServiceState, Dispatcher) of
+aspects_info_before([F | L], Request,
+                    ServiceState, Dispatcher) ->
+    try F(Request, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
-            aspects_info(L, Request, ServiceStateNew, Dispatcher);
+            aspects_info_before(L, Request,
+                                ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
+    end.
+
+aspects_info_after([], _, ServiceState, _) ->
+    {ok, ServiceState};
+aspects_info_after([{M, F} = Aspect | L], Request,
+                   ServiceState, Dispatcher) ->
+    try M:F(Request, ServiceState, Dispatcher) of
+        {ok, ServiceStateNew} ->
+            aspects_info_after(L, Request,
+                               ServiceStateNew, Dispatcher);
+        {stop, _, _} = Stop ->
+            Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
+    end;
+aspects_info_after([F | L], Request,
+                   ServiceState, Dispatcher) ->
+    try F(Request, ServiceState, Dispatcher) of
+        {ok, ServiceStateNew} ->
+            aspects_info_after(L, Request,
+                               ServiceStateNew, Dispatcher);
+        {stop, _, _} = Stop ->
+            Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
 spawn_opt_proc_lib(F, Options0) ->
