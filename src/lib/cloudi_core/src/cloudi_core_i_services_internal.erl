@@ -1806,13 +1806,21 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                    prefix = Prefix,
                    duo_mode_pid = undefined,
                    options = #config_service_options{
+                       aspects_init_after = Aspects,
                        init_pid_options = PidOptions}} = State) ->
     ok = initialize_wait(Timeout),
     {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
                             start_link(Timeout, PidOptions,
                                        ProcessDictionary, State),
     Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
-                                            DispatcherProxy)
+                                            DispatcherProxy) of
+        {ok, ServiceStateInit} ->
+            aspects_init(Aspects, Args, Prefix, Timeout,
+                         ServiceStateInit, DispatcherProxy);
+        {stop, _, _} = Stop ->
+            Stop;
+        {stop, _} = Stop ->
+            Stop
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR_SYNC("init ~tp ~tp~n~tp",
@@ -1826,25 +1834,14 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
     ok = cloudi_core_i_services_internal_init:
          process_dictionary_set(ProcessDictionaryNew),
     hibernate_check(case Result of
-        {ok, ServiceState} ->
+        {ok, ServiceStateNew} ->
             ConfigOptionsNew = check_init_receive(ConfigOptions),
-            #config_service_options{
-                aspects_init_after = Aspects} = ConfigOptionsNew,
-            case aspects_init(Aspects, Args, Prefix, Timeout,
-                              ServiceState, Dispatcher) of
-                {ok, ServiceStateNew} ->
-                    erlang:process_flag(trap_exit, true),
-                    ok = cloudi_core_i_services_monitor:
-                         process_init_end(Dispatcher),
-                    StateNew = StateNext#state{service_state = ServiceStateNew,
-                                               options = ConfigOptionsNew},
-                    {noreply, process_queues(StateNew)};
-                {stop, Reason, ServiceStateNew} ->
-                    {stop, Reason,
-                     StateNext#state{service_state = ServiceStateNew,
-                                     duo_mode_pid = undefined,
-                                     options = ConfigOptionsNew}}
-            end;
+            erlang:process_flag(trap_exit, true),
+            ok = cloudi_core_i_services_monitor:
+                 process_init_end(Dispatcher),
+            StateNew = StateNext#state{service_state = ServiceStateNew,
+                                       options = ConfigOptionsNew},
+            {noreply, process_queues(StateNew)};
         {stop, Reason, ServiceState} ->
             {stop, Reason, StateNext#state{service_state = ServiceState,
                                            duo_mode_pid = undefined}};
@@ -3441,6 +3438,7 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
          DispatcherProcessDictionary,
          #state{prefix = Prefix,
                 options = #config_service_options{
+                    aspects_init_after = Aspects,
                     init_pid_options = PidOptions}} = DispatcherState} ->
             ok = initialize_wait(Timeout),
             {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
@@ -3448,7 +3446,14 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                                                DispatcherProcessDictionary,
                                                DispatcherState),
             Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
-                                                    DispatcherProxy)
+                                                    DispatcherProxy) of
+                    {ok, ServiceStateInit} ->
+                        aspects_init(Aspects, Args, Prefix, Timeout,
+                                     ServiceStateInit, DispatcherProxy);
+                    {stop, _, _} = Stop ->
+                        Stop;
+                    {stop, _} = Stop ->
+                        Stop
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     ?LOG_ERROR_SYNC("init ~tp ~tp~n~tp",
@@ -3465,11 +3470,10 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                 cloudi_core_i_services_internal_init:
                 stop_link(DispatcherProxy),
             case Result of
-                {ok, ServiceState} ->
+                {ok, ServiceStateNew} ->
                     ConfigOptionsNew = check_init_receive(ConfigOptions),
                     #config_service_options{
-                        hibernate = Hibernate,
-                        aspects_init_after = Aspects} = ConfigOptionsNew,
+                        hibernate = Hibernate} = ConfigOptionsNew,
                     % duo_mode_pid takes control of any state that may
                     % have been updated during initialization that is now
                     % only relevant to the duo_mode pid
@@ -3479,6 +3483,7 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                         queue_requests = QueueRequests,
                         queued = Queued,
                         queued_info = QueuedInfo,
+                        service_state = ServiceStateNew,
                         options = ConfigOptionsNew},
                     DispatcherConfigOptionsNew =
                         duo_mode_dispatcher_options(ConfigOptionsNew),
@@ -3489,31 +3494,21 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                         queued = undefined,
                         queued_info = undefined,
                         options = DispatcherConfigOptionsNew},
-                    case aspects_init(Aspects, Args, Prefix, Timeout,
-                                      ServiceState, Dispatcher) of
-                        {ok, ServiceStateNew} ->
-                            erlang:process_flag(trap_exit, true),
-                            Dispatcher ! {'cloudi_service_init_state',
-                                          DispatcherProcessDictionaryNew,
-                                          DispatcherStateNew},
-                            ok = cloudi_core_i_services_monitor:
-                                 process_init_end(DuoModePid),
-                            StateNew = StateNext#state_duo{
-                                           service_state = ServiceStateNew},
-                            FinalState = duo_process_queues(StateNew),
-                            case cloudi_core_i_rate_based_configuration:
-                                 hibernate_check(Hibernate) of
-                                false ->
-                                    duo_mode_loop(FinalState);
-                                true ->
-                                    proc_lib:hibernate(?MODULE,
-                                                       duo_mode_loop,
-                                                       [FinalState])
-                            end;
-                        {stop, Reason, ServiceStateNew} ->
-                            StateNew = StateNext#state_duo{
-                                           service_state = ServiceStateNew},
-                            duo_mode_loop_terminate(Reason, StateNew)
+                    erlang:process_flag(trap_exit, true),
+                    Dispatcher ! {'cloudi_service_init_state',
+                                  DispatcherProcessDictionaryNew,
+                                  DispatcherStateNew},
+                    ok = cloudi_core_i_services_monitor:
+                         process_init_end(DuoModePid),
+                    StateNew = duo_process_queues(StateNext),
+                    case cloudi_core_i_rate_based_configuration:
+                         hibernate_check(Hibernate) of
+                        false ->
+                            duo_mode_loop(StateNew);
+                        true ->
+                            proc_lib:hibernate(?MODULE,
+                                               duo_mode_loop,
+                                               [StateNew])
                     end;
                 {stop, Reason, ServiceState} ->
                     StateNew = State#state_duo{service_state = ServiceState},
@@ -4248,19 +4243,31 @@ duo_process_queues(State) ->
 
 aspects_init([], _, _, _, ServiceState, _) ->
     {ok, ServiceState};
-aspects_init([{M, F} | L], Args, Prefix, Timeout, ServiceState, Dispatcher) ->
-    case M:F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
+aspects_init([{M, F} = Aspect| L], Args, Prefix, Timeout,
+             ServiceState, Dispatcher) ->
+    try M:F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
-            aspects_init(L, Args, Prefix, Timeout, ServiceStateNew, Dispatcher);
+            aspects_init(L, Args, Prefix, Timeout,
+                         ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR_SYNC("aspect_init(~tp) ~tp ~tp~n~tp",
+                            [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end;
 aspects_init([F | L], Args, Prefix, Timeout, ServiceState, Dispatcher) ->
-    case F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
+    try F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
         {ok, ServiceStateNew} ->
             aspects_init(L, Args, Prefix, Timeout, ServiceStateNew, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR_SYNC("aspect_init(~tp) ~tp ~tp~n~tp",
+                            [F, ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
 
 aspects_request_before([], _, _, _, _, _, _, _, _, _, ServiceState, _) ->

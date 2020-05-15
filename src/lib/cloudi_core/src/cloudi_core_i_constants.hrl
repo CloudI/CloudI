@@ -124,11 +124,10 @@
                                     erlang:integer_to_list(Instance))
         end).
 
-% maximum timeout value for erlang:send_after/3 and gen_server:call
+% maximum timeout value for erlang:send_after/3, gen_server:call and
+% internal/external service requests
 -define(TIMEOUT_MAX_ERLANG, 4294967295).
-% maximum timeout value for a service request
-% (limitation for internal service requests, external service requests
-%  should have a maximum of TIMEOUT_MAX_ERLANG)
+% maximum timeout value for blocking on a response in Erlang source code
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
 % time-related constants
@@ -214,9 +213,10 @@
 % (i.e., this is the timeout penalty a request takes when forwarding a request)
 -define(FORWARD_DELTA, 100). % milliseconds
 
-% blocking operations must decrement the timeout to make sure timeouts
-% have time to unravel all synchronous calls
-% (should be less than all INTERVAL constants)
+% blocking on a response must have an outer timeout slightly larger than
+% an inner timeout for all sychronous calls to reliably unravel
+% (should not be used when the response data is critically necessary and
+%  a race with a timer is possible, because timeouts are not accurate)
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
 % helper macros for handling limits
@@ -239,6 +239,12 @@
                 Value
         end).
 
+% The TIMEOUT_*_MIN values below are for initialization,
+% the interface functions allow 0 as the min due to the service request
+% timeout getting automatically decremented based on the elapsed time.
+% So, that means the 'limit_min' atom represents the TIMEOUT_*_MIN constant
+% below as the minimum limit for timeout initialization.
+
 % initialization timeout value limits
 -define(TIMEOUT_INITIALIZE_MIN, ?TIMEOUT_DELTA + 1). % milliseconds
 -define(TIMEOUT_INITIALIZE_MAX, ?TIMEOUT_MAX). % milliseconds
@@ -253,7 +259,7 @@
 
 % asynchronous send timeout value limits
 -define(TIMEOUT_SEND_ASYNC_MIN, ?SEND_ASYNC_INTERVAL - 1). % milliseconds
--define(TIMEOUT_SEND_ASYNC_MAX, ?TIMEOUT_MAX). % milliseconds
+-define(TIMEOUT_SEND_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
 -define(TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutSendAsync),
         ?LIMIT_ASSIGN(TimeoutSendAsync,
                       ?TIMEOUT_SEND_ASYNC_MIN,
@@ -265,7 +271,7 @@
 
 % synchronous send timeout value limits
 -define(TIMEOUT_SEND_SYNC_MIN, ?SEND_SYNC_INTERVAL - 1). % milliseconds
--define(TIMEOUT_SEND_SYNC_MAX, ?TIMEOUT_MAX). % milliseconds
+-define(TIMEOUT_SEND_SYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
 -define(TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSendSync),
         ?LIMIT_ASSIGN(TimeoutSendSync,
                       ?TIMEOUT_SEND_SYNC_MIN,
@@ -274,6 +280,30 @@
         ?LIMIT_FORMAT(TimeoutSendSync,
                       ?TIMEOUT_SEND_SYNC_MIN,
                       ?TIMEOUT_SEND_SYNC_MAX)).
+
+-define(TIMEOUT_GET_PID_MIN, ?TIMEOUT_SEND_SYNC_MIN). % milliseconds
+-define(TIMEOUT_GET_PID_MAX, ?TIMEOUT_SEND_SYNC_MAX). % milliseconds
+-define(TIMEOUT_GET_PIDS_MIN, ?TIMEOUT_SEND_SYNC_MIN). % milliseconds
+-define(TIMEOUT_GET_PIDS_MAX, ?TIMEOUT_SEND_SYNC_MAX). % milliseconds
+-define(TIMEOUT_MCAST_ASYNC_MIN, ?MCAST_ASYNC_INTERVAL - 1). % milliseconds
+-define(TIMEOUT_MCAST_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+-define(TIMEOUT_FORWARD_ASYNC_MIN, 0). % milliseconds
+-define(TIMEOUT_FORWARD_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+-define(TIMEOUT_FORWARD_SYNC_MIN, 0). % milliseconds
+-define(TIMEOUT_FORWARD_SYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+-define(TIMEOUT_RETURN_ASYNC_MIN, 0). % milliseconds
+-define(TIMEOUT_RETURN_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+-define(TIMEOUT_RETURN_SYNC_MIN, 0). % milliseconds
+-define(TIMEOUT_RETURN_SYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+-define(TIMEOUT_RECV_ASYNC_MIN, ?RECV_ASYNC_INTERVAL - 1). % milliseconds
+-define(TIMEOUT_RECV_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+-define(TIMEOUT_RECV_ASYNCS_MIN, ?RECV_ASYNC_INTERVAL - 1). % milliseconds
+-define(TIMEOUT_RECV_ASYNCS_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+
+-define(DEST_REFRESH_START_MIN, 0). % milliseconds
+-define(DEST_REFRESH_START_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+-define(DEST_REFRESH_DELAY_MIN, ?TIMEOUT_DELTA + 1). % milliseconds
+-define(DEST_REFRESH_DELAY_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
 
 % termination timeout when MaxT == 0
 % (if MaxR == 0, take MaxT as a terminate timeout value, i.e., as if MaxR == 1)

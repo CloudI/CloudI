@@ -90,7 +90,7 @@
 -type request() :: any().
 -type response_info() :: any().
 -type response() :: any().
--type timeout_value_milliseconds() :: 0..?TIMEOUT_MAX.
+-type timeout_value_milliseconds() :: 0..?TIMEOUT_MAX_ERLANG.
 -type timeout_milliseconds() :: timeout_value_milliseconds() |
                                 undefined | limit_min | limit_max.
 -type priority_value() :: cloudi_service_api:priority().
@@ -113,7 +113,7 @@
 -export_type([error_reason/0]).
 
 -type dest_refresh_delay_milliseconds() ::
-    0..?TIMEOUT_MAX_ERLANG.
+    ?DEST_REFRESH_DELAY_MIN..?DEST_REFRESH_DELAY_MAX.
 -export_type([dest_refresh_delay_milliseconds/0]).
 
 -type message_service_request() ::
@@ -251,19 +251,19 @@ new(Options)
            (DestRefresh =:= immediate_oldest) orelse
            (DestRefresh =:= lazy_oldest),
     true = is_integer(DestRefreshStart) andalso
-           (DestRefreshStart >= 0) andalso % immediate cache is possible here
-           (DestRefreshStart =< ?TIMEOUT_MAX_ERLANG),
+           (DestRefreshStart >= ?DEST_REFRESH_START_MIN) andalso
+           (DestRefreshStart =< ?DEST_REFRESH_START_MAX),
     true = is_integer(DestRefreshDelay) andalso
-           (DestRefreshDelay > ?TIMEOUT_DELTA) andalso
-           (DestRefreshDelay =< ?TIMEOUT_MAX_ERLANG),
+           (DestRefreshDelay >= ?DEST_REFRESH_DELAY_MIN) andalso
+           (DestRefreshDelay =< ?DEST_REFRESH_DELAY_MAX),
     true = (RequestNameLookup =:= sync) orelse
            (RequestNameLookup =:= async),
     true = is_integer(DefaultTimeoutAsync) andalso
-           (DefaultTimeoutAsync > ?TIMEOUT_DELTA) andalso
-           (DefaultTimeoutAsync =< ?TIMEOUT_MAX),
+           (DefaultTimeoutAsync >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
+           (DefaultTimeoutAsync =< ?TIMEOUT_SEND_ASYNC_MAX),
     true = is_integer(DefaultTimeoutSync) andalso
-           (DefaultTimeoutSync > ?TIMEOUT_DELTA) andalso
-           (DefaultTimeoutSync =< ?TIMEOUT_MAX),
+           (DefaultTimeoutSync >= ?TIMEOUT_SEND_SYNC_MIN) andalso
+           (DefaultTimeoutSync =< ?TIMEOUT_SEND_SYNC_MAX),
     true = (PriorityDefault >= ?PRIORITY_HIGH) andalso
            (PriorityDefault =< ?PRIORITY_LOW),
     true = is_atom(Scope),
@@ -314,6 +314,8 @@ new(Options)
                 DestRefreshStart < ?DEFAULT_DEST_REFRESH_START ->
                     receive
                         {cloudi_cpg_data, G} ->
+                            % DestRefreshStart was small enough to
+                            % immediately cache the groups
                             destination_refresh(DestRefresh,
                                                 Receiver,
                                                 DestRefreshDelay,
@@ -409,22 +411,21 @@ get_pid(#cloudi_context{} = Context, Name, immediate) ->
     get_pid(Context, Name, limit_min);
 
 get_pid(#cloudi_context{} = Context, Name, limit_min) ->
-    get_pid(Context, Name, ?SEND_SYNC_INTERVAL - 1);
+    get_pid(Context, Name, ?TIMEOUT_GET_PID_MIN);
 
 get_pid(#cloudi_context{} = Context, Name, limit_max) ->
-    get_pid(Context, Name, ?TIMEOUT_MAX);
+    get_pid(Context, Name, ?TIMEOUT_GET_PID_MAX);
 
 get_pid(#cloudi_context{} = Context, [NameC | _] = Name, Timeout)
     when is_integer(NameC), is_integer(Timeout),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_GET_PID_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
         request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
-    case destination_get(DestRefresh, Scope, Name, Groups,
-                         Timeout + ?TIMEOUT_DELTA) of
+    case destination_get(DestRefresh, Scope, Name, Groups, Timeout) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_SYNC_INTERVAL ->
@@ -483,22 +484,21 @@ get_pids(#cloudi_context{} = Context, Name, immediate) ->
     get_pids(Context, Name, limit_min);
 
 get_pids(#cloudi_context{} = Context, Name, limit_min) ->
-    get_pids(Context, Name, ?SEND_SYNC_INTERVAL - 1);
+    get_pids(Context, Name, ?TIMEOUT_GET_PIDS_MIN);
 
 get_pids(#cloudi_context{} = Context, Name, limit_max) ->
-    get_pids(Context, Name, ?TIMEOUT_MAX);
+    get_pids(Context, Name, ?TIMEOUT_GET_PIDS_MAX);
 
 get_pids(#cloudi_context{} = Context, [NameC | _] = Name, Timeout)
     when is_integer(NameC), is_integer(Timeout),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_GET_PIDS_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
         request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
-    case destination_all(DestRefresh, Scope, Name, Groups,
-                         Timeout + ?TIMEOUT_DELTA) of
+    case destination_all(DestRefresh, Scope, Name, Groups, Timeout) of
         {error, {no_such_group, Name}}
         when Timeout >= ?SEND_SYNC_INTERVAL ->
             if
@@ -643,13 +643,13 @@ send_async(#cloudi_context{} = Context,
            Name, RequestInfo, Request,
            limit_min, Priority, PatternPid) ->
     send_async(Context, Name, RequestInfo, Request,
-               ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
+               ?TIMEOUT_SEND_ASYNC_MIN, Priority, PatternPid);
 
 send_async(#cloudi_context{} = Context,
            Name, RequestInfo, Request,
            limit_max, Priority, PatternPid) ->
     send_async(Context, Name, RequestInfo, Request,
-               ?TIMEOUT_MAX, Priority, PatternPid);
+               ?TIMEOUT_SEND_ASYNC_MAX, Priority, PatternPid);
 
 send_async(#cloudi_context{priority_default = PriorityDefault} = Context,
            Name, RequestInfo, Request,
@@ -661,15 +661,14 @@ send_async(#cloudi_context{} = Context,
            [NameC | _] = Name, RequestInfo, Request,
            Timeout, Priority, undefined)
     when is_integer(NameC), is_integer(Timeout),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_SEND_ASYNC_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
         request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
-    case destination_get(DestRefresh, Scope, Name, Groups,
-                         Timeout + ?TIMEOUT_DELTA) of
+    case destination_get(DestRefresh, Scope, Name, Groups, Timeout) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_ASYNC_INTERVAL ->
@@ -694,7 +693,8 @@ send_async(#cloudi_context{receiver = Receiver,
            [NameC | _] = Name, RequestInfo, Request,
            Timeout, Priority, {Pattern, Pid})
     when is_integer(NameC), is_integer(Timeout),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_SEND_ASYNC_MAX,
+         is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
@@ -935,13 +935,13 @@ send_sync(#cloudi_context{} = Context,
           Name, RequestInfo, Request,
           limit_min, Priority, PatternPid) ->
     send_sync(Context, Name, RequestInfo, Request,
-              ?SEND_SYNC_INTERVAL - 1, Priority, PatternPid);
+              ?TIMEOUT_SEND_SYNC_MIN, Priority, PatternPid);
 
 send_sync(#cloudi_context{} = Context,
           Name, RequestInfo, Request,
           limit_max, Priority, PatternPid) ->
     send_sync(Context, Name, RequestInfo, Request,
-              ?TIMEOUT_MAX, Priority, PatternPid);
+              ?TIMEOUT_SEND_SYNC_MAX, Priority, PatternPid);
 
 send_sync(#cloudi_context{priority_default = PriorityDefault} = Context,
           Name, RequestInfo, Request,
@@ -953,15 +953,14 @@ send_sync(#cloudi_context{} = Context,
           [NameC | _] = Name, RequestInfo, Request,
           Timeout, Priority, undefined)
     when is_integer(NameC), is_integer(Timeout),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_SEND_SYNC_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
         dest_refresh = DestRefresh,
         request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
-    case destination_get(DestRefresh, Scope, Name, Groups,
-                         Timeout + ?TIMEOUT_DELTA) of
+    case destination_get(DestRefresh, Scope, Name, Groups, Timeout) of
         {error, {Reason, Name}}
         when (Reason =:= no_process orelse Reason =:= no_such_group),
              Timeout >= ?SEND_SYNC_INTERVAL ->
@@ -986,7 +985,8 @@ send_sync(#cloudi_context{receiver = Receiver,
           [NameC | _] = Name, RequestInfo, Request,
           Timeout, Priority, {Pattern, Pid})
     when is_integer(NameC), is_integer(Timeout),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_SEND_SYNC_MAX,
+         is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
@@ -1077,12 +1077,12 @@ mcast_async(#cloudi_context{} = Context,
 mcast_async(#cloudi_context{} = Context,
             Name, RequestInfo, Request, limit_min, Priority) ->
     mcast_async(Context, Name, RequestInfo, Request,
-                ?MCAST_ASYNC_INTERVAL - 1, Priority);
+                ?TIMEOUT_MCAST_ASYNC_MIN, Priority);
 
 mcast_async(#cloudi_context{} = Context,
             Name, RequestInfo, Request, limit_max, Priority) ->
     mcast_async(Context, Name, RequestInfo, Request,
-                ?TIMEOUT_MAX, Priority);
+                ?TIMEOUT_MCAST_ASYNC_MAX, Priority);
 
 mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
             Name, RequestInfo, Request, Timeout, undefined) ->
@@ -1092,7 +1092,8 @@ mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
 mcast_async(#cloudi_context{} = Context,
             [NameC | _] = Name, RequestInfo, Request, Timeout, Priority)
     when is_integer(NameC), is_integer(Timeout),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
+         Timeout >= 0, Timeout =< ?TIMEOUT_MCAST_ASYNC_MAX,
+         is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
@@ -1100,8 +1101,7 @@ mcast_async(#cloudi_context{} = Context,
         request_name_lookup = RequestNameLookup,
         scope = Scope,
         cpg_data = Groups} = NewContext,
-    case destination_all(DestRefresh, Scope, Name, Groups,
-                         Timeout + ?TIMEOUT_DELTA) of
+    case destination_all(DestRefresh, Scope, Name, Groups, Timeout) of
         {error, {no_such_group, Name}}
         when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             if
@@ -1227,13 +1227,12 @@ recv_async(Context, immediate) ->
     recv_async(Context, limit_min);
 
 recv_async(Context, limit_min) ->
-    recv_async(Context, ?RECV_ASYNC_INTERVAL - 1, <<0:128>>);
+    recv_async(Context, ?TIMEOUT_RECV_ASYNC_MIN, <<0:128>>);
 
 recv_async(Context, limit_max) ->
-    recv_async(Context, ?TIMEOUT_MAX, <<0:128>>);
+    recv_async(Context, ?TIMEOUT_RECV_ASYNC_MAX, <<0:128>>);
 
-recv_async(Context, Timeout)
-    when is_integer(Timeout), Timeout >= 0 ->
+recv_async(Context, Timeout) ->
     recv_async(Context, Timeout, <<0:128>>).
 
 %%-------------------------------------------------------------------------
@@ -1264,14 +1263,15 @@ recv_async(#cloudi_context{} = Context, immediate, TransId) ->
     recv_async(Context, limit_min, TransId);
 
 recv_async(#cloudi_context{} = Context, limit_min, TransId) ->
-    recv_async(Context, ?RECV_ASYNC_INTERVAL - 1, TransId);
+    recv_async(Context, ?TIMEOUT_RECV_ASYNC_MIN, TransId);
 
 recv_async(#cloudi_context{} = Context, limit_max, TransId) ->
-    recv_async(Context, ?TIMEOUT_MAX, TransId);
+    recv_async(Context, ?TIMEOUT_RECV_ASYNC_MAX, TransId);
 
 recv_async(#cloudi_context{receiver = Receiver} = Context,
            Timeout, <<0:128>>)
-    when is_integer(Timeout), Timeout >= 0 ->
+    when is_integer(Timeout),
+         Timeout >= 0, Timeout =< ?TIMEOUT_RECV_ASYNC_MAX ->
     if
         self() /= Receiver ->
             ?LOG_ERROR("recv_async called outside of context", []),
@@ -1283,7 +1283,8 @@ recv_async(#cloudi_context{receiver = Receiver} = Context,
 
 recv_async(#cloudi_context{receiver = Receiver} = Context,
            Timeout, TransId)
-    when is_integer(Timeout), is_binary(TransId), Timeout >= 0 ->
+    when is_integer(Timeout), is_binary(TransId),
+         Timeout >= 0, Timeout =< ?TIMEOUT_RECV_ASYNC_MAX ->
     if
         self() /= Receiver ->
             ?LOG_ERROR("recv_async called outside of context", []),
@@ -1337,15 +1338,15 @@ recv_asyncs(#cloudi_context{} = Context, immediate, TransIdList) ->
     recv_asyncs(Context, limit_min, TransIdList);
 
 recv_asyncs(#cloudi_context{} = Context, limit_min, TransIdList) ->
-    recv_asyncs(Context, ?RECV_ASYNC_INTERVAL - 1, TransIdList);
+    recv_asyncs(Context, ?TIMEOUT_RECV_ASYNCS_MIN, TransIdList);
 
 recv_asyncs(#cloudi_context{} = Context, limit_max, TransIdList) ->
-    recv_asyncs(Context, ?TIMEOUT_MAX, TransIdList);
+    recv_asyncs(Context, ?TIMEOUT_RECV_ASYNCS_MAX, TransIdList);
 
 recv_asyncs(#cloudi_context{receiver = Receiver} = Context,
             Timeout, TransIdList)
     when is_integer(Timeout), is_list(TransIdList),
-         Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
+         Timeout >= 0, Timeout =< ?TIMEOUT_RECV_ASYNCS_MAX ->
     if
         self() /= Receiver ->
             ?LOG_ERROR("recv_asyncs called outside of context", []),
@@ -1402,7 +1403,7 @@ timeout_max(Dispatcher)
     cloudi_service:timeout_max(Dispatcher);
 
 timeout_max(#cloudi_context{}) ->
-    ?TIMEOUT_MAX.
+    ?TIMEOUT_MAX_ERLANG.
 
 %%-------------------------------------------------------------------------
 %% @doc

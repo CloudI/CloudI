@@ -91,7 +91,7 @@
 -export_type([priority/0]).
 
 -type dest_refresh_delay_milliseconds() ::
-    (?TIMEOUT_DELTA + 1)..?TIMEOUT_MAX_ERLANG.
+    ?DEST_REFRESH_DELAY_MIN..?DEST_REFRESH_DELAY_MAX.
 -export_type([dest_refresh_delay_milliseconds/0]).
 
 -type timeout_initialize_value_milliseconds() ::
@@ -987,8 +987,10 @@
 %%%------------------------------------------------------------------------
 
 % timeout for the functions below
+-define(TIMEOUT_SERVICE_API_MIN, ?TIMEOUT_DELTA + 1).
+-define(TIMEOUT_SERVICE_API_MAX, ?TIMEOUT_MAX_ERLANG).
 -type api_timeout_milliseconds() ::
-    (?TIMEOUT_DELTA + 1)..?TIMEOUT_MAX_ERLANG | infinity.
+    ?TIMEOUT_SERVICE_API_MIN..?TIMEOUT_SERVICE_API_MAX | infinity.
 -export_type([api_timeout_milliseconds/0]).
 
 %%-------------------------------------------------------------------------
@@ -1012,8 +1014,8 @@
 
 acl_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:acl_add(L, Timeout).
 
@@ -1035,8 +1037,8 @@ acl_add([_ | _] = L, Timeout)
 
 acl_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:acl_remove(L, Timeout).
 
@@ -1052,8 +1054,8 @@ acl_remove([_ | _] = L, Timeout)
 
 acl(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:acl(Timeout).
 
@@ -1077,8 +1079,8 @@ acl(Timeout)
 
 service_subscriptions(ServiceId, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case service_id_convert(ServiceId) of
         {ok, ServiceIdValid} ->
@@ -1110,8 +1112,8 @@ service_subscriptions(ServiceId, Timeout)
 
 services_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:services_add(L, Timeout).
 
@@ -1136,8 +1138,8 @@ services_add([_ | _] = L, Timeout)
 
 services_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case service_ids_convert(L) of
         {ok, ServiceIdsValid} ->
@@ -1170,8 +1172,8 @@ services_remove([_ | _] = L, Timeout)
 
 services_restart([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case service_ids_convert(L) of
         {ok, ServiceIdsValid} ->
@@ -1199,8 +1201,8 @@ services_restart([_ | _] = L, Timeout)
 
 services_suspend([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case service_ids_convert(L) of
         {ok, ServiceIdsValid} ->
@@ -1228,8 +1230,8 @@ services_suspend([_ | _] = L, Timeout)
 
 services_resume([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case service_ids_convert(L) of
         {ok, ServiceIdsValid} ->
@@ -1263,8 +1265,8 @@ services_resume([_ | _] = L, Timeout)
 
 services_search(Name, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     {Scope, ServiceName} = case Name of
         {ScopeValue, [_ | _] = ServiceNameValue} when is_atom(ScopeValue) ->
@@ -1300,8 +1302,8 @@ services_search(Name, Timeout)
 services_status(L, Timeout)
     when is_list(L),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     ServiceIdsResult = case service_ids_convert(L) of
         {ok, []} ->
@@ -1340,8 +1342,8 @@ services_status(L, Timeout)
 
 services_update([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case service_ids_convert_update(L) of
         {ok, LNew} ->
@@ -1363,8 +1365,8 @@ services_update([_ | _] = L, Timeout)
 
 services(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:services(Timeout).
 
@@ -1383,8 +1385,8 @@ services(Timeout)
 
 nodes_set([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:nodes_set(L, Timeout).
 
@@ -1400,8 +1402,8 @@ nodes_set([_ | _] = L, Timeout)
 
 nodes_get(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:nodes_get(Timeout).
 
@@ -1422,8 +1424,8 @@ nodes_get(Timeout)
 
 nodes_add([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:nodes_add(L, Timeout).
 
@@ -1443,8 +1445,8 @@ nodes_add([_ | _] = L, Timeout)
 
 nodes_remove([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:nodes_remove(L, Timeout).
 
@@ -1460,8 +1462,8 @@ nodes_remove([_ | _] = L, Timeout)
 
 nodes_alive(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_nodes:alive(Timeout).
 
@@ -1477,8 +1479,8 @@ nodes_alive(Timeout)
 
 nodes_dead(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_nodes:dead(Timeout).
 
@@ -1498,8 +1500,8 @@ nodes_dead(Timeout)
 nodes_status(L, Timeout)
     when is_list(L),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_nodes:status(L, Timeout).
 
@@ -1515,8 +1517,8 @@ nodes_status(L, Timeout)
 
 nodes(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_nodes:nodes(Timeout).
 
@@ -1532,8 +1534,8 @@ nodes(Timeout)
 
 logging_set([_ | _] = L, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_set(L, Timeout).
 
@@ -1551,8 +1553,8 @@ logging_file_set(FilePath, Timeout)
     when ((FilePath =:= undefined) orelse
           (is_list(FilePath) andalso is_integer(hd(FilePath)))),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_file_set(FilePath, Timeout).
 
@@ -1574,8 +1576,8 @@ logging_level_set(Level, Timeout)
           (Level =:= debug) orelse (Level =:= trace) orelse
           (Level =:= off) orelse (Level =:= undefined)),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_level_set(Level, Timeout).
 
@@ -1592,8 +1594,8 @@ logging_level_set(Level, Timeout)
 logging_stdout_set(Stdout, Timeout)
     when is_boolean(Stdout),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_stdout_set(Stdout, Timeout).
 
@@ -1614,8 +1616,8 @@ logging_stdout_set(Stdout, Timeout)
 logging_syslog_set(L, Timeout)
     when is_list(L) orelse (L =:= undefined),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_syslog_set(L, Timeout).
 
@@ -1639,8 +1641,8 @@ logging_syslog_set(L, Timeout)
 logging_formatters_set(L, Timeout)
     when is_list(L) orelse (L =:= undefined),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_formatters_set(L, Timeout).
 
@@ -1659,8 +1661,8 @@ logging_formatters_set(L, Timeout)
 logging_redirect_set(Node, Timeout)
     when is_atom(Node),
          ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_redirect_set(Node, Timeout).
 
@@ -1676,8 +1678,8 @@ logging_redirect_set(Node, Timeout)
 
 logging(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging(Timeout).
 
@@ -1696,8 +1698,8 @@ logging(Timeout)
 
 code_path_add(Dir, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case code:add_pathz(Dir) of
         true ->
@@ -1721,8 +1723,8 @@ code_path_add(Dir, Timeout)
 
 code_path_remove(Dir, Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     case code:del_path(Dir) of
         true ->
@@ -1745,8 +1747,8 @@ code_path_remove(Dir, Timeout)
 
 code_path(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     {ok, code:get_path()}.
 
@@ -1767,8 +1769,8 @@ code_path(Timeout)
 
 code_status(Timeout)
     when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     TimeNative = cloudi_timestamp:native_monotonic(),
     TimeOffset = erlang:time_offset(),
