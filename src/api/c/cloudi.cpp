@@ -631,20 +631,17 @@ int cloudi_initialize(cloudi_instance_t * api,
 
 void * cloudi_destroy(cloudi_instance_t * api)
 {
-    if (api)
+    if (api && api->fd)
     {
-        if (api->fd != 0)
-        {
-            ::close(api->fd);
-            delete reinterpret_cast<lookup_t *>(api->lookup);
-            delete reinterpret_cast<buffer_t *>(api->buffer_send);
-            delete reinterpret_cast<buffer_t *>(api->buffer_recv);
-            delete reinterpret_cast<buffer_t *>(api->buffer_call);
-            delete reinterpret_cast<timer *>(api->poll_timer);
-            if (api->prefix)
-                delete [] api->prefix;
-            return api->state;
-        }
+        ::close(api->fd);
+        delete reinterpret_cast<lookup_t *>(api->lookup);
+        delete reinterpret_cast<buffer_t *>(api->buffer_send);
+        delete reinterpret_cast<buffer_t *>(api->buffer_recv);
+        delete reinterpret_cast<buffer_t *>(api->buffer_call);
+        delete reinterpret_cast<timer *>(api->poll_timer);
+        if (api->prefix)
+            delete [] api->prefix;
+        return api->state;
     }
     return 0;
 }
@@ -890,7 +887,7 @@ static void cloudi_forward_free(cloudi_instance_t * api,
     {
         char * const name_p = const_cast<char *>(name);
         if (api->free_with_delete)
-            delete name_p;
+            delete [] name_p;
         else
             ::free(name_p);
         api->free_name = 0;
@@ -901,7 +898,7 @@ static void cloudi_forward_free(cloudi_instance_t * api,
         char * const request_info_p =
             const_cast<char *>(reinterpret_cast<char const *>(request_info));
         if (api->free_with_delete)
-            delete request_info_p;
+            delete [] request_info_p;
         else
             ::free(request_info_p);
         api->free_request_info = 0;
@@ -911,7 +908,7 @@ static void cloudi_forward_free(cloudi_instance_t * api,
         char * const request_p =
             const_cast<char *>(reinterpret_cast<char const *>(request));
         if (api->free_with_delete)
-            delete request_p;
+            delete [] request_p;
         else
             ::free(request_p);
         api->free_request = 0;
@@ -1079,7 +1076,7 @@ static void cloudi_return_free(cloudi_instance_t * api,
     {
         char * const name_p = const_cast<char *>(name);
         if (api->free_with_delete)
-            delete name_p;
+            delete [] name_p;
         else
             ::free(name_p);
         api->free_name = 0;
@@ -1088,7 +1085,7 @@ static void cloudi_return_free(cloudi_instance_t * api,
     {
         char * const pattern_p = const_cast<char *>(pattern);
         if (api->free_with_delete)
-            delete pattern_p;
+            delete [] pattern_p;
         else
             ::free(pattern_p);
         api->free_pattern = 0;
@@ -1100,7 +1097,7 @@ static void cloudi_return_free(cloudi_instance_t * api,
         char * const response_info_p =
             const_cast<char *>(reinterpret_cast<char const *>(response_info));
         if (api->free_with_delete)
-            delete response_info_p;
+            delete [] response_info_p;
         else
             ::free(response_info_p);
         api->free_response_info = 0;
@@ -1110,7 +1107,7 @@ static void cloudi_return_free(cloudi_instance_t * api,
         char * const response_p =
             const_cast<char *>(reinterpret_cast<char const *>(response));
         if (api->free_with_delete)
-            delete response_p;
+            delete [] response_p;
         else
             ::free(response_p);
         api->free_response = 0;
@@ -1924,8 +1921,8 @@ static char const * text_pairs_new(char const ** pairs,
     {
         char const * const value = pairs[i + 1];
         assert(value);
-        size_t const key_size = strlen(key) + 1;
-        size_t const value_size = strlen(value) + 1;
+        size_t const key_size = ::strlen(key) + 1;
+        size_t const value_size = ::strlen(value) + 1;
         if (! text.reserve(size + key_size + value_size))
             break;
         ::memcpy(&text[size], key, key_size);
@@ -1940,11 +1937,6 @@ static char const * text_pairs_new(char const ** pairs,
     }
     text_size = size;
     return text.release(true);
-}
-
-static void text_pairs_new_destroy(char * text)
-{
-    ::free(text);
 }
 
 // CloudI helper functions
@@ -1964,11 +1956,6 @@ char const * cloudi_info_key_value_new(char const ** pairs,
                                        uint32_t * info_size)
 {
     return text_pairs_new(pairs, *info_size);
-}
-
-void cloudi_info_key_value_new_destroy(char * info)
-{
-    text_pairs_new_destroy(info);
 }
 
 void cloudi_free_name(cloudi_instance_t * api)
@@ -2538,11 +2525,6 @@ char const * API::info_key_value_new(char const ** pairs,
                                      uint32_t & info_size)
 {
     return cloudi_info_key_value_new(pairs, &info_size);
-}
-
-void API::info_key_value_new_destroy(char * info)
-{
-    cloudi_info_key_value_new_destroy(info);
 }
 
 void API::free_with_delete() const

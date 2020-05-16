@@ -22,8 +22,7 @@
       info_key_value_parse_destroy
     * Change the C++ CloudI API key_value functions to be static
       (info_key_value_parse and info_key_value_parse_destroy)
-    * Add info_key_value_new functions to the C/C++ CloudI API
-      (info_key_value_new and info_key_value_new_destroy)
+    * Add info_key_value_new function to the C/C++ CloudI API
     * Add auto-free functions to the C/C++ CloudI API
       (free_name, free_pattern, free_request_info, free_request,
        free_response_info, free_response, free_with_delete)

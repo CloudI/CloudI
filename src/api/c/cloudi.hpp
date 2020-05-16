@@ -727,7 +727,6 @@ class API
 
         static char const * info_key_value_new(char const ** pairs,
                                                uint32_t & info_size);
-        static void info_key_value_new_destroy(char * info);
 
         void free_with_delete() const;
         void free_name() const;
