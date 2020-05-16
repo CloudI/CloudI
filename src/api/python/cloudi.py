@@ -111,7 +111,7 @@ class API(object):
         self.__terminate = False
         self.__size = int(buffer_size_str)
         self.__callbacks = {}
-        self.__timeout_terminate = 1000 # TIMEOUT_TERMINATE_MIN
+        self.__timeout_terminate = 10 # TIMEOUT_TERMINATE_MIN
         self.__send(term_to_binary(OtpErlangAtom(b'init')))
         (self.__process_index,
          self.__process_count,

@@ -71,6 +71,13 @@ typedef struct cloudi_instance_t
     int initialization_complete:1;
     int terminate:1;
     int cxx_terminate_exception:1;
+    int free_with_delete:1;
+    int free_name:1;
+    int free_pattern:1;
+    int free_request_info:1;
+    int free_request:1;
+    int free_response_info:1;
+    int free_response:1;
 
 } cloudi_instance_t;
 
@@ -91,50 +98,50 @@ typedef void (*cloudi_callback_t)(int const request_type,
                                   char const * const pid,
                                   uint32_t const pid_size,
                                   void * state,
-                                  cloudi_instance_t * p);
+                                  cloudi_instance_t * api);
 
-#define cloudi_get_response(p)               ((p)->response)
-#define cloudi_get_response_size(p)          ((p)->response_size)
-#define cloudi_get_response_info(p)          ((p)->response_info)
-#define cloudi_get_response_info_size(p)     ((p)->response_info_size)
-#define cloudi_get_trans_id_count(p)         ((p)->trans_id_count)
-#define cloudi_get_trans_id(p, i)            (&((p)->trans_id[i * 16]))
-#define cloudi_get_subscribe_count(p)        ((p)->subscribe_count)
-#define cloudi_get_process_index(p)          ((p)->process_index)
-#define cloudi_get_process_count(p)          ((p)->process_count)
-#define cloudi_get_process_count_max(p)      ((p)->process_count_max)
-#define cloudi_get_process_count_min(p)      ((p)->process_count_min)
-#define cloudi_get_prefix(p)                 ((p)->prefix)
-#define cloudi_get_timeout_initialize(p)     ((p)->timeout_initialize)
-#define cloudi_get_timeout_async(p)          ((p)->timeout_async)
-#define cloudi_get_timeout_sync(p)           ((p)->timeout_sync)
-#define cloudi_get_timeout_terminate(p)      ((p)->timeout_terminate)
-#define cloudi_get_priority_default(p)       ((p)->priority_default)
+#define cloudi_get_response(api)               ((api)->response)
+#define cloudi_get_response_size(api)          ((api)->response_size)
+#define cloudi_get_response_info(api)          ((api)->response_info)
+#define cloudi_get_response_info_size(api)     ((api)->response_info_size)
+#define cloudi_get_trans_id_count(api)         ((api)->trans_id_count)
+#define cloudi_get_trans_id(api, i)            (&((api)->trans_id[i * 16]))
+#define cloudi_get_subscribe_count(api)        ((api)->subscribe_count)
+#define cloudi_get_process_index(api)          ((api)->process_index)
+#define cloudi_get_process_count(api)          ((api)->process_count)
+#define cloudi_get_process_count_max(api)      ((api)->process_count_max)
+#define cloudi_get_process_count_min(api)      ((api)->process_count_min)
+#define cloudi_get_prefix(api)                 ((api)->prefix)
+#define cloudi_get_timeout_initialize(api)     ((api)->timeout_initialize)
+#define cloudi_get_timeout_async(api)          ((api)->timeout_async)
+#define cloudi_get_timeout_sync(api)           ((api)->timeout_sync)
+#define cloudi_get_timeout_terminate(api)      ((api)->timeout_terminate)
+#define cloudi_get_priority_default(api)       ((api)->priority_default)
 
-int cloudi_initialize(cloudi_instance_t * p,
+int cloudi_initialize(cloudi_instance_t * api,
                       unsigned int const thread_index,
                       void * state);
 
-void * cloudi_destroy(cloudi_instance_t * p);
+void * cloudi_destroy(cloudi_instance_t * api);
 
 int cloudi_initialize_thread_count(unsigned int * const thread_count);
 
-int cloudi_subscribe(cloudi_instance_t * p,
+int cloudi_subscribe(cloudi_instance_t * api,
                      char const * const pattern,
                      cloudi_callback_t f);
 
-int cloudi_subscribe_count(cloudi_instance_t * p,
+int cloudi_subscribe_count(cloudi_instance_t * api,
                            char const * const pattern);
 
-int cloudi_unsubscribe(cloudi_instance_t * p,
+int cloudi_unsubscribe(cloudi_instance_t * api,
                        char const * const pattern);
 
-int cloudi_send_async(cloudi_instance_t * p,
+int cloudi_send_async(cloudi_instance_t * api,
                       char const * const name,
                       void const * const request,
                       uint32_t const request_size);
 
-int cloudi_send_async_(cloudi_instance_t * p,
+int cloudi_send_async_(cloudi_instance_t * api,
                        char const * const name,
                        void const * const request_info,
                        uint32_t const request_info_size,
@@ -143,12 +150,12 @@ int cloudi_send_async_(cloudi_instance_t * p,
                        uint32_t timeout,
                        int8_t const priority);
 
-int cloudi_send_sync(cloudi_instance_t * p,
+int cloudi_send_sync(cloudi_instance_t * api,
                      char const * const name,
                      void const * const request,
                      uint32_t const request_size);
 
-int cloudi_send_sync_(cloudi_instance_t * p,
+int cloudi_send_sync_(cloudi_instance_t * api,
                       char const * const name,
                       void const * const request_info,
                       uint32_t const request_info_size,
@@ -157,12 +164,12 @@ int cloudi_send_sync_(cloudi_instance_t * p,
                       uint32_t timeout,
                       int8_t const priority);
 
-int cloudi_mcast_async(cloudi_instance_t * p,
+int cloudi_mcast_async(cloudi_instance_t * api,
                        char const * const name,
                        void const * const request,
                        uint32_t const request_size);
 
-int cloudi_mcast_async_(cloudi_instance_t * p,
+int cloudi_mcast_async_(cloudi_instance_t * api,
                         char const * const name,
                         void const * const request_info,
                         uint32_t const request_info_size,
@@ -171,7 +178,7 @@ int cloudi_mcast_async_(cloudi_instance_t * p,
                         uint32_t timeout,
                         int8_t const priority);
 
-int cloudi_forward(cloudi_instance_t * p,
+int cloudi_forward(cloudi_instance_t * api,
                    int const request_type,
                    char const * const name,
                    void const * const request_info,
@@ -184,7 +191,7 @@ int cloudi_forward(cloudi_instance_t * p,
                    char const * const pid,
                    uint32_t const pid_size);
 
-int cloudi_forward_async(cloudi_instance_t * p,
+int cloudi_forward_async(cloudi_instance_t * api,
                          char const * const name,
                          void const * const request_info,
                          uint32_t const request_info_size,
@@ -196,7 +203,7 @@ int cloudi_forward_async(cloudi_instance_t * p,
                          char const * const pid,
                          uint32_t const pid_size);
 
-int cloudi_forward_sync(cloudi_instance_t * p,
+int cloudi_forward_sync(cloudi_instance_t * api,
                         char const * const name,
                         void const * const request_info,
                         uint32_t const request_info_size,
@@ -208,7 +215,7 @@ int cloudi_forward_sync(cloudi_instance_t * p,
                         char const * const pid,
                         uint32_t const pid_size);
 
-int cloudi_return(cloudi_instance_t * p,
+int cloudi_return(cloudi_instance_t * api,
                   int const request_type,
                   char const * const name,
                   char const * const pattern,
@@ -221,7 +228,7 @@ int cloudi_return(cloudi_instance_t * p,
                   char const * const pid,
                   uint32_t const pid_size);
 
-int cloudi_return_async(cloudi_instance_t * p,
+int cloudi_return_async(cloudi_instance_t * api,
                         char const * const name,
                         char const * const pattern,
                         void const * const response_info,
@@ -233,7 +240,7 @@ int cloudi_return_async(cloudi_instance_t * p,
                         char const * const pid,
                         uint32_t const pid_size);
 
-int cloudi_return_sync(cloudi_instance_t * p,
+int cloudi_return_sync(cloudi_instance_t * api,
                        char const * const name,
                        char const * const pattern,
                        void const * const response_info,
@@ -245,20 +252,31 @@ int cloudi_return_sync(cloudi_instance_t * p,
                        char const * const pid,
                        uint32_t const pid_size);
 
-int cloudi_recv_async(cloudi_instance_t * p,
+int cloudi_recv_async(cloudi_instance_t * api,
                       uint32_t timeout,
                       char const * const trans_id,
                       int consume);
 
-int cloudi_poll(cloudi_instance_t * p,
+int cloudi_poll(cloudi_instance_t * api,
                 int timeout);
 
-int cloudi_shutdown(cloudi_instance_t * p,
+int cloudi_shutdown(cloudi_instance_t * api,
                     char const * const reason);
 
-char const ** cloudi_info_key_value_parse(void const * const request_info,
-                                          uint32_t const request_info_size);
-void cloudi_info_key_value_destroy(char const ** p);
+char const ** cloudi_info_key_value_parse(void const * const info,
+                                          uint32_t const info_size);
+void cloudi_info_key_value_parse_destroy(char const ** pairs);
+
+char const * cloudi_info_key_value_new(char const ** pairs,
+                                       uint32_t * info_size);
+void cloudi_info_key_value_new_destroy(char * info);
+
+void cloudi_free_name(cloudi_instance_t * api);
+void cloudi_free_pattern(cloudi_instance_t * api);
+void cloudi_free_request_info(cloudi_instance_t * api);
+void cloudi_free_request(cloudi_instance_t * api);
+void cloudi_free_response_info(cloudi_instance_t * api);
+void cloudi_free_response(cloudi_instance_t * api);
 
 enum
 {

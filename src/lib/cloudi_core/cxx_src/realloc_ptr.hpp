@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -35,37 +35,53 @@
 // using realloc may be considered bad, but the hope is that the allocation
 // might be extended in memory, rather than a completely new allocation.
 // that is why the C++ new/delete are not used
-// (currently no C++ realloc exists).
+// (no C++ realloc exists, std::vector could be used instead but control
+//  over the allocations would be lost).
 template <typename T>
 class realloc_ptr
 {
 public:
     typedef T element_type;
 
-    explicit realloc_ptr(size_t initialSize, size_t maxSize) :
-        m_initialSize(greater_pow2(initialSize)),
-        m_size(m_initialSize),
-        m_maxSize(greater_pow2(maxSize)),
-        m_p(reinterpret_cast<T *>(malloc(m_initialSize * sizeof(T)))) {}
+    explicit realloc_ptr(size_t const size_initial, size_t const size_max) :
+        m_size_initial(greater_pow2(size_initial)),
+        m_size_max(greater_pow2(size_max)),
+        m_size(m_size_initial),
+        m_p(reinterpret_cast<T *>(::malloc(m_size_initial * sizeof(T))))
+    {
+    }
 
-    ~realloc_ptr() throw() { free(m_p); }
+    ~realloc_ptr() throw()
+    {
+        if (m_p)
+            ::free(m_p);
+    }
 
-    T * release() throw()
+    T * release(bool const last = false) throw()
     {
         T * t = m_p;
-        m_p = reinterpret_cast<T *>(malloc(m_initialSize * sizeof(T)));
+        if (last)
+            m_p = 0;
+        else
+            m_p = reinterpret_cast<T *>(::malloc(m_size_initial * sizeof(T)));
         return t;
     }
 
-    size_t size() const { return m_size; }
+    size_t size() const
+    {
+        return m_size;
+    }
 
-    T & operator [](size_t i) const
+    T & operator [](size_t const i) const
     {
         assert(i < m_size);
         return m_p[i];
     }
 
-    T * get() const { return m_p; }
+    T * get() const
+    {
+        return m_p;
+    }
 
     template <typename R>
     R * get() const
@@ -74,89 +90,91 @@ public:
         return reinterpret_cast<R *>(m_p);
     }
 
-    bool copy(realloc_ptr & src, size_t iDst = 0)
+    bool copy(realloc_ptr & src, size_t const dst_i = 0)
     {
         assert(&src != this);
-        if (! reserve(iDst + src.m_size))
+        if (! reserve(dst_i + src.m_size))
             return false;
-        memcpy(&(m_p[iDst]), src.m_p, src.m_size * sizeof(T));
+        ::memcpy(&(m_p[dst_i]), src.m_p, src.m_size * sizeof(T));
         return true;
     }
 
-    bool copy(realloc_ptr & src, size_t nSrc, size_t iDst)
+    bool copy(realloc_ptr & src,
+              size_t const src_n, size_t const dst_i)
     {
         assert(&src != this);
-        if (! reserve(iDst + nSrc))
+        if (! reserve(dst_i + src_n))
             return false;
-        memcpy(&(m_p[iDst]), src.m_p, nSrc * sizeof(T));
+        ::memcpy(&(m_p[dst_i]), src.m_p, src_n * sizeof(T));
         return true;
     }
 
-    bool copy(realloc_ptr & src, size_t iSrc, size_t nSrc, size_t iDst)
+    bool copy(realloc_ptr & src,
+              size_t const src_i, size_t const src_n, size_t const dst_i)
     {
         assert(&src != this);
-        if (! reserve(iDst + nSrc))
+        if (! reserve(dst_i + src_n))
             return false;
-        memcpy(&(m_p[iDst]), &(src.m_p[iSrc]), nSrc * sizeof(T));
+        ::memcpy(&(m_p[dst_i]), &(src.m_p[src_i]), src_n * sizeof(T));
         return true;
     }
 
-    bool move(size_t iSrc, size_t nSrc, size_t iDst)
+    bool move(size_t const src_i, size_t const src_n, size_t const dst_i)
     {
-        if (! reserve(iDst + nSrc))
+        if (! reserve(dst_i + src_n))
             return false;
-        memmove(&(m_p[iDst]), &(m_p[iSrc]), nSrc * sizeof(T));
+        ::memmove(&(m_p[dst_i]), &(m_p[src_i]), src_n * sizeof(T));
         return true;
     }
 
     bool grow()
     {
-        size_t const newSize = m_size << 1;
-        if (newSize > m_maxSize)
+        size_t const size_new = m_size << 1;
+        if (size_new > m_size_max)
             return false;
-        T * tmp = reinterpret_cast<T *>(realloc(m_p, newSize * sizeof(T)));
+        T * tmp = reinterpret_cast<T *>(::realloc(m_p, size_new * sizeof(T)));
         if (! tmp)
             return false;
         m_p = tmp;
-        m_size = newSize;
+        m_size = size_new;
         return true;
     }
 
-    bool reserve(size_t size)
+    bool reserve(size_t const size)
     {
         if (size < m_size)
             return true;
-        if (size > m_maxSize)
+        if (size > m_size_max)
             return false;
-        size_t newSize = m_size;
-        while (size >= newSize)
-            newSize <<= 1;
-        T * tmp = reinterpret_cast<T *>(realloc(m_p, newSize * sizeof(T)));
+        size_t size_new = m_size;
+        while (size >= size_new)
+            size_new <<= 1;
+        T * tmp = reinterpret_cast<T *>(::realloc(m_p, size_new * sizeof(T)));
         if (! tmp)
             return false;
         m_p = tmp;
-        m_size = newSize;
+        m_size = size_new;
         return true;
     }
 
 private:
-    // find a value >= totalSize as a power of 2
+    // find a value >= size_total as a power of 2
     size_t greater_pow2(size_t n)
     {
-        size_t const totalSize = n * sizeof(T);
+        size_t const size_total = n * sizeof(T);
         int bits = 0;
-        for (size_t div2 = totalSize; div2 > 1; div2 >>= 1)
+        for (size_t div2 = size_total; div2 > 1; div2 >>= 1)
             bits++;
         size_t const value = (1 << bits);
-        if (value == totalSize)
+        if (value == size_total)
             return value;
         else
             return (value << 1);
     }
 
-    size_t const m_initialSize;
+    size_t const m_size_initial;
+    size_t const m_size_max;
     size_t m_size;
-    size_t const m_maxSize;
     T * m_p;
 
     realloc_ptr(realloc_ptr const &);

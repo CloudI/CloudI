@@ -89,7 +89,7 @@ class API
         $this->terminate = false;
         $this->size = intval($buffer_size_str);
         $this->callbacks = array();
-        $this->timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
+        $this->timeout_terminate = 10; // TIMEOUT_TERMINATE_MIN
         $this->send(\Erlang\term_to_binary(new \Erlang\OtpErlangAtom('init')));
         list($this->process_index,
              $this->process_count,

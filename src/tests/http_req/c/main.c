@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -62,7 +62,7 @@ static void request(int const request_type,
             break;
         }
     }
-    cloudi_info_key_value_destroy(http_qs);
+    cloudi_info_key_value_parse_destroy(http_qs);
     /* value is a pointer within request */
     if (value)
     {
@@ -74,7 +74,16 @@ static void request(int const request_type,
         memcpy(response,
                "<http_test><error>no value specified</error></http_test>", 57);
     }
-    cloudi_return(api, request_type, name, pattern, "", 0,
+    char const * http_response_headers[] = {
+        "content-type","text/xml; charset=utf-8",
+        0};
+    uint32_t response_info_size;
+    char const * response_info;
+    response_info = cloudi_info_key_value_new(http_response_headers,
+                                              &response_info_size);
+    cloudi_free_response_info(api);
+    cloudi_return(api, request_type, name, pattern,
+                  response_info, response_info_size,
                   response, strlen(response),
                   timeout, trans_id, pid, pid_size);
 }

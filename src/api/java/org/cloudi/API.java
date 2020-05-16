@@ -181,7 +181,7 @@ public class API
         this.timeout_initialize = 5000;
         this.timeout_async = 5000;
         this.timeout_sync = 5000;
-        this.timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
+        this.timeout_terminate = 10; // TIMEOUT_TERMINATE_MIN
         this.priority_default = 0;
 
         // send the initialization message to the managing Erlang process
@@ -1566,24 +1566,6 @@ public class API
         send(shutdown);
     }
 
-    private static byte[] text_pairs_new(final Map<String, List<String>> info)
-    {
-        final ByteArrayOutputStream result = new ByteArrayOutputStream(1024);
-        for (Map.Entry<String, List<String>> pair : info.entrySet())
-        {
-            final byte[] key_bytes = pair.getKey().getBytes();
-            for (String value : pair.getValue())
-            {
-                final byte[] value_bytes = value.getBytes();
-                result.write(key_bytes, 0, key_bytes.length);
-                result.write(0);
-                result.write(value_bytes, 0, value_bytes.length);
-                result.write(0);
-            }
-        }
-        return result.toByteArray();
-    }
-
     private static HashMap<String,
                            ArrayList<String>> text_pairs_parse(final byte[] b)
     {
@@ -1622,15 +1604,22 @@ public class API
         return result;
     }
 
-    /**
-     * Encode request_info key/value data
-     *
-     * @param  info    request_info key/value map
-     * @return encoded binary
-     */
-    public static byte[] info_key_value_new(Map<String, List<String>> info)
+    private static byte[] text_pairs_new(final Map<String, List<String>> info)
     {
-        return API.text_pairs_new(info);
+        final ByteArrayOutputStream result = new ByteArrayOutputStream(1024);
+        for (Map.Entry<String, List<String>> pair : info.entrySet())
+        {
+            final byte[] key_bytes = pair.getKey().getBytes();
+            for (String value : pair.getValue())
+            {
+                final byte[] value_bytes = value.getBytes();
+                result.write(key_bytes, 0, key_bytes.length);
+                result.write(0);
+                result.write(value_bytes, 0, value_bytes.length);
+                result.write(0);
+            }
+        }
+        return result.toByteArray();
     }
 
     /**
@@ -1643,6 +1632,17 @@ public class API
                           ArrayList<String>> info_key_value_parse(byte[] info)
     {
         return API.text_pairs_parse(info);
+    }
+
+    /**
+     * Encode request_info key/value data
+     *
+     * @param  info    request_info key/value map
+     * @return encoded binary
+     */
+    public static byte[] info_key_value_new(Map<String, List<String>> info)
+    {
+        return API.text_pairs_new(info);
     }
 
     private void send(final OtpOutputStream command)

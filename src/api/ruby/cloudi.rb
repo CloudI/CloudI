@@ -62,7 +62,7 @@ module CloudI
             @terminate = false
             @size = buffer_size_str.to_i
             @callbacks = Hash.new
-            @timeout_terminate = 1000 # TIMEOUT_TERMINATE_MIN
+            @timeout_terminate = 10 # TIMEOUT_TERMINATE_MIN
             send(Erlang.term_to_binary(:init))
             poll_request(nil, false)
         end

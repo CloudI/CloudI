@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_spawn).
@@ -324,7 +324,7 @@ transform_data(D) ->
 
 call_port_sync(Process, Command, Msg)
     when is_integer(Command), is_list(Msg) ->
-    try gen_server:call(Process, {call, Command, Msg})
+    try gen_server:call(Process, {call, Command, Msg}, infinity)
     catch
         _:Reason ->
             {error, Reason}

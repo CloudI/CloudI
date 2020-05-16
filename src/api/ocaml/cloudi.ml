@@ -1064,7 +1064,7 @@ let api
         and fragment_recv = Bytes.create buffer_size
         and callbacks = Hashtbl.create 1024
         and buffer_recv = Buffer.create buffer_size
-        and timeout_terminate = 1000 in
+        and timeout_terminate = 10 (* TIMEOUT_TERMINATE_MIN *) in
         let api = Instance.make
           ~state:state
           ~terminate_exception:terminate_exception

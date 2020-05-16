@@ -141,7 +141,7 @@ func API(threadIndex uint32, state interface{}) (*Instance, error) {
 	callbacks := make(map[string]*list.List)
 	bufferRecv := new(bytes.Buffer)
 	bufferRecv.Grow(int(bufferSize))
-	timeoutTerminate := uint32(1000)
+	timeoutTerminate := uint32(10) // TIMEOUT_TERMINATE_MIN
 	api := &Instance{state: state, socket: socket, useHeader: useHeader, fragmentSize: bufferSize, fragmentRecv: fragmentRecv, callbacks: callbacks, bufferRecv: bufferRecv, timeoutTerminate: timeoutTerminate}
 	var init []byte
 	init, err = erlang.TermToBinary(erlang.OtpErlangAtom("init"), -1)

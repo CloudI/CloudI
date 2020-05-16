@@ -197,7 +197,7 @@ api threadIndex state terminateReturnValueOpt = do
                 bufferSize = read bufferSizeStr :: Int
                 fd = C.CInt $ fromIntegral (threadIndex + 3)
                 useHeader = protocol /= "udp"
-                timeoutTerminate' = 1000
+                timeoutTerminate' = 10 -- TIMEOUT_TERMINATE_MIN
                 initTerms = Erlang.OtpErlangAtom (Char8.pack "init")
             in
             case Erlang.termToBinary initTerms (-1) of

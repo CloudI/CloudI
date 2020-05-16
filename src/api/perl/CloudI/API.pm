@@ -120,7 +120,7 @@ sub new
         _timeout_initialize => undef,
         _timeout_async => undef,
         _timeout_sync => undef,
-        _timeout_terminate => 1000, # TIMEOUT_TERMINATE_MIN
+        _timeout_terminate => 10, # TIMEOUT_TERMINATE_MIN
         _priority_default => undef,
     }, $class;
     $self->_send(Erlang::term_to_binary(Erlang::OtpErlangAtom->new('init')));

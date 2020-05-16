@@ -721,10 +721,21 @@ class API
             return shutdown(reason.c_str());
         }
 
-        char const ** info_key_value_parse(void const * const message_info,
-                                           uint32_t const message_info_size)
-                                           const;
-        void info_key_value_destroy(char const ** p) const;
+        static char const ** info_key_value_parse(void const * const info,
+                                                  uint32_t const info_size);
+        static void info_key_value_parse_destroy(char const ** pairs);
+
+        static char const * info_key_value_new(char const ** pairs,
+                                               uint32_t & info_size);
+        static void info_key_value_new_destroy(char * info);
+
+        void free_with_delete() const;
+        void free_name() const;
+        void free_pattern() const;
+        void free_request_info() const;
+        void free_request() const;
+        void free_response_info() const;
+        void free_response() const;
 
         // enumeration namespace that is valid with the C++98 standard
         class return_value
@@ -736,7 +747,7 @@ class API
                 // programs can use exit status
                 // values [1..6] without conflicts
                 // with internal cloudi error conditions
-            
+
                 // API specific errors
                 terminate                           = 110, // error_poll_HUP
                 timeout                             =   7,

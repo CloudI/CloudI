@@ -87,7 +87,7 @@ static std::string backtrace_string()
             result <<
                 std::setfill(' ') << std::setw(18) << std::right <<
                 std::hex << trace.addr << " in " <<
-                trace.object_function << std::endl << 
+                trace.object_function << std::endl <<
                 "   at " << trace.object_filename << std::endl;
             indented = false;
         }
@@ -97,9 +97,9 @@ static std::string backtrace_string()
                 result << "    ";
             backward::ResolvedTrace::SourceLoc const & location =
                 trace.inliners[j];
-            result << 
+            result <<
                 "     (inlined)     "
-                "in " << location.function << std::endl << 
+                "in " << location.function << std::endl <<
                 "   at " << location.filename << ":" <<
                 std::dec << location.line << std::endl;
             indented = false;
@@ -145,9 +145,9 @@ namespace
                 public CloudI::API::callback_function_generic
             {
                 public:
-                    callback_function_c(cloudi_instance_t * p,
+                    callback_function_c(cloudi_instance_t * api,
                                         cloudi_callback_t f) :
-                        m_p(p), m_f(f) {}
+                        m_api(api), m_f(f) {}
                     virtual ~callback_function_c() throw() {}
 
                     virtual void operator () (int const request_type,
@@ -175,11 +175,11 @@ namespace
                             trans_id,
                             pid,
                             pid_size,
-                            m_p->state,
-                            m_p);
+                            m_api->state,
+                            m_api);
                     }
                 private:
-                    cloudi_instance_t * m_p;
+                    cloudi_instance_t * m_api;
                     cloudi_callback_t m_f;
             };
             class callback_null_response :
@@ -209,9 +209,9 @@ namespace
             callback_function(CloudI::API::callback_function_generic * p) :
                 m_function(p) {}
 
-            callback_function(cloudi_instance_t * p,
+            callback_function(cloudi_instance_t * api,
                               cloudi_callback_t f) :
-                m_function(new callback_function_c(p, f)) {}
+                m_function(new callback_function_c(api, f)) {}
 
             static callback_function null_response()
             {
@@ -245,7 +245,7 @@ namespace
                               pid,
                               pid_size);
             }
-                
+
         private:
             boost::shared_ptr<CloudI::API::callback_function_generic>
                 m_function;
@@ -339,7 +339,7 @@ namespace
         private:
             static callback_function const m_null_response;
             lookup_queue_t m_lookup;
-            
+
     };
     callback_function const callback_function_lookup::m_null_response =
         callback_function::null_response();
@@ -541,15 +541,15 @@ static void exception_unknown()
     ::abort();
 }
 
-static int poll_request(cloudi_instance_t * p,
+static int poll_request(cloudi_instance_t * api,
                         int timeout,
                         int external);
 
-int cloudi_initialize(cloudi_instance_t * p,
+int cloudi_initialize(cloudi_instance_t * api,
                       unsigned int const thread_index,
                       void * state)
 {
-    if (p == 0)
+    if (api == 0)
         return cloudi_out_of_memory;
     char const * const protocol = ::getenv("CLOUDI_API_INIT_PROTOCOL");
     if (protocol == 0)
@@ -557,39 +557,48 @@ int cloudi_initialize(cloudi_instance_t * p,
     char const * const buffer_size_p = ::getenv("CLOUDI_API_INIT_BUFFER_SIZE");
     if (buffer_size_p == 0)
         return cloudi_invalid_input;
-    ::memset(p, 0, sizeof(cloudi_instance_t));
-    p->state = state;
+    ::memset(api, 0, sizeof(cloudi_instance_t));
+    api->state = state;
     uint32_t const buffer_size = ::atoi(buffer_size_p);
     if (::strcmp(protocol, "tcp") == 0)
     {
-        p->fd = thread_index + 3;
-        p->use_header = 1;
+        api->fd = thread_index + 3;
+        api->use_header = 1;
     }
     else if (::strcmp(protocol, "udp") == 0)
     {
-        p->fd = thread_index + 3;
-        //p->use_header = 0;
+        api->fd = thread_index + 3;
+        //api->use_header = 0;
     }
     else if (::strcmp(protocol, "local") == 0)
     {
-        p->fd = thread_index + 3;
-        p->use_header = 1;
+        api->fd = thread_index + 3;
+        api->use_header = 1;
     }
     else
     {
         return cloudi_invalid_input;
     }
-    //p->initialization_complete = 0;
-    //p->terminate = 0;
-    p->buffer_size = buffer_size;
-    p->lookup = new lookup_t();
-    p->buffer_send = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
-    p->buffer_recv = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
-    //p->buffer_recv_index = 0;
-    p->buffer_call = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
-    p->poll_timer = new timer();
-    //p->prefix = 0;
-    p->timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
+    //api->initialization_complete = 0;
+    //api->terminate = 0;
+    //api->cxx_terminate_exception = 0;
+    //api->free_with_delete = 0;
+    //api->free_name = 0;
+    //api->free_pattern = 0;
+    //api->free_request_info = 0;
+    //api->free_request = 0;
+    //api->free_response_info = 0;
+    //api->free_response = 0;
+
+    api->buffer_size = buffer_size;
+    api->lookup = new lookup_t();
+    api->buffer_send = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
+    api->buffer_recv = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
+    //api->buffer_recv_index = 0;
+    api->buffer_call = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
+    api->poll_timer = new timer();
+    //api->prefix = 0;
+    api->timeout_terminate = 10; // TIMEOUT_TERMINATE_MIN
 
     // termination handling
     ::atexit(&exit_handler);
@@ -600,67 +609,68 @@ int cloudi_initialize(cloudi_instance_t * p,
     std::cout.setf(std::ios::unitbuf);
 
     // attempt initialization
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "init"))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
 
-    while (cloudi_timeout == (result = poll_request(p, 1000, 0)))
+    while (cloudi_timeout == (result = poll_request(api, 1000, 0)))
     {
     }
 
     return result;
 }
 
-void * cloudi_destroy(cloudi_instance_t * p)
+void * cloudi_destroy(cloudi_instance_t * api)
 {
-    if (p == 0)
-        return 0;
-    if (p->fd != 0)
+    if (api)
     {
-        ::close(p->fd);
-        delete reinterpret_cast<lookup_t *>(p->lookup);
-        delete reinterpret_cast<buffer_t *>(p->buffer_send);
-        delete reinterpret_cast<buffer_t *>(p->buffer_recv);
-        delete reinterpret_cast<buffer_t *>(p->buffer_call);
-        delete reinterpret_cast<timer *>(p->poll_timer);
-        if (p->prefix)
-            delete [] p->prefix;
-        return p->state;
+        if (api->fd != 0)
+        {
+            ::close(api->fd);
+            delete reinterpret_cast<lookup_t *>(api->lookup);
+            delete reinterpret_cast<buffer_t *>(api->buffer_send);
+            delete reinterpret_cast<buffer_t *>(api->buffer_recv);
+            delete reinterpret_cast<buffer_t *>(api->buffer_call);
+            delete reinterpret_cast<timer *>(api->poll_timer);
+            if (api->prefix)
+                delete [] api->prefix;
+            return api->state;
+        }
     }
     return 0;
 }
 
 int cloudi_initialize_thread_count(unsigned int * const thread_count)
 {
-    char const * const p = ::getenv("CLOUDI_API_INIT_THREAD_COUNT");
-    if (p == 0)
+    char const * const value_str = ::getenv("CLOUDI_API_INIT_THREAD_COUNT");
+    if (value_str == 0)
         return cloudi_invalid_input;
-    int const value = ::atoi(p);
+    int const value = ::atoi(value_str);
     if (value < 0)
         return cloudi_invalid_input;
     *thread_count = static_cast<unsigned int>(value);
     return cloudi_success;
 }
 
-static int cloudi_subscribe_(cloudi_instance_t * p,
+static int cloudi_subscribe_(cloudi_instance_t * api,
                              char const * const pattern,
                              callback_function const & f)
 {
-    lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
-    lookup.insert(std::string(p->prefix) + pattern, f);
+    lookup_t & lookup = *reinterpret_cast<lookup_t *>(api->lookup);
+    lookup.insert(std::string(api->prefix) + pattern, f);
 
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
@@ -672,28 +682,28 @@ static int cloudi_subscribe_(cloudi_instance_t * p,
         return cloudi_error_write_overflow;
     if (ei_encode_string(buffer.get<char>(), &index, pattern))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
 }
 
-int cloudi_subscribe(cloudi_instance_t * p,
+int cloudi_subscribe(cloudi_instance_t * api,
                      char const * const pattern,
                      cloudi_callback_t f)
 {
-    return cloudi_subscribe_(p,
+    return cloudi_subscribe_(api,
                              pattern,
-                             callback_function(p, f));
+                             callback_function(api, f));
 }
 
-int cloudi_subscribe_count(cloudi_instance_t * p,
+int cloudi_subscribe_count(cloudi_instance_t * api,
                            char const * const pattern)
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
@@ -705,27 +715,27 @@ int cloudi_subscribe_count(cloudi_instance_t * p,
         return cloudi_error_write_overflow;
     if (ei_encode_string(buffer.get<char>(), &index, pattern))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
-    result = poll_request(p, -1, 0);
+    result = poll_request(api, -1, 0);
     if (result)
         return result;
     return cloudi_success;
 }
 
-int cloudi_unsubscribe(cloudi_instance_t * p,
+int cloudi_unsubscribe(cloudi_instance_t * api,
                        char const * const pattern)
 {
-    std::string str(p->prefix);
+    std::string str(api->prefix);
     str += pattern;
-    lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
+    lookup_t & lookup = *reinterpret_cast<lookup_t *>(api->lookup);
     if (lookup.remove(str))
     {
-        buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+        buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
         int index = 0;
-        if (p->use_header)
+        if (api->use_header)
             index = 4;
         if (ei_encode_version(buffer.get<char>(), &index))
             return cloudi_error_ei_encode;
@@ -737,7 +747,7 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
             return cloudi_error_write_overflow;
         if (ei_encode_string(buffer.get<char>(), &index, pattern))
             return cloudi_error_ei_encode;
-        int result = write_exact(p->fd, p->use_header,
+        int result = write_exact(api->fd, api->use_header,
                                  buffer.get<char>(), index);
         if (result)
             return result;
@@ -749,7 +759,7 @@ int cloudi_unsubscribe(cloudi_instance_t * p,
     }
 }
 
-static int cloudi_send_(cloudi_instance_t * p,
+static int cloudi_send_(cloudi_instance_t * api,
                         char const * const command_name,
                         char const * const name,
                         void const * const request_info,
@@ -759,9 +769,9 @@ static int cloudi_send_(cloudi_instance_t * p,
                         uint32_t timeout,
                         int8_t const priority)
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
@@ -783,27 +793,27 @@ static int cloudi_send_(cloudi_instance_t * p,
         return cloudi_error_ei_encode;
     if (ei_encode_long(buffer.get<char>(), &index, priority))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
-    result = poll_request(p, -1, 0);
+    result = poll_request(api, -1, 0);
     if (result)
         return result;
     return cloudi_success;
 }
 
-int cloudi_send_async(cloudi_instance_t * p,
+int cloudi_send_async(cloudi_instance_t * api,
                       char const * const name,
                       void const * const request,
                       uint32_t const request_size)
 {
-    return cloudi_send_(p, "send_async", name, "", 0,
+    return cloudi_send_(api, "send_async", name, "", 0,
                         request, request_size,
-                        p->timeout_async, p->priority_default);
+                        api->timeout_async, api->priority_default);
 }
 
-int cloudi_send_async_(cloudi_instance_t * p,
+int cloudi_send_async_(cloudi_instance_t * api,
                        char const * const name,
                        void const * const request_info,
                        uint32_t const request_info_size,
@@ -813,23 +823,23 @@ int cloudi_send_async_(cloudi_instance_t * p,
                        int8_t const priority)
 {
     if (timeout == 0)
-        timeout = p->timeout_async;
-    return cloudi_send_(p, "send_async", name,
+        timeout = api->timeout_async;
+    return cloudi_send_(api, "send_async", name,
                         request_info, request_info_size,
                         request, request_size, timeout, priority);
 }
 
-int cloudi_send_sync(cloudi_instance_t * p,
+int cloudi_send_sync(cloudi_instance_t * api,
                      char const * const name,
                      void const * const request,
                      uint32_t const request_size)
 {
-    return cloudi_send_(p, "send_sync", name, "", 0,
+    return cloudi_send_(api, "send_sync", name, "", 0,
                         request, request_size,
-                        p->timeout_sync, p->priority_default);
+                        api->timeout_sync, api->priority_default);
 }
 
-int cloudi_send_sync_(cloudi_instance_t * p,
+int cloudi_send_sync_(cloudi_instance_t * api,
                       char const * const name,
                       void const * const request_info,
                       uint32_t const request_info_size,
@@ -839,23 +849,23 @@ int cloudi_send_sync_(cloudi_instance_t * p,
                       int8_t const priority)
 {
     if (timeout == 0)
-        timeout = p->timeout_sync;
-    return cloudi_send_(p, "send_sync", name,
+        timeout = api->timeout_sync;
+    return cloudi_send_(api, "send_sync", name,
                         request_info, request_info_size,
                         request, request_size, timeout, priority);
 }
 
-int cloudi_mcast_async(cloudi_instance_t * p,
+int cloudi_mcast_async(cloudi_instance_t * api,
                        char const * const name,
                        void const * const request,
                        uint32_t const request_size)
 {
-    return cloudi_send_(p, "mcast_async", name, "", 0,
+    return cloudi_send_(api, "mcast_async", name, "", 0,
                         request, request_size,
-                        p->timeout_async, p->priority_default);
+                        api->timeout_async, api->priority_default);
 }
 
-int cloudi_mcast_async_(cloudi_instance_t * p,
+int cloudi_mcast_async_(cloudi_instance_t * api,
                         char const * const name,
                         void const * const request_info,
                         uint32_t const request_info_size,
@@ -865,13 +875,52 @@ int cloudi_mcast_async_(cloudi_instance_t * p,
                         int8_t const priority)
 {
     if (timeout == 0)
-        timeout = p->timeout_async;
-    return cloudi_send_(p, "mcast_async", name,
+        timeout = api->timeout_async;
+    return cloudi_send_(api, "mcast_async", name,
                         request_info, request_info_size,
                         request, request_size, timeout, priority);
 }
 
-static int cloudi_forward_(cloudi_instance_t * p,
+static void cloudi_forward_free(cloudi_instance_t * api,
+                                char const * const name,
+                                void const * const request_info,
+                                void const * const request)
+{
+    if (api->free_name)
+    {
+        char * const name_p = const_cast<char *>(name);
+        if (api->free_with_delete)
+            delete name_p;
+        else
+            ::free(name_p);
+        api->free_name = 0;
+    }
+    assert(api->free_pattern == 0);
+    if (api->free_request_info)
+    {
+        char * const request_info_p =
+            const_cast<char *>(reinterpret_cast<char const *>(request_info));
+        if (api->free_with_delete)
+            delete request_info_p;
+        else
+            ::free(request_info_p);
+        api->free_request_info = 0;
+    }
+    if (api->free_request)
+    {
+        char * const request_p =
+            const_cast<char *>(reinterpret_cast<char const *>(request));
+        if (api->free_with_delete)
+            delete request_p;
+        else
+            ::free(request_p);
+        api->free_request = 0;
+    }
+    assert(api->free_response_info == 0);
+    assert(api->free_response == 0);
+}
+
+static int cloudi_forward_(cloudi_instance_t * api,
                            char const * const command_name,
                            char const * const name,
                            void const * const request_info,
@@ -884,9 +933,9 @@ static int cloudi_forward_(cloudi_instance_t * p,
                            char const * const pid,
                            uint32_t const pid_size)
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
@@ -917,11 +966,13 @@ static int cloudi_forward_(cloudi_instance_t * p,
     int const pid_data_size = pid_size - pid_index;
     ::memcpy(&(buffer[index]), &(pid[pid_index]), pid_data_size);
     index += pid_data_size;
-    return write_exact(p->fd, p->use_header,
-                       buffer.get<char>(), index);
+    int const result = write_exact(api->fd, api->use_header,
+                                   buffer.get<char>(), index);
+    cloudi_forward_free(api, name, request_info, request);
+    return result;
 }
 
-int cloudi_forward(cloudi_instance_t * p,
+int cloudi_forward(cloudi_instance_t * api,
                    int const request_type,
                    char const * const name,
                    void const * const request_info,
@@ -937,7 +988,7 @@ int cloudi_forward(cloudi_instance_t * p,
     int result;
     if (request_type == CLOUDI_ASYNC)
     {
-        result = cloudi_forward_(p,
+        result = cloudi_forward_(api,
                                  "forward_async", name,
                                  request_info, request_info_size,
                                  request, request_size,
@@ -950,7 +1001,7 @@ int cloudi_forward(cloudi_instance_t * p,
     }
     else if (request_type == CLOUDI_SYNC)
     {
-        result = cloudi_forward_(p,
+        result = cloudi_forward_(api,
                                  "forward_sync", name,
                                  request_info, request_info_size,
                                  request, request_size,
@@ -968,7 +1019,7 @@ int cloudi_forward(cloudi_instance_t * p,
     return result;
 }
 
-int cloudi_forward_async(cloudi_instance_t * p,
+int cloudi_forward_async(cloudi_instance_t * api,
                          char const * const name,
                          void const * const request_info,
                          uint32_t const request_info_size,
@@ -980,7 +1031,7 @@ int cloudi_forward_async(cloudi_instance_t * p,
                          char const * const pid,
                          uint32_t const pid_size)
 {
-    int result = cloudi_forward_(p,
+    int result = cloudi_forward_(api,
                                  "forward_async", name,
                                  request_info, request_info_size,
                                  request, request_size,
@@ -993,7 +1044,7 @@ int cloudi_forward_async(cloudi_instance_t * p,
     return result;
 }
 
-int cloudi_forward_sync(cloudi_instance_t * p,
+int cloudi_forward_sync(cloudi_instance_t * api,
                         char const * const name,
                         void const * const request_info,
                         uint32_t const request_info_size,
@@ -1005,7 +1056,7 @@ int cloudi_forward_sync(cloudi_instance_t * p,
                         char const * const pid,
                         uint32_t const pid_size)
 {
-    int result = cloudi_forward_(p,
+    int result = cloudi_forward_(api,
                                  "forward_sync", name,
                                  request_info, request_info_size,
                                  request, request_size,
@@ -1018,7 +1069,55 @@ int cloudi_forward_sync(cloudi_instance_t * p,
     return result;
 }
 
-static int cloudi_return_(cloudi_instance_t * p,
+static void cloudi_return_free(cloudi_instance_t * api,
+                               char const * const name,
+                               char const * const pattern,
+                               void const * const response_info,
+                               void const * const response)
+{
+    if (api->free_name)
+    {
+        char * const name_p = const_cast<char *>(name);
+        if (api->free_with_delete)
+            delete name_p;
+        else
+            ::free(name_p);
+        api->free_name = 0;
+    }
+    if (api->free_pattern)
+    {
+        char * const pattern_p = const_cast<char *>(pattern);
+        if (api->free_with_delete)
+            delete pattern_p;
+        else
+            ::free(pattern_p);
+        api->free_pattern = 0;
+    }
+    assert(api->free_request_info == 0);
+    assert(api->free_request == 0);
+    if (api->free_response_info)
+    {
+        char * const response_info_p =
+            const_cast<char *>(reinterpret_cast<char const *>(response_info));
+        if (api->free_with_delete)
+            delete response_info_p;
+        else
+            ::free(response_info_p);
+        api->free_response_info = 0;
+    }
+    if (api->free_response)
+    {
+        char * const response_p =
+            const_cast<char *>(reinterpret_cast<char const *>(response));
+        if (api->free_with_delete)
+            delete response_p;
+        else
+            ::free(response_p);
+        api->free_response = 0;
+    }
+}
+
+static int cloudi_return_(cloudi_instance_t * api,
                           char const * const command_name,
                           char const * const name,
                           char const * const pattern,
@@ -1031,9 +1130,9 @@ static int cloudi_return_(cloudi_instance_t * p,
                           char const * const pid,
                           uint32_t const pid_size)
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
@@ -1064,11 +1163,13 @@ static int cloudi_return_(cloudi_instance_t * p,
     int const pid_data_size = pid_size - pid_index;
     ::memcpy(&(buffer[index]), &(pid[pid_index]), pid_data_size);
     index += pid_data_size;
-    return write_exact(p->fd, p->use_header,
-                       buffer.get<char>(), index);
+    int const result = write_exact(api->fd, api->use_header,
+                                   buffer.get<char>(), index);
+    cloudi_return_free(api, name, pattern, response_info, response);
+    return result;
 }
 
-int cloudi_return(cloudi_instance_t * p,
+int cloudi_return(cloudi_instance_t * api,
                   int const request_type,
                   char const * const name,
                   char const * const pattern,
@@ -1084,7 +1185,7 @@ int cloudi_return(cloudi_instance_t * p,
     int result;
     if (request_type == CLOUDI_ASYNC)
     {
-        result = cloudi_return_(p,
+        result = cloudi_return_(api,
                                 "return_async", name, pattern,
                                 response_info, response_info_size,
                                 response, response_size,
@@ -1096,7 +1197,7 @@ int cloudi_return(cloudi_instance_t * p,
     }
     else if (request_type == CLOUDI_SYNC)
     {
-        result = cloudi_return_(p,
+        result = cloudi_return_(api,
                                 "return_sync", name, pattern,
                                 response_info, response_info_size,
                                 response, response_size,
@@ -1113,7 +1214,7 @@ int cloudi_return(cloudi_instance_t * p,
     return result;
 }
 
-int cloudi_return_async(cloudi_instance_t * p,
+int cloudi_return_async(cloudi_instance_t * api,
                         char const * const name,
                         char const * const pattern,
                         void const * const response_info,
@@ -1125,7 +1226,7 @@ int cloudi_return_async(cloudi_instance_t * p,
                         char const * const pid,
                         uint32_t const pid_size)
 {
-    int result = cloudi_return_(p,
+    int result = cloudi_return_(api,
                                 "return_async", name, pattern,
                                 response_info, response_info_size,
                                 response, response_size,
@@ -1137,7 +1238,7 @@ int cloudi_return_async(cloudi_instance_t * p,
     return result;
 }
 
-int cloudi_return_sync(cloudi_instance_t * p,
+int cloudi_return_sync(cloudi_instance_t * api,
                        char const * const name,
                        char const * const pattern,
                        void const * const response_info,
@@ -1149,7 +1250,7 @@ int cloudi_return_sync(cloudi_instance_t * p,
                        char const * const pid,
                        uint32_t const pid_size)
 {
-    int result = cloudi_return_(p,
+    int result = cloudi_return_(api,
                                 "return_sync",
                                 name, pattern,
                                 response_info, response_info_size,
@@ -1162,18 +1263,18 @@ int cloudi_return_sync(cloudi_instance_t * p,
     return result;
 }
 
-int cloudi_recv_async(cloudi_instance_t * p,
+int cloudi_recv_async(cloudi_instance_t * api,
                       uint32_t timeout,
                       char const * const trans_id,
                       int consume)
 {
-    char const trans_id_null[16] = {0, 0, 0, 0, 0, 0, 0, 0, 
+    char const trans_id_null[16] = {0, 0, 0, 0, 0, 0, 0, 0,
                                     0, 0, 0, 0, 0, 0, 0, 0};
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
-        
+
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 4))
@@ -1181,7 +1282,7 @@ int cloudi_recv_async(cloudi_instance_t * p,
     if (ei_encode_atom(buffer.get<char>(), &index, "recv_async"))
         return cloudi_error_ei_encode;
     if (timeout == 0)
-        timeout = p->timeout_sync;
+        timeout = api->timeout_sync;
     if (ei_encode_ulong(buffer.get<char>(), &index, timeout))
         return cloudi_error_ei_encode;
     if (trans_id == 0)
@@ -1204,45 +1305,45 @@ int cloudi_recv_async(cloudi_instance_t * p,
         if (ei_encode_atom(buffer.get<char>(), &index, "false"))
             return cloudi_error_ei_encode;
     }
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
-    result = poll_request(p, -1, 0);
+    result = poll_request(api, -1, 0);
     if (result)
         return result;
     return cloudi_success;
 }
 
-static int polling(cloudi_instance_t * p)
+static int polling(cloudi_instance_t * api)
 {
-    assert(! p->initialization_complete);
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    assert(! api->initialization_complete);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "polling"))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
 }
 
-static int keepalive(cloudi_instance_t * p)
+static int keepalive(cloudi_instance_t * api)
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "keepalive"))
         return cloudi_error_ei_encode;
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
@@ -1261,7 +1362,7 @@ static int keepalive(cloudi_instance_t * p)
 #define MESSAGE_SUBSCRIBE_COUNT    10
 #define MESSAGE_TERM               11
 
-static void callback(cloudi_instance_t * p,
+static void callback(cloudi_instance_t * api,
                      int const command,
                      char const * const name,
                      char const * const pattern,
@@ -1275,10 +1376,10 @@ static void callback(cloudi_instance_t * p,
                      char const * const pid,
                      uint32_t const pid_size)
 {
-    lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
+    lookup_t & lookup = *reinterpret_cast<lookup_t *>(api->lookup);
     callback_function f = lookup.find(std::string(pattern));
     int result = cloudi_success;
-    
+
     if (command == MESSAGE_SEND_ASYNC)
     {
         try
@@ -1297,7 +1398,7 @@ static void callback(cloudi_instance_t * p,
         }
         catch (CloudI::API::return_sync_exception const & e)
         {
-            p->terminate = 1;
+            api->terminate = 1;
             std::cerr << boost::diagnostic_information(e);
             return;
         }
@@ -1307,7 +1408,7 @@ static void callback(cloudi_instance_t * p,
         }
         catch (CloudI::API::forward_sync_exception const & e)
         {
-            p->terminate = 1;
+            api->terminate = 1;
             std::cerr << boost::diagnostic_information(e);
             return;
         }
@@ -1321,7 +1422,7 @@ static void callback(cloudi_instance_t * p,
         }
         try
         {
-            result = cloudi_return(p,
+            result = cloudi_return(api,
                                    CLOUDI_ASYNC, name, pattern, "", 0, "", 0,
                                    timeout, trans_id, pid, pid_size);
             assert(result == cloudi_success);
@@ -1350,7 +1451,7 @@ static void callback(cloudi_instance_t * p,
         }
         catch (CloudI::API::return_async_exception const & e)
         {
-            p->terminate = 1;
+            api->terminate = 1;
             std::cerr << boost::diagnostic_information(e);
             return;
         }
@@ -1360,7 +1461,7 @@ static void callback(cloudi_instance_t * p,
         }
         catch (CloudI::API::forward_async_exception const & e)
         {
-            p->terminate = 1;
+            api->terminate = 1;
             std::cerr << boost::diagnostic_information(e);
             return;
         }
@@ -1374,7 +1475,7 @@ static void callback(cloudi_instance_t * p,
         }
         try
         {
-            result = cloudi_return(p,
+            result = cloudi_return(api,
                                    CLOUDI_SYNC, name, pattern, "", 0, "", 0,
                                    timeout, trans_id, pid, pid_size);
             assert(result == cloudi_success);
@@ -1423,16 +1524,16 @@ static void store_incoming_int8(buffer_t const & buffer,
     index += sizeof(int8_t);
 }
 
-static bool handle_events(cloudi_instance_t * p,
-                          int external, 
+static bool handle_events(cloudi_instance_t * api,
+                          int external,
                           uint32_t index,
                           int & result,
                           uint32_t command = 0)
 {
-    buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
+    buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(api->buffer_recv);
     if (command == 0)
     {
-        if (index > p->buffer_recv_index)
+        if (index > api->buffer_recv_index)
         {
             result = cloudi_error_read_underflow;
             return false;
@@ -1445,7 +1546,7 @@ static bool handle_events(cloudi_instance_t * p,
         {
             case MESSAGE_TERM:
             {
-                p->terminate = 1;
+                api->terminate = 1;
                 if (external)
                     result = cloudi_success;
                 else
@@ -1454,15 +1555,15 @@ static bool handle_events(cloudi_instance_t * p,
             }
             case MESSAGE_REINIT:
             {
-                store_incoming_uint32(buffer_recv, index, p->process_count);
-                store_incoming_uint32(buffer_recv, index, p->timeout_async);
-                store_incoming_uint32(buffer_recv, index, p->timeout_sync);
-                store_incoming_int8(buffer_recv, index, p->priority_default);
+                store_incoming_uint32(buffer_recv, index, api->process_count);
+                store_incoming_uint32(buffer_recv, index, api->timeout_async);
+                store_incoming_uint32(buffer_recv, index, api->timeout_sync);
+                store_incoming_int8(buffer_recv, index, api->priority_default);
                 break;
             }
             case MESSAGE_KEEPALIVE:
             {
-                result = keepalive(p);
+                result = keepalive(api);
                 if (result)
                     return false;
                 break;
@@ -1473,12 +1574,12 @@ static bool handle_events(cloudi_instance_t * p,
                 return false;
             }
         }
-        if (index > p->buffer_recv_index)
+        if (index > api->buffer_recv_index)
         {
             result = cloudi_error_read_underflow;
             return false;
         }
-        else if (index == p->buffer_recv_index)
+        else if (index == api->buffer_recv_index)
         {
             return true;
         }
@@ -1486,50 +1587,50 @@ static bool handle_events(cloudi_instance_t * p,
     }
 }
 
-static int poll_request(cloudi_instance_t * p,
+static int poll_request(cloudi_instance_t * api,
                         int timeout,
                         int external)
 {
     int result;
-    if (p->terminate)
+    if (api->terminate)
     {
         if (external)
             return cloudi_success;
         else
             return cloudi_terminate;
     }
-    else if (external && ! p->initialization_complete)
+    else if (external && ! api->initialization_complete)
     {
-        result = polling(p);
+        result = polling(api);
         if (result)
             return result;
-        p->initialization_complete = 1;
+        api->initialization_complete = 1;
     }
 
-    buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
-    buffer_t & buffer_call = *reinterpret_cast<buffer_t *>(p->buffer_call);
+    buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(api->buffer_recv);
+    buffer_t & buffer_call = *reinterpret_cast<buffer_t *>(api->buffer_call);
 
-    timer & poll_timer = *reinterpret_cast<timer *>(p->poll_timer);
+    timer & poll_timer = *reinterpret_cast<timer *>(api->poll_timer);
     if (timeout > 0)
     {
         poll_timer.restart();
     }
-    struct pollfd fds[1] = {{p->fd, POLLIN | POLLPRI, 0}};
+    struct pollfd fds[1] = {{api->fd, POLLIN | POLLPRI, 0}};
     int count = ::poll(fds, 1, timeout);
     if (count == 0)
         return cloudi_timeout;
     else if (count < 0)
         return errno_poll();
 
-    result = read_all(p->fd, p->use_header,
-                      buffer_recv, p->buffer_recv_index,
-                      p->buffer_size);
+    result = read_all(api->fd, api->use_header,
+                      buffer_recv, api->buffer_recv_index,
+                      api->buffer_size);
     if (result)
         return result;
-    if (p->buffer_recv_index == 0)
+    if (api->buffer_recv_index == 0)
         return cloudi_error_read_underflow;
     uint32_t index = 0;
-        
+
     while (true)
     {
         uint32_t command = 0;
@@ -1538,24 +1639,24 @@ static int poll_request(cloudi_instance_t * p,
         {
             case MESSAGE_INIT:
             {
-                store_incoming_uint32(buffer_recv, index, p->process_index);
-                store_incoming_uint32(buffer_recv, index, p->process_count);
-                store_incoming_uint32(buffer_recv, index, p->process_count_max);
-                store_incoming_uint32(buffer_recv, index, p->process_count_min);
-                store_incoming_binary(buffer_recv, index, p->prefix);
+                store_incoming_uint32(buffer_recv, index, api->process_index);
+                store_incoming_uint32(buffer_recv, index, api->process_count);
+                store_incoming_uint32(buffer_recv, index, api->process_count_max);
+                store_incoming_uint32(buffer_recv, index, api->process_count_min);
+                store_incoming_binary(buffer_recv, index, api->prefix);
                 store_incoming_uint32(buffer_recv, index,
-                                      p->timeout_initialize);
-                store_incoming_uint32(buffer_recv, index, p->timeout_async);
-                store_incoming_uint32(buffer_recv, index, p->timeout_sync);
-                store_incoming_uint32(buffer_recv, index, p->timeout_terminate);
-                store_incoming_int8(buffer_recv, index, p->priority_default);
-                if (index != p->buffer_recv_index)
+                                      api->timeout_initialize);
+                store_incoming_uint32(buffer_recv, index, api->timeout_async);
+                store_incoming_uint32(buffer_recv, index, api->timeout_sync);
+                store_incoming_uint32(buffer_recv, index, api->timeout_terminate);
+                store_incoming_int8(buffer_recv, index, api->priority_default);
+                if (index != api->buffer_recv_index)
                 {
                     assert(! external);
-                    if (! handle_events(p, external, index, result))
+                    if (! handle_events(api, external, index, result))
                         return result;
                 }
-                p->buffer_recv_index = 0;
+                api->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_SEND_ASYNC:
@@ -1588,18 +1689,18 @@ static int poll_request(cloudi_instance_t * p,
                 store_incoming_uint32(buffer_call, index, pid_size);
                 char * pid = &buffer_call[index];
                 index += pid_size;
-                if (index != p->buffer_recv_index)
+                if (index != api->buffer_recv_index)
                 {
                     assert(external);
-                    if (! handle_events(p, external, index, result))
+                    if (! handle_events(api, external, index, result))
                         return result;
                 }
-                p->buffer_recv_index = 0;
-                callback(p, command, name, pattern,
+                api->buffer_recv_index = 0;
+                callback(api, command, name, pattern,
                          request_info, request_info_size,
                          request, request_size, request_timeout,
                          priority, trans_id, pid, pid_size);
-                if (p->terminate)
+                if (api->terminate)
                     return cloudi_success;
                 break;
             }
@@ -1607,83 +1708,83 @@ static int poll_request(cloudi_instance_t * p,
             case MESSAGE_RETURN_SYNC:
             {
                 store_incoming_uint32(buffer_recv, index,
-                                      p->response_info_size);
-                p->response_info = &buffer_recv[index];
-                index += p->response_info_size + 1;
-                store_incoming_uint32(buffer_recv, index, p->response_size);
-                p->response = &buffer_recv[index];
-                index += p->response_size + 1;
-                p->trans_id_count = 1;
-                p->trans_id = &buffer_recv[index];
+                                      api->response_info_size);
+                api->response_info = &buffer_recv[index];
+                index += api->response_info_size + 1;
+                store_incoming_uint32(buffer_recv, index, api->response_size);
+                api->response = &buffer_recv[index];
+                index += api->response_size + 1;
+                api->trans_id_count = 1;
+                api->trans_id = &buffer_recv[index];
                 index += 16;
-                if (index != p->buffer_recv_index)
+                if (index != api->buffer_recv_index)
                 {
                     assert(! external);
-                    if (! handle_events(p, external, index, result))
+                    if (! handle_events(api, external, index, result))
                         return result;
                 }
-                p->buffer_recv_index = 0;
+                api->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_RETURN_ASYNC:
             {
-                p->trans_id_count = 1;
-                p->trans_id = &buffer_recv[index];
+                api->trans_id_count = 1;
+                api->trans_id = &buffer_recv[index];
                 index += 16;
-                if (index != p->buffer_recv_index)
+                if (index != api->buffer_recv_index)
                 {
                     assert(! external);
-                    if (! handle_events(p, external, index, result))
+                    if (! handle_events(api, external, index, result))
                         return result;
                 }
-                p->buffer_recv_index = 0;
+                api->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_RETURNS_ASYNC:
             {
-                store_incoming_uint32(buffer_recv, index, p->trans_id_count);
-                p->trans_id = &buffer_recv[index];
-                index += 16 * p->trans_id_count;
-                if (index != p->buffer_recv_index)
+                store_incoming_uint32(buffer_recv, index, api->trans_id_count);
+                api->trans_id = &buffer_recv[index];
+                index += 16 * api->trans_id_count;
+                if (index != api->buffer_recv_index)
                 {
                     assert(! external);
-                    if (! handle_events(p, external, index, result))
+                    if (! handle_events(api, external, index, result))
                         return result;
                 }
-                p->buffer_recv_index = 0;
+                api->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_SUBSCRIBE_COUNT:
             {
-                store_incoming_uint32(buffer_recv, index, p->subscribe_count);
-                if (index != p->buffer_recv_index)
+                store_incoming_uint32(buffer_recv, index, api->subscribe_count);
+                if (index != api->buffer_recv_index)
                 {
                     assert(! external);
-                    if (! handle_events(p, external, index, result))
+                    if (! handle_events(api, external, index, result))
                         return result;
                 }
-                p->buffer_recv_index = 0;
+                api->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_TERM:
             {
-                if (! handle_events(p, external, index, result, command))
+                if (! handle_events(api, external, index, result, command))
                     return result;
                 assert(false);
                 break;
             }
             case MESSAGE_REINIT:
             {
-                store_incoming_uint32(buffer_recv, index, p->process_count);
-                store_incoming_uint32(buffer_recv, index, p->timeout_async);
-                store_incoming_uint32(buffer_recv, index, p->timeout_sync);
-                store_incoming_int8(buffer_recv, index, p->priority_default);
-                if (index == p->buffer_recv_index)
+                store_incoming_uint32(buffer_recv, index, api->process_count);
+                store_incoming_uint32(buffer_recv, index, api->timeout_async);
+                store_incoming_uint32(buffer_recv, index, api->timeout_sync);
+                store_incoming_int8(buffer_recv, index, api->priority_default);
+                if (index == api->buffer_recv_index)
                 {
-                    p->buffer_recv_index = 0;
+                    api->buffer_recv_index = 0;
                     break;
                 }
-                else if (index < p->buffer_recv_index)
+                else if (index < api->buffer_recv_index)
                 {
                     continue;
                 }
@@ -1694,15 +1795,15 @@ static int poll_request(cloudi_instance_t * p,
             }
             case MESSAGE_KEEPALIVE:
             {
-                result = keepalive(p);
+                result = keepalive(api);
                 if (result)
                     return false;
-                if (index == p->buffer_recv_index)
+                if (index == api->buffer_recv_index)
                 {
-                    p->buffer_recv_index = 0;
+                    api->buffer_recv_index = 0;
                     break;
                 }
-                else if (index < p->buffer_recv_index)
+                else if (index < api->buffer_recv_index)
                 {
                     continue;
                 }
@@ -1737,29 +1838,29 @@ static int poll_request(cloudi_instance_t * p,
         else if (count < 0)
             return errno_poll();
 
-        result = read_all(p->fd, p->use_header,
-                          buffer_recv, p->buffer_recv_index,
-                          p->buffer_size);
+        result = read_all(api->fd, api->use_header,
+                          buffer_recv, api->buffer_recv_index,
+                          api->buffer_size);
         if (result)
             return result;
-        if (p->buffer_recv_index == 0)
+        if (api->buffer_recv_index == 0)
             return cloudi_error_read_underflow;
         index = 0;
     }
 }
 
-int cloudi_poll(cloudi_instance_t * p,
+int cloudi_poll(cloudi_instance_t * api,
                 int timeout)
 {
-    return poll_request(p, timeout, 1);
+    return poll_request(api, timeout, 1);
 }
 
-int cloudi_shutdown(cloudi_instance_t * p,
+int cloudi_shutdown(cloudi_instance_t * api,
                     char const * const reason)
 {
-    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
     int index = 0;
-    if (p->use_header)
+    if (api->use_header)
         index = 4;
 
     if (ei_encode_version(buffer.get<char>(), &index))
@@ -1778,51 +1879,132 @@ int cloudi_shutdown(cloudi_instance_t * p,
         if (ei_encode_string(buffer.get<char>(), &index, reason))
             return cloudi_error_ei_encode;
     }
-    int result = write_exact(p->fd, p->use_header,
+    int result = write_exact(api->fd, api->use_header,
                              buffer.get<char>(), index);
     if (result)
         return result;
     return cloudi_success;
 }
 
-static char const ** text_key_value_parse(void const * const text,
-                                          uint32_t const text_size)
+static char const ** text_pairs_parse(void const * const text,
+                                      uint32_t const text_size)
 {
-    char const * p = reinterpret_cast<char const *>(text);
-    realloc_ptr<char const *> result(16, 8192);
-    result[0] = p;
+    char const * text_p = reinterpret_cast<char const *>(text);
+    realloc_ptr<char const *> pairs(16, 268435456);
     size_t i = 1;
+    pairs[0] = text_p;
     if (text_size > 1)
     {
         for (size_t text_i = 1; text_i < text_size - 1; ++text_i)
         {
-            if (p[text_i] == '\0')
+            if (text_p[text_i] == '\0')
             {
-                result[i] = &p[++text_i];
-                result.reserve(++i + 1);
+                pairs[i] = &text_p[++text_i];
+                if (! pairs.reserve(++i + 1))
+                    break;
             }
         }
     }
-    result[i] = 0;
-    return result.release();
+    pairs[i] = 0;
+    return pairs.release(true);
 }
 
-static void text_key_value_destroy(char const ** p)
+static void text_pairs_parse_destroy(char const ** pairs)
 {
-    free(p);
+    ::free(pairs);
+}
+
+static char const * text_pairs_new(char const ** pairs,
+                                   uint32_t & text_size)
+{
+    realloc_ptr<char> text(1024, 1073741824);
+    size_t size = 0;
+    char const * key;
+    for (size_t i = 0; (key = pairs[i]); i += 2)
+    {
+        char const * const value = pairs[i + 1];
+        assert(value);
+        size_t const key_size = strlen(key) + 1;
+        size_t const value_size = strlen(value) + 1;
+        if (! text.reserve(size + key_size + value_size))
+            break;
+        ::memcpy(&text[size], key, key_size);
+        size += key_size;
+        ::memcpy(&text[size], value, value_size);
+        size += value_size;
+    }
+    if (size == 0)
+    {
+        text[0] = '\0';
+        size = 1;
+    }
+    text_size = size;
+    return text.release(true);
+}
+
+static void text_pairs_new_destroy(char * text)
+{
+    ::free(text);
 }
 
 // CloudI helper functions
 
-char const ** cloudi_info_key_value_parse(void const * const message_info,
-                                          uint32_t const message_info_size)
+char const ** cloudi_info_key_value_parse(void const * const info,
+                                          uint32_t const info_size)
 {
-    return text_key_value_parse(message_info, message_info_size);
+    return text_pairs_parse(info, info_size);
 }
 
-void cloudi_info_key_value_destroy(char const ** p)
+void cloudi_info_key_value_parse_destroy(char const ** pairs)
 {
-    text_key_value_destroy(p);
+    text_pairs_parse_destroy(pairs);
+}
+
+char const * cloudi_info_key_value_new(char const ** pairs,
+                                       uint32_t * info_size)
+{
+    return text_pairs_new(pairs, *info_size);
+}
+
+void cloudi_info_key_value_new_destroy(char * info)
+{
+    text_pairs_new_destroy(info);
+}
+
+void cloudi_free_name(cloudi_instance_t * api)
+{
+    assert(api->free_name == 0);
+    api->free_name = 1;
+}
+
+void cloudi_free_pattern(cloudi_instance_t * api)
+{
+    assert(api->free_pattern == 0);
+    api->free_pattern = 1;
+}
+
+void cloudi_free_request_info(cloudi_instance_t * api)
+{
+    assert(api->free_request_info == 0);
+    api->free_request_info = 1;
+}
+
+void cloudi_free_request(cloudi_instance_t * api)
+{
+    assert(api->free_request == 0);
+    api->free_request = 1;
+}
+
+void cloudi_free_response_info(cloudi_instance_t * api)
+{
+    assert(api->free_response_info == 0);
+    api->free_response_info = 1;
+}
+
+void cloudi_free_response(cloudi_instance_t * api)
+{
+    assert(api->free_response == 0);
+    api->free_response = 1;
 }
 
 } // extern C
@@ -2341,16 +2523,61 @@ int API::shutdown(char const * const reason) const
                            reason);
 }
 
-char const ** API::info_key_value_parse(void const * const message_info,
-                                        uint32_t const message_info_size) const
+char const ** API::info_key_value_parse(void const * const info,
+                                        uint32_t const info_size)
 {
-    return cloudi_info_key_value_parse(message_info,
-                                       message_info_size);
+    return cloudi_info_key_value_parse(info, info_size);
 }
 
-void API::info_key_value_destroy(char const ** p) const
+void API::info_key_value_parse_destroy(char const ** pairs)
 {
-    cloudi_info_key_value_destroy(p);
+    cloudi_info_key_value_parse_destroy(pairs);
+}
+
+char const * API::info_key_value_new(char const ** pairs,
+                                     uint32_t & info_size)
+{
+    return cloudi_info_key_value_new(pairs, &info_size);
+}
+
+void API::info_key_value_new_destroy(char * info)
+{
+    cloudi_info_key_value_new_destroy(info);
+}
+
+void API::free_with_delete() const
+{
+    m_impl.api()->free_with_delete = 1;
+}
+
+void API::free_name() const
+{
+    cloudi_free_name(m_impl.api());
+}
+
+void API::free_pattern() const
+{
+    cloudi_free_pattern(m_impl.api());
+}
+
+void API::free_request_info() const
+{
+    cloudi_free_request_info(m_impl.api());
+}
+
+void API::free_request() const
+{
+    cloudi_free_request(m_impl.api());
+}
+
+void API::free_response_info() const
+{
+    cloudi_free_response_info(m_impl.api());
+}
+
+void API::free_response() const
+{
+    cloudi_free_response(m_impl.api());
 }
 
 std::string API::backtrace()
