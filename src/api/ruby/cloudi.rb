@@ -654,12 +654,12 @@ module CloudI
         def self.text_pairs_new(pairs)
             text_stream = StringIO.new
             pairs.each do |key, values|
-                if values.kind_of?(Array)
+                if values.kind_of?(String)
+                    text_stream.write "#{key}\0#{values}\0"
+                else
                     values.each do |value|
                         text_stream.write "#{key}\0#{value}\0"
                     end
-                else
-                    text_stream.write "#{key}\0#{values}\0"
                 end
             end
             text = text_stream.string

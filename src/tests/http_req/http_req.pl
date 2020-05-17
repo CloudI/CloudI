@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -41,7 +41,7 @@ sub task
         {
             my ($request_type, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
-            my %http_qs = $api->info_key_value_parse($request);
+            my %http_qs = CloudI::API::info_key_value_parse($request);
             my $response;
             if (! defined($http_qs{'value'}))
             {
@@ -58,8 +58,12 @@ sub task
                 $response =
 "<http_test><value>$value</value></http_test>";
             }
+            my $response_info = CloudI::API::info_key_value_new((
+                'content-type' => 'text/xml; charset=utf-8',
+            ));
             $api->return_($request_type, $name, $pattern,
-                          '', $response, $timeout, $trans_id, $pid);
+                          $response_info, $response,
+                          $timeout, $trans_id, $pid);
         };
 
         # run
@@ -90,7 +94,7 @@ sub assert
 
 {
     assert($use_threads);
-    my $thread_count = CloudI::API->thread_count();
+    my $thread_count = CloudI::API::thread_count();
     my @threads = ();
     for my $i (0 .. ($thread_count - 1))
     {

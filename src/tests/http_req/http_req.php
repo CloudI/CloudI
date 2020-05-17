@@ -4,7 +4,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -60,7 +60,7 @@ class Task //extends \Thread
                             $request_info, $request,
                             $timeout, $priority, $trans_id, $pid)
     {
-        $http_qs = $this->api->info_key_value_parse($request);
+        $http_qs = \CloudI\API::info_key_value_parse($request);
         if (! isset($http_qs['value']))
         {
             $response =
@@ -75,8 +75,11 @@ class Task //extends \Thread
             $response =
 "<http_test><value>{$value}</value></http_test>";
         }
+        $response_info = \CloudI\API::info_key_value_new(array(
+            'content-type' => 'text/xml; charset=utf-8',
+        ));
         $this->api->return_($request_type, $name, $pattern,
-                            '', $response,
+                            $response_info, $response,
                             $timeout, $trans_id, $pid);
     }
 }

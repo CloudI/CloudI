@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -73,7 +73,7 @@ sub assert
 
 {
     assert($use_threads);
-    my $thread_count = CloudI::API->thread_count();
+    my $thread_count = CloudI::API::thread_count();
     my @threads = ();
     for my $i (0 .. ($thread_count - 1))
     {

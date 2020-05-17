@@ -558,7 +558,7 @@ sub _sequence3
 
 {
     assert($use_threads);
-    my $thread_count = CloudI::API->thread_count();
+    my $thread_count = CloudI::API::thread_count();
     my @threads = ();
     for my $i (0 .. ($thread_count - 1))
     {

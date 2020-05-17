@@ -843,36 +843,63 @@ class API
             array(new \Erlang\OtpErlangAtom('shutdown'), $reason)));
     }
 
-    private function text_key_value_parse($text)
+    private static function text_pairs_parse($text)
     {
-        $result = array();
-        $data = explode("\0", $text);
-        $size = count($data);
+        $pairs = array();
+        $text_segments = explode("\0", $text);
+        $size = count($text_segments);
         if ($size >= 2)
         {
             foreach (range(0, ($size - $size % 2) - 2, 2) as $i)
             {
-                $key = $data[$i];
-                if (isset($result[$key]))
+                $key = $text_segments[$i];
+                if (isset($pairs[$key]))
                 {
-                    $value = $result[$key];
+                    $value = $pairs[$key];
                     if (is_array($value))
-                        $value[] = $data[$i + 1];
+                        $value[] = $text_segments[$i + 1];
                     else
-                        $result[$key] = array($value, $data[$i + 1]);
+                        $pairs[$key] = array($value, $text_segments[$i + 1]);
                 }
                 else
                 {
-                    $result[$key] = $data[$i + 1];
+                    $pairs[$key] = $text_segments[$i + 1];
                 }
             }
         }
-        return $result;
+        return $pairs;
     }
 
-    public function info_key_value_parse($message_info)
+    private static function text_pairs_new($pairs)
     {
-        return $this->text_key_value_parse($message_info);
+        $text = '';
+        foreach ($pairs as $key => $values)
+        {
+            if (is_string($values))
+            {
+                $text .= $key . "\0" . $values . "\0";
+            }
+            else
+            {
+                foreach ($values as $value)
+                {
+                    $text .= $key . "\0" . $value . "\0";
+                }
+            }
+        }
+        if (empty($text))
+            $text = "\0";
+        return $text;
+    }
+
+    public static function info_key_value_parse($info)
+    {
+        return self::text_pairs_parse($info);
+    }
+
+    public static function info_key_value_new($pairs)
+    {
+        return self::text_pairs_new($pairs);
     }
 
     private function send($data)

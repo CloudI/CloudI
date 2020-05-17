@@ -1024,46 +1024,80 @@ sub shutdown
         Erlang::OtpErlangAtom->new('shutdown'), $reason]));
 }
 
-sub _text_key_value_parse
+# callable without an object
+sub _text_pairs_parse
 {
-    my $self = shift;
     my ($text) = @_;
-    my %result = ();
-    my @data = split("\0", $text);
-    my $size = scalar(@data);
+    my %pairs = ();
+    my @text_segments = split("\0", $text);
+    my $size = scalar(@text_segments);
     if ($size >= 2)
     {
         use integer;
         for my $i_step (0 .. (($size / 2) - 1))
         {
             my $i = $i_step * 2;
-            my $key = $data[$i];
-            my $value = $result{$key};
+            my $key = $text_segments[$i];
+            my $value = $pairs{$key};
             if (defined($value))
             {
                 if (ref($value) eq 'ARRAY')
                 {
-                    push(@$value, $data[$i + 1]);
+                    push(@$value, $text_segments[$i + 1]);
                 }
                 else
                 {
-                    $result{$key} = [$value, $data[$i + 1]];
+                    $pairs{$key} = [$value, $text_segments[$i + 1]];
                 }
             }
             else
             {
-                $result{$key} = $data[$i + 1];
+                $pairs{$key} = $text_segments[$i + 1];
             }
         }
     }
-    return %result;
+    return %pairs;
 }
 
+# callable without an object
+sub _text_pairs_new
+{
+    my (%pairs) = @_;
+    my $text = '';
+    while (my ($key, $values) = each(%pairs))
+    {
+        if (ref($values) eq '' && scalar($values) eq $values)
+        {
+            # values is a string
+            $text .= $key . "\0" . $values . "\0";
+        }
+        else
+        {
+            for my $value (@$values)
+            {
+                $text .= $key . "\0" . $value . "\0";
+            }
+        }
+    }
+    if ($text eq '')
+    {
+        $text = "\0";
+    }
+    return $text;
+}
+
+# callable without an object
 sub info_key_value_parse
 {
-    my $self = shift;
-    my ($message_info) = @_;
-    return $self->_text_key_value_parse($message_info);
+    my ($info) = @_;
+    return _text_pairs_parse($info);
+}
+
+# callable without an object
+sub info_key_value_new
+{
+    my (%pairs) = @_;
+    return _text_pairs_new(%pairs);
 }
 
 sub _send

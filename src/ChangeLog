@@ -4,9 +4,9 @@
 2020-05-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change the info_key_value_parse function to be static in the
-      Python/Ruby CloudI API
+      Perl/PHP/Python/Ruby CloudI API
     * Add the info_key_value_new function to the
-      Python/Ruby CloudI API
+      Perl/PHP/Python/Ruby CloudI API
 
 2020-05-15 Michael Truog   <mjtruog at protonmail dot com>
 
