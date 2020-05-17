@@ -1247,25 +1247,63 @@ func (api *Instance) Shutdown(extra ...interface{}) error {
 	return nil
 }
 
-func (api *Instance) textKeyValueParse(text []byte) map[string][]string {
-	result := map[string][]string{}
-	data := bytes.Split(text, []byte{0})
-	for i := 0; i < len(data)-1; i += 2 {
-		key := string(data[i])
-		value := string(data[i+1])
-		current := result[key]
+func textPairsParse(text []byte) map[string][]string {
+	pairs := map[string][]string{}
+	textSegments := bytes.Split(text, []byte{0})
+	for i := 0; i < len(textSegments)-1; i += 2 {
+		key := string(textSegments[i])
+		value := string(textSegments[i+1])
+		current := pairs[key]
 		if current == nil {
-			result[key] = []string{value}
+			pairs[key] = []string{value}
 		} else {
-			result[key] = append(current, value)
+			pairs[key] = append(current, value)
 		}
 	}
-	return result
+	return pairs
 }
 
-// InfoKeyValueParse parses "text_pairs" in service request info
-func (api *Instance) InfoKeyValueParse(messageInfo []byte) map[string][]string {
-	return api.textKeyValueParse(messageInfo)
+func textPairsNew(pairs map[string][]string) ([]byte, error) {
+	var textBuffer = new(bytes.Buffer)
+	var err error
+	for key, values := range pairs {
+		for i := 0; i < len(values); i++ {
+			_, err = textBuffer.WriteString(key)
+			if err != nil {
+				return nil, err
+			}
+			err = textBuffer.WriteByte(0)
+			if err != nil {
+				return nil, err
+			}
+			_, err = textBuffer.WriteString(values[i])
+			if err != nil {
+				return nil, err
+			}
+			err = textBuffer.WriteByte(0)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	if textBuffer.Len() == 0 {
+		err = textBuffer.WriteByte(0)
+		if err != nil {
+			return nil, err
+		}
+	}
+	text := textBuffer.Bytes()
+	return text, nil
+}
+
+// InfoKeyValueParse decodes service request info key/value data
+func InfoKeyValueParse(info []byte) map[string][]string {
+	return textPairsParse(info)
+}
+
+// InfoKeyValueNew encodes service response info key/value data
+func InfoKeyValueNew(pairs map[string][]string) ([]byte, error) {
+	return textPairsNew(pairs)
 }
 
 func (api *Instance) send(data []byte) error {

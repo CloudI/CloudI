@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -35,7 +35,7 @@ import (
 )
 
 func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
-	httpQs := api.InfoKeyValueParse(request)
+	httpQs := cloudi.InfoKeyValueParse(request)
 	value := httpQs["value"]
 	var valueInt int
 	var err error
@@ -51,7 +51,14 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 	} else {
 		response = []byte(fmt.Sprintf("<http_test><value>%d</value></http_test>", valueInt))
 	}
-	api.Return(requestType, name, pattern, []byte{}, response, timeout, transId, pid)
+	var responseInfo []byte
+	responseInfo, err = cloudi.InfoKeyValueNew(map[string][]string{
+		"content-type": {"text/xml; charset=utf-8"},
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	api.Return(requestType, name, pattern, responseInfo, response, timeout, transId, pid)
 	// execution doesn't reach here
 	return nil, nil, nil
 }
