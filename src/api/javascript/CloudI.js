@@ -1088,29 +1088,56 @@ CloudI.API.prototype.shutdown = function (callback, reason) {
     });
 };
 
-CloudI.API.prototype._text_key_value_parse = function (text) {
-    var result = {};
-    var data = text.toString('binary').split('\x00');
-    for (var i = 0; i < data.length - 1; i += 2) {
-        var key = data[i];
-        var current = result[key];
+// class method
+var text_pairs_parse = function text_pairs_parse (text) {
+    var pairs = {};
+    var text_segments = text.toString('binary').split('\x00');
+    for (var i = 0; i < text_segments.length - 1; i += 2) {
+        var key = text_segments[i];
+        var current = pairs[key];
         if (current === undefined) {
-            result[key] = data[i + 1];
+            pairs[key] = text_segments[i + 1];
         }
         else if (typeof current === 'object' && 
                  toNativeString.call(response) == '[object Array]') {
-            current.push(data[i + 1]);
+            current.push(text_segments[i + 1]);
         }
         else {
-            result[key] = [current, data[i + 1]];
+            pairs[key] = [current, text_segments[i + 1]];
         }
     }
-    return result;
+    return pairs;
 };
 
-CloudI.API.prototype.info_key_value_parse = function (message_info) {
-    var API = this;
-    return API._text_key_value_parse(message_info);
+// class method
+var text_pairs_new = function text_pairs_new (pairs) {
+    var text_segments = [];
+    for (var key in pairs) {
+        var values = pairs[key];
+        if (typeof values === 'string') {
+            text_segments.push(key);
+            text_segments.push(values);
+        }
+        else {
+            for (var value in values) {
+                text_segments.push(key);
+                text_segments.push(value);
+            }
+        }
+    }
+    if (text_segments.length == 0) {
+        return '\x00';
+    }
+    text_segments.push('');
+    return text_segments.join('\x00');
+};
+
+CloudI.API.info_key_value_parse = function info_key_value_parse (info) {
+    return text_pairs_parse(info);
+};
+
+CloudI.API.info_key_value_new = function info_key_value_new (pairs) {
+    return text_pairs_new(pairs);
 };
 
 CloudI.API.prototype._exception = function (err) {
