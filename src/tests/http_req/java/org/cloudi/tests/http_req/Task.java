@@ -26,8 +26,10 @@
 
 package org.cloudi.tests.http_req;
 
-import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import com.ericsson.otp.erlang.OtpErlangPid;
 import org.cloudi.API;
 
@@ -90,8 +92,13 @@ public class Task implements Runnable
             response =
                 "<http_test><error>no value specified</error></http_test>";
         }
+        HashMap<String, List<String>> http_response_headers =
+            new HashMap<String, List<String>>();
+        http_response_headers.put("content-type",
+                                  Arrays.asList("text/xml; charset=utf-8"));
+        byte[] response_info = API.info_key_value_new(http_response_headers);
         this.api.return_(request_type, name, pattern,
-                         ("").getBytes(), response.getBytes(),
+                         response_info, response.getBytes(),
                          timeout, trans_id, pid);
         return null;
     }

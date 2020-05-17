@@ -70,7 +70,7 @@ class Task(threading.Thread):
                   timeout, priority, trans_id, pid):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
-        http_qs = self.__api.info_key_value_parse(request)
+        http_qs = API.info_key_value_parse(request)
         value = http_qs.get(b'value', None)
         if value is None:
             response = """\
@@ -80,8 +80,11 @@ class Task(threading.Thread):
                 value = value[0]
             response = """\
 <http_test><value>%d</value></http_test>""" % (int(value),)
+        response_info = API.info_key_value_new({
+            b'content-type': b'text/xml; charset=utf-8',
+        })
         self.__api.return_(request_type, name, pattern,
-                           b'', response.encode('utf-8'),
+                           response_info, response.encode('utf-8'),
                            timeout, trans_id, pid)
 
 def _main():

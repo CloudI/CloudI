@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-05-16 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the info_key_value_parse function to be static in the
+      Python/Ruby CloudI API
+    * Add the info_key_value_new function to the
+      Python/Ruby CloudI API
+
 2020-05-15 Michael Truog   <mjtruog at protonmail dot com>
 
     * Isolate aspect function exception errors in the same way for

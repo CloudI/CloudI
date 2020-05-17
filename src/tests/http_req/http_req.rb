@@ -63,7 +63,7 @@ if __FILE__ == $PROGRAM_NAME
 
             def request(request_type, name, pattern, request_info, request,
                         timeout, priority, trans_id, pid)
-                http_qs = @api.info_key_value_parse(request)
+                http_qs = CloudI::API.info_key_value_parse(request)
                 value = http_qs.fetch('value', nil)
                 response = if value.nil?
                     '<http_test><error>no value specified</error></http_test>'
@@ -74,8 +74,11 @@ if __FILE__ == $PROGRAM_NAME
                     value = value.to_i
                     "<http_test><value>#{value}</value></http_test>"
                 end
+                response_info = CloudI::API.info_key_value_new({
+                    "content-type" => "text/xml; charset=utf-8"
+                })
                 @api.return_(request_type, name, pattern,
-                             '', response, timeout, trans_id, pid)
+                             response_info, response, timeout, trans_id, pid)
             end
         end
         begin

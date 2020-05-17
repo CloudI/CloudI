@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -64,7 +64,7 @@ class _Task(threading.Thread):
         # pylint: disable=too-many-arguments
         assert request == b'CONNECT'
         print('connect: %s' %
-              str(self.__api.info_key_value_parse(request_info)))
+              str(API.info_key_value_parse(request_info)))
         return 'got connect! yay!'
 
     def __disconnect(self, request_type, name, pattern, request_info, request,
@@ -73,7 +73,7 @@ class _Task(threading.Thread):
         # pylint: disable=too-many-arguments
         assert request == b'DISCONNECT'
         print('disconnect: %s' %
-              str(self.__api.info_key_value_parse(request_info)))
+              str(API.info_key_value_parse(request_info)))
         return ''
 
     def __request(self, request_type, name, pattern, request_info, request,

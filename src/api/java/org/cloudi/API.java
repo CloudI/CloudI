@@ -1567,30 +1567,30 @@ public class API
     }
 
     private static HashMap<String,
-                           ArrayList<String>> text_pairs_parse(final byte[] b)
+                           ArrayList<String>> text_pairs_parse(final byte[] t)
     {
-        final HashMap<String, ArrayList<String> > result =
-            new HashMap<String, ArrayList<String> >();
+        final HashMap<String, ArrayList<String>> pairs =
+            new HashMap<String, ArrayList<String>>();
         String key = null;
-        int binary_i = 0;
-        for (int binary_j = 0; binary_j < b.length; ++binary_j)
+        int text_i = 0;
+        for (int text_j = 0; text_j < t.length; ++text_j)
         {
-            if (b[binary_j] == 0)
+            if (t[text_j] == 0)
             {
                 if (key == null)
                 {
-                    key = new String(b, binary_i, binary_j - binary_i);
+                    key = new String(t, text_i, text_j - text_i);
                 }
                 else
                 {
-                    ArrayList<String> value = result.get(key);
-                    final String element = new String(b, binary_i,
-                                                      binary_j - binary_i);
+                    ArrayList<String> value = pairs.get(key);
+                    final String element = new String(t, text_i,
+                                                      text_j - text_i);
                     if (value == null)
                     {
                         value = new ArrayList<String>();
                         value.add(element);
-                        result.put(key, value);
+                        pairs.put(key, value);
                     }
                     else
                     {
@@ -1598,35 +1598,37 @@ public class API
                     }
                     key = null;
                 }
-                binary_i = binary_j + 1;
+                text_i = text_j + 1;
             }
         }
-        return result;
+        return pairs;
     }
 
-    private static byte[] text_pairs_new(final Map<String, List<String>> info)
+    private static byte[] text_pairs_new(final Map<String, List<String>> pairs)
     {
-        final ByteArrayOutputStream result = new ByteArrayOutputStream(1024);
-        for (Map.Entry<String, List<String>> pair : info.entrySet())
+        final ByteArrayOutputStream text = new ByteArrayOutputStream(1024);
+        for (Map.Entry<String, List<String>> pair : pairs.entrySet())
         {
             final byte[] key_bytes = pair.getKey().getBytes();
             for (String value : pair.getValue())
             {
                 final byte[] value_bytes = value.getBytes();
-                result.write(key_bytes, 0, key_bytes.length);
-                result.write(0);
-                result.write(value_bytes, 0, value_bytes.length);
-                result.write(0);
+                text.write(key_bytes, 0, key_bytes.length);
+                text.write(0);
+                text.write(value_bytes, 0, value_bytes.length);
+                text.write(0);
             }
         }
-        return result.toByteArray();
+        if (text.size() == 0)
+            text.write(0);
+        return text.toByteArray();
     }
 
     /**
-     * Decode request_info key/value data
+     * Decode service request info key/value data
      *
      * @param  info    encoded binary
-     * @return request_info key/value map
+     * @return info key/value map
      */
     public static HashMap<String,
                           ArrayList<String>> info_key_value_parse(byte[] info)
@@ -1635,14 +1637,14 @@ public class API
     }
 
     /**
-     * Encode request_info key/value data
+     * Encode service response info key/value data
      *
-     * @param  info    request_info key/value map
+     * @param  pairs   info key/value map
      * @return encoded binary
      */
-    public static byte[] info_key_value_new(Map<String, List<String>> info)
+    public static byte[] info_key_value_new(Map<String, List<String>> pairs)
     {
-        return API.text_pairs_new(info);
+        return API.text_pairs_new(pairs);
     }
 
     private void send(final OtpOutputStream command)

@@ -51,6 +51,7 @@ if sys.version_info[0] >= 3:
 else:
     TypeUnicode = unicode
     def _function_argc(function):
+        # pylint: disable=deprecated-method
         args, _, _, _ = inspect.getargspec(function)
         return len(args)
 
@@ -75,6 +76,7 @@ _MESSAGE_TERM = 11
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-public-methods
+# pylint: disable=useless-object-inheritance
 class API(object):
     """
     CloudI API object for use in a single thread of execution
@@ -446,7 +448,7 @@ class API(object):
             except ReturnAsyncException:
                 pass
             return
-        elif command == _MESSAGE_SEND_SYNC:
+        if command == _MESSAGE_SEND_SYNC:
             try:
                 response = function(API.SYNC, name, pattern,
                                     request_info, request,
@@ -489,8 +491,7 @@ class API(object):
             except ReturnSyncException:
                 pass
             return
-        else:
-            raise MessageDecodingException()
+        raise MessageDecodingException()
 
     def __handle_events(self, external, data, data_size, j, command=None):
         # pylint: disable=too-many-arguments
@@ -504,9 +505,8 @@ class API(object):
                 self.__terminate = True
                 if external:
                     return False
-                else:
-                    raise TerminateException(self.__timeout_terminate)
-            elif command == _MESSAGE_REINIT:
+                raise TerminateException(self.__timeout_terminate)
+            if command == _MESSAGE_REINIT:
                 i, j = j, j + 4 + 4 + 4 + 1
                 (self.__process_count,
                  self.__timeout_async, self.__timeout_sync,
@@ -519,7 +519,7 @@ class API(object):
                 raise MessageDecodingException()
             if j > data_size:
                 raise MessageDecodingException()
-            elif j == data_size:
+            if j == data_size:
                 return True
             i, j = j, j + 4
             command = struct.unpack(b'=I', data[i:j])[0]
@@ -532,9 +532,8 @@ class API(object):
         if self.__terminate:
             if external:
                 return False
-            else:
-                raise TerminateException(self.__timeout_terminate)
-        elif external and not self.__initialization_complete:
+            raise TerminateException(self.__timeout_terminate)
+        if external and not self.__initialization_complete:
             self.__send(term_to_binary(OtpErlangAtom(b'polling')))
             self.__initialization_complete = True
 
@@ -581,8 +580,7 @@ class API(object):
                         prefix.decode('utf-8'), timeout_initialize,
                         timeout_sync, timeout_async, timeout_terminate,
                         priority_default)
-            elif (command == _MESSAGE_SEND_ASYNC or
-                  command == _MESSAGE_SEND_SYNC):
+            if command in (_MESSAGE_SEND_ASYNC, _MESSAGE_SEND_SYNC):
                 i, j = j, j + 4
                 name_size = struct.unpack(b'=I', data[i:j])[0]
                 i, j = j, j + name_size + 4
@@ -619,8 +617,7 @@ class API(object):
                                 binary_to_term(pid))
                 if self.__terminate:
                     return False
-            elif (command == _MESSAGE_RECV_ASYNC or
-                  command == _MESSAGE_RETURN_SYNC):
+            elif command in (_MESSAGE_RECV_ASYNC, _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
                 response_info_size = struct.unpack(b'=I', data[i:j])[0]
                 i, j = j, j + response_info_size + 1 + 4
@@ -705,7 +702,7 @@ class API(object):
             if timeout_value is not None:
                 if timeout == 0:
                     return True
-                elif timeout > 0:
+                if timeout > 0:
                     timeout_value = timeout * 0.001
             fd_in, _, fd_except = select.select([self.__s], [], [self.__s],
                                                 timeout_value)
@@ -735,26 +732,51 @@ class API(object):
         self.__send(term_to_binary((OtpErlangAtom(b'shutdown'),
                                     reason)))
 
-    def __text_key_value_parse(self, text):
-        # pylint: disable=no-self-use
-        result = {}
+    @staticmethod
+    def __text_pairs_parse(text):
+        pairs = {}
         data = text.split(b'\0')
         for i in range(0, len(data) - 1, 2):
             key = data[i]
-            current = result.get(key, None)
+            current = pairs.get(key, None)
             if current is None:
-                result[key] = data[i + 1]
+                pairs[key] = data[i + 1]
             elif isinstance(current, list):
                 current.append(data[i + 1])
             else:
-                result[key] = [current, data[i + 1]]
-        return result
+                pairs[key] = [current, data[i + 1]]
+        return pairs
 
-    def info_key_value_parse(self, message_info):
+    @staticmethod
+    def __text_pairs_new(pairs):
+        text_segments = []
+        for key, values in pairs.items():
+            if isinstance(values, bytes):
+                text_segments.append(key)
+                text_segments.append(values)
+            else:
+                assert not isinstance(values, str)
+                for value in values:
+                    text_segments.append(key)
+                    text_segments.append(value)
+        if text_segments == []:
+            return b'\0'
+        text_segments.append(b'')
+        return b'\0'.join(text_segments)
+
+    @staticmethod
+    def info_key_value_parse(info):
         """
-        parses "text_pairs" in service request info
+        decode service request info key/value data
         """
-        return self.__text_key_value_parse(message_info)
+        return API.__text_pairs_parse(info)
+
+    @staticmethod
+    def info_key_value_new(pairs):
+        """
+        encode service response info key/value data
+        """
+        return API.__text_pairs_new(pairs)
 
     def __send(self, data):
         if self.__use_header:
@@ -849,6 +871,7 @@ if sys.stderr.__class__.__name__ != '_unbuffered':
     class _unbuffered(object):
         # pylint: disable=too-few-public-methods
         def __init__(self, stream):
+            # pylint: disable=import-outside-toplevel
             if sys.version_info[0] >= 3:
                 import io
                 self.__stream = io.TextIOWrapper(

@@ -49,11 +49,13 @@ if sys.version_info[0] >= 3:
         return len(args)
 else:
     def _function_argc(function):
+        # pylint: disable=deprecated-method
         args, _, _, _ = inspect.getargspec(function)
         return len(args)
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-public-methods
+# pylint: disable=useless-object-inheritance
 class API(object):
     """
     CloudI API object for use in a single thread of execution
@@ -67,7 +69,7 @@ class API(object):
         try:
             self.__api = libcloudi_py.cloudi_c(thread_index)
         except Exception as exception:
-            self.__rethrow_exception(exception)
+            API.__rethrow_exception(exception)
 
     @staticmethod
     def thread_count():
@@ -99,7 +101,7 @@ class API(object):
         try:
             return self.__api.subscribe_count(pattern)
         except Exception as exception:
-            self.__rethrow_exception(exception)
+            API.__rethrow_exception(exception)
 
     def unsubscribe(self, pattern):
         """
@@ -124,7 +126,7 @@ class API(object):
         try:
             return self.__api.send_async(name, request, **kwargs)
         except Exception as exception:
-            self.__rethrow_exception(exception)
+            API.__rethrow_exception(exception)
 
     def send_sync(self, name, request,
                   timeout=None, request_info=None, priority=None):
@@ -143,7 +145,7 @@ class API(object):
         try:
             return self.__api.send_sync(name, request, **kwargs)
         except Exception as exception:
-            self.__rethrow_exception(exception)
+            API.__rethrow_exception(exception)
 
     def mcast_async(self, name, request,
                     timeout=None, request_info=None, priority=None):
@@ -164,7 +166,7 @@ class API(object):
         try:
             trans_ids = self.__api.mcast_async(name, request, **kwargs)
         except Exception as exception:
-            self.__rethrow_exception(exception)
+            API.__rethrow_exception(exception)
         if trans_ids is None:
             return tuple()
         return tuple([
@@ -256,7 +258,7 @@ class API(object):
         try:
             return self.__api.recv_async(**kwargs)
         except Exception as exception:
-            self.__rethrow_exception(exception)
+            API.__rethrow_exception(exception)
 
     def process_index(self):
         """
@@ -322,7 +324,7 @@ class API(object):
         try:
             return self.__api.poll(timeout)
         except Exception as exception:
-            self.__rethrow_exception(exception)
+            API.__rethrow_exception(exception)
 
     def shutdown(self, reason=None):
         """
@@ -333,36 +335,61 @@ class API(object):
             kwargs['reason'] = reason
         return self.__api.shutdown(**kwargs)
 
-    def __rethrow_exception(self, exception):
+    @staticmethod
+    def __rethrow_exception(exception):
         if isinstance(exception, libcloudi_py.message_decoding_exception):
             raise MessageDecodingException(str(exception))
-        elif isinstance(exception, libcloudi_py.invalid_input_exception):
+        if isinstance(exception, libcloudi_py.invalid_input_exception):
             raise InvalidInputException(str(exception))
-        elif isinstance(exception, libcloudi_py.terminate_exception):
+        if isinstance(exception, libcloudi_py.terminate_exception):
             raise TerminateException(exception.timeout)
-        else:
-            raise exception
+        raise exception
 
-    def __text_key_value_parse(self, text):
-        # pylint: disable=no-self-use
-        result = {}
+    @staticmethod
+    def __text_pairs_parse(text):
+        pairs = {}
         data = text.split(b'\0')
         for i in range(0, len(data) - 1, 2):
             key = data[i]
-            current = result.get(key, None)
+            current = pairs.get(key, None)
             if current is None:
-                result[key] = data[i + 1]
+                pairs[key] = data[i + 1]
             elif isinstance(current, list):
                 current.append(data[i + 1])
             else:
-                result[key] = [current, data[i + 1]]
-        return result
+                pairs[key] = [current, data[i + 1]]
+        return pairs
 
-    def info_key_value_parse(self, message_info):
+    @staticmethod
+    def __text_pairs_new(pairs):
+        text_segments = []
+        for key, values in pairs.items():
+            if isinstance(values, bytes):
+                text_segments.append(key)
+                text_segments.append(values)
+            else:
+                assert not isinstance(values, str)
+                for value in values:
+                    text_segments.append(key)
+                    text_segments.append(value)
+        if text_segments == []:
+            return b'\0'
+        text_segments.append(b'')
+        return b'\0'.join(text_segments)
+
+    @staticmethod
+    def info_key_value_parse(info):
         """
-        parses "text_pairs" in service request info
+        decode service request info key/value data
         """
-        return self.__text_key_value_parse(message_info)
+        return API.__text_pairs_parse(info)
+
+    @staticmethod
+    def info_key_value_new(pairs):
+        """
+        encode service response info key/value data
+        """
+        return API.__text_pairs_new(pairs)
 
 class InvalidInputException(Exception):
     """
@@ -427,6 +454,7 @@ if sys.stderr.__class__.__name__ != '_unbuffered':
     class _unbuffered(object):
         # pylint: disable=too-few-public-methods
         def __init__(self, stream):
+            # pylint: disable=import-outside-toplevel
             if sys.version_info[0] >= 3:
                 import io
                 self.__stream = io.TextIOWrapper(

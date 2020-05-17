@@ -31,6 +31,7 @@ $stdout.sync = true
 $stderr.sync = true
 
 require 'erlang'
+require 'stringio'
 
 module CloudI
     class API
@@ -634,24 +635,47 @@ module CloudI
             send(Erlang.term_to_binary([:shutdown, reason]))
         end
 
-        def text_key_value_parse(text)
-            result = {}
-            data = text.split(NULL.chr)
-            (0...(data.length)).step(2).each do |i|
-                value = result[data[i]]
+        def self.text_pairs_parse(text)
+            pairs = {}
+            text_segments = text.split(NULL.chr)
+            (0...(text_segments.length)).step(2).each do |i|
+                value = pairs[text_segments[i]]
                 if value == nil
-                    result[data[i]] = data[i + 1]
+                    pairs[text_segments[i]] = text_segments[i + 1]
                 elsif value.kind_of?(Array)
-                    value << data[i + 1]
+                    value << text_segments[i + 1]
                 else
-                    result[data[i]] = [value, data[i + 1]]
+                    pairs[text_segments[i]] = [value, text_segments[i + 1]]
                 end
             end
-            return result
+            return pairs
         end
 
-        def info_key_value_parse(message_info)
-            return text_key_value_parse(message_info)
+        def self.text_pairs_new(pairs)
+            text_stream = StringIO.new
+            pairs.each do |key, values|
+                if values.kind_of?(Array)
+                    values.each do |value|
+                        text_stream.write "#{key}\0#{value}\0"
+                    end
+                else
+                    text_stream.write "#{key}\0#{values}\0"
+                end
+            end
+            text = text_stream.string
+            if text == ''
+                return "\0"
+            else
+                return text
+            end
+        end
+
+        def self.info_key_value_parse(info)
+            return text_pairs_parse(info)
+        end
+
+        def self.info_key_value_new(pairs)
+            return text_pairs_new(pairs)
         end
 
         def self.assert
@@ -662,7 +686,8 @@ module CloudI
         private :callback
         private :handle_events
         private :poll_request
-        private :text_key_value_parse
+        private_class_method :text_pairs_parse
+        private_class_method :text_pairs_new
         private
 
         def send(data)
