@@ -75,7 +75,7 @@ module Foreign.CloudI
     , infoKeyValueNew
     ) where
 
-import Prelude hiding (init,length)
+import Prelude hiding (init,length,(<>))
 import Data.Bits (shiftL,(.|.))
 import Data.Maybe (fromMaybe)
 import Data.Typeable (Typeable)
@@ -180,6 +180,10 @@ data CallbackResult s =
     | Finished (Instance.T s)
 
 type Result a = Either String a
+
+infixr 4 <>
+(<>) :: Monoid.Monoid m => m -> m -> m
+(<>) = Monoid.mappend
 
 -- | creates an instance of the CloudI API
 api :: Typeable s => Int -> s -> Maybe Bool ->
