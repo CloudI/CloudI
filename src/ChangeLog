@@ -5,6 +5,8 @@
 
     * Add the info_key_value_new function to the
       Haskell/OCaml CloudI API
+    * Fix the infoKeyValueParse value list order in the
+      Haskell CloudI API
 
 2020-05-16 Michael Truog   <mjtruog at protonmail dot com>
 

@@ -1213,21 +1213,24 @@ textPairsParse text =
                 Nothing ->
                     loop (Map.insert k [v] m) l'
                 Just v' ->
-                    loop (Map.insert k (v:v') m) l'
+                    loop (Map.insert k (v' ++ [v]) m) l'
     in
     loop Map.empty (Char8.split '\0' text)
 
 textPairsNew :: Map ByteString [ByteString] -> ByteString
 textPairsNew pairs =
-    let pair builder _ [] =
-            builder
-        pair builder k (v:l') =
-            pair (builder <>
-                Builder.byteString k <> Builder.char8 '\0' <>
-                Builder.byteString v <> Builder.char8 '\0') k l'
-    in
-    LazyByteString.toStrict $ Builder.toLazyByteString $
-        Map.foldlWithKey pair Monoid.mempty pairs
+    if Map.size pairs == 0 then
+        Char8.pack "\0"
+    else
+        let pair builder _ [] =
+                builder
+            pair builder k (v:l') =
+                pair (builder <>
+                    Builder.byteString k <> Builder.char8 '\0' <>
+                    Builder.byteString v <> Builder.char8 '\0') k l'
+        in
+        LazyByteString.toStrict $ Builder.toLazyByteString $
+            Map.foldlWithKey pair Monoid.mempty pairs
 
 -- | decode service request info key/value data
 infoKeyValueParse :: ByteString -> Map ByteString [ByteString]

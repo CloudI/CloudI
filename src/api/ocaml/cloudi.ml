@@ -1373,19 +1373,22 @@ let text_pairs_parse text : (string, string list) Hashtbl.t =
 
 let text_pairs_new pairs : string =
   let buffer = Buffer.create 1024 in
-  Hashtbl.iter (fun key values ->
-    let rec loop = function
-      | [] ->
-        ()
-      | h::t ->
-        Buffer.add_string buffer key ;
-        Buffer.add_char buffer '\x00' ;
-        Buffer.add_string buffer h ;
-        Buffer.add_char buffer '\x00' ;
-        loop t
-    in
-    loop values
-  ) pairs ;
+  if Hashtbl.length pairs = 0 then
+    Buffer.add_char buffer '\x00'
+  else
+    Hashtbl.iter (fun key values ->
+      let rec loop = function
+        | [] ->
+          ()
+        | h::t ->
+          Buffer.add_string buffer key ;
+          Buffer.add_char buffer '\x00' ;
+          Buffer.add_string buffer h ;
+          Buffer.add_char buffer '\x00' ;
+          loop t
+      in
+      loop values
+    ) pairs ;
   Buffer.contents buffer
 
 let info_key_value_parse info =
