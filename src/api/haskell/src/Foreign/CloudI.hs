@@ -72,6 +72,7 @@ module Foreign.CloudI
     , threadCreate
     , threadsWait
     , infoKeyValueParse
+    , infoKeyValueNew
     ) where
 
 import Prelude hiding (init,length)
@@ -1199,8 +1200,8 @@ threadsWait = do
             Concurrent.takeMVar done
             threadsWait
 
-textKeyValueParse :: ByteString -> Map ByteString [ByteString]
-textKeyValueParse text =
+textPairsParse :: ByteString -> Map ByteString [ByteString]
+textPairsParse text =
     let loop m [] = m
         loop m [v] =
             if v == ByteString.empty then
@@ -1216,7 +1217,23 @@ textKeyValueParse text =
     in
     loop Map.empty (Char8.split '\0' text)
 
--- | parses "text_pairs" in service request info
+textPairsNew :: Map ByteString [ByteString] -> ByteString
+textPairsNew pairs =
+    let pair builder _ [] =
+            builder
+        pair builder k (v:l') =
+            pair (builder <>
+                Builder.byteString k <> Builder.char8 '\0' <>
+                Builder.byteString v <> Builder.char8 '\0') k l'
+    in
+    LazyByteString.toStrict $ Builder.toLazyByteString $
+        Map.foldlWithKey pair Monoid.mempty pairs
+
+-- | decode service request info key/value data
 infoKeyValueParse :: ByteString -> Map ByteString [ByteString]
-infoKeyValueParse = textKeyValueParse
+infoKeyValueParse = textPairsParse
+
+-- | encode service response info key/value data
+infoKeyValueNew :: Map ByteString [ByteString] -> ByteString
+infoKeyValueNew = textPairsNew
 

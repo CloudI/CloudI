@@ -52,9 +52,13 @@ request_ requestType name pattern _ request timeout _ transId pid state api =
                 "<http_test><error>no value specified</error></http_test>"
             Just (i) ->
                 "<http_test><value>" ++ (show i) ++ "</value></http_test>"
+        httpResponseHeaders = Map.insert
+            (Char8.pack "content-type")
+            [Char8.pack "text/xml; charset=utf-8"] Map.empty
+        responseInfo = CloudI.infoKeyValueNew httpResponseHeaders
     in do
     CloudI.return_ api
-        requestType name pattern ByteString.empty response timeout transId pid
+        requestType name pattern responseInfo response timeout transId pid
     return $ CloudI.Null (state, api)
 
 task :: Int -> IO ()

@@ -7,7 +7,7 @@ license:             MIT
 license-file:        ../../LICENSE
 author:              Michael Truog
 maintainer:          mjtruog at protonmail dot com
-copyright:           2017-2019 Michael Truog
+copyright:           2017-2020 Michael Truog
 category:            Foreign
 stability:           provisional
 build-type:          Simple
@@ -15,9 +15,10 @@ cabal-version:       1.22
 tested-with:           GHC == 7.10.3
                      , GHC == 8.0.2
                      , GHC == 8.2.2
-                     , GHC == 8.4.3
+                     , GHC == 8.4.4
                      , GHC == 8.6.5
-                     , GHC == 8.8.1
+                     , GHC == 8.8.3
+                     , GHC == 8.10.1
 
 library
   hs-source-dirs:    src

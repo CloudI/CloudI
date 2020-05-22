@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -37,9 +37,11 @@ let request request_type name pattern _ request timeout _ trans_id pid _ api =
   | Some (value) ->
     let s = string_of_int value in
     "<http_test><value>" ^ s ^ "</value></http_test>"
-  in
+  and http_response_headers = Hashtbl.create 1 in
+  Hashtbl.add http_response_headers "content-type" ["text/xml; charset=utf-8"] ;
+  let response_info = Cloudi.info_key_value_new http_response_headers in
   match Cloudi.return_ api
-    request_type name pattern "" response timeout trans_id pid with
+    request_type name pattern response_info response timeout trans_id pid with
   | Error (error) ->
     Cloudi.NullError (error)
   | Ok _ ->

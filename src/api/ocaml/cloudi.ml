@@ -1349,28 +1349,48 @@ let shutdown
     | Ok _ ->
       Ok (())
 
-let text_key_value_parse text : (string, string list) Hashtbl.t =
-  let result = Hashtbl.create 32
+let text_pairs_parse text : (string, string list) Hashtbl.t =
+  let pairs = Hashtbl.create 32
   and data = str_split_on_char '\x00' text in
   let rec loop = function
   | [] ->
-    result
+    pairs
   | [""] ->
-    result
+    pairs
   | key::t0 ->
     match t0 with
     | [] ->
       raise Exit
     | value::t1 -> (
       try
-        let l = Hashtbl.find result key in
-        Hashtbl.replace result key (list_append l [value])
+        let l = Hashtbl.find pairs key in
+        Hashtbl.replace pairs key (list_append l [value])
       with Not_found ->
-        Hashtbl.add result key [value]) ;
+        Hashtbl.add pairs key [value]) ;
       loop t1
   in
   loop data
 
-let info_key_value_parse message_info =
-  text_key_value_parse message_info
+let text_pairs_new pairs : string =
+  let buffer = Buffer.create 1024 in
+  Hashtbl.iter (fun key values ->
+    let rec loop = function
+      | [] ->
+        ()
+      | h::t ->
+        Buffer.add_string buffer key ;
+        Buffer.add_char buffer '\x00' ;
+        Buffer.add_string buffer h ;
+        Buffer.add_char buffer '\x00' ;
+        loop t
+    in
+    loop values
+  ) pairs ;
+  Buffer.contents buffer
+
+let info_key_value_parse info =
+  text_pairs_parse info
+
+let info_key_value_new pairs =
+  text_pairs_new pairs
 

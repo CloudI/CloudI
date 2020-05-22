@@ -191,6 +191,9 @@ val poll : 's Instance.t -> int -> (bool, string) result
 (** shutdown the service successfully *)
 val shutdown : ?reason:string -> 's Instance.t -> (unit, string) result
 
-(** parses "text_pairs" in service request info *)
+(** decode service request info key/value data *)
 val info_key_value_parse : string -> (string, string list) Hashtbl.t
+
+(** encode service response info key/value data *)
+val info_key_value_new : (string, string list) Hashtbl.t -> string
 
