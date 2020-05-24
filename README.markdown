@@ -71,7 +71,7 @@ Optional (default="yes"):
 * `Java >= 1.5 JDK`
   * `(default-jdk/Ubuntu, (built-in)/OSX)`
   * Use the "--enable-java-support=no" configure flag to disable
-* `Javascript >= 0.8.0`
+* `JavaScript >= 0.12.18`
   * `(nodejs/Ubuntu)`
   * Use the "--enable-javascript-support=no" configure flag to disable
 * `Perl >= 5.10`

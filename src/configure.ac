@@ -661,7 +661,7 @@ AM_CONDITIONAL([PYTHON_C_SUPPORT], [test "x$python_c_support" = "xtrue"])
 if test "x$ruby_support" = "xtrue" ; then
 AC_ARG_VAR([RUBY],[ruby executable])
 AC_PATH_PROGS([RUBY],
-              [ruby1.9.4 ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
+              [ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
     [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
 fi

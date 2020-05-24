@@ -233,18 +233,9 @@ CloudI.API = function API (thread_index, callback) {
     else {
         throw new InvalidInputException();
     }
-    if (Erlang.nodejs_version_after('0.12.1',false)) {
-        API._s_in = new net.Socket({fd: (thread_index + 3),
-                                    readable: true,
-                                    writable: true});
-        API._s_out = API._s_in;
-    }
-    else {
-        API._s_in = new net.Socket({fd: (thread_index + 3),
-                                    readable: true,
-                                    writable: false});
-        API._s_out = fs.createWriteStream(null, {fd: (thread_index + 3)});
-    }
+    API._socket = new net.Socket({fd: (thread_index + 3),
+                                  readable: true,
+                                  writable: true});
     API._initialization_complete = false;
     API._terminate = false;
     API._terminate_callback = undefined;
@@ -255,7 +246,7 @@ CloudI.API = function API (thread_index, callback) {
     API._poll_callbacks_pending = [];
     API._poll_data = undefined;
     API._poll_data_size = undefined;
-    API._s_in.on('data', function(data) {
+    API._socket.on('data', function(data) {
         try {
             if (! API._use_header) {
                 API._poll_request(data);
@@ -299,7 +290,7 @@ CloudI.API = function API (thread_index, callback) {
             }
         }
     });
-    API._s_in.on('error', function(err) {
+    API._socket.on('error', function(err) {
         API._exception(err);
         API._poll_terminate();
     });
@@ -1012,7 +1003,7 @@ CloudI.API.prototype._poll_wait = function (f) {
 CloudI.API.prototype._poll_terminate = function () {
     var API = this;
     API._terminate = true;
-    API._s_in.destroy();
+    API._socket.destroy();
     if (API._terminate_callback !== undefined) {
         API._terminate_callback(false);
     }
@@ -1157,7 +1148,7 @@ CloudI.API.prototype._send = function (terms) {
         if (API._use_header) {
             data = Buffer.concat([packUint32big(data.length), data]);
         }
-        API._s_out.write(data, 'binary');
+        API._socket.write(data, 'binary');
     });
 };
 
