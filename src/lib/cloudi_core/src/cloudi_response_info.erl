@@ -58,7 +58,7 @@
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===New ResponseInfo key/value data.===
-%% ResponseInfo is meant to contain key/value pairs that is request
+%% ResponseInfo is meant to contain key/value pairs that is response
 %% meta-data.  Create the binary ResponseInfo data with any supported
 %% data structure.
 %% @end
@@ -73,7 +73,7 @@ key_value_new(ResponseInfo) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===New ResponseInfo key/value data.===
-%% ResponseInfo is meant to contain key/value pairs that is request
+%% ResponseInfo is meant to contain key/value pairs that is response
 %% meta-data.  Create the binary ResponseInfo data with any supported
 %% data structure.
 %% @end
@@ -94,7 +94,7 @@ key_value_new(ResponseInfo, Format) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Parse ResponseInfo key/value data.===
-%% ResponseInfo is meant to contain key/value pairs that is request
+%% ResponseInfo is meant to contain key/value pairs that is response
 %% meta-data.
 %% @end
 %%-------------------------------------------------------------------------
