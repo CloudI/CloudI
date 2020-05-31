@@ -142,17 +142,19 @@ params_encode(Params) ->
 uri_normalize(URI) ->
     try uri_string:parse(URI) of
         Values ->
-            Scheme = case maps:get(scheme, Values) of
+            {Scheme, Port} = case maps:get(scheme, Values) of
                 "http" ->
-                    http;
+                    {http,
+                     maps:get(port, Values, 80)};
                 "https" ->
-                    https;
+                    {https,
+                     maps:get(port, Values, 443)};
                 SchemeStr ->
-                    SchemeStr
+                    {SchemeStr,
+                     maps:get(port, Values)}
             end,
-            UserInfo = maps:get(userinfo, Values),
+            UserInfo = maps:get(userinfo, Values, ""),
             Host = maps:get(host, Values),
-            Port = maps:get(port, Values),
             Path = maps:get(path, Values),
             uri_normalize(Scheme, UserInfo,
                           cloudi_string:lowercase(Host), Port, [Path])

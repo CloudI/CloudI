@@ -29,7 +29,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -50,8 +50,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request_info).
@@ -243,6 +243,9 @@ value_to_binary(V) ->
 -include_lib("eunit/include/eunit.hrl").
 
 text_pairs_test() ->
+    <<>> = key_value_new([]),
+    <<>> = key_value_new([], text_pairs),
+    0 = maps:size(key_value_parse(<<>>)),
     KeyValues0 = [{atom_key, atom_value},
                   {atom_key, "list_value"},
                   {atom_key, <<"binary_value">>},
@@ -276,6 +279,8 @@ text_pairs_test() ->
     ok.
 
 binary_pairs_test() ->
+    <<0>> = key_value_new([], binary_pairs),
+    0 = maps:size(key_value_parse(<<0>>)),
     KeyValues0 = [{atom_key, atom_value},
                   {atom_key, "list_value"},
                   {atom_key, <<"binary_value">>},

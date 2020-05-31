@@ -3,12 +3,14 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI ResponseInfo Creation==
+%%% ==CloudI ResponseInfo Creation and Parsing==
+%%% The ResponseInfo format is consistent with the RequestInfo format,
+%%% defined in the cloudi_request_info module.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,23 +31,80 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_response_info).
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([lookup_content_type/0,
+-export([key_value_new/1,
+         key_value_new/2,
+         key_value_parse/1,
+         lookup_content_type/0,
          lookup_content_type/1,
          lookup_content_type/2]).
+
+-type format() :: cloudi_request_info:format().
+-export_type([format/0]).
 
 -include("cloudi_response_info.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===New ResponseInfo key/value data.===
+%% ResponseInfo is meant to contain key/value pairs that is request
+%% meta-data.  Create the binary ResponseInfo data with any supported
+%% data structure.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_new(ResponseInfo :: cloudi_key_value:key_values()) ->
+    Result :: binary().
+
+key_value_new(ResponseInfo) ->
+    key_value_new(ResponseInfo, text_pairs).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===New ResponseInfo key/value data.===
+%% ResponseInfo is meant to contain key/value pairs that is request
+%% meta-data.  Create the binary ResponseInfo data with any supported
+%% data structure.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_new(ResponseInfo :: cloudi_key_value:key_values(),
+                    Format :: format()) ->
+    Result :: binary().
+
+key_value_new(ResponseInfo, Format) ->
+    case cloudi_key_value:to_list(ResponseInfo) of
+        [] ->
+            <<0>>;
+        L ->
+            cloudi_request_info:key_value_new(L, Format)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse ResponseInfo key/value data.===
+%% ResponseInfo is meant to contain key/value pairs that is request
+%% meta-data.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_parse(ResponseInfo :: binary() |
+                                      cloudi_key_value:key_values()) ->
+    Result :: #{cloudi_key_value:key() := cloudi_key_value:value()}.
+
+key_value_parse(ResponseInfo) ->
+    cloudi_request_info:key_value_parse(ResponseInfo).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -103,3 +162,14 @@ lookup_content_type(Format, FileExtension) ->
 
 lookup_content_type_data() ->
     ?LOOKUP_CONTENT_TYPE_DATA.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+format_test() ->
+    <<0>> = key_value_new([]),
+    <<0>> = key_value_new([], text_pairs),
+    <<0>> = key_value_new([], binary_pairs),
+    ok.
+
+-endif.

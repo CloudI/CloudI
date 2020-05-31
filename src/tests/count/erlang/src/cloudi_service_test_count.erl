@@ -96,7 +96,8 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
     CountN = update(Count0),
     ?LOG_INFO("count == ~w erlang", [CountN]),
     Response = cloudi_string:format_to_binary("~w", [CountN]),
-    {reply, Response, State#state{count = CountN}};
+    ResponseInfo = cloudi_response_info:key_value_new(#{}),
+    {reply, ResponseInfo, Response, State#state{count = CountN}};
 cloudi_service_handle_request(RequestType, Name, Pattern,
                               RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
@@ -126,7 +127,7 @@ cloudi_service_handle_request(RequestType, Name, Pattern,
             end,
             ?LOG_INFO("count == ~w erlang (CRDT)", [CountN]),
             Response = cloudi_string:format_to_binary("~w", [CountN]),
-            ResponseInfo = cloudi_request_info:key_value_new(#{}),
+            ResponseInfo = cloudi_response_info:key_value_new(#{}),
             {reply, ResponseInfo, Response,
              State#state{crdt = CRDTN,
                          count = CountN}}

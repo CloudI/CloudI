@@ -79,7 +79,7 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
             <<"<http_test><error>no value specified</error></http_test>">>
     end,
     HttpResponseHeaders = #{"content-type" => "text/xml; charset=utf-8"},
-    ResponseInfo = cloudi_request_info:key_value_new(HttpResponseHeaders),
+    ResponseInfo = cloudi_response_info:key_value_new(HttpResponseHeaders),
     {reply, ResponseInfo, Response, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->

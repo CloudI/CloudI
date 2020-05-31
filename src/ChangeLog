@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-05-31 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the cloudi_response_info functions
+      key_value_new/1, key_value_new/2, key_value_parse/1 to return
+      empty key/value lookup data as <<0>>
+      (if the cloudi_response_info:key_value_new function is called
+       a null response will not be created,
+       though <<0>> is interpreted as the binary_pairs format)
+    * Fix cloudi_service_oauth1 URL parsing with Erlang/OTP 23
+
 2020-05-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change the C/C++ CloudI API to let NULL represent empty
