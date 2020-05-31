@@ -39,14 +39,15 @@ This reporter pushes data to [InfluxDB](https://influxdb.com/index.html).
 
 Available options:
 
+* __protocol__ - `http`, `https` or `udp` for operating with InfluxDB. `http` by default. If you use `udp`, check __udp_mtu__ below to avoid `{error,emsgsize}`.
 * __host__ - InfluxDB host. `127.0.0.1` by default.
-* __protocol__ - `http`, `https` or `udp` for operating with InfluxDB. `http` by default.
 * __port__ - InfluxDB port. `8086` by default.
 * __db__ - Database on InfluxDB for writing data. `exometer` by default.
 * __username__ - Username for authorization on InfluxDB.
 * __password__ - Password for authorization on InfluxDB.
 * __timestamping__ - Enable timestamping, `false` by default. To enable `timestamping` with the reporter you can use `true` or `{true, Precision}` where `Precision` is a unit taken from `[n,u,ms,s,m,h]`. The default unit is `u`.
-* __batch_window_size__ - set window size in ms for batch sending. This means the reporter will collect measurements within this interval and send all measurements in one packet. `0` by default.
+* __batch_window_size__ - Set window size in ms for batch sending. This means the reporter will collect measurements within this interval and send all measurements in one packet. `0` by default.
+* __udp_mtu__ - (Used only with __protocol__ == `udp`.) MTU of the network interface through which UDP packets flow to the __host__. `65536` by default (Linux loopback interface MTU). Run `ifconfig` on the machine where this app will run to find it out. Metrics will be sent out if their size (in the Line Protocol format) exceeds this value, even if the current __batch_window_size__ is not over yet. (They will also be sent out at the end of __batch_window_size__ as usual, regardless of their size.)
 
 The following options can be set globally in the reporter config or locally in a specific subscription. The latter case overwrites the first.
 

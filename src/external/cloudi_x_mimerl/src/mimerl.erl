@@ -5,7 +5,9 @@
 -module(mimerl).
 
 -export([extension/1]).
+-export([web_extension/1]).
 -export([filename/1]).
+-export([web/1]).
 -export([mime_to_exts/1]).
 
 %% @doc Transform an extension to a mimetype
@@ -19,6 +21,11 @@
 -spec extension(binary()) -> binary().
 extension(Ext) ->
     extensions(Ext).
+
+%% @doc transform a web extension to a mimetype
+web_extension(Ext) ->
+    web_extensions(Ext).
+
 
 %% @doc Return the mimetype for any file by looking at its extension.
 %% Example:
@@ -34,6 +41,11 @@ filename(Path) ->
 		<< $., Ext/binary >> -> extension(Ext)
 	end.
 
+web(Path) ->
+    case filename:extension(Path) of
+		<<>> -> <<"application/octet-stream">>;
+		<< $., Ext/binary >> -> web_extension(Ext)
+	end.
 
 %% @doc Return the list of extensions for a mimetype.
 %% Example:
@@ -454,6 +466,7 @@ extensions(<<"m2v">>) -> <<"video/mpeg">>;
 extensions(<<"m3a">>) -> <<"audio/mpeg">>;
 extensions(<<"m3u">>) -> <<"audio/x-mpegurl">>;
 extensions(<<"m3u8">>) -> <<"application/vnd.apple.mpegurl">>;
+extensions(<<"m4a">>) -> <<"audio/mp4">>;
 extensions(<<"m4u">>) -> <<"video/vnd.mpegurl">>;
 extensions(<<"m4v">>) -> <<"video/x-m4v">>;
 extensions(<<"ma">>) -> <<"application/mathematica">>;
@@ -594,7 +607,7 @@ extensions(<<"org">>) -> <<"application/vnd.lotus-organizer">>;
 extensions(<<"osf">>) -> <<"application/vnd.yamaha.openscoreformat">>;
 extensions(<<"osfpvg">>) -> <<"application/vnd.yamaha.openscoreformat.osfpvg+xml">>;
 extensions(<<"otc">>) -> <<"application/vnd.oasis.opendocument.chart-template">>;
-extensions(<<"otf">>) -> <<"application/x-font-otf">>;
+extensions(<<"otf">>) -> <<"font/otf">>;
 extensions(<<"otg">>) -> <<"application/vnd.oasis.opendocument.graphics-template">>;
 extensions(<<"oth">>) -> <<"application/vnd.oasis.opendocument.text-web">>;
 extensions(<<"oti">>) -> <<"application/vnd.oasis.opendocument.image-template">>;
@@ -847,8 +860,8 @@ extensions(<<"tra">>) -> <<"application/vnd.trueapp">>;
 extensions(<<"trm">>) -> <<"application/x-msterminal">>;
 extensions(<<"tsd">>) -> <<"application/timestamped-data">>;
 extensions(<<"tsv">>) -> <<"text/tab-separated-values">>;
-extensions(<<"ttc">>) -> <<"application/x-font-ttf">>;
-extensions(<<"ttf">>) -> <<"application/x-font-ttf">>;
+extensions(<<"ttc">>) -> <<"font/collection">>;
+extensions(<<"ttf">>) -> <<"font/ttf">>;
 extensions(<<"ttl">>) -> <<"text/turtle">>;
 extensions(<<"twd">>) -> <<"application/vnd.simtech-mindmapper">>;
 extensions(<<"twds">>) -> <<"application/vnd.simtech-mindmapper">>;
@@ -943,7 +956,8 @@ extensions(<<"wmlsc">>) -> <<"application/vnd.wap.wmlscriptc">>;
 extensions(<<"wmv">>) -> <<"video/x-ms-wmv">>;
 extensions(<<"wmx">>) -> <<"video/x-ms-wmx">>;
 extensions(<<"wmz">>) -> <<"application/x-ms-wmz">>;
-extensions(<<"woff">>) -> <<"application/font-woff">>;
+extensions(<<"woff">>) -> <<"font/woff">>;
+extensions(<<"woff2">>) -> <<"font/woff2">>;
 extensions(<<"wpd">>) -> <<"application/vnd.wordperfect">>;
 extensions(<<"wpl">>) -> <<"application/vnd.ms-wpl">>;
 extensions(<<"wps">>) -> <<"application/vnd.ms-works">>;
@@ -1052,7 +1066,6 @@ mimetypes(<<"application/emma+xml">>) -> [<<"emma">>];
 mimetypes(<<"application/epub+zip">>) -> [<<"epub">>];
 mimetypes(<<"application/exi">>) -> [<<"exi">>];
 mimetypes(<<"application/font-tdpfr">>) -> [<<"pfr">>];
-mimetypes(<<"application/font-woff">>) -> [<<"woff">>];
 mimetypes(<<"application/gml+xml">>) -> [<<"gml">>];
 mimetypes(<<"application/gpx+xml">>) -> [<<"gpx">>];
 mimetypes(<<"application/gxf">>) -> [<<"gxf">>];
@@ -1535,10 +1548,8 @@ mimetypes(<<"application/x-eva">>) -> [<<"eva">>];
 mimetypes(<<"application/x-font-bdf">>) -> [<<"bdf">>];
 mimetypes(<<"application/x-font-ghostscript">>) -> [<<"gsf">>];
 mimetypes(<<"application/x-font-linux-psf">>) -> [<<"psf">>];
-mimetypes(<<"application/x-font-otf">>) -> [<<"otf">>];
 mimetypes(<<"application/x-font-pcf">>) -> [<<"pcf">>];
 mimetypes(<<"application/x-font-snf">>) -> [<<"snf">>];
-mimetypes(<<"application/x-font-ttf">>) -> [<<"ttf">>,<<"ttc">>];
 mimetypes(<<"application/x-font-type1">>) -> [<<"pfa">>,<<"pfb">>,<<"pfm">>,<<"afm">>];
 mimetypes(<<"application/x-freearc">>) -> [<<"arc">>];
 mimetypes(<<"application/x-futuresplash">>) -> [<<"spl">>];
@@ -1622,7 +1633,7 @@ mimetypes(<<"application/zip">>) -> [<<"zip">>];
 mimetypes(<<"audio/adpcm">>) -> [<<"adp">>];
 mimetypes(<<"audio/basic">>) -> [<<"au">>,<<"snd">>];
 mimetypes(<<"audio/midi">>) -> [<<"mid">>,<<"midi">>,<<"kar">>,<<"rmi">>];
-mimetypes(<<"audio/mp4">>) -> [<<"mp4a">>];
+mimetypes(<<"audio/mp4">>) -> [<<"m4a">>,<<"mp4a">>];
 mimetypes(<<"audio/mpeg">>) -> [<<"mpga">>,<<"mp2">>,<<"mp2a">>,<<"mp3">>,<<"m2a">>,<<"m3a">>];
 mimetypes(<<"audio/ogg">>) -> [<<"oga">>,<<"ogg">>,<<"spx">>];
 mimetypes(<<"audio/s3m">>) -> [<<"s3m">>];
@@ -1657,6 +1668,11 @@ mimetypes(<<"chemical/x-cmdf">>) -> [<<"cmdf">>];
 mimetypes(<<"chemical/x-cml">>) -> [<<"cml">>];
 mimetypes(<<"chemical/x-csml">>) -> [<<"csml">>];
 mimetypes(<<"chemical/x-xyz">>) -> [<<"xyz">>];
+mimetypes(<<"font/collection">>) -> [<<"ttc">>];
+mimetypes(<<"font/otf">>) -> [<<"otf">>];
+mimetypes(<<"font/ttf">>) -> [<<"ttf">>];
+mimetypes(<<"font/woff">>) -> [<<"woff">>];
+mimetypes(<<"font/woff2">>) -> [<<"woff2">>];
 mimetypes(<<"image/bmp">>) -> [<<"bmp">>];
 mimetypes(<<"image/cgm">>) -> [<<"cgm">>];
 mimetypes(<<"image/g3fax">>) -> [<<"g3">>];
@@ -1798,3 +1814,21 @@ mimetypes(<<"video/x-smv">>) -> [<<"smv">>];
 mimetypes(<<"x-conference/x-cooltalk">>) -> [<<"ice">>];
 mimetypes(_) -> [<<>>].
 %% GENERATED
+
+web_extensions(<<"css">>) -> {<<"text">>, <<"css">>};
+web_extensions(<<"gif">>) -> {<<"image">>, <<"gif">>};
+web_extensions(<<"html">>) -> {<<"text">>, <<"html">>};
+web_extensions(<<"htm">>) -> {<<"text">>, <<"html">>};
+web_extensions(<<"ico">>) -> {<<"image">>, <<"x-icon">>};
+web_extensions(<<"jpeg">>) -> {<<"image">>, <<"jpeg">>};
+web_extensions(<<"jpg">>) -> {<<"image">>, <<"jpeg">>};
+web_extensions(<<"js">>) -> {<<"application">>, <<"javascript">>};
+web_extensions(<<"mp3">>) -> {<<"audio">>, <<"mpeg">>};
+web_extensions(<<"mp4">>) -> {<<"video">>, <<"mp4">>};
+web_extensions(<<"ogg">>) -> {<<"audio">>, <<"ogg">>};
+web_extensions(<<"ogv">>) -> {<<"video">>, <<"ogg">>};
+web_extensions(<<"png">>) -> {<<"image">>, <<"png">>};
+web_extensions(<<"svg">>) -> {<<"image">>, <<"svg+xml">>};
+web_extensions(<<"wav">>) -> {<<"audio">>, <<"x-wav">>};
+web_extensions(<<"webm">>) -> {<<"video">>, <<"webm">>};
+web_extensions(_) -> {<<"application">>, <<"octet-stream">>}.

@@ -1,12 +1,11 @@
 {application, idna, [
   {description, "A pure Erlang IDNA implementation"},
-  {vsn, "6.0.0"},
+  {vsn, "6.0.1"},
   {modules, []},
   {registered, []},
   {applications, [kernel, stdlib, unicode_util_compat]},
 
-  {maintainers, ["Benoit Chesneau"]},
-  {licenses, ["BSD"]},
+  {licenses, ["MIT"]},
   {links, [{"Github", "https://github.com/benoitc/erlang-idna"}]}
 
 ]}.

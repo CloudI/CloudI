@@ -273,7 +273,7 @@ make a request
 ### request/5 ###
 
 <pre><code>
-request(Method::term(), Hackney_url::<a href="#type-url">url()</a> | binary() | list(), Headers0::list(), Body::term(), Options0::list()) -&gt; {ok, integer(), list(), <a href="#type-client_ref">client_ref()</a>} | {ok, integer(), list()} | {ok, <a href="#type-client_ref">client_ref()</a>} | {error, term()}
+request(Method::term(), Hackney_url::<a href="#type-url">url()</a> | binary() | list(), Headers0::list(), Body::term(), Options0::list()) -&gt; {ok, integer(), list(), <a href="#type-client_ref">client_ref()</a>} | {ok, integer(), list(), binary()} | {ok, integer(), list()} | {ok, <a href="#type-client_ref">client_ref()</a>} | {error, term()}
 </code></pre>
 <br />
 
@@ -355,13 +355,14 @@ redirection even on POST
 transfers without checking the certificate
 
 * `{checkout_timeout, infinity | integer()}`: timeout used when
-checking out a socket from the pool, in milliseconds. Default is 8000
+checking out a socket from the pool, in milliseconds.
+By default is equal to connect_timeout
 
 * `{connect_timeout, infinity | integer()}`: timeout used when
 establishing a connection, in milliseconds. Default is 8000
 
 * `{recv_timeout, infinity | integer()}`: timeout used when
-receiving a connection. Default is 5000
+receiving data over a connection. Default is 5000
 
 
 <blockquote>Note: if the response is async, only
@@ -391,18 +392,21 @@ to connect to an HTTP tunnel.
 
 
 
-<bloquote>Note: instead of doing `hackney:request(Method, ...)` you can
+<blockquote>Note: instead of doing `hackney:request(Method, ...)` you can
 also do `hackney:Method(...)` if you prefer to use the REST
-syntax.</bloquote>
+syntax.</blockquote>
 
 Return:
 
 * `{ok, ResponseStatus, ResponseHeaders}`: On HEAD
 request if the response succeeded.
 
-* `{ok, ResponseStatus, ResponseHeaders, Ref}`: when
+* `{ok, ResponseStatus, ResponseHeaders, Ref}`: When
 the response succeeded. The request reference is used later to
 retrieve the body.
+
+* `{ok, ResponseStatus, ResponseHeaders, Body}`: When the
+option `with_body` is set to true and the response succeeded.
 
 * `{ok, Ref}` Return the request reference when you
 decide to stream the request. You can use the returned reference to
@@ -528,7 +532,7 @@ setopts(Ref::<a href="#type-client_ref">client_ref()</a>, Options::list()) -&gt;
 set client options.
 Options are:
 - `async`: to fetch the response asynchronously
-- `{async, once}`: to receive the response asynchronously once time.
+- `{async, once}`: to receive the response asynchronously one time.
 To receive the next message use the function `hackney:stream_next/1`.
 - `{stream_to, pid()}`: to set the pid where the messages of an
 asynchronous response will be sent.
@@ -587,7 +591,7 @@ and headers of the response. and return
 ### stop_async/1 ###
 
 <pre><code>
-stop_async(Ref::<a href="#type-client_ref">client_ref()</a>) -&gt; ok | {error, req_not_found} | {error, term()}
+stop_async(Ref::<a href="#type-client_ref">client_ref()</a>) -&gt; {ok, <a href="#type-client_ref">client_ref()</a>} | {error, req_not_found} | {error, term()}
 </code></pre>
 <br />
 

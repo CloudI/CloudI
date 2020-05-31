@@ -1,8 +1,12 @@
 {application, mimerl,
- [{description, "An OTP library"},
-  {vsn, "1.0.2"},
+ [{description, "Library to handle mimetypes"},
+  {vsn, "1.2.0"},
   {registered, []},
   {applications, [kernel,stdlib]},
   {env,[]},
-  {modules, []}
+  {modules, []},
+
+  {maintainers, ["Benoit Chesneau"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/benoitc/mimerl"}]}
  ]}.

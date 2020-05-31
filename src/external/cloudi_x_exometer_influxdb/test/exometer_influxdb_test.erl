@@ -3,8 +3,13 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("exometer_core/include/exometer.hrl").
 
+-include("state.hrl").
+
 -import(exometer_report_influxdb, [evaluate_subscription_options/5,
-                                   make_packet/5]).
+                                   exometer_info/2,
+                                   make_packet/5,
+                                   maybe_send/4,
+                                   name/1]).
 
 
 evaluate_subscription_options(MetricId, Options) ->
@@ -144,6 +149,45 @@ subscribtions_module_test() ->
     [application:stop(App) || App <- Apps],
     gen_udp:close(Socket),
     ok.
+
+send_udp_packet_when_it_hits_size_limit_test() ->
+    TestServerPort = 55555,
+    {ok, ServerSocket} = gen_udp:open(TestServerPort, [{active, false}]),
+    {ok, ClientSocket} = gen_udp:open(0),
+    State1 = #state{protocol = udp,
+                    connection = ClientSocket,
+                    host = "localhost",
+                    port = TestServerPort,
+                    batch_window_size = 99999,
+                    max_udp_size = 70,
+                    precision = s,
+                    timestamping = false},
+    {ok, State2} = maybe_send(flights, [{type, departure}], #{count => 3}, State1), % fits into packet - send
+    {ok, State3} = maybe_send(flights, [{type, arrival}],   #{count => 2}, State2), % fits into packet - send
+    {ok, State4} = maybe_send(flights, [{type, arrival}],   #{count => 1}, State3), % doesn't fit - save for later
+    {ok, State5} = maybe_send(flights, [{type, arrival}],   #{count => 1}, State4), % doesn't fit - save for later
+    {ok, {_Address, _Port, Packet1}} = gen_udp:recv(ServerSocket, 0, 9999),
+
+    ?assertEqual("flights,type=departure count=3i \n"
+                 "flights,type=arrival count=2i \n", Packet1),
+
+    ?assertEqual(<<"flights,type=arrival count=1i \n"
+                   "flights,type=arrival count=1i \n">>, State5#state.collected_metrics),
+
+    % Send the remaining metrics when the current batch window ends
+    {ok, State6} = exometer_info({exometer_influxdb, send}, State5),
+    {ok, {_Address, _Port, Packet2}} = gen_udp:recv(ServerSocket, 0, 9999),
+
+    ?assertEqual("flights,type=arrival count=1i \n"
+                 "flights,type=arrival count=1i \n", Packet2),
+
+    ?assertEqual(<<>>, State6#state.collected_metrics).
+
+name_test() ->
+    ?assertEqual(<<"things">>,   name(things)),
+    ?assertEqual(<<"things">>,   name(<<"things">>)),
+    ?assertEqual(<<"foo_bar">>,  name([foo, bar])),
+    ?assertEqual(<<"97_98_99">>, name("abc")).
 
 make_bin_packet(Name, Tags, Fields, Timestamping, Precision) ->
     binary:list_to_bin(make_packet(Name, Tags, Fields, Timestamping, Precision)).

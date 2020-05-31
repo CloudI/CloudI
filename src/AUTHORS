@@ -28,9 +28,9 @@ exometer             Basho Technologies
 exometer_core        Basho Technologies
 exometer_influxdb    Travelping GmbH
 folsom               BMC TrueSight Pulse (formerly Boundary)
-hackney              Benoît Chesneau <benoitc@e-engura.org>
+hackney              Benoît Chesneau <bchesneau@pm.me>
 hut                  Tino Breddin
-idna                 Benoît Chesneau <benoitc@e-engura.org>
+idna                 Benoît Chesneau <bchesneau@pm.me>
 jinterface           Ericsson's OTP Team
 jsonrpclib           Josh Marshall, Thomas Calmant
 jsx                  Alisdair Sullivan <alisdairsullivan@yahoo.ca>

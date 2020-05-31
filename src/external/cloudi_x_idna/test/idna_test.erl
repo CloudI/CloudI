@@ -201,6 +201,8 @@ valid_contexto_test() ->
   false = idna_context:valid_contexto(Latin_l ++ Latin_middle_dot, 0),
   false = idna_context:valid_contexto(Latin_middle_dot, 0),
   false = idna_context:valid_contexto(Latin_l ++ Latin_middle_dot ++ Latin, 1),
+  true = idna_context:valid_contexto("ru" ++ Latin_l ++ Latin_middle_dot ++  Latin_l ++ "z", 3),
+  false = idna_context:valid_contexto("ru" ++ Latin ++ Latin_middle_dot ++  Latin_l ++ "z", 3),
 
   % RFC 5892 Rule A.4 (Greek Lower Numeral Sign)
   Glns = [16#0375],

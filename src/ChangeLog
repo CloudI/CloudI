@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-05-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update exometer_influxdb
+    * Update hackney to 1.16.0
+
 2020-05-24 Michael Truog   <mjtruog at protonmail dot com>
 
     * Set minimum node.js requirement as 0.12.18

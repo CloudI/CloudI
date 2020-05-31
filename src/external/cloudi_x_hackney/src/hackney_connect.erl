@@ -10,18 +10,15 @@
          maybe_connect/1,
          reconnect/4,
          set_sockopts/2,
-         ssl_opts/2,
          check_or_close/1,
          peername/1,
          sockname/1,
          close/1,
          is_pool/1]).
 
--export([partial_chain/1]).
-
 -include("hackney.hrl").
 -include_lib("hackney_internal.hrl").
--include_lib("public_key/include/OTP-PUB-KEY.hrl").
+
 
 connect(Transport, Host, Port) ->
   connect(Transport, Host, Port, []).
@@ -33,13 +30,15 @@ connect(Transport, Host, Port, Options, Dynamic) when is_binary(Host) ->
   connect(Transport, binary_to_list(Host), Port, Options, Dynamic);
 connect(Transport, Host, Port, Options, Dynamic) ->
   ?report_debug("connect", [{transport, Transport},
-    {host, Host},
-    {port, Port},
-    {dynamic, Dynamic}]),
+                            {host, Host},
+                            {port, Port},
+                            {dynamic, Dynamic}]),
 
   Host2 = case Transport of
-            hackney_local_tcp -> Host;
-            _ ->  idna:utf8_to_ascii(Host)
+            hackney_local_tcp ->
+              Host;
+            _ ->
+              hackney_url:idnconvert_hostname(Host)
           end,
 
   case create_connection(Transport, Host2, Port, Options, Dynamic) of
@@ -77,22 +76,22 @@ create_connection(Transport, Host, Port, Options, Dynamic)
 
   %% initial state
   InitialState = #client{mod_metrics=Engine,
-    transport=Transport,
-    host=Host,
-    port=Port,
-    netloc=Netloc,
-    options=Options,
-    dynamic=Dynamic,
-    recv_timeout=Timeout,
-    follow_redirect=FollowRedirect,
-    max_redirect=MaxRedirect,
-    retries=MaxRedirect,
-    force_redirect=ForceRedirect,
-    async=Async,
-    with_body=WithBody,
-    max_body=MaxBody,
-    stream_to=StreamTo,
-    buffer = <<>>},
+                         transport=Transport,
+                         host=Host,
+                         port=Port,
+                         netloc=Netloc,
+                         options=Options,
+                         dynamic=Dynamic,
+                         recv_timeout=Timeout,
+                         follow_redirect=FollowRedirect,
+                         max_redirect=MaxRedirect,
+                         retries=MaxRedirect,
+                         force_redirect=ForceRedirect,
+                         async=Async,
+                         with_body=WithBody,
+                         max_body=MaxBody,
+                         stream_to=StreamTo,
+                         buffer = <<>>},
 
   %% if we use a pool then checkout the connection from the pool, else
   %% connect the socket to the remote
@@ -105,15 +104,15 @@ create_connection(Transport, Host, Port, Options, Dynamic)
 maybe_connect(#client{state=closed, redirect=nil}=Client) ->
   %% the socket has been closed, reconnect it.
   #client{transport=Transport,
-    host=Host,
-    port=Port} = Client,
+          host=Host,
+          port=Port} = Client,
   reconnect(Host, Port, Transport, Client);
 maybe_connect(#client{state=closed, redirect=Redirect}=Client) ->
   %% connection closed after a redirection, reinit the options and
   %% reconnect it.
   {Transport, Host, Port, Options} = Redirect,
   Client1 = Client#client{options=Options,
-    redirect=nil},
+                          redirect=nil},
   reconnect(Host, Port, Transport, Client1);
 maybe_connect(#client{redirect=nil}=Client) ->
   {ok, check_mod_metrics(Client)};
@@ -121,7 +120,7 @@ maybe_connect(#client{redirect=Redirect}=Client) ->
   %% reinit the options and reconnect the client
   {Transport, Host, Port, Options} = Redirect,
   reconnect(Host, Port, Transport, Client#client{options=Options,
-    redirect=nil}).
+                                                 redirect=nil}).
 
 check_or_close(#client{socket=nil}=Client) ->
   Client;
@@ -183,9 +182,7 @@ is_pool(#client{options=Opts}) ->
   case proplists:get_value(pool, Opts) of
     false ->
       false;
-    undefined when UseDefaultPool =:= true ->
-      true;
-    undefined ->
+    undefined when UseDefaultPool =:= false ->
       false;
     _ ->
       true
@@ -220,9 +217,9 @@ socket_from_pool(Host, Port, Transport, Client0) ->
       _ = metrics:update_meter(Metrics, [hackney_pool, PoolName, take_rate], 1),
       _ = metrics:increment_counter(Metrics, [hackney_pool, Host, reuse_connection]),
       Client1 = Client#client{socket=Skt,
-        socket_ref=Ref,
-        pool_handler=PoolHandler,
-        state = connected},
+                              socket_ref=Ref,
+                              pool_handler=PoolHandler,
+                              state = connected},
 
       hackney_manager:update_state(Client1),
       {ok, Client1};
@@ -233,6 +230,9 @@ socket_from_pool(Host, Port, Transport, Client0) ->
 
       do_connect(Host, Port, Transport, Client1, pool);
     Error ->
+      ?report_trace("connect error", []),
+      _ = metrics:increment_counter(Metrics, [hackney, Host, connect_error]),
+
       Error
   end.
 
@@ -240,9 +240,12 @@ do_connect(Host, Port, Transport, Client) ->
   do_connect(Host, Port, Transport, Client, direct).
 
 
+connect_timeout(#client{options=Opts}) ->
+  proplists:get_value(connect_timeout, Opts, 8000).
+
 
 do_connect(Host, Port, Transport, #client{mod_metrics=Metrics,
-  options=Opts}=Client0, Type) ->
+                                          options=ClientOptions}=Client0, Type) ->
   Begin = os:timestamp(),
   {_RequestRef, Client} = case Type of
                             pool ->
@@ -251,29 +254,9 @@ do_connect(Host, Port, Transport, #client{mod_metrics=Metrics,
                               hackney_manager:new_request(Client0)
                           end,
 
-  ConnectOpts0 = proplists:get_value(connect_options, Opts, []),
-  ConnectTimeout = proplists:get_value(connect_timeout, Opts, 8000),
+  ConnectTimeout = connect_timeout(Client),
+  ConnectOpts = hackney_connection:connect_options(Transport, Host, ClientOptions),
 
-  %% handle ipv6
-  ConnectOpts1 = case lists:member(inet, ConnectOpts0) orelse
-    lists:member(inet6, ConnectOpts0) of
-                   true ->
-                     ConnectOpts0;
-                   false ->
-                     case hackney_util:is_ipv6(Host) of
-                       true ->
-                         [inet6 | ConnectOpts0];
-                       false ->
-                         ConnectOpts0
-                     end
-                 end,
-
-  ConnectOpts = case Transport of
-                  hackney_ssl ->
-                    ConnectOpts1 ++ ssl_opts(Host, Opts);
-                  _ ->
-                    ConnectOpts1
-                end,
   case Transport:connect(Host, Port, ConnectOpts, ConnectTimeout) of
     {ok, Skt} ->
       ?report_trace("new connection", []),
@@ -281,7 +264,7 @@ do_connect(Host, Port, Transport, #client{mod_metrics=Metrics,
       _ = metrics:update_histogram(Metrics, [hackney, Host, connect_time], ConnectTime),
       _ = metrics:increment_counter(Metrics, [hackney_pool, Host, new_connection]),
       Client1 = Client#client{socket=Skt,
-        state = connected},
+                              state = connected},
       hackney_manager:update_state(Client1),
       {ok, Client1};
     {error, timeout} ->
@@ -311,65 +294,3 @@ check_mod_metrics(#client{mod_metrics=Mod}=State)
 check_mod_metrics(State) ->
   State#client{mod_metrics=hackney_metrics:get_engine()}.
 
-ssl_opts(Host, Options) ->
-  case proplists:get_value(ssl_options, Options) of
-    undefined ->
-      ssl_opts_1(Host, Options);
-    [] ->
-      ssl_opts_1(Host, Options);
-    SSLOpts ->
-      SSLOpts
-  end.
-
-ssl_opts_1(Host, Options) ->
-  Insecure =  proplists:get_value(insecure, Options, false),
-  CACerts = certifi:cacerts(),
-  case Insecure of
-    true ->
-      [{verify, verify_none}];
-    false ->
-      VerifyFun = {
-        fun ssl_verify_hostname:verify_fun/3,
-        [{check_hostname, Host}]
-       },
-      [{verify, verify_peer},
-       {depth, 99},
-       {cacerts, CACerts},
-       {partial_chain, fun partial_chain/1},
-       {verify_fun, VerifyFun}]
-  end.
-
-%% code from rebar3 undert BSD license
-partial_chain(Certs) ->
-  Certs1 = lists:reverse([{Cert, public_key:pkix_decode_cert(Cert, otp)} ||
-    Cert <- Certs]),
-  CACerts = certifi:cacerts(),
-  CACerts1 = [public_key:pkix_decode_cert(Cert, otp) || Cert <- CACerts],
-
-  case find(fun({_, Cert}) ->
-    check_cert(CACerts1, Cert)
-            end, Certs1) of
-    {ok, Trusted} ->
-      {trusted_ca, element(1, Trusted)};
-    _ ->
-      unknown_ca
-  end.
-
-extract_public_key_info(Cert) ->
-  ((Cert#'OTPCertificate'.tbsCertificate)#'OTPTBSCertificate'.subjectPublicKeyInfo).
-
-check_cert(CACerts, Cert) ->
-  lists:any(fun(CACert) ->
-    extract_public_key_info(CACert) == extract_public_key_info(Cert)
-            end, CACerts).
-
--spec find(fun(), list()) -> {ok, term()} | error.
-find(Fun, [Head|Tail]) when is_function(Fun) ->
-  case Fun(Head) of
-    true ->
-      {ok, Head};
-    false ->
-      find(Fun, Tail)
-  end;
-find(_Fun, []) ->
-  error.

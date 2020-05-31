@@ -51,8 +51,8 @@ Erlang `certifi`
 `SSL Certificates for Erlang`
 
 - `https://github.com/certifi/erlang-certifi`
-- `commit 4ad4051fd3f1d6ae8f9c4fe5eb3fb4f1cd66363e (2.4.2)`
-- `Mon Dec  3 20:45:23 UTC 2018`
+- `commit 549670ddfe96727a703a295c75c423d8a2c50718 (2.5.2)`
+- `Sat May 30 23:57:14 UTC 2020`
 - `BSD`
 
 Erlang `cowboy1`
@@ -123,8 +123,8 @@ Erlang `exometer_influxdb`
 `Exometer InfluxDB reporter`
 
 - `https://github.com/travelping/exometer_influxdb`
-- `commit df48129d1e47dd263eb28e7d2e453f1b9d66bb97 (0.6.0)`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit b27104776fdab5d19bb376f683c8d156c84e5a5a`
+- `Sat May 30 23:57:14 UTC 2020`
 - `Mozilla Public License 2.0`
 
 Erlang `folsom`
@@ -141,8 +141,8 @@ Erlang `hackney`
 `HTTP client library in Erlang`
 
 - `https://github.com/benoitc/hackney`
-- `commit a3a01695c6b6ef0f75c2b2d65ecb652e4768094d (1.14.3)`
-- `Mon Dec  3 20:45:23 UTC 2018`
+- `commit f3e9292db22c807e73f57a8422402d6b423ddf5f (1.16.0)`
+- `Sat May 30 23:57:14 UTC 2020`
 - `Apache License 2.0`
 
 Erlang `hut`
@@ -159,8 +159,8 @@ Erlang `idna`
 `A pure Erlang IDNA implementation`
 
 - `https://github.com/benoitc/erlang-idna`
-- `commit 6cff72747821110169ecfac871b0c69e5064afff (6.0.0)`
-- `Mon Dec  3 20:45:23 UTC 2018`
+- `commit cda8d41eec752469053db6155ca8afeeeb2b5387 (6.0.1)`
+- `Sat May 30 23:57:14 UTC 2020`
 - `BSD`
 
 Erlang `jsx`
@@ -186,8 +186,8 @@ Erlang `mimerl`
 `library to handle mimetypes`
 
 - `https://github.com/benoitc/mimerl`
-- `commit 678aba028a690da6822c87410d475841c048b6bf (1.0.2)`
-- `Mon Dec  3 20:45:23 UTC 2018`
+- `commit 5a1b22a8fada5b3b40438da00a6923cb87a42bbc (1.2.0)`
+- `Sat May 30 23:57:14 UTC 2020`
 - `MIT`
 
 Erlang `msgpack`
@@ -267,17 +267,17 @@ Erlang `ssl_verify_fun`
 `SSL verification for Erlang`
 
 - `https://github.com/deadtrickster/ssl_verify_fun.erl`
-- `commit c5718226b0b9f3d1a38ef6ca3c3b4c75f53dda92 (1.1.4)`
-- `Mon Dec  3 20:45:23 UTC 2018`
+- `commit 87550a18b3f5c8f9cd062bc41ba5ee719f21dd0a (1.1.6)`
+- `Sat May 30 23:57:14 UTC 2020`
 - `MIT`
 
 Erlang `unicode_util_compat`
 -----------------------
-`unicode_util compatibility library for Erlang < 20`
+`unicode_util compatibility library for Erlang < 21`
 
 - `https://github.com/benoitc/unicode_util_compat`
-- `commit 6229b0c96785fb1800c8fa14641eb400c493c63f (0.4.1)`
-- `Mon Dec  3 20:45:23 UTC 2018`
+- `commit 6b43143b6fddaffc6cfcc3dc02f0ba136cf047f2 (0.5.0)`
+- `Sat May 30 23:57:14 UTC 2020`
 - `Apache License 2.0`
 
 Haskell `binary`

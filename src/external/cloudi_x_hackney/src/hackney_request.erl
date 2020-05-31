@@ -27,8 +27,12 @@
 
 -define(CHUNK_SIZE, 65536000). %% 64 MB is the default
 
-perform(Client0, {Method0, Path, Headers0, Body0}) ->
+perform(Client0, {Method0, Path0, Headers0, Body0}) ->
   Method = hackney_bstr:to_upper(hackney_bstr:to_binary(Method0)),
+  Path = case Path0 of
+           <<"">> -> <<"/">>;
+           _ -> Path0
+         end,
 
   #client{options=Options} = Client0,
 
@@ -72,6 +76,8 @@ perform(Client0, {Method0, Path, Headers0, Body0}) ->
                                               handle_multipart_body(Headers2, ReqType0,
                                                                     Size, Boundary, Client0);
                                             <<>> when Method =:= <<"POST">> orelse Method =:= <<"PUT">> ->
+                                              handle_body(Headers2, ReqType0, Body0, Client0);
+                                            [] when Method =:= <<"POST">> orelse Method =:= <<"PUT">> ->
                                               handle_body(Headers2, ReqType0, Body0, Client0);
                                             <<>> ->
                                               {Headers2, ReqType0, Body0, Client0};
@@ -222,7 +228,11 @@ stream_multipart({mp_mixed_eof, MixedBoundary}, Client) ->
   stream_body(<< Eof/binary, "\r\n" >>, Client);
 stream_multipart({file, Path}, Client) ->
   stream_multipart({file, Path, []}, Client);
-stream_multipart({file, Path, _ExtraHeaders}=File,
+stream_multipart({file, Path, <<Name/binary>>}, Client) ->
+  stream_multipart({file, Path, Name, []}, Client);
+stream_multipart({file, Path, ExtraHeaders}, Client) ->
+  stream_multipart({file, Path, <<"file">>, ExtraHeaders}, Client);
+stream_multipart({file, Path, _Name, _ExtraHeaders}=File,
   #client{mp_boundary=Boundary}=Client) ->
   {MpHeader, _} = hackney_multipart:mp_file_header(File, Boundary),
   case stream_body(MpHeader, Client) of

@@ -1,7 +1,7 @@
 {application, ssl_verify_fun,
  [
-  {description, ""},
-  {vsn, "1.1.4"},
+  {description, "SSL verification library"},
+  {vsn, "1.1.6"},
   {modules, []},
   {registered, []},
   {applications, [

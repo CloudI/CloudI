@@ -95,7 +95,7 @@ cancel_request(Ref) ->
 %% @doc set client options.
 %% Options are:
 %% - `async': to fetch the response asynchronously
-%% - `{async, once}': to receive the response asynchronously once time.
+%% - `{async, once}': to receive the response asynchronously one time.
 %% To receive the next message use the function `hackney:stream_next/1'.
 %% - `{stream_to, pid()}': to set the pid where the messages of an
 %% asynchronous response will be sent.
@@ -240,11 +240,12 @@ request(Method, URL, Headers, Body) ->
 %%          <li>`insecure': to perform "insecure" SSL connections and
 %%          transfers without checking the certificate</li>
 %%          <li>`{checkout_timeout, infinity | integer()}': timeout used when
-%%          checking out a socket from the pool, in milliseconds. Default is 8000</li>
+%%          checking out a socket from the pool, in milliseconds.
+%%          By default is equal to connect_timeout</li>
 %%          <li>`{connect_timeout, infinity | integer()}': timeout used when
 %%          establishing a connection, in milliseconds. Default is 8000</li>
 %%          <li>`{recv_timeout, infinity | integer()}': timeout used when
-%%          receiving a connection. Default is 5000</li>
+%%          receiving data over a connection. Default is 5000</li>
 %%      </ul>
 %%
 %%      <blockquote>Note: if the response is async, only
@@ -271,17 +272,19 @@ request(Method, URL, Headers, Body) ->
 %%      </li>
 %%  </ul>
 %%
-%%  <bloquote>Note: instead of doing `hackney:request(Method, ...)' you can
+%%  <blockquote>Note: instead of doing `hackney:request(Method, ...)' you can
 %%  also do `hackney:Method(...)' if you prefer to use the REST
-%%  syntax.</bloquote>
+%%  syntax.</blockquote>
 %%
 %%  Return:
 %%  <ul>
 %%  <li><code>{ok, ResponseStatus, ResponseHeaders}</code>: On HEAD
 %%  request if the response succeeded.</li>
-%%  <li><code>{ok, ResponseStatus, ResponseHeaders, Ref}</code>: when
+%%  <li><code>{ok, ResponseStatus, ResponseHeaders, Ref}</code>: When
 %%  the response succeeded. The request reference is used later to
 %%  retrieve the body.</li>
+%%  <li><code>{ok, ResponseStatus, ResponseHeaders, Body}</code>: When the
+%%  option `with_body' is set to true and the response succeeded.</li>
 %%  <li><code>{ok, Ref}</code> Return the request reference when you
 %%  decide to stream the request. You can use the returned reference to
 %%  stream the request body and continue to handle the response.</li>
@@ -293,6 +296,7 @@ request(Method, URL, Headers, Body) ->
 %%  </ul>
 -spec request(term(), url() | binary() | list(), list(), term(), list())
     -> {ok, integer(), list(), client_ref()}
+  | {ok, integer(), list(), binary()}
   | {ok, integer(), list()}
   | {ok, client_ref()}
   | {error, term()}.
@@ -553,7 +557,7 @@ resume_stream(Ref) ->
                                                end).
 
 %% @doc stop to receive asynchronously.
--spec stop_async(client_ref()) -> ok | {error, req_not_found} | {error, term()}.
+-spec stop_async(client_ref()) -> {ok, client_ref()} | {error, req_not_found} | {error, term()}.
 stop_async(Ref) ->
   hackney_manager:stop_async_response(Ref).
 
@@ -880,13 +884,12 @@ absolute_url(RelativeUrl, #client{transport=T, host=Host, port=Port,
                   _       -> <<Path/binary, "/", RelativeUrl/binary>>
                 end
             end,
-  Parsed = hackney_url:normalize(#hackney_url{scheme=Scheme,
-                                              host=Host,
-                                              port=Port,
-                                              netloc=Netloc,
-                                              path=NewPath}),
-  hackney_url:unparse_url(Parsed).
 
+  hackney_url:unparse_url(#hackney_url{scheme=Scheme,
+                                       host=Host,
+                                       port=Port,
+                                       netloc=Netloc,
+                                       path=NewPath}).
 
 %% handle send response
 reply({ok, Data, NState}, _State) ->

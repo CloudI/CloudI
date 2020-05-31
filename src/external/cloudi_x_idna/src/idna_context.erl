@@ -79,7 +79,7 @@ valid_contexto(CP, Label, Pos) ->
       % MIDDLE DOT
       if
         (Pos > 0) andalso (Pos < (Len -1)) ->
-          case lists:sublist(Label, Pos, Pos +2) of
+          case lists:sublist(Label, Pos, 3) of
             [16#006C, _, 16#006C] -> true;
             _ -> false
           end;

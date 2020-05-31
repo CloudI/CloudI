@@ -1,5 +1,12 @@
 -define(RECV_TIMEOUT, 5000).
 
+
+-record(connection, {transport,
+                     host,
+                     port,
+                     id,
+                     tunnel = false}).
+
 -record(client,  {
   start_time,
   mod_metrics = nil,
@@ -48,3 +55,5 @@
 
 
 -define(CONFIG, hackney_config).
+
+-define(CONNECTIONS, hackney_connections).

@@ -17,7 +17,9 @@
 
 -ifdef(TEST).
 -export([evaluate_subscription_options/5,
-         make_packet/5]).
+         make_packet/5,
+         maybe_send/4,
+         name/1]).
 -endif.
 
 -include_lib("exometer_core/include/exometer.hrl").
@@ -33,40 +35,25 @@
 -define(DEFAULT_FORMATTING, []).
 -define(DEFAULT_TIMESTAMP_OPT, false).
 -define(DEFAULT_BATCH_WINDOW_SIZE, 0).
+-define(DEFAULT_UDP_MTU, 65536).
 -define(DEFAULT_AUTOSUBSCRIBE, false).
 -define(DEFAULT_SUBSCRIPTIONS_MOD, undefined).
 
 -define(VALID_PRECISIONS, [n, u, ms, s, m, h]).
 
+% https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
+-define(MAX_UDP_PACKET_SIZE, 65535).
+-define(UDP_HEADER_SIZE, 8).
+-define(IP_HEADER_SIZE, 20).
+
 -define(HTTP(Proto), (Proto =:= http orelse Proto =:= https)).
 
+-include("exometer_state.hrl").
 -include("exometer_log.hrl").
 
 -type options() :: [{atom(), any()}].
 -type value() :: any().
 -type callback_result() :: {ok, state()} | any().
--type precision() :: n | u | ms | s | m | h.
--type protocol() :: http | udp.
-
--record(state, {protocol :: protocol(),
-                db :: binary(), % for http
-                username :: undefined | binary(), % for http
-                password :: undefined | binary(), % for http
-                host :: inet:ip_address() | inet:hostname(), % for udp
-                port :: inet:port_number(),  % for udp
-                timestamping :: boolean(),
-                precision :: precision(),
-                collected_metrics = #{} :: map(),
-                batch_window_size = 0 :: integer(),
-                tags :: map(),
-                series_name :: atom() | binary(),
-                formatting :: list(),
-                metrics :: map(),
-                autosubscribe :: boolean(),
-                subscriptions_module :: module(),
-                connection :: gen_udp:socket() | reference()}).
--type state() :: #state{}.
-
 
 %% ===================================================================
 %% Public API
@@ -81,6 +68,7 @@ exometer_init(Opts) ->
     Password = get_opt(password, Opts, ?DEFAULT_PASSWORD),
     TimestampOpt = get_opt(timestamping, Opts, ?DEFAULT_TIMESTAMP_OPT),
     BatchWinSize = get_opt(batch_window_size, Opts, ?DEFAULT_BATCH_WINDOW_SIZE),
+    UDP_MTU = get_opt(udp_mtu, Opts, ?DEFAULT_UDP_MTU),
     {Timestamping, Precision} = evaluate_timestamp_opt(TimestampOpt),
     Tags = [{key(Key), Value} || {Key, Value} <- get_opt(tags, Opts, [])],
     SeriesName = get_opt(series_name, Opts, ?DEFAULT_SERIES_NAME),
@@ -100,6 +88,7 @@ exometer_init(Opts) ->
                     series_name = SeriesName,
                     formatting = Formatting,
                     batch_window_size = BatchWinSize,
+                    max_udp_size = max_udp_size(UDP_MTU),
                     autosubscribe = Autosubscribe,
                     subscriptions_module = SubscriptionsMod,
                     metrics = maps:new()},
@@ -128,7 +117,7 @@ exometer_report(Metric, DataPoint, _Extra, Value,
                 #state{metrics = Metrics} = State) ->
     case maps:get(Metric, Metrics, not_found) of
         {MetricName, Tags} ->
-            maybe_send(Metric, MetricName, Tags,
+            maybe_send(MetricName, Tags,
                        maps:from_list([{DataPoint, Value}]), State);
         Error ->
             ?warning("InfluxDB reporter got trouble when looking ~p metric's tag: ~p",
@@ -175,13 +164,9 @@ exometer_cast(_Unknown, State) ->
 exometer_info({exometer_influxdb, reconnect}, State) ->
     reconnect(State);
 exometer_info({exometer_influxdb, send}, 
-              #state{precision = Precision,
-                     collected_metrics = CollectedMetrics} = State) ->
-    if CollectedMetrics /= #{} ->
-        Packets = [make_packet(MetricName, Tags, Fileds, Timestamping, Precision) ++ "\n"
-                   || {_, {MetricName, Tags, Fileds, Timestamping}} 
-                      <- maps:to_list(CollectedMetrics)],
-        send(Packets, State#state{collected_metrics = #{}});
+              #state{collected_metrics = CollectedMetrics} = State) ->
+    if size(CollectedMetrics) > 0 ->
+        send(CollectedMetrics, State#state{collected_metrics = <<>>});
     true -> {ok, State}
     end;
 exometer_info(_Unknown, State) ->
@@ -272,36 +257,35 @@ prepare_batch_send(Time) ->
 prepare_reconnect() ->
     erlang:send_after(1000, self(), {exometer_influxdb, reconnect}).
 
--spec maybe_send(list(), list(), map(), map(), state()) ->
+-spec maybe_send(list(), map(), map(), state()) ->
     {ok, state()} | {error, term()}.
-maybe_send(OriginMetricName, MetricName, Tags0, Fields, 
-           #state{batch_window_size = BatchWinSize, 
+maybe_send(MetricName, Tags, Fields,
+           #state{batch_window_size = 0,
+                  precision = Precision,
+                  timestamping = Timestamping} = State) ->
+    Packet = make_packet(MetricName, Tags, Fields, Timestamping andalso unix_time(Precision), Precision),
+    send(Packet, State);
+maybe_send(MetricName, Tags, Fields,
+           #state{protocol = Protocol,
+                  batch_window_size = BatchWindowSize,
+                  max_udp_size = MaxUDPSize,
                   precision = Precision,
                   timestamping = Timestamping,
-                  collected_metrics = CollectedMetrics} = State)
-  when BatchWinSize > 0 ->
-    NewCollectedMetrics = case maps:get(OriginMetricName, CollectedMetrics, not_found) of
-        {MetricName, Tags, Fields1} ->
-            NewFields = maps:merge(Fields, Fields1),
-            maps:put(OriginMetricName, 
-                     {MetricName, Tags, NewFields, Timestamping andalso unix_time(Precision)}, 
-                     CollectedMetrics);
-        {MetricName, Tags, Fields1, _OrigTimestamp} ->
-            NewFields = maps:merge(Fields, Fields1),
-            maps:put(OriginMetricName,
-                     {MetricName, Tags, NewFields, Timestamping andalso unix_time(Precision)},
-                     CollectedMetrics);
-        not_found -> 
-            maps:put(OriginMetricName, 
-                     {MetricName, Tags0, Fields, Timestamping andalso unix_time(Precision)}, 
-                     CollectedMetrics)
-    end,
-    maps:size(CollectedMetrics) == 0 andalso prepare_batch_send(BatchWinSize),
-    {ok, State#state{collected_metrics = NewCollectedMetrics}};
-maybe_send(_, MetricName, Tags, Fields,
-           #state{timestamping = Timestamping, precision = Precision} = State) ->
-    Packet = make_packet(MetricName, Tags, Fields, Timestamping, Precision),
-    send(Packet, State).
+                  collected_metrics = CollectedMetrics} = State) ->
+    maybe_start_new_window(BatchWindowSize, CollectedMetrics),
+    Packet = make_packet(MetricName, Tags, Fields, Timestamping andalso unix_time(Precision), Precision),
+    BinaryPacket = list_to_binary(Packet),
+    NewCollectedMetrics = <<CollectedMetrics/binary, BinaryPacket/binary, "\n">>,
+    if
+        Protocol == udp andalso size(CollectedMetrics) > 0 andalso size(NewCollectedMetrics) > MaxUDPSize ->
+            send(CollectedMetrics, State#state{collected_metrics = <<BinaryPacket/binary, "\n">>});
+        true ->
+            {ok, State#state{collected_metrics = NewCollectedMetrics}}
+    end.
+
+maybe_start_new_window(Window, Metrics) when size(Metrics) == 0 ->
+    prepare_batch_send(Window);
+maybe_start_new_window(_, _) -> ok.
 
 -spec send(binary() | list(), state()) ->
     {ok, state()} | {error, term()}.
@@ -337,6 +321,11 @@ send(Packet, #state{protocol = udp, connection = Socket,
             reconnect(State)
     end;
 send(_, #state{protocol = Protocol}) -> {error, {Protocol, not_supported}}.
+
+max_udp_size(MTU) when MTU > ?MAX_UDP_PACKET_SIZE ->
+    max_udp_size(?MAX_UDP_PACKET_SIZE);
+max_udp_size(MaxPacketSize) ->
+    MaxPacketSize - ?UDP_HEADER_SIZE - ?IP_HEADER_SIZE.
 
 -spec merge_tags(list() | map(), list() | map()) -> map().
 merge_tags(Tags, AdditionalTags) when is_list(Tags) ->

@@ -6,7 +6,7 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-module to manage urls.
+module to manage URLs.
 
 <a name="types"></a>
 
@@ -37,10 +37,8 @@ qs_vals() = [{binary(), binary() | true}]
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#fix_path-1">fix_path/1</a></td><td></td></tr><tr><td valign="top"><a href="#make_url-3">make_url/3</a></td><td> construct an url from a base url, a path and a list of
-properties to give to the url.</td></tr><tr><td valign="top"><a href="#normalize-1">normalize/1</a></td><td>Normalizes the encoding of a Url
-use the hackney_url:pathencode/1 to encode an url.</td></tr><tr><td valign="top"><a href="#normalize-2">normalize/2</a></td><td>Normalizes the encoding of a Url.</td></tr><tr><td valign="top"><a href="#parse_qs-1">parse_qs/1</a></td><td></td></tr><tr><td valign="top"><a href="#parse_url-1">parse_url/1</a></td><td>Parse an url and return a #hackney_url record.</td></tr><tr><td valign="top"><a href="#pathencode-1">pathencode/1</a></td><td>encode a URL path.</td></tr><tr><td valign="top"><a href="#qs-1">qs/1</a></td><td>encode query properties to binary.</td></tr><tr><td valign="top"><a href="#qs-2">qs/2</a></td><td>encode query properties to binary
-Opts are passed to urlencode.</td></tr><tr><td valign="top"><a href="#transport_scheme-1">transport_scheme/1</a></td><td></td></tr><tr><td valign="top"><a href="#unparse_url-1">unparse_url/1</a></td><td></td></tr><tr><td valign="top"><a href="#urldecode-1">urldecode/1</a></td><td>Decode a URL encoded binary.</td></tr><tr><td valign="top"><a href="#urldecode-2">urldecode/2</a></td><td>Decode a URL encoded binary.</td></tr><tr><td valign="top"><a href="#urlencode-1">urlencode/1</a></td><td>URL encode a string binary.</td></tr><tr><td valign="top"><a href="#urlencode-2">urlencode/2</a></td><td>URL encode a string binary.</td></tr></table>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#fix_path-1">fix_path/1</a></td><td></td></tr><tr><td valign="top"><a href="#idnconvert_hostname-1">idnconvert_hostname/1</a></td><td></td></tr><tr><td valign="top"><a href="#make_url-3">make_url/3</a></td><td>Construct an URL from a base URL, a path and a list of
+properties to give to the URL.</td></tr><tr><td valign="top"><a href="#normalize-1">normalize/1</a></td><td>Normalizes the encoding of an URL.</td></tr><tr><td valign="top"><a href="#normalize-2">normalize/2</a></td><td>Normalizes the encoding of an URL.</td></tr><tr><td valign="top"><a href="#parse_qs-1">parse_qs/1</a></td><td></td></tr><tr><td valign="top"><a href="#parse_url-1">parse_url/1</a></td><td>Parse an URL and return a #hackney_url record.</td></tr><tr><td valign="top"><a href="#pathencode-1">pathencode/1</a></td><td>Encode an URL path.</td></tr><tr><td valign="top"><a href="#property-2">property/2</a></td><td></td></tr><tr><td valign="top"><a href="#qs-1">qs/1</a></td><td>Encode query properties to binary.</td></tr><tr><td valign="top"><a href="#qs-2">qs/2</a></td><td>Encode query properties to binary.</td></tr><tr><td valign="top"><a href="#transport_scheme-1">transport_scheme/1</a></td><td></td></tr><tr><td valign="top"><a href="#unparse_url-1">unparse_url/1</a></td><td></td></tr><tr><td valign="top"><a href="#urldecode-1">urldecode/1</a></td><td>Decode an URL encoded binary.</td></tr><tr><td valign="top"><a href="#urldecode-2">urldecode/2</a></td><td>Decode an URL encoded binary.</td></tr><tr><td valign="top"><a href="#urlencode-1">urlencode/1</a></td><td>URL encode a string binary.</td></tr><tr><td valign="top"><a href="#urlencode-2">urlencode/2</a></td><td>URL encode a string binary.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -53,6 +51,12 @@ Opts are passed to urlencode.</td></tr><tr><td valign="top"><a href="#transport_
 
 `fix_path(Path) -> any()`
 
+<a name="idnconvert_hostname-1"></a>
+
+### idnconvert_hostname/1 ###
+
+`idnconvert_hostname(Host) -> any()`
+
 <a name="make_url-3"></a>
 
 ### make_url/3 ###
@@ -62,8 +66,8 @@ make_url(Url::binary(), Path::binary() | [binary()], Query::binary() | <a href="
 </code></pre>
 <br />
 
-construct an url from a base url, a path and a list of
-properties to give to the url.
+Construct an URL from a base URL, a path and a list of
+properties to give to the URL.
 
 <a name="normalize-1"></a>
 
@@ -75,8 +79,8 @@ normalize(URL) -&gt; NormalizedUrl
 
 <ul class="definitions"><li><code>URL = binary() | list() | <a href="#type-hackney_url">hackney_url()</a></code></li><li><code>NormalizedUrl = <a href="#type-hackney_url">hackney_url()</a></code></li></ul>
 
-Normalizes the encoding of a Url
-use the hackney_url:pathencode/1 to encode an url
+Normalizes the encoding of an URL.
+Use the [`hackney_url:pathencode/1`](hackney_url.md#pathencode-1) to encode an URL.
 
 <a name="normalize-2"></a>
 
@@ -88,7 +92,7 @@ normalize(URL, Fun) -&gt; NormalizedUrl
 
 <ul class="definitions"><li><code>URL = binary() | list() | <a href="#type-hackney_url">hackney_url()</a></code></li><li><code>Fun = function()</code></li><li><code>NormalizedUrl = <a href="#type-hackney_url">hackney_url()</a></code></li></ul>
 
-Normalizes the encoding of a Url
+Normalizes the encoding of an URL.
 
 <a name="parse_qs-1"></a>
 
@@ -108,20 +112,26 @@ parse_url(URL::binary() | list()) -&gt; <a href="#type-hackney_url">hackney_url(
 </code></pre>
 <br />
 
-Parse an url and return a #hackney_url record.
+Parse an URL and return a #hackney_url record.
 
 <a name="pathencode-1"></a>
 
 ### pathencode/1 ###
 
 <pre><code>
-pathencode(Bin::binary()) -&gt; binary()
+pathencode(Path::binary() | list()) -&gt; binary()
 </code></pre>
 <br />
 
 Equivalent to [`pathencode(Bin, [])`](#pathencode-2).
 
-encode a URL path
+Encode an URL path.
+
+<a name="property-2"></a>
+
+### property/2 ###
+
+`property(X1, URL) -> any()`
 
 <a name="qs-1"></a>
 
@@ -132,7 +142,7 @@ qs(KVs::<a href="#type-qs_vals">qs_vals()</a>) -&gt; binary()
 </code></pre>
 <br />
 
-encode query properties to binary
+Encode query properties to binary.
 
 <a name="qs-2"></a>
 
@@ -143,8 +153,8 @@ qs(KVs::<a href="#type-qs_vals">qs_vals()</a>, Opts::[<a href="#type-qs_opt">qs_
 </code></pre>
 <br />
 
-encode query properties to binary
-Opts are passed to urlencode.
+Encode query properties to binary.
+Opts are passed to [`urlencode/2`](#urlencode-2)
 
 <a name="transport_scheme-1"></a>
 
@@ -169,7 +179,7 @@ urldecode(Bin::binary()) -&gt; binary()
 
 Equivalent to [`urldecode(Bin, crash)`](#urldecode-2).
 
-Decode a URL encoded binary.
+Decode an URL encoded binary.
 
 <a name="urldecode-2"></a>
 
@@ -180,7 +190,7 @@ urldecode(Bin::binary(), OnError::crash | skip) -&gt; binary()
 </code></pre>
 <br />
 
-Decode a URL encoded binary.
+Decode an URL encoded binary.
 The second argument specifies how to handle percent characters that are not
 followed by two valid hex characters. Use `skip` to ignore such errors,
 if `crash` is used the function will fail with the reason `badarg`.

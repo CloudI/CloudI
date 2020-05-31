@@ -146,7 +146,7 @@ Excerpt from RFC (http://tools.ietf.org/html/rfc6125)
 
 ```
 
-####Usage###
+### Usage
 
 * With SSL lib or HTTP client you can use provided verify_fun/3, do not forget to add `check_hostname` key to user state:
 
