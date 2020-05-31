@@ -34,6 +34,7 @@ import System.Exit (ExitCode(ExitFailure),exitWith)
 import qualified Control.Concurrent as Concurrent
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
+import qualified Data.Map.Strict as Map
 import qualified Foreign.CloudI as CloudI
 import qualified System.IO as SysIO
 type ByteString = ByteString.ByteString
@@ -53,7 +54,9 @@ request_ _ _ _ _ _ _ _ _ _ state@State{count_value = count0} api = do
         count_str = show count1
     putStrLn $ "count == " ++ count_str ++ " haskell"
     let response = Char8.pack count_str
-    return $ CloudI.Response (response, state{count_value = count1}, api)
+        responseInfo = CloudI.infoKeyValueNew Map.empty
+    return $ CloudI.ResponseInfo (responseInfo, response,
+                                  state{count_value = count1}, api)
 
 task :: Int -> IO ()
 task threadIndex = do

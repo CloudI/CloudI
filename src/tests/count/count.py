@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -71,8 +71,9 @@ class Task(threading.Thread):
             self.__count += 1
         print('count == %d %s' % (self.__count, self.__name))
         response = b'%d' % self.__count
+        response_info = API.info_key_value_new({})
         self.__api.return_(request_type, name, pattern,
-                           b'', response,
+                           response_info, response,
                            timeout, trans_id, pid)
 
 def _main():

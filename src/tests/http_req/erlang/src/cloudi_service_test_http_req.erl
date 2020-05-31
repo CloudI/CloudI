@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_http_req).
@@ -78,7 +78,9 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
         error ->
             <<"<http_test><error>no value specified</error></http_test>">>
     end,
-    {reply, Response, State}.
+    HttpResponseHeaders = #{"content-type" => "text/xml; charset=utf-8"},
+    ResponseInfo = cloudi_request_info:key_value_new(HttpResponseHeaders),
+    {reply, ResponseInfo, Response, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ?LOG_INFO("terminate http_req erlang", []),

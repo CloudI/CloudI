@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -68,7 +68,12 @@ static void request(int const request_type,
     }
     printf("count == %d c\n", state_p->count);
     snprintf(response, sizeof(response), "%d", state_p->count);
-    cloudi_return(api, request_type, name, pattern, "", 0,
+    uint32_t response_info_size;
+    char const * response_info;
+    response_info = cloudi_info_key_value_new(0, &response_info_size);
+    cloudi_free_response_info(api);
+    cloudi_return(api, request_type, name, pattern,
+                  response_info, response_info_size,
                   response, strlen(response),
                   timeout, trans_id, pid, pid_size);
 }

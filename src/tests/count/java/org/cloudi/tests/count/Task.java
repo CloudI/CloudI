@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,8 @@
 
 package org.cloudi.tests.count;
 
+import java.util.HashMap;
+import java.util.List;
 import com.ericsson.otp.erlang.OtpErlangPid;
 import org.cloudi.API;
 
@@ -76,8 +78,10 @@ public class Task implements Runnable
         }
         API.out.println("count == " + this.count + " java");
         String response = Long.toString(this.count);
+        byte[] response_info = API.info_key_value_new(
+            new HashMap<String, List<String>>());
         this.api.return_(request_type, name, pattern,
-                         ("").getBytes(), response.getBytes(),
+                         response_info, response.getBytes(),
                          timeout, trans_id, pid);
         return null;
     }

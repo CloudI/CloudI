@@ -89,8 +89,10 @@ sub _request
     }
     print "count == $self->{count} perl\n";
     my $response = "$self->{count}";
+    my $response_info = CloudI::API::info_key_value_new(());
     $self->{api}->return_($request_type, $name, $pattern,
-                          '', $response, $timeout, $trans_id, $pid);
+                          $response_info, $response,
+                          $timeout, $trans_id, $pid);
 }
 
 {

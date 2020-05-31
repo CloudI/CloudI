@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -65,9 +65,10 @@ Task.prototype.request = function (request_type, name, pattern,
         Task._count += 1;
     }
     process.stdout.write('count == ' + Task._count + ' javascript\n');
-    response = '' + Task._count;
+    var response = '' + Task._count;
+    var response_info = CloudI.API.info_key_value_new({});
     Task._api.return_(request_type, name, pattern,
-                      '', response, timeout, trans_id, pid);
+                      response_info, response, timeout, trans_id, pid);
 };
 
 assert(CloudI.API.thread_count() == 1);

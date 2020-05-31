@@ -1916,19 +1916,22 @@ static char const * text_pairs_new(char const ** pairs,
 {
     realloc_ptr<char> text(1024, 1073741824);
     size_t size = 0;
-    char const * key;
-    for (size_t i = 0; (key = pairs[i]); i += 2)
+    if (pairs)
     {
-        char const * const value = pairs[i + 1];
-        assert(value);
-        size_t const key_size = ::strlen(key) + 1;
-        size_t const value_size = ::strlen(value) + 1;
-        if (! text.reserve(size + key_size + value_size))
-            break;
-        ::memcpy(&text[size], key, key_size);
-        size += key_size;
-        ::memcpy(&text[size], value, value_size);
-        size += value_size;
+        char const * key;
+        for (size_t i = 0; (key = pairs[i]); i += 2)
+        {
+            char const * const value = pairs[i + 1];
+            assert(value);
+            size_t const key_size = ::strlen(key) + 1;
+            size_t const value_size = ::strlen(value) + 1;
+            if (! text.reserve(size + key_size + value_size))
+                break;
+            ::memcpy(&text[size], key, key_size);
+            size += key_size;
+            ::memcpy(&text[size], value, value_size);
+            size += value_size;
+        }
     }
     if (size == 0)
     {

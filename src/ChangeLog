@@ -3,6 +3,11 @@
 
 2020-05-30 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Change the C/C++ CloudI API to let NULL represent empty
+      for info_key_value_new function calls
+    * Add empty info_key_value_new use to the count
+      integration tests
+    * Add info_key_value_new use to the http_req Erlang integration test
     * Update exometer_influxdb
     * Update hackney to 1.16.0
 

@@ -7,7 +7,7 @@ license:             MIT
 license-file:        ../../../LICENSE
 author:              Michael Truog
 maintainer:          mjtruog at protonmail dot com
-copyright:           2017-2018 Michael Truog
+copyright:           2017-2020 Michael Truog
 category:            Foreign
 stability:           provisional
 build-type:          Simple
@@ -19,5 +19,6 @@ executable           count_haskell
   build-depends:       base >= 4.8.2.0
                      , cloudi == @VERSION@
                      , bytestring
+                     , containers
   default-language:  Haskell2010
 

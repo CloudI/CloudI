@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -46,7 +46,13 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 	}
 	fmt.Printf("count == %d go\n", stateP.count)
 	response := []byte(fmt.Sprintf("%d", stateP.count))
-	api.Return(requestType, name, pattern, []byte{}, response, timeout, transId, pid)
+	var responseInfo []byte
+	var err error
+	responseInfo, err = cloudi.InfoKeyValueNew(map[string][]string{})
+	if err != nil {
+		return nil, nil, err
+	}
+	api.Return(requestType, name, pattern, responseInfo, response, timeout, transId, pid)
 	// execution doesn't reach here
 	return nil, nil, nil
 }

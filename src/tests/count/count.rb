@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -69,8 +69,9 @@ if __FILE__ == $PROGRAM_NAME
                 end
                 $stdout.puts "count == #{@count} ruby"
                 response = "#{@count}"
+                response_info = CloudI::API.info_key_value_new({})
                 @api.return_(request_type, name, pattern,
-                             '', response, timeout, trans_id, pid)
+                             response_info, response, timeout, trans_id, pid)
             end
         end
         begin
