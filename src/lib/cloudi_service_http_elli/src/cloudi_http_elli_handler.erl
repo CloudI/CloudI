@@ -113,7 +113,6 @@ handle(Req,
                     if
                         (OutputType =:= external) orelse
                         (OutputType =:= binary) orelse (OutputType =:= list) ->
-                            % cloudi_request_info text_pairs format
                             get_query_string_external(QSVals);
                         OutputType =:= internal ->
                             % cloudi_key_value format
@@ -360,12 +359,7 @@ header_content_type(Headers) ->
 
 % format for external services, http headers passed as key-value pairs
 headers_external_incoming(L) ->
-    erlang:iolist_to_binary(headers_external_incoming_text(L)).
-
-headers_external_incoming_text([] = L) ->
-    L;
-headers_external_incoming_text([{K, V} | L]) when is_binary(K) ->
-    [[K, 0, V, 0] | headers_external_incoming_text(L)].
+    cloudi_request_info:key_value_new(L, text_pairs).
 
 headers_external_outgoing(<<>>) ->
     [];
@@ -375,29 +369,10 @@ headers_external_outgoing([{_, _} | _] = ResponseInfo) ->
     ResponseInfo;
 headers_external_outgoing(ResponseInfo)
     when is_binary(ResponseInfo) ->
-    headers_external_outgoing_text(binary:split(ResponseInfo, <<0>>, [global])).
+    cloudi_response_info:key_value_parse(ResponseInfo, list).
 
-headers_external_outgoing_text([<<>>]) ->
-    [];
-headers_external_outgoing_text([K, <<>>]) ->
-    [{K, <<>>}];
-headers_external_outgoing_text([K, V | L]) ->
-    [{K, V} | headers_external_outgoing_text(L)].
-
-get_query_string_external([]) ->
-    <<>>;
 get_query_string_external(QsVals) ->
-    erlang:iolist_to_binary(get_query_string_external_text(QsVals)).
-
-get_query_string_external_text([] = L) ->
-    L;
-get_query_string_external_text([{K, V} | L]) ->
-    if
-        V =:= true ->
-            [[K, 0, <<"true">>, 0] | get_query_string_external_text(L)];
-        is_binary(V) ->
-            [[K, 0, V, 0] | get_query_string_external_text(L)]
-    end.
+    cloudi_request_info:key_value_new(QsVals, text_pairs).
 
 request_time_start() ->
     cloudi_timestamp:microseconds_monotonic().

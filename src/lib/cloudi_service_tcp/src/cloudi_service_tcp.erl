@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_tcp).
@@ -441,7 +441,7 @@ socket_loop_init_set(true, Scope,
                            DestinationSetRequestInfo, <<"SET">>,
                            TimeoutSync, Self) of
         {ok, ResponseInfo, _Response} ->
-            KeyValues = cloudi_request_info:key_value_parse(ResponseInfo),
+            KeyValues = cloudi_response_info:key_value_parse(ResponseInfo),
             NewDestination = case cloudi_key_value:find(<<"service_name">>,
                                                         KeyValues) of
                 error ->
@@ -786,7 +786,7 @@ socket_loop_terminate(Reason,
     erlang:exit(Reason).
 
 socket_terminate_check(Socket, Info) ->
-    KeyValues = cloudi_request_info:key_value_parse(Info),
+    KeyValues = cloudi_response_info:key_value_parse(Info),
     case cloudi_key_value:find(<<"connection">>, KeyValues) of
         {ok, <<"close">>} ->
             self() ! {tcp_closed, Socket},

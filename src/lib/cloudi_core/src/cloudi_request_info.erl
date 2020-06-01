@@ -61,7 +61,8 @@
 -export([key_value_new/1,
          key_value_new/2,
          key_value_append/2,
-         key_value_parse/1]).
+         key_value_parse/1,
+         key_value_parse/2]).
 
 -type format() :: text_pairs | binary_pairs.
 -export_type([format/0]).
@@ -146,9 +147,36 @@ key_value_parse(RequestInfo)
 key_value_parse(RequestInfo) ->
     cloudi_key_value:to_map(RequestInfo).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse RequestInfo key/value data to the return type specified.===
+%% RequestInfo is meant to contain key/value pairs that is request
+%% meta-data.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_parse(RequestInfo :: binary() |
+                                     cloudi_key_value:key_values(),
+                      ResultType :: map | list) ->
+    Result :: #{cloudi_key_value:key() := cloudi_key_value:value()} |
+              list({cloudi_key_value:key(), cloudi_key_value:value()}).
+
+key_value_parse(RequestInfo, map) ->
+    key_value_parse(RequestInfo);
+key_value_parse(RequestInfo, list) ->
+    key_value_parse_to_list(RequestInfo).
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+key_value_parse_to_list(<<0:8, _/binary>> = RequestInfo) ->
+    binary_pairs_binary_to_list(RequestInfo);
+key_value_parse_to_list(RequestInfo)
+    when is_binary(RequestInfo) ->
+    text_pairs_binary_to_list(RequestInfo);
+key_value_parse_to_list(RequestInfo) ->
+    cloudi_key_value:to_list(RequestInfo).
 
 text_pairs_list_to_binary_element([] = L) ->
     L;
@@ -180,6 +208,15 @@ text_pairs_binary_to_map_element([K, V | L], Lookup) ->
 text_pairs_binary_to_map(RequestInfo) ->
     L = binary:split(RequestInfo, <<0>>, [global]),
     text_pairs_binary_to_map_element(L, #{}).
+
+text_pairs_binary_to_list_element([<<>>]) ->
+    [];
+text_pairs_binary_to_list_element([K, V | L]) ->
+    [{K, V} | text_pairs_binary_to_list_element(L)].
+
+text_pairs_binary_to_list(RequestInfo) ->
+    L = binary:split(RequestInfo, <<0>>, [global]),
+    text_pairs_binary_to_list_element(L).
 
 binary_pairs_list_to_binary_element([] = L) ->
     L;
@@ -216,6 +253,18 @@ binary_pairs_binary_to_map_element(B0, Lookup) ->
 
 binary_pairs_binary_to_map(<<0:8, BinaryPairs/binary>>) ->
     binary_pairs_binary_to_map_element(BinaryPairs, #{}).
+
+binary_pairs_binary_to_list_element(<<>>, L) ->
+    lists:reverse(L);
+binary_pairs_binary_to_list_element(B0, L) ->
+    <<SizeK:32/big-unsigned-integer, B1/binary>> = B0,
+    <<K:SizeK/binary-unit:8, B2/binary>> = B1,
+    <<SizeV:32/big-unsigned-integer, B3/binary>> = B2,
+    <<V:SizeV/binary-unit:8, BN/binary>> = B3,
+    binary_pairs_binary_to_list_element(BN, [{K, V} | L]).
+
+binary_pairs_binary_to_list(<<0:8, BinaryPairs/binary>>) ->
+    binary_pairs_binary_to_list_element(BinaryPairs, []).
 
 key_to_binary(K)
     when is_binary(K) ->
@@ -276,6 +325,13 @@ text_pairs_test() ->
                                                 <<"binary_value">>],
                            <<"list_key">> => [<<"list_value">>,
                                               <<"binary_value">>]},
+    KeyValues3 = key_value_parse(TextPairs0, list),
+    true = KeyValues3 == [{<<"atom_key">>, <<"atom_value">>},
+                          {<<"atom_key">>, <<"list_value">>},
+                          {<<"atom_key">>, <<"binary_value">>},
+                          {<<"list_key">>, <<"list_value">>},
+                          {<<"list_key">>, <<"binary_value">>},
+                          {<<"binary_key">>, <<"binary_value">>}],
     ok.
 
 binary_pairs_test() ->
@@ -320,6 +376,13 @@ binary_pairs_test() ->
                                                 <<"binary_value">>],
                            <<"list_key">> => [<<"list_value">>,
                                               <<"binary_value">>]},
+    KeyValues3 = key_value_parse(BinaryPairs0, list),
+    true = KeyValues3 == [{<<"atom_key">>, <<"atom_value">>},
+                          {<<"atom_key">>, <<"list_value">>},
+                          {<<"atom_key">>, <<"binary_value">>},
+                          {<<"list_key">>, <<"list_value">>},
+                          {<<"list_key">>, <<"binary_value">>},
+                          {<<"binary_key">>, <<"binary_value">>}],
     ok.
 
 -endif.

@@ -3,12 +3,15 @@
 
 2020-05-31 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add key_value_parse/2 to cloudi_request_info and cloudi_response_info
     * Add the cloudi_response_info functions
-      key_value_new/1, key_value_new/2, key_value_parse/1 to return
+      key_value_new and key_value_parse to return
       empty key/value lookup data as <<0>>
-      (if the cloudi_response_info:key_value_new function is called
+      (i.e., if the cloudi_response_info:key_value_new function is called
        a null response will not be created,
        though <<0>> is interpreted as the binary_pairs format)
+    * Change previous usage of cloudi_request_info for ResponseInfo parsing
+      to use cloudi_response_info
     * Fix cloudi_service_oauth1 URL parsing with Erlang/OTP 23
 
 2020-05-30 Michael Truog   <mjtruog at protonmail dot com>

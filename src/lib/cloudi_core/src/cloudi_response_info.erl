@@ -42,6 +42,7 @@
 -export([key_value_new/1,
          key_value_new/2,
          key_value_parse/1,
+         key_value_parse/2,
          lookup_content_type/0,
          lookup_content_type/1,
          lookup_content_type/2]).
@@ -105,6 +106,23 @@ key_value_new(ResponseInfo, Format) ->
 
 key_value_parse(ResponseInfo) ->
     cloudi_request_info:key_value_parse(ResponseInfo).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse ResponseInfo key/value data to the return type specified.===
+%% ResponseInfo is meant to contain key/value pairs that is response
+%% meta-data.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_parse(ResponseInfo :: binary() |
+                                      cloudi_key_value:key_values(),
+                      ResultType :: map | list) ->
+    Result :: #{cloudi_key_value:key() := cloudi_key_value:value()} |
+              list({cloudi_key_value:key(), cloudi_key_value:value()}).
+
+key_value_parse(ResponseInfo, ResultType) ->
+    cloudi_request_info:key_value_parse(ResponseInfo, ResultType).
 
 %%-------------------------------------------------------------------------
 %% @doc
