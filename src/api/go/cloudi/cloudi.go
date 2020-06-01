@@ -1263,7 +1263,7 @@ func textPairsParse(text []byte) map[string][]string {
 	return pairs
 }
 
-func textPairsNew(pairs map[string][]string) ([]byte, error) {
+func textPairsNew(pairs map[string][]string, response bool) ([]byte, error) {
 	var textBuffer = new(bytes.Buffer)
 	var err error
 	for key, values := range pairs {
@@ -1286,7 +1286,7 @@ func textPairsNew(pairs map[string][]string) ([]byte, error) {
 			}
 		}
 	}
-	if textBuffer.Len() == 0 {
+	if response && textBuffer.Len() == 0 {
 		err = textBuffer.WriteByte(0)
 		if err != nil {
 			return nil, err
@@ -1302,8 +1302,21 @@ func InfoKeyValueParse(info []byte) map[string][]string {
 }
 
 // InfoKeyValueNew encodes service response info key/value data
-func InfoKeyValueNew(pairs map[string][]string) ([]byte, error) {
-	return textPairsNew(pairs)
+func InfoKeyValueNew(pairs map[string][]string, extra ...interface{}) ([]byte, error) {
+	extraArity := len(extra)
+	if extraArity > 1 {
+		return nil, invalidInputErrorNew()
+	}
+	response := true
+	for _, extraArg := range extra {
+		switch arg := extraArg.(type) {
+		case bool:
+			response = arg
+		default:
+			return nil, invalidInputErrorNew()
+		}
+	}
+	return textPairsNew(pairs, response)
 }
 
 func (api *Instance) send(data []byte) error {

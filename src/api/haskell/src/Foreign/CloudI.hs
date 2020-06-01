@@ -1221,9 +1221,10 @@ textPairsParse text =
     in
     loop Map.empty (Char8.split '\0' text)
 
-textPairsNew :: Map ByteString [ByteString] -> ByteString
-textPairsNew pairs =
-    if Map.size pairs == 0 then
+textPairsNew :: Map ByteString [ByteString] -> Maybe Bool -> ByteString
+textPairsNew pairs responseOpt =
+    let response = fromMaybe True responseOpt in
+    if response && Map.size pairs == 0 then
         Char8.pack "\0"
     else
         let pair builder _ [] =
@@ -1241,6 +1242,6 @@ infoKeyValueParse :: ByteString -> Map ByteString [ByteString]
 infoKeyValueParse = textPairsParse
 
 -- | encode service response info key/value data
-infoKeyValueNew :: Map ByteString [ByteString] -> ByteString
+infoKeyValueNew :: Map ByteString [ByteString] -> Maybe Bool -> ByteString
 infoKeyValueNew = textPairsNew
 

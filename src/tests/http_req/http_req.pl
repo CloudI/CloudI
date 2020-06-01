@@ -58,9 +58,9 @@ sub task
                 $response =
 "<http_test><value>$value</value></http_test>";
             }
-            my $response_info = CloudI::API::info_key_value_new((
+            my $response_info = CloudI::API::info_key_value_new({
                 'content-type' => 'text/xml; charset=utf-8',
-            ));
+            });
             $api->return_($request_type, $name, $pattern,
                           $response_info, $response,
                           $timeout, $trans_id, $pid);

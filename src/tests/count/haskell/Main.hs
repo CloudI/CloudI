@@ -54,7 +54,7 @@ request_ _ _ _ _ _ _ _ _ _ state@State{count_value = count0} api = do
         count_str = show count1
     putStrLn $ "count == " ++ count_str ++ " haskell"
     let response = Char8.pack count_str
-        responseInfo = CloudI.infoKeyValueNew Map.empty
+        responseInfo = CloudI.infoKeyValueNew Map.empty Nothing
     return $ CloudI.ResponseInfo (responseInfo, response,
                                   state{count_value = count1}, api)
 

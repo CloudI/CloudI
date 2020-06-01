@@ -268,7 +268,8 @@ char const ** cloudi_info_key_value_parse(void const * const info,
 void cloudi_info_key_value_parse_destroy(char const ** pairs);
 
 char const * cloudi_info_key_value_new(char const ** pairs,
-                                       uint32_t * info_size);
+                                       uint32_t * info_size,
+                                       int response);
 
 void cloudi_free_name(cloudi_instance_t * api);
 void cloudi_free_pattern(cloudi_instance_t * api);

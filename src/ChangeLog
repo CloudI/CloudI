@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-06-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the optional argument response to the info_key_value_new function
+      for all external service CloudI API implementations
+      (C/C++/Go/Haskell/Java/JavaScript/OCaml/Perl/PHP/Python/Python-C/Ruby)
+
 2020-05-31 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add key_value_parse/2 to cloudi_request_info and cloudi_response_info

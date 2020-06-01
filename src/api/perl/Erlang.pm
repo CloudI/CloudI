@@ -86,7 +86,7 @@ require Erlang::OutputException;
 sub binary_to_term
 {
     my ($data) = @_;
-    if (! defined($data) || ref($data) ne '')
+    if (! defined($data) or ref($data) ne '')
     {
         die Erlang::ParseException->new('not bytes input');
     }
@@ -111,7 +111,7 @@ sub binary_to_term
     my $e = $@;
     if ($e)
     {
-        if ($e->isa('Erlang::ParseException') ||
+        if ($e->isa('Erlang::ParseException') or
             $e->isa('Erlang::InputException'))
         {
             die $e;
@@ -215,8 +215,8 @@ sub _binary_to_term
         $i += 2;
         return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j)));
     }
-    elsif ($tag == TAG_NEW_PORT_EXT ||
-           $tag == TAG_REFERENCE_EXT || $tag == TAG_PORT_EXT)
+    elsif ($tag == TAG_NEW_PORT_EXT or
+           $tag == TAG_REFERENCE_EXT or $tag == TAG_PORT_EXT)
     {
         my $node;
         ($i, $node) = _binary_to_atom($i, $data);
@@ -238,10 +238,10 @@ sub _binary_to_term
                                                             $creation));
             }
         }
-        # $tag == TAG_NEW_PORT_EXT || $tag == TAG_PORT_EXT
+        # $tag == TAG_NEW_PORT_EXT or $tag == TAG_PORT_EXT
         return ($i, Erlang::OtpErlangPort->new($node, $id, $creation));
     }
-    elsif ($tag == TAG_NEW_PID_EXT || $tag == TAG_PID_EXT)
+    elsif ($tag == TAG_NEW_PID_EXT or $tag == TAG_PID_EXT)
     {
         my $node;
         ($i, $node) = _binary_to_atom($i, $data);
@@ -262,7 +262,7 @@ sub _binary_to_term
         }
         return ($i, Erlang::OtpErlangPid->new($node, $id, $serial, $creation));
     }
-    elsif ($tag == TAG_SMALL_TUPLE_EXT || $tag == TAG_LARGE_TUPLE_EXT)
+    elsif ($tag == TAG_SMALL_TUPLE_EXT or $tag == TAG_LARGE_TUPLE_EXT)
     {
         my $length;
         if ($tag == TAG_SMALL_TUPLE_EXT)
@@ -295,7 +295,7 @@ sub _binary_to_term
         ($i, $tmp) = _binary_to_term_sequence($i, $length, $data);
         my $tail;
         ($i, $tail) = _binary_to_term($i, $data);
-        if (ref($tail) ne 'Erlang::OtpErlangList' || $tail->count() != 0)
+        if (ref($tail) ne 'Erlang::OtpErlangList' or $tail->count() != 0)
         {
             push(@$tmp, $tail);
             return ($i, Erlang::OtpErlangList->new($tmp, 1));
@@ -312,7 +312,7 @@ sub _binary_to_term
         return ($i + $j,
                 Erlang::OtpErlangBinary->new(substr($data, $i, $j), 8));
     }
-    elsif ($tag == TAG_SMALL_BIG_EXT || $tag == TAG_LARGE_BIG_EXT)
+    elsif ($tag == TAG_SMALL_BIG_EXT or $tag == TAG_LARGE_BIG_EXT)
     {
         my $j;
         if ($tag == TAG_SMALL_BIG_EXT)
@@ -368,7 +368,7 @@ sub _binary_to_term
                                                    substr($data, $old_i,
                                                           $i - $old_i)));
     }
-    elsif ($tag == TAG_NEWER_REFERENCE_EXT || $tag == TAG_NEW_REFERENCE_EXT)
+    elsif ($tag == TAG_NEWER_REFERENCE_EXT or $tag == TAG_NEW_REFERENCE_EXT)
     {
         my ($j) = unpack('n', substr($data, $i, 2));
         $j *= 4;
@@ -459,7 +459,7 @@ sub _binary_to_term
         my $data_compressed = substr($data, $i);
         my $j = length($data_compressed);
         my $data_uncompressed = Compress::Zlib::uncompress($data_compressed);
-        if (! defined($data_uncompressed) ||
+        if (! defined($data_uncompressed) or
             $size_uncompressed != length($data_uncompressed))
         {
             die Erlang::ParseException->new('compression corrupt');
@@ -634,13 +634,13 @@ sub _term_to_binary
     {
         return _hash_to_binary($term);
     }
-    elsif ($ref eq 'Erlang::OtpErlangAtom' ||
-           $ref eq 'Erlang::OtpErlangList' ||
-           $ref eq 'Erlang::OtpErlangBinary' ||
-           $ref eq 'Erlang::OtpErlangFunction' ||
-           $ref eq 'Erlang::OtpErlangReference' ||
-           $ref eq 'Erlang::OtpErlangPort' ||
-           $ref eq 'Erlang::OtpErlangPid' ||
+    elsif ($ref eq 'Erlang::OtpErlangAtom' or
+           $ref eq 'Erlang::OtpErlangList' or
+           $ref eq 'Erlang::OtpErlangBinary' or
+           $ref eq 'Erlang::OtpErlangFunction' or
+           $ref eq 'Erlang::OtpErlangReference' or
+           $ref eq 'Erlang::OtpErlangPort' or
+           $ref eq 'Erlang::OtpErlangPid' or
            $ref eq 'Erlang::OtpErlangString')
     {
         return $term->binary();
@@ -730,7 +730,7 @@ sub _hash_to_binary
 sub _integer_to_binary
 {
     my ($term) = @_;
-    if (0 <= $term && $term <= 255)
+    if (0 <= $term and $term <= 255)
     {
         return pack('CC', TAG_SMALL_INTEGER_EXT, $term);
     }

@@ -728,6 +728,10 @@ class API
         static char const * info_key_value_new(char const ** pairs,
                                                uint32_t & info_size);
 
+        static char const * info_key_value_new(char const ** pairs,
+                                               uint32_t & info_size,
+                                               bool response);
+
         void free_with_delete() const;
         void free_name() const;
         void free_pattern() const;

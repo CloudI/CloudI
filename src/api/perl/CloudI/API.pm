@@ -71,7 +71,7 @@ sub new
 {
     my $class = shift;
     my ($thread_index) = @_;
-    if (! defined($thread_index) || $thread_index !~ /^\d+$/)
+    if (! defined($thread_index) or $thread_index !~ /^\d+$/)
     {
         die CloudI::InvalidInputException->new();
     }
@@ -81,7 +81,7 @@ sub new
         die CloudI::InvalidInputException->new();
     }
     my $buffer_size = getenv('CLOUDI_API_INIT_BUFFER_SIZE');
-    if (! defined($buffer_size) || $buffer_size !~ /^\d+$/)
+    if (! defined($buffer_size) or $buffer_size !~ /^\d+$/)
     {
         die CloudI::InvalidInputException->new();
     }
@@ -150,7 +150,7 @@ sub DESTROY
 sub thread_count
 {
     my $count = getenv('CLOUDI_API_INIT_THREAD_COUNT');
-    if (! defined($count) || $count !~ /^\d+$/)
+    if (! defined($count) or $count !~ /^\d+$/)
     {
         die CloudI::InvalidInputException->new();
     }
@@ -163,12 +163,12 @@ sub subscribe
     # arity 2 or 3 (so using an object is not required)
     my ($pattern, $object, $method) = @_;
     my $function;
-    if (! defined($method) && ref($object) eq 'CODE')
+    if (! defined($method) and ref($object) eq 'CODE')
     {
         $function = $object;
     }
-    elsif (defined(blessed($object)) &&
-           defined($method) && ref($method) eq '' &&
+    elsif (defined(blessed($object)) and
+           defined($method) and ref($method) eq '' and
            defined($object->can($method)))
     {
         # object method
@@ -505,7 +505,7 @@ sub _callback
                     $response = '';
                 }
             }
-            elsif (ref($response_info) ne '' ||
+            elsif (ref($response_info) ne '' or
                    ! defined($response_info))
             {
                 $response_info = '';
@@ -525,12 +525,12 @@ sub _callback
             elsif ($e->isa('CloudI::TerminateException'))
             {
             }
-            elsif ($e->isa('CloudI::ReturnAsyncException') ||
+            elsif ($e->isa('CloudI::ReturnAsyncException') or
                    $e->isa('CloudI::ForwardAsyncException'))
             {
                 return;
             }
-            elsif ($e->isa('CloudI::ReturnSyncException') ||
+            elsif ($e->isa('CloudI::ReturnSyncException') or
                    $e->isa('CloudI::ForwardSyncException'))
             {
                 $self->{_terminate} = 1;
@@ -576,7 +576,7 @@ sub _callback
                     $response = '';
                 }
             }
-            elsif (ref($response_info) ne '' ||
+            elsif (ref($response_info) ne '' or
                    ! defined($response_info))
             {
                 $response_info = '';
@@ -596,12 +596,12 @@ sub _callback
             elsif ($e->isa('CloudI::TerminateException'))
             {
             }
-            elsif ($e->isa('CloudI::ReturnSyncException') ||
+            elsif ($e->isa('CloudI::ReturnSyncException') or
                    $e->isa('CloudI::ForwardSyncException'))
             {
                 return;
             }
-            elsif ($e->isa('CloudI::ReturnAsyncException') ||
+            elsif ($e->isa('CloudI::ReturnAsyncException') or
                    $e->isa('CloudI::ForwardAsyncException'))
             {
                 $self->{_terminate} = 1;
@@ -717,7 +717,7 @@ sub _poll_request
             die CloudI::TerminateException->new($self->{_timeout_terminate});
         }
     }
-    elsif ($external && ! $self->{_initialization_complete})
+    elsif ($external and ! $self->{_initialization_complete})
     {
         $self->_send(Erlang::term_to_binary(
             Erlang::OtpErlangAtom->new('polling')));
@@ -726,7 +726,7 @@ sub _poll_request
 
     my $poll_timer;
     my $timeout_value_secs;
-    if (! defined($timeout) || $timeout < 0)
+    if (! defined($timeout) or $timeout < 0)
     {
         $timeout_value_secs = undef;
     }
@@ -745,7 +745,7 @@ sub _poll_request
     vec($result_except, fileno($self->{_s}), 1) = 1;
     my $result = select($result_read, undef, $result_except,
                         $timeout_value_secs);
-    if ($result == -1 || vec($result_except, fileno($self->{_s}), 1) == 1)
+    if ($result == -1 or vec($result_except, fileno($self->{_s}), 1) == 1)
     {
         return 0;
     }
@@ -793,7 +793,7 @@ sub _poll_request
                     $timeout_sync, $timeout_async,
                     $timeout_terminate, $priority_default);
         }
-        elsif ($command == MESSAGE_SEND_ASYNC ||
+        elsif ($command == MESSAGE_SEND_ASYNC or
                $command == MESSAGE_SEND_SYNC)
         {
             $i += $j; $j = 4;
@@ -837,7 +837,7 @@ sub _poll_request
                 return 0;
             }
         }
-        elsif ($command == MESSAGE_RECV_ASYNC ||
+        elsif ($command == MESSAGE_RECV_ASYNC or
                $command == MESSAGE_RETURN_SYNC)
         {
             $i += $j; $j = 4;
@@ -982,7 +982,7 @@ sub _poll_request
         vec($result_except, fileno($self->{_s}), 1) = 1;
         $result = select($result_read, undef, $result_except,
                          $timeout_value_secs);
-        if ($result == -1 || vec($result_except, fileno($self->{_s}), 1) == 1)
+        if ($result == -1 or vec($result_except, fileno($self->{_s}), 1) == 1)
         {
             return 0;
         }
@@ -1062,11 +1062,11 @@ sub _text_pairs_parse
 # callable without an object
 sub _text_pairs_new
 {
-    my (%pairs) = @_;
+    my ($pairs_ref, $response) = @_;
     my $text = '';
-    while (my ($key, $values) = each(%pairs))
+    while (my ($key, $values) = each(%$pairs_ref))
     {
-        if (ref($values) eq '' && scalar($values) eq $values)
+        if (ref($values) eq '' and scalar($values) eq $values)
         {
             # values is a string
             $text .= $key . "\0" . $values . "\0";
@@ -1079,7 +1079,7 @@ sub _text_pairs_new
             }
         }
     }
-    if ($text eq '')
+    if ($response and $text eq '')
     {
         $text = "\0";
     }
@@ -1096,8 +1096,12 @@ sub info_key_value_parse
 # callable without an object
 sub info_key_value_new
 {
-    my (%pairs) = @_;
-    return _text_pairs_new(%pairs);
+    my ($pairs_ref, $response) = @_;
+    if (! defined($response))
+    {
+        $response = 1;
+    }
+    return _text_pairs_new($pairs_ref, $response);
 }
 
 sub _send
@@ -1124,7 +1128,7 @@ sub _recv
         while ($i < 4)
         {
             $read = sysread($self->{_s}, $fragment, 4 - $i);
-            if (! defined($read) || $read == 0)
+            if (! defined($read) or $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
             }
@@ -1138,7 +1142,7 @@ sub _recv
         {
             $read = sysread($self->{_s}, $fragment,
                             _min($total - $i, $self->{_size}));
-            if (! defined($read) || $read == 0)
+            if (! defined($read) or $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
             }
@@ -1154,7 +1158,7 @@ sub _recv
         while ($ready)
         {
             $read = sysread($self->{_s}, $fragment, $self->{_size});
-            if (! defined($read) || $read == 0)
+            if (! defined($read) or $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
             }

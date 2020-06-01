@@ -1371,9 +1371,9 @@ let text_pairs_parse text : (string, string list) Hashtbl.t =
   in
   loop data
 
-let text_pairs_new pairs : string =
+let text_pairs_new pairs response : string =
   let buffer = Buffer.create 1024 in
-  if Hashtbl.length pairs = 0 then
+  if response && Hashtbl.length pairs = 0 then
     Buffer.add_char buffer '\x00'
   else
     Hashtbl.iter (fun key values ->
@@ -1394,6 +1394,7 @@ let text_pairs_new pairs : string =
 let info_key_value_parse info =
   text_pairs_parse info
 
-let info_key_value_new pairs =
-  text_pairs_new pairs
+let info_key_value_new
+  ?response:(response = true) pairs =
+  text_pairs_new pairs response
 

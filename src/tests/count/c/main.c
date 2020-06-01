@@ -70,7 +70,7 @@ static void request(int const request_type,
     snprintf(response, sizeof(response), "%d", state_p->count);
     uint32_t response_info_size;
     char const * response_info;
-    response_info = cloudi_info_key_value_new(0, &response_info_size);
+    response_info = cloudi_info_key_value_new(0, &response_info_size, 1);
     cloudi_free_response_info(api);
     cloudi_return(api, request_type, name, pattern,
                   response_info, response_info_size,

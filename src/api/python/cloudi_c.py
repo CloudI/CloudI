@@ -361,7 +361,7 @@ class API(object):
         return pairs
 
     @staticmethod
-    def __text_pairs_new(pairs):
+    def __text_pairs_new(pairs, response):
         text_segments = []
         for key, values in pairs.items():
             if isinstance(values, bytes):
@@ -372,7 +372,7 @@ class API(object):
                 for value in values:
                     text_segments.append(key)
                     text_segments.append(value)
-        if text_segments == []:
+        if response and text_segments == []:
             return b'\0'
         text_segments.append(b'')
         return b'\0'.join(text_segments)
@@ -385,11 +385,11 @@ class API(object):
         return API.__text_pairs_parse(info)
 
     @staticmethod
-    def info_key_value_new(pairs):
+    def info_key_value_new(pairs, response=True):
         """
         encode service response info key/value data
         """
-        return API.__text_pairs_new(pairs)
+        return API.__text_pairs_new(pairs, response)
 
 class InvalidInputException(Exception):
     """

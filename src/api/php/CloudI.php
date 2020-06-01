@@ -870,7 +870,7 @@ class API
         return $pairs;
     }
 
-    private static function text_pairs_new($pairs)
+    private static function text_pairs_new($pairs, $response)
     {
         $text = '';
         foreach ($pairs as $key => $values)
@@ -887,7 +887,7 @@ class API
                 }
             }
         }
-        if (empty($text))
+        if ($response && empty($text))
             $text = "\0";
         return $text;
     }
@@ -897,9 +897,9 @@ class API
         return self::text_pairs_parse($info);
     }
 
-    public static function info_key_value_new($pairs)
+    public static function info_key_value_new($pairs, $response = true)
     {
-        return self::text_pairs_new($pairs);
+        return self::text_pairs_new($pairs, $response);
     }
 
     private function send($data)

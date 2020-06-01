@@ -195,5 +195,6 @@ val shutdown : ?reason:string -> 's Instance.t -> (unit, string) result
 val info_key_value_parse : string -> (string, string list) Hashtbl.t
 
 (** encode service response info key/value data *)
-val info_key_value_new : (string, string list) Hashtbl.t -> string
+val info_key_value_new :
+  ?response:bool -> (string, string list) Hashtbl.t -> string
 

@@ -1912,7 +1912,8 @@ static void text_pairs_parse_destroy(char const ** pairs)
 }
 
 static char const * text_pairs_new(char const ** pairs,
-                                   uint32_t & text_size)
+                                   uint32_t & text_size,
+                                   bool response)
 {
     realloc_ptr<char> text(1024, 1073741824);
     size_t size = 0;
@@ -1933,7 +1934,7 @@ static char const * text_pairs_new(char const ** pairs,
             size += value_size;
         }
     }
-    if (size == 0)
+    if (response && size == 0)
     {
         text[0] = '\0';
         size = 1;
@@ -1956,9 +1957,10 @@ void cloudi_info_key_value_parse_destroy(char const ** pairs)
 }
 
 char const * cloudi_info_key_value_new(char const ** pairs,
-                                       uint32_t * info_size)
+                                       uint32_t * info_size,
+                                       int response)
 {
-    return text_pairs_new(pairs, *info_size);
+    return text_pairs_new(pairs, *info_size, response);
 }
 
 void cloudi_free_name(cloudi_instance_t * api)
@@ -2527,7 +2529,14 @@ void API::info_key_value_parse_destroy(char const ** pairs)
 char const * API::info_key_value_new(char const ** pairs,
                                      uint32_t & info_size)
 {
-    return cloudi_info_key_value_new(pairs, &info_size);
+    return cloudi_info_key_value_new(pairs, &info_size, true);
+}
+
+char const * API::info_key_value_new(char const ** pairs,
+                                     uint32_t & info_size,
+                                     bool response)
+{
+    return cloudi_info_key_value_new(pairs, &info_size, response);
 }
 
 void API::free_with_delete() const

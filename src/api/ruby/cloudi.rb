@@ -651,7 +651,7 @@ module CloudI
             return pairs
         end
 
-        def self.text_pairs_new(pairs)
+        def self.text_pairs_new(pairs, response)
             text_stream = StringIO.new
             pairs.each do |key, values|
                 if values.kind_of?(String)
@@ -663,7 +663,7 @@ module CloudI
                 end
             end
             text = text_stream.string
-            if text == ''
+            if response and text == ''
                 return "\0"
             else
                 return text
@@ -674,8 +674,8 @@ module CloudI
             return text_pairs_parse(info)
         end
 
-        def self.info_key_value_new(pairs)
-            return text_pairs_new(pairs)
+        def self.info_key_value_new(pairs, response = true)
+            return text_pairs_new(pairs, response)
         end
 
         def self.assert

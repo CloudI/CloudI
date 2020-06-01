@@ -80,7 +80,8 @@ static void request(int const request_type,
     uint32_t response_info_size;
     char const * response_info;
     response_info = cloudi_info_key_value_new(http_response_headers,
-                                              &response_info_size);
+                                              &response_info_size,
+                                              1);
     cloudi_free_response_info(api);
     cloudi_return(api, request_type, name, pattern,
                   response_info, response_info_size,

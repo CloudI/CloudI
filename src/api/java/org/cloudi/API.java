@@ -1604,7 +1604,8 @@ public class API
         return pairs;
     }
 
-    private static byte[] text_pairs_new(final Map<String, List<String>> pairs)
+    private static byte[] text_pairs_new(final Map<String, List<String>> pairs,
+                                         final boolean response)
     {
         final ByteArrayOutputStream text = new ByteArrayOutputStream(1024);
         for (Map.Entry<String, List<String>> pair : pairs.entrySet())
@@ -1619,7 +1620,7 @@ public class API
                 text.write(0);
             }
         }
-        if (text.size() == 0)
+        if (response && text.size() == 0)
             text.write(0);
         return text.toByteArray();
     }
@@ -1627,7 +1628,7 @@ public class API
     /**
      * Decode service request info key/value data
      *
-     * @param  info    encoded binary
+     * @param  info encoded binary
      * @return info key/value map
      */
     public static HashMap<String,
@@ -1639,12 +1640,25 @@ public class API
     /**
      * Encode service response info key/value data
      *
-     * @param  pairs   info key/value map
+     * @param  pairs info key/value map
      * @return encoded binary
      */
     public static byte[] info_key_value_new(Map<String, List<String>> pairs)
     {
-        return API.text_pairs_new(pairs);
+        return API.info_key_value_new(pairs, true);
+    }
+
+    /**
+     * Encode service response info key/value data
+     *
+     * @param  pairs info key/value map
+     * @param  response if encoding response data
+     * @return encoded binary
+     */
+    public static byte[] info_key_value_new(Map<String, List<String>> pairs,
+                                            boolean response)
+    {
+        return API.text_pairs_new(pairs, response);
     }
 
     private void send(final OtpOutputStream command)

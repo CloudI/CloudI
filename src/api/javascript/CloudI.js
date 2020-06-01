@@ -1101,7 +1101,7 @@ var text_pairs_parse = function text_pairs_parse (text) {
 };
 
 // class method
-var text_pairs_new = function text_pairs_new (pairs) {
+var text_pairs_new = function text_pairs_new (pairs, response) {
     var text_segments = [];
     for (var key in pairs) {
         var values = pairs[key];
@@ -1116,7 +1116,7 @@ var text_pairs_new = function text_pairs_new (pairs) {
             }
         }
     }
-    if (text_segments.length == 0) {
+    if (response && text_segments.length == 0) {
         return '\x00';
     }
     text_segments.push('');
@@ -1127,8 +1127,10 @@ CloudI.API.info_key_value_parse = function info_key_value_parse (info) {
     return text_pairs_parse(info);
 };
 
-CloudI.API.info_key_value_new = function info_key_value_new (pairs) {
-    return text_pairs_new(pairs);
+CloudI.API.info_key_value_new = function info_key_value_new (pairs, response) {
+    response = typeof response !== 'undefined' ?
+               response : true;
+    return text_pairs_new(pairs, response);
 };
 
 CloudI.API.prototype._exception = function (err) {
