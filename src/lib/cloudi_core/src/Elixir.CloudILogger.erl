@@ -2,7 +2,7 @@
 
 -module('Elixir.CloudILogger').
 
--compile(no_auto_import).
+-compile([no_auto_import]).
 
 -export(['MACRO-function_arity'/1,
 	 'MACRO-function_name'/1, 'MACRO-log'/4,
@@ -42,20 +42,19 @@
      {log_trace_apply, 3}, {log_trace_sync, 2},
      {log_warn, 2}, {log_warn_apply, 2}, {log_warn_apply, 3},
      {log_warn_sync, 2}];
-'__info__'(attributes) ->
-    erlang:get_module_info('Elixir.CloudILogger',
-			   attributes);
-'__info__'(compile) ->
-    erlang:get_module_info('Elixir.CloudILogger', compile);
-'__info__'(md5) ->
-    erlang:get_module_info('Elixir.CloudILogger', md5);
+'__info__'(EKey = attributes) ->
+    erlang:get_module_info('Elixir.CloudILogger', EKey);
+'__info__'(EKey = compile) ->
+    erlang:get_module_info('Elixir.CloudILogger', EKey);
+'__info__'(EKey = md5) ->
+    erlang:get_module_info('Elixir.CloudILogger', EKey);
 '__info__'(deprecated) -> [].
 
 'MACRO-function_arity'(_E@CALLER) ->
     {'case', [],
      [{{'.', [],
 	[{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-       [], []},
+       [{no_parens, true}], []},
       [{do,
 	[{'->', [], [[nil], undefined]},
 	 {'->', [],
@@ -67,7 +66,7 @@
     {'case', [],
      [{{'.', [],
 	[{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-       [], []},
+       [{no_parens, true}], []},
       [{do,
 	[{'->', [], [[nil], undefined]},
 	 {'->', [],
@@ -75,8 +74,8 @@
 	     {'_', [], 'Elixir.CloudILogger'}}],
 	   {function, [], 'Elixir.CloudILogger'}]}]}]]}.
 
-'MACRO-log'(_E@CALLER, EVlevel@1, EVformat@1,
-	    EVargs@1) ->
+'MACRO-log'(_E@CALLER, _Elevel@1, _Eformat@1,
+	    _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -84,7 +83,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -97,21 +96,21 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVlevel@1,
-	EVformat@1, EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Elevel@1,
+	_Eformat@1, _Eargs@1]}]}.
 
-'MACRO-log_apply'(_E@CALLER, EVlevel@1, EVf@1, EVa@1) ->
+'MACRO-log_apply'(_E@CALLER, _Elevel@1, _Ef@1, _Ea@1) ->
     {{'.', [], [cloudi_core_i_logger_interface, log_apply]},
-     [], [EVlevel@1, EVf@1, EVa@1]}.
+     [], [_Elevel@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_apply'(_E@CALLER, EVlevel@1, EVm@1, EVf@1,
-		  EVa@1) ->
+'MACRO-log_apply'(_E@CALLER, _Elevel@1, _Em@1, _Ef@1,
+		  _Ea@1) ->
     {{'.', [], [cloudi_core_i_logger_interface, log_apply]},
-     [], [EVlevel@1, EVm@1, EVf@1, EVa@1]}.
+     [], [_Elevel@1, _Em@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_debug'(_E@CALLER, EVformat@1, EVargs@1) ->
+'MACRO-log_debug'(_E@CALLER, _Eformat@1, _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -119,7 +118,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -132,24 +131,24 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_debug_apply'(_E@CALLER, EVf@1, EVa@1) ->
+'MACRO-log_debug_apply'(_E@CALLER, _Ef@1, _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, debug_apply]},
-     [], [EVf@1, EVa@1]}.
+     [], [_Ef@1, _Ea@1]}.
 
-'MACRO-log_debug_apply'(_E@CALLER, EVm@1, EVf@1,
-			EVa@1) ->
+'MACRO-log_debug_apply'(_E@CALLER, _Em@1, _Ef@1,
+			_Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, debug_apply]},
-     [], [EVm@1, EVf@1, EVa@1]}.
+     [], [_Em@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_debug_sync'(_E@CALLER, EVformat@1,
-		       EVargs@1) ->
+'MACRO-log_debug_sync'(_E@CALLER, _Eformat@1,
+		       _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -157,7 +156,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -172,12 +171,12 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_error'(_E@CALLER, EVformat@1, EVargs@1) ->
+'MACRO-log_error'(_E@CALLER, _Eformat@1, _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -185,7 +184,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -198,24 +197,24 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_error_apply'(_E@CALLER, EVf@1, EVa@1) ->
+'MACRO-log_error_apply'(_E@CALLER, _Ef@1, _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, error_apply]},
-     [], [EVf@1, EVa@1]}.
+     [], [_Ef@1, _Ea@1]}.
 
-'MACRO-log_error_apply'(_E@CALLER, EVm@1, EVf@1,
-			EVa@1) ->
+'MACRO-log_error_apply'(_E@CALLER, _Em@1, _Ef@1,
+			_Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, error_apply]},
-     [], [EVm@1, EVf@1, EVa@1]}.
+     [], [_Em@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_error_sync'(_E@CALLER, EVformat@1,
-		       EVargs@1) ->
+'MACRO-log_error_sync'(_E@CALLER, _Eformat@1,
+		       _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -223,7 +222,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -238,12 +237,12 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_fatal'(_E@CALLER, EVformat@1, EVargs@1) ->
+'MACRO-log_fatal'(_E@CALLER, _Eformat@1, _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -251,7 +250,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -264,24 +263,24 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_fatal_apply'(_E@CALLER, EVf@1, EVa@1) ->
+'MACRO-log_fatal_apply'(_E@CALLER, _Ef@1, _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, fatal_apply]},
-     [], [EVf@1, EVa@1]}.
+     [], [_Ef@1, _Ea@1]}.
 
-'MACRO-log_fatal_apply'(_E@CALLER, EVm@1, EVf@1,
-			EVa@1) ->
+'MACRO-log_fatal_apply'(_E@CALLER, _Em@1, _Ef@1,
+			_Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, fatal_apply]},
-     [], [EVm@1, EVf@1, EVa@1]}.
+     [], [_Em@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_fatal_sync'(_E@CALLER, EVformat@1,
-		       EVargs@1) ->
+'MACRO-log_fatal_sync'(_E@CALLER, _Eformat@1,
+		       _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -289,7 +288,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -304,12 +303,12 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_info'(_E@CALLER, EVformat@1, EVargs@1) ->
+'MACRO-log_info'(_E@CALLER, _Eformat@1, _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -317,7 +316,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -330,24 +329,24 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_info_apply'(_E@CALLER, EVf@1, EVa@1) ->
+'MACRO-log_info_apply'(_E@CALLER, _Ef@1, _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, info_apply]},
-     [], [EVf@1, EVa@1]}.
+     [], [_Ef@1, _Ea@1]}.
 
-'MACRO-log_info_apply'(_E@CALLER, EVm@1, EVf@1,
-		       EVa@1) ->
+'MACRO-log_info_apply'(_E@CALLER, _Em@1, _Ef@1,
+		       _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, info_apply]},
-     [], [EVm@1, EVf@1, EVa@1]}.
+     [], [_Em@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_info_sync'(_E@CALLER, EVformat@1,
-		      EVargs@1) ->
+'MACRO-log_info_sync'(_E@CALLER, _Eformat@1,
+		      _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -355,7 +354,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -369,21 +368,21 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
 'MACRO-log_metadata_get'(_E@CALLER) ->
     {{'.', [], [cloudi_core_i_logger, metadata_get]}, [],
      []}.
 
-'MACRO-log_metadata_set'(_E@CALLER, EVl@1) ->
+'MACRO-log_metadata_set'(_E@CALLER, _El@1) ->
     {{'.', [], [cloudi_core_i_logger, metadata_set]}, [],
-     [EVl@1]}.
+     [_El@1]}.
 
-'MACRO-log_sync'(_E@CALLER, EVlevel@1, EVformat@1,
-		 EVargs@1) ->
+'MACRO-log_sync'(_E@CALLER, _Elevel@1, _Eformat@1,
+		 _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -391,7 +390,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -405,12 +404,12 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVlevel@1,
-	EVformat@1, EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Elevel@1,
+	_Eformat@1, _Eargs@1]}]}.
 
-'MACRO-log_trace'(_E@CALLER, EVformat@1, EVargs@1) ->
+'MACRO-log_trace'(_E@CALLER, _Eformat@1, _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -418,7 +417,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -431,24 +430,24 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_trace_apply'(_E@CALLER, EVf@1, EVa@1) ->
+'MACRO-log_trace_apply'(_E@CALLER, _Ef@1, _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, trace_apply]},
-     [], [EVf@1, EVa@1]}.
+     [], [_Ef@1, _Ea@1]}.
 
-'MACRO-log_trace_apply'(_E@CALLER, EVm@1, EVf@1,
-			EVa@1) ->
+'MACRO-log_trace_apply'(_E@CALLER, _Em@1, _Ef@1,
+			_Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, trace_apply]},
-     [], [EVm@1, EVf@1, EVa@1]}.
+     [], [_Em@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_trace_sync'(_E@CALLER, EVformat@1,
-		       EVargs@1) ->
+'MACRO-log_trace_sync'(_E@CALLER, _Eformat@1,
+		       _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -456,7 +455,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -471,12 +470,12 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_warn'(_E@CALLER, EVformat@1, EVargs@1) ->
+'MACRO-log_warn'(_E@CALLER, _Eformat@1, _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -484,7 +483,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -497,24 +496,24 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
 
-'MACRO-log_warn_apply'(_E@CALLER, EVf@1, EVa@1) ->
+'MACRO-log_warn_apply'(_E@CALLER, _Ef@1, _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, warn_apply]},
-     [], [EVf@1, EVa@1]}.
+     [], [_Ef@1, _Ea@1]}.
 
-'MACRO-log_warn_apply'(_E@CALLER, EVm@1, EVf@1,
-		       EVa@1) ->
+'MACRO-log_warn_apply'(_E@CALLER, _Em@1, _Ef@1,
+		       _Ea@1) ->
     {{'.', [],
       [cloudi_core_i_logger_interface, warn_apply]},
-     [], [EVm@1, EVf@1, EVa@1]}.
+     [], [_Em@1, _Ef@1, _Ea@1]}.
 
-'MACRO-log_warn_sync'(_E@CALLER, EVformat@1,
-		      EVargs@1) ->
+'MACRO-log_warn_sync'(_E@CALLER, _Eformat@1,
+		      _Eargs@1) ->
     {'__block__', [],
      [{'=', [],
        [{{function, [], 'Elixir.CloudILogger'},
@@ -522,7 +521,7 @@
 	{'case', [],
 	 [{{'.', [],
 	    [{'__ENV__', [], 'Elixir.CloudILogger'}, function]},
-	   [], []},
+	   [{no_parens, true}], []},
 	  [{do,
 	    [{'->', [], [[nil], {undefined, undefined}]},
 	     {'->', [],
@@ -536,7 +535,7 @@
        [{'__MODULE__', [], 'Elixir.CloudILogger'},
 	{{'.', [],
 	  [{'__ENV__', [], 'Elixir.CloudILogger'}, line]},
-	 [], []},
+	 [{no_parens, true}], []},
 	{function, [], 'Elixir.CloudILogger'},
-	{arity, [], 'Elixir.CloudILogger'}, EVformat@1,
-	EVargs@1]}]}.
+	{arity, [], 'Elixir.CloudILogger'}, _Eformat@1,
+	_Eargs@1]}]}.
