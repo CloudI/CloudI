@@ -62,45 +62,45 @@ Please see the [FAQ](https://cloudi.org/faq.html) for more details.
 
 ### Requirements
 
-* `Erlang >= 19.3 (erlang/Ubuntu)`
-* `C++ (g++/Ubuntu)`
-* `boost >= 1.36.0 (libboost-system-dev + libboost-thread-dev + libboost-dev/Ubuntu)`
+* `Erlang >= 19.3 (erlang /Ubuntu)`
+* `C++ (g++ /Ubuntu)`
+* `boost >= 1.36.0 (libboost-system-dev libboost-thread-dev libboost-dev /Ubuntu)`
 
 Optional (default="yes"):
 
 * `Java >= 1.5 JDK`
-  * `(default-jdk/Ubuntu)`
+  * `(default-jdk /Ubuntu)`
   * Use the "--enable-java-support=no" configure flag to disable
 * `JavaScript >= 0.12.18`
-  * `(nodejs/Ubuntu)`
+  * `(nodejs /Ubuntu)`
   * Use the "--enable-javascript-support=no" configure flag to disable
 * `Perl >= 5.10`
-  * `(perl + perl-modules/Ubuntu)`
+  * `(perl perl-modules /Ubuntu)`
   * Use the "--enable-perl-support=no" configure flag to disable
 * `PHP >= 5.3.6`
-  * `(php/Ubuntu)`
+  * `(php /Ubuntu)`
   * Use the "--enable-php-support=no" configure flag to disable
 * `Python >= 2.7.0`
-  * `(python + python-dev/Ubuntu)`
+  * `(python3 python3-dev /Ubuntu)`
   * Use the "--enable-python-support=no" and "--enable-python-c-support=no" configure flag to disable
 * `Ruby >= 1.9.0`
-  * `(ruby/Ubuntu)`
+  * `(ruby /Ubuntu)`
   * Use the "--enable-ruby-support=no" configure flag to disable
 * `GNU MP library`
-  * `(libgmp-dev/Ubuntu)`
+  * `(libgmp-dev /Ubuntu)`
   * Used in the hexpi (C++) integration test only
     ("--with-integration-tests=no" configure flag to disable)
 
 Optional (default="no"):
 
 * `Go >= 1.6`
-  * `(golang/Ubuntu)`
+  * `(golang /Ubuntu)`
   * Use the "--enable-go-support" configure flag to enable
 * `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
-  * `(ghc + cabal-install + zlib1g-dev/Ubuntu)`
+  * `(ghc cabal-install zlib1g-dev /Ubuntu)`
   * Use the "--enable-haskell-support" configure flag to enable
 * `OCaml >= 4.03.0`
-  * `(ocaml/Ubuntu)`
+  * `(ocaml /Ubuntu)`
   * Use the "--enable-ocaml-support" configure flag to enable
 
 ### Building

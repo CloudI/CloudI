@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-06-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix hackney compilation on Erlang/OTP 20.2
+    * Update cpg
+
 2020-06-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the optional argument response to the info_key_value_new function
