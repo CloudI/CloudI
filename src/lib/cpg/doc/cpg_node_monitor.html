@@ -14,9 +14,9 @@
    <h3><a name="CPG_Remote_Node_Monitor_Process.">CPG Remote Node Monitor Process.</a></h3>
    Handle remote node pid monitors to reduce the messages the cpg
    scope process needs to manage.
-<p>Copyright © 2017-2018 Michael Truog</p>
+<p>Copyright © 2017-2020 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.4 Nov 28 2019 12:37:51
+<p><b>Version:</b> 1.8.1 Jun 3 2020 18:15:22
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -58,7 +58,7 @@
 
 <h3 class="function"><a name="died-1">died/1</a></h3>
 <div class="spec">
-<p><tt>died(Process::<a href="#type-process">process()</a>) -&gt; [pid()]</tt><br></p>
+<p><tt>died(Process::<a href="#type-process">process()</a>) -&gt; {[pid()], [[{pid(), {exit, any()}}, ...]]}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 1.5.8">
+<meta name="generator" content="Asciidoctor 1.5.5">
 <meta name="description" content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing">
 <meta name="keywords" content="tutorial, cloud, private cloud, framework, erlang, fault tolerant, distributed systems, embarrassingly parallel, divide and conquer, cloudi">
 <title>CloudI User Tutorials</title>
@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html" class="active">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.8.0.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.0.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -40,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <div id="header_document">
 <h1>CloudI User Tutorials</h1>
 <div class="details">
-<span id="revnumber">version 1.8.0,</span>
-<span id="revdate">2019-11-28</span>
+<span id="revnumber">version 2.0.0,</span>
+<span id="revdate">2020-06-04</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle"></div>
@@ -87,7 +87,7 @@ With CloudI, you can create a system with Microservices that doesn&#8217;t requi
 If a supported programming language doesn&#8217;t yet have a tutorial written yet, it is best to refer to the <a href="#cloudi_examples">CloudI Examples</a>.</p>
 </div>
 <div class="sect2">
-<h3 id="java_tutorial"><a href="tutorial_java.html">Java Tutorial</a></h3>
+<h3 id="a_href_tutorial_java_html_java_tutorial_a"><a href="tutorial_java.html">Java Tutorial</a></h3>
 
 </div>
 </div>
@@ -232,7 +232,7 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 <p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx/main.cpp">C++</a></p>
 </li>
 <li>
-<p>Erlang (<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence1.erl">Sequence 1</a> <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence2.erl">Sequence 2</a> <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence3.erl">Sequence 3</a> <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence4.erl">Sequence 4</a>)</p>
+<p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging.erl">Erlang</a></p>
 </li>
 <li>
 <p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/gopath/src/messaging_go/main.go">Go</a></p>
@@ -388,9 +388,9 @@ Often the main data throughput is HTTP protocol usage coming from any of the pro
 The incoming HTTP requests are automatically load-balanced among the available services, based on the incoming URL path matching a service name pattern for a pool of service processes.</p>
 </div>
 <div class="paragraph">
-<p>CloudI services provide process pooling automatically when their configuration has a <a href="api.html#2_services_add" target="_blank" rel="noopener">count_process or count_thread (of an external service)</a> greater than 1.
-A CloudI service&#8217;s process pooling can be adjusted dynamically based on the incoming service request rate by using the <a href="api.html#2_services_add_config_opts_count_process_dynamic" target="_blank" rel="noopener">count_process_dynamic</a> service configuration option.
-When a service request is sent it will automatically select a service execution process (which represents an external service thread within an OS process or an internal service Erlang process within the Erlang VM) randomly from those available, due to <a href="api.html#1_subscribe" target="_blank" rel="noopener">subscribing</a> with the same service name pattern.</p>
+<p>CloudI services provide process pooling automatically when their configuration has a <a href="api.html#2_services_add" target="_blank">count_process or count_thread (of an external service)</a> greater than 1.
+A CloudI service&#8217;s process pooling can be adjusted dynamically based on the incoming service request rate by using the <a href="api.html#2_services_add_config_opts_count_process_dynamic" target="_blank">count_process_dynamic</a> service configuration option.
+When a service request is sent it will automatically select a service execution process (which represents an external service thread within an OS process or an internal service Erlang process within the Erlang VM) randomly from those available, due to <a href="api.html#1_subscribe" target="_blank">subscribing</a> with the same service name pattern.</p>
 </div>
 <div class="paragraph">
 <p>Relying on this process pooling keeps services dependable and helps to reduce their potential complexity, since a service developer only needs to focus on developing serial source code.
@@ -412,7 +412,7 @@ If the service request messaging is able to keep many separate external CloudI s
 <div class="paragraph">
 <p>Controlling the potential service request latency with the selection of the programming languages can avoid prematurely exhausting computational resources.
 A good approach is using as few programming languages that can reasonably be used for the business logic design.
-Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank" rel="noopener">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, OCaml, Java, Python/C, Haskell, Go (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds, when under high load) due to inefficiencies within the programming language runtimes.
+Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, OCaml, Java, Python/C, Haskell, Go (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds, when under high load) due to inefficiencies within the programming language runtimes.
 By considering the latency requirements of the system early during development it will be easier to scale the deployment and avoid wasted development effort.</p>
 </div>
 <div class="paragraph">

@@ -12,19 +12,17 @@
 <h1>Module cpg</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="CloudI_Process_Groups_(CPG)">CloudI Process Groups (CPG)</a></h3>
-   Based on the pg2 module in the Erlang OTP kernel application
-   (lib/kernel-x.x.x/src/pg2.erl).
-<p>Copyright © 2011-2018 Michael Truog</p>
+   cpg relies on distributed Erlang for node communication, which means
+   a fully connected network topology is created.
+<p>Copyright © 2011-2020 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.5 Nov 28 2019 12:37:51
+<p><b>Version:</b> 1.8.1 Jun 3 2020 18:15:21
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
    <h3><a name="CloudI_Process_Groups_(CPG)">CloudI Process Groups (CPG)</a></h3>
-   Based on the pg2 module in the Erlang OTP kernel application
-   (lib/kernel-x.x.x/src/pg2.erl).
    cpg relies on distributed Erlang for node communication, which means
    a fully connected network topology is created.  With Distributed Erlang,
    Erlang pids either exist on the local node or a remote node
@@ -44,12 +42,16 @@
 <p><tt>callback_leave() = fun((any(), pid()) -&gt; any()) | fun((any(), pid(), <a href="#type-reason_leave">reason_leave()</a>) -&gt; any())</tt></p>
 
 
+<h3 class="typedecl"><a name="type-listen">listen()</a></h3>
+<p><tt>listen() = visible | all</tt></p>
+
+
 <h3 class="typedecl"><a name="type-name">name()</a></h3>
 <p><tt>name() = any()</tt></p>
 
 
 <h3 class="typedecl"><a name="type-reason_join">reason_join()</a></h3>
-<p><tt>reason_join() = join_local | join_remote | {exit, any()}</tt></p>
+<p><tt>reason_join() = join_local | join_remote</tt></p>
 
 
 <h3 class="typedecl"><a name="type-reason_leave">reason_leave()</a></h3>
@@ -254,6 +256,12 @@
 <tr><td valign="top"><a href="#get_remote_pid-4">get_remote_pid/4</a></td><td>
   <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
+<tr><td valign="top"><a href="#hidden_nodes-1">hidden_nodes/1</a></td><td>
+  <h4><a name="Get_the_hidden_nodes.">Get the hidden nodes.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#ignore_node-2">ignore_node/2</a></td><td>
+  <h4><a name="Check_if_a_node_is_ignored.">Check if a node is ignored.</a></h4>
+  Nodes that connect periodically for running operations commands are
+  ignored by this function.</td></tr>
 <tr><td valign="top"><a href="#join-1">join/1</a></td><td>
   <h4><a name="Join_a_specific_group_with_self()_as_a_local_pid.">Join a specific group with self() as a local pid.</a></h4>
   A group is automatically created if it does not already exist.</td></tr>
@@ -316,6 +324,8 @@
   <h4><a name="Leave_specific_groups_a_specific_number_of_times.">Leave specific groups a specific number of times.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#leave_counts-4">leave_counts/4</a></td><td>
   <h4><a name="Leave_specific_groups_a_specific_number_of_times.">Leave specific groups a specific number of times.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#listen_nodes-2">listen_nodes/2</a></td><td>
+  <h4><a name="Get_the_monitored_listen_nodes.">Get the monitored listen nodes.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#register_name-2">register_name/2</a></td><td>
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
@@ -331,6 +341,9 @@
 <tr><td valign="top"><a href="#reset-1">reset/1</a></td><td>
   <h4><a name="Reset_any_internal_scope_state.">Reset any internal scope state.</a></h4>
   Updates cpg application node_type monitoring.</td></tr>
+<tr><td valign="top"><a href="#reset_all-1">reset_all/1</a></td><td>
+  <h4><a name="Reset_internal_scopes_state.">Reset internal scopes state.</a></h4>
+  Updates cpg application node_type monitoring.</td></tr>
 <tr><td valign="top"><a href="#scope_exists-1">scope_exists/1</a></td><td>
   <h4><a name="Confirm_a_scope_exists.">Confirm a scope exists.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#send-2">send/2</a></td><td>
@@ -345,6 +358,11 @@
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
   process registration (instead of {local, atom()} or {global, atom()}).</td></tr>
+<tr><td valign="top"><a href="#valid_node-1">valid_node/1</a></td><td>
+  <h4><a name="Check_if_a_node_is_valid.">Check if a node is valid.</a></h4>
+  If the node name is not ignored.</td></tr>
+<tr><td valign="top"><a href="#visible_nodes-1">visible_nodes/1</a></td><td>
+  <h4><a name="Get_the_visible_nodes.">Get the visible nodes.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#whereis_name-1">whereis_name/1</a></td><td>
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
@@ -850,6 +868,21 @@
   <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
+<h3 class="function"><a name="hidden_nodes-1">hidden_nodes/1</a></h3>
+<div class="spec">
+<p><tt>hidden_nodes(NodeNameLocal::nonempty_string()) -&gt; [node()]</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_hidden_nodes.">Get the hidden nodes.</a></h4>
+</p>
+
+<h3 class="function"><a name="ignore_node-2">ignore_node/2</a></h3>
+<div class="spec">
+<p><tt>ignore_node(Node::node(), NodeNameLocal::nonempty_string()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Check_if_a_node_is_ignored.">Check if a node is ignored.</a></h4>
+  Nodes that connect periodically for running operations commands are
+  ignored by this function.</p>
+
 <h3 class="function"><a name="join-1">join/1</a></h3>
 <div class="spec">
 <p><tt>join(GroupName::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
@@ -1015,6 +1048,13 @@
   <h4><a name="Leave_specific_groups_a_specific_number_of_times.">Leave specific groups a specific number of times.</a></h4>
 </p>
 
+<h3 class="function"><a name="listen_nodes-2">listen_nodes/2</a></h3>
+<div class="spec">
+<p><tt>listen_nodes(Listen::<a href="#type-listen">listen()</a>, NodeNameLocal::nonempty_string()) -&gt; [node()]</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_monitored_listen_nodes.">Get the monitored listen nodes.</a></h4>
+</p>
+
 <h3 class="function"><a name="register_name-2">register_name/2</a></h3>
 <div class="spec">
 <p><tt>register_name(GroupName::<a href="#type-via_name">via_name()</a>, Pid::pid()) -&gt; yes</tt><br></p>
@@ -1058,6 +1098,13 @@
   <h4><a name="Reset_any_internal_scope_state.">Reset any internal scope state.</a></h4>
   Updates cpg application node_type monitoring</p>
 
+<h3 class="function"><a name="reset_all-1">reset_all/1</a></h3>
+<div class="spec">
+<p><tt>reset_all(Scopes::[<a href="#type-scope">scope()</a>]) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Reset_internal_scopes_state.">Reset internal scopes state.</a></h4>
+  Updates cpg application node_type monitoring</p>
+
 <h3 class="function"><a name="scope_exists-1">scope_exists/1</a></h3>
 <div class="spec">
 <p><tt>scope_exists(Scope::atom()) -&gt; ok | {error, term()}</tt><br></p>
@@ -1094,6 +1141,20 @@
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
   process registration (instead of {local, atom()} or {global, atom()})</p>
+
+<h3 class="function"><a name="valid_node-1">valid_node/1</a></h3>
+<div class="spec">
+<p><tt>valid_node(Node::node()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Check_if_a_node_is_valid.">Check if a node is valid.</a></h4>
+  If the node name is not ignored.</p>
+
+<h3 class="function"><a name="visible_nodes-1">visible_nodes/1</a></h3>
+<div class="spec">
+<p><tt>visible_nodes(NodeNameLocal::nonempty_string()) -&gt; [node()]</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_visible_nodes.">Get the visible nodes.</a></h4>
+</p>
 
 <h3 class="function"><a name="whereis_name-1">whereis_name/1</a></h3>
 <div class="spec">

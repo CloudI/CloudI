@@ -1,5 +1,32 @@
 ------------------------------------------------------------------------        
 
+June 4, 2020
+  Version 2.0.0 released.
+  * backwards incompatible changes:
+    * CloudI API initialization has an optional terminate_return_value
+      parameter (defaults to true for past functionality) that causes a
+      terminate exception to be used if set to false, in
+      C++/OCaml/Haskell
+    * info_key_value_parse CloudI API function is now static in
+      Go/JavaScript/Perl/PHP/Python/Ruby
+  * Fixed CloudI Service API nodes_set (nodes configuration) use of
+    connect and listen for hidden node connections
+    (isolates one CloudI cluster from another by not creating a
+     fully-connected network topology when connect == hidden)
+  * Added the service configuration option restart_all to restart
+    all service processes when one fails
+  * Added the CloudI Service API services_suspend and services_resume
+    functions to pause the processing of incoming service messages
+  * Added suspend-related information to the CloudI Service API
+    services_status output
+  * Added C/C++ CloudI API functions for automatically freeing
+    memory passed to return or forward
+  * Erlang/OTP 23 support was added
+  * Python 3.8 support was added
+  * Haskell GHC 8.10.1 support was added
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 November 28, 2019
   Version 1.8.0 released.
   * backwards compatibility difference:

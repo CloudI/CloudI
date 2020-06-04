@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.8.0.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.0.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -40,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.8.0<br />
-              last updated on November 28<sup>th</sup> 2019</h3></center>
+  <center><h3>version 2.0.0<br />
+              last updated on June 4<sup>th</sup> 2020</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -138,6 +138,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <ul class="faq">
     <li><a href="#7_start"      >7.1 - Why does CloudI stop shortly after being started?</a></li>
     <li><a href="#7_slow"       >7.2 - Why is CloudI making my Linux machine slow?</a></li>
+    <li><a href="#7_install"    >7.3 - Why does my container or guest VM installation of CloudI have problems?</a></li>
   </ul>
 
   <hr \>
@@ -1061,13 +1062,24 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="3_Overview"></a>
   <h3>3.1 - Overview</h3>
   <p>
-    Installation of CloudI from source (within the archive's "src" directory)
-    uses the typical open source command sequence of:
+    For CloudI on a Live CD ISO image use the<br />
+    <a href="https://github.com/CloudI/live_cd#readme" target="_blank">https://github.com/CloudI/live_cd</a> repository.
+  </p>
+  <p>
+    For CloudI in a container (e.g., Docker) use the<br />
+    <a href="https://github.com/CloudI/containers#readme" target="_blank">https://github.com/CloudI/containers</a> repository.
+  </p>
+  <p>
+    Installation of CloudI from source (in the
+    <a href="https://github.com/CloudI/CloudI#readme" target="_blank">main repository</a>
+    or CloudI release "src" directory) uses the typical open source
+    command sequence of:
     <ol style="font-family: monospace">
       <li>./configure</li>
       <li>make</li>
       <li>sudo make install</li>
     </ol>
+    If the ./configure script doesn't exist, use ./autogen.sh to generate it.
   </p>
   <p class="paragraph">
     The most common programming languages CloudI supports are expected to be
@@ -1173,17 +1185,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     Use the debug python executable instead of the normal python
     executable<br />(default="no")
     </td></tr><tr><td nowrap>
-    --without-integration-tests
+    --with-integration-tests
     </td><td>
-    Do not build and install the integration tests or utilize the
-    integration tests configuration that causes them to run at startup<br />
-    (default="yes")
+    Build and install the integration tests<br />(default="yes")
     </td></tr><tr><td nowrap>
-    --without-integration-tests-ran
+    --with-integration-tests-ran
     </td><td>
-    Do not install the integration tests configuration that
-    causes them to run at startup<br />
-    (default="no")
+    Install the integration tests configuration
+    to run the tests at startup<br />(default="no")
     </td></tr><tr><td nowrap>
     --enable-go-support
     </td><td>
@@ -1234,7 +1243,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </p>
   <p class="paragraph">
     For more installation configuration option details, please execute
-    "./configure --help" (otherwise, you can refer to
+    "./configure&nbsp;--help" (otherwise, you can refer to
     <a href="https://github.com/CloudI/CloudI/blob/master/src/INSTALL" target="_blank">src/INSTALL</a>
     for basic configuration information).
   </p>
@@ -2855,6 +2864,42 @@ sudo cloudi stop
      for service configuration details or
      <a href="faq.html#5_Performance">"5.1 - Performance Considerations"</a>
      for general information about scheduler limitations).
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <a name="7_install"></a>
+  <h3>7.3 - Why does my container or guest VM installation of CloudI have problems?</h3>
+  <p class="paragraph">
+    CloudI Erlang source code executes within the Erlang/OTP VM
+    (BEAM, i.e., "Bogdan/Björn's Erlang Abstract Machine") and requires
+    accurate time-keeping during its execution.  Typically time information
+    is obtained using clock_gettime with CLOCK_MONOTONIC and CLOCK_REALTIME
+    (e.g., on Linux).  The time source can be checked in the Erlang shell with
+    "erlang:system_info(os_monotonic_time_source)." and
+    "erlang:system_info(os_system_time_source).".
+  </p>
+  <h4>Container Execution</h4>
+  <p>
+    Container execution of CloudI can occur on an overloaded machine to
+    cause timeouts to occur prematurely after not giving CloudI CPU time.
+    If Erlang/OTP was configured with
+    &#8209;&#8209;enable&#8209;prefer&#8209;elapsed&#8209;monotonic&#8209;time&#8209;during&#8209;suspend
+    (not enabled by default) and the container system freezes/unfreezes
+    processes automatically using SIGSTOP/SIGCONT
+    (on Linux it would likely use the <a href="https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt" target="_blank">cgroup freezer subsystem</a>)
+    based on the machine load, it may be possible to have reliable Erlang/OTP
+    execution in a container.  If execution was reliable, it would be
+    inefficient, so container execution is best to avoid if both
+    fault-tolerance and efficiency are requirements.
+  </p>
+  <h4>Guest VM Execution</h4>
+  <p>
+    Guest VM execution can have relatively accurate time-keeping on Linux when
+    the clocksource is set to kvm&#8209;clock and the scheduler is set to
+    <a href="https://en.wikipedia.org/wiki/Completely_Fair_Scheduler" target="_blank">Completely Fair Queuing (CFQ)</a>
+    (Linux kernel arguments "elevator=cfq&nbsp;clocksource=kvm&#8209;clock").
+    Various CloudI testing occurs in guest VM execution without problems,
+    though execution is slower than bare-metal execution.
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
 </div>

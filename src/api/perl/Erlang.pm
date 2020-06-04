@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@ use strict;
 use warnings;
 use 5.010;
 
-$Erlang::VERSION = '1.80';
+$Erlang::VERSION = '2.00';
 
 require Compress::Zlib;
 # bigint/bignum caused slowness without enough features to be useful

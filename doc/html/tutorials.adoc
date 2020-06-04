@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 1.8.0
-:revdate: 2019-11-28
+:revnumber: 2.0.0
+:revdate: 2020-06-04
 :lang: en
 :encoding: UTF-8
 :toc:
@@ -78,7 +78,7 @@ All Supported Programming Languages::
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.rb[Ruby]
   * Basic Messaging Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx/main.cpp[C++]
-  ** Erlang (link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence1.erl[Sequence 1] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence2.erl[Sequence 2] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence3.erl[Sequence 3] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence4.erl[Sequence 4])
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging.erl[Erlang]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/gopath/src/messaging_go/main.go[Go]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/haskell/Main.hs[Haskell]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/java/org/cloudi/tests/messaging/Task.java[Java]
