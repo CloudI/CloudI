@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-06-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Increase configure flag --with-test-timeout=container value to
+      10 minutes (600) based on LXC container testing
+
 2020-06-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * CloudI version 2.0.0 released

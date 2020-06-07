@@ -339,13 +339,13 @@ AC_ARG_WITH([test-timeout],
         [The maximum amount of time a CloudI test will wait for completion
          in seconds.  The default of 10 seconds is for bare-metal use
          (ARG=dev).  Unreliable container execution should use ARG=container
-         to get 60 seconds or provide the integer directly.
+         to get 10 minutes (600) or provide the integer directly.
          @<:@ARG=dev@:>@ ])],
     [
     if test "x$withval" = "xdev"; then
         CLOUDI_TEST_TIMEOUT="10"
     elif test "x$withval" = "xcontainer"; then
-        CLOUDI_TEST_TIMEOUT="60"
+        CLOUDI_TEST_TIMEOUT="600"
     elif test "$withval" -ge 10; then
         CLOUDI_TEST_TIMEOUT="$withval"
     else
