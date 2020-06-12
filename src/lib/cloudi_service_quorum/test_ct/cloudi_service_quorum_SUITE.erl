@@ -79,7 +79,8 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 
 all() ->
     test_condition([{group, quorum_timeout},
-                    {group, quorum_crash}]).
+                    {group, quorum_crash}],
+                   ?CLOUDI_LONG_TEST_TIMEOUT).
 
 groups() ->
     [{quorum_timeout, [],
@@ -307,13 +308,11 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-test_condition(L) ->
-    if
-        ?CLOUDI_LONG_TEST_TIMEOUT > 0 ->
-            L;
-        ?CLOUDI_LONG_TEST_TIMEOUT =:= 0 ->
-            {skip, long_tests_disabled}
-    end.
+test_condition(_, 0) ->
+    {skip, long_tests_disabled};
+test_condition(L, LongTestTimeout)
+    when LongTestTimeout > 0 ->
+    L.
 
 services_add(I, Configuration) ->
     services_add(I, [], Configuration).

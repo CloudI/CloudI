@@ -18,7 +18,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -39,8 +39,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2010-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(btrie).
@@ -304,10 +304,12 @@ binary_prefix(KeyEnd1, KeyEnd2) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-internal_test_() ->
-    [
-        {"internal tests", ?_assertEqual(ok, test())}
-    ].
+-include("trie_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"internal tests", ?_assertOk(test())}
+    ]}.
 
 -endif.
 

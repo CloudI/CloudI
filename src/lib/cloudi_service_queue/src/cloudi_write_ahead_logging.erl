@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_write_ahead_logging).
@@ -525,7 +525,18 @@ checksum(ChecksumType, Data) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-checksum_size_test() ->
+-ifdef(CLOUDI_TEST_TIMEOUT).
+-define(TEST_TIMEOUT, ?CLOUDI_TEST_TIMEOUT). % seconds
+-else.
+-define(TEST_TIMEOUT, 10). % seconds
+-endif.
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"checksum size tests", ?_assertEqual(ok, t_checksum_size())}
+    ]}.
+
+t_checksum_size() ->
     Data = <<"The quick brown fox jumps over the lazy dog">>,
     Checksums = [undefined, crc32, md5, ripemd160,
                  sha, sha224, sha256, sha384, sha512],

@@ -13,7 +13,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -52,8 +52,8 @@
 %%% limitations under the License.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pqueue4).
@@ -11573,15 +11573,17 @@ remove_unique_p(0, F,
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-internal_test_() ->
-    [
-        {"internal tests", ?_assertEqual(ok, test())}
-    ].
+-include("pqueue_test.hrl").
 
-proper_test_() ->
-    {timeout, 600, [
-        {"proper tests", ?_assert(pqueue_proper:qc_pq4())}
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"internal tests", ?_assertOk(test())}
     ]}.
+
+long_test_() ->
+    test_condition([
+        {"proper tests", ?_assert(pqueue_proper:qc_pq4())}
+    ], ?CLOUDI_LONG_TEST_TIMEOUT).
 
 -endif.
 

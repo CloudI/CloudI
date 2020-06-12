@@ -26,7 +26,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -47,8 +47,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2017-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_hash).
@@ -641,7 +641,15 @@ iodata_to_list(ListOut, Byte, Size)
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-jenkins_test() ->
+-include("quickrand_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"jenkins tests", ?_assertOk(t_jenkins())},
+        {"jenkins64 tests", ?_assertOk(t_jenkins64())}
+    ]}.
+
+t_jenkins() ->
     Message1List = "The quick brown fox jumps over the lazy dog",
     Message1Binary = erlang:list_to_binary(Message1List),
     Hash1_32 = 1995770187,
@@ -652,7 +660,7 @@ jenkins_test() ->
     Hash1_64 = quickrand_hash:jenkins_64(Message1Binary),
     ok.
 
-jenkins64_test() ->
+t_jenkins64() ->
     Message1List = "The quick brown fox jumps over the lazy dog",
     Message1Binary = erlang:list_to_binary(Message1List),
     Hash1_32 = 564871382,

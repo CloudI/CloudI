@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supool_test_server).
@@ -71,7 +71,18 @@ loop() ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-internal_test() ->
+-ifdef(CLOUDI_TEST_TIMEOUT).
+-define(TEST_TIMEOUT, ?CLOUDI_TEST_TIMEOUT). % seconds
+-else.
+-define(TEST_TIMEOUT, 10). % seconds
+-endif.
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"internal tests", ?_assertEqual(ok, t_basic())}
+    ]}.
+
+t_basic() ->
     %application:start(sasl),
     application:start(supool),
     ChildSpec = {undefined, {supool_test_server, start_link, []},

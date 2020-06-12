@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2009-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_proplists).
@@ -139,21 +139,31 @@ take_values(Result, [{Key, Default} | DefaultList], List)
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-delete_all_test() ->
+-include("cloudi_core_i_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"delete_all tests", ?_assertOk(t_delete_all())},
+        {"find_any tests", ?_assertOk(t_find_any())},
+        {"partition tests", ?_assertOk(t_partition())},
+        {"take_values tests", ?_assertOk(t_take_values())}
+    ]}.
+
+t_delete_all() ->
     [{d, true}] = delete_all([a, b, c], [{a, true}, {d, true}]),
     ok.
 
-find_any_test() ->
+t_find_any() ->
     false = find_any([b], [{a, true}, {d, true}]),
     true = find_any([d], [{a, true}, {d, true}]),
     ok.
 
-partition_test() ->
+t_partition() ->
     {[{a, true}, {a, false}],
      [{b, false}]} = partition(a, [{a, true}, {a, false}, {b, false}]),
     ok.
 
-take_values_test() ->
+t_take_values() ->
     [1, 5, 3] = take_values([{a, 1}, {b, 2}, {c, 3}],
                             [{b, 5}]),
     ok.

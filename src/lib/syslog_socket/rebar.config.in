@@ -1,0 +1,6 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
+{ct_extra_params, "@CLOUDI_TEST_VMARGS@ -env ERL_COMPILER_OPTIONS \"[{d, 'CLOUDI_TEST_TIMEOUT', @CLOUDI_TEST_TIMEOUT@}]\""}.
+{ct_use_short_names, true}.
+

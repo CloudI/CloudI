@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2009-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_string).
@@ -896,7 +896,26 @@ uppercase(String)
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-afterl_test() ->
+-include("cloudi_core_i_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"afterl tests", ?_assertOk(t_afterl())},
+        {"afterr tests", ?_assertOk(t_afterr())},
+        {"beforel tests", ?_assertOk(t_beforel())},
+        {"beforer tests", ?_assertOk(t_beforer())},
+        {"findl tests", ?_assertOk(t_findl())},
+        {"findr tests", ?_assertOk(t_findr())},
+        {"join tests", ?_assertOk(t_join())},
+        {"split tests", ?_assertOk(t_split())},
+        {"splitl tests", ?_assertOk(t_splitl())},
+        {"splitr tests", ?_assertOk(t_splitr())},
+        {"trim tests", ?_assertOk(t_trim())},
+        {"triml tests", ?_assertOk(t_triml())},
+        {"trimr tests", ?_assertOk(t_trimr())}
+    ]}.
+
+t_afterl() ->
     "this-is-all-input" = afterl($/, "this-is-all-input", input),
     "" = afterl($/, "this-is-all-input", empty),
     "" = afterl($/, "this-is-all-input"),
@@ -905,7 +924,7 @@ afterl_test() ->
     "is-all-input" = afterl($-, "this-is-all-input"),
     ok.
 
-afterr_test() ->
+t_afterr() ->
     "this-is-all-input" = afterr($/, "this-is-all-input", input),
     "" = afterr($/, "this-is-all-input", empty),
     "" = afterr($/, "this-is-all-input"),
@@ -914,7 +933,7 @@ afterr_test() ->
     "input" = afterr($-, "this-is-all-input"),
     ok.
 
-beforel_test() ->
+t_beforel() ->
     "this-is-all-input" = beforel($/, "this-is-all-input", input),
     "" = beforel($/, "this-is-all-input", empty),
     "" = beforel($/, "this-is-all-input"),
@@ -923,7 +942,7 @@ beforel_test() ->
     "this" = beforel($-, "this-is-all-input"),
     ok.
 
-beforer_test() ->
+t_beforer() ->
     "this-is-all-input" = beforer($/, "this-is-all-input", input),
     "" = beforer($/, "this-is-all-input", empty),
     "" = beforer($/, "this-is-all-input"),
@@ -932,7 +951,7 @@ beforer_test() ->
     "this-is-all" = beforer($-, "this-is-all-input"),
     ok.
 
-findl_test() ->
+t_findl() ->
     "..cd..ef" = findl(".", "ab..cd..ef"),
     <<"..cd..ef">> = findl(".", <<"ab..cd..ef">>),
     <<"..cd..ef">> = findl("..", <<"ab..cd..ef">>),
@@ -941,7 +960,7 @@ findl_test() ->
     false = findl("x", "ab..cd..ef"),
     ok.
 
-findr_test() ->
+t_findr() ->
     ".ef" = findr(".", "ab..cd..ef"),
     <<".ef">> = findr(".", <<"ab..cd..ef">>),
     <<"..ef">> = findr("..", <<"ab..cd..ef">>),
@@ -950,19 +969,19 @@ findr_test() ->
     false = findr("x", "ab..cd..ef"),
     ok.
 
-join_test() ->
+t_join() ->
     "ab..bc..cd" = join("..", ["ab","bc","cd"]),
     <<"ab..bc..cd">> = join(<<"..">>, [<<"ab">>,<<"bc">>,<<"cd">>]),
     <<"ab..bc....cd">> = join(<<"..">>, [<<"ab">>,<<"bc">>,<<>>,<<"cd">>]),
     ok.
 
-split_test() ->
+t_split() ->
     ["ab","bc","cd"] = split("..", "ab..bc..cd"),
     [<<"ab">>,<<"bc">>,<<"cd">>] = split(<<"..">>, <<"ab..bc..cd">>),
     [<<"ab">>,<<"bc">>,<<>>,<<"cd">>] = split(<<"..">>, <<"ab..bc....cd">>),
     ok.
 
-splitl_test() ->
+t_splitl() ->
     {"this-is-all-input", ""} = splitl($/, "this-is-all-input", input),
     {"", ""} = splitl($/, "this-is-all-input", empty),
     {"", ""} = splitl($/, "this-is-all-input"),
@@ -971,7 +990,7 @@ splitl_test() ->
     {"this", "is-all-input"} = splitl($-, "this-is-all-input"),
     ok.
 
-splitr_test() ->
+t_splitr() ->
     {"", "this-is-all-input"} = splitr($/, "this-is-all-input", input),
     {"", ""} = splitr($/, "this-is-all-input", empty),
     {"", ""} = splitr($/, "this-is-all-input"),
@@ -980,21 +999,21 @@ splitr_test() ->
     {"this-is-all", "input"} = splitr($-, "this-is-all-input"),
     ok.
 
-trim_test() ->
+t_trim() ->
     <<"Hello">> = trim(<<"\t  Hello  \n">>),
     "Hello" = trim("\t  Hello  \n"),
     <<".Hello.">> = trim(<<".Hello.\n">>),
     ".Hello." = trim(".Hello.\n"),
     ok.
 
-triml_test() ->
+t_triml() ->
     <<"Hello  \n">> = triml(<<"\t  Hello  \n">>),
     "Hello  \n" = triml("\t  Hello  \n"),
     <<"Hello.\n">> = triml("\n.", <<".Hello.\n">>),
     "Hello.\n" = triml("\n.", ".Hello.\n"),
     ok.
 
-trimr_test() ->
+t_trimr() ->
     <<"\t  Hello">> = trimr(<<"\t  Hello  \n">>),
     "\t  Hello" = trimr("\t  Hello  \n"),
     <<".Hello">> = trimr("\n.", <<".Hello.\n">>),

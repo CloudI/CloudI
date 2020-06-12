@@ -20,7 +20,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,8 +41,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2010-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -2292,14 +2292,16 @@ wildcard_match2_lists(_, L) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-internal_test_() ->
-    [
-        {"internal tests", ?_assertEqual(ok, test())}
-    ].
+-include("trie_test.hrl").
 
-%proper_test_() ->
-%    {timeout, 600, [
-%        {"proper tests", ?_assert(trie_proper:qc_run(?MODULE))}
-%    ]}.
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"internal tests", ?_assertOk(test())}
+    ]}.
+
+long_test_() ->
+    test_condition([
+        {"proper tests", ?_assert(trie_proper:qc_run(?MODULE))}
+    ], ?CLOUDI_LONG_TEST_TIMEOUT).
 
 -endif.

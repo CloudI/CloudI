@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_response_info).
@@ -184,7 +184,14 @@ lookup_content_type_data() ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-format_test() ->
+-include("cloudi_core_i_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"format tests", ?_assertOk(t_format())}
+    ]}.
+
+t_format() ->
     <<0>> = key_value_new([]),
     <<0>> = key_value_new([], text_pairs),
     <<0>> = key_value_new([], binary_pairs),

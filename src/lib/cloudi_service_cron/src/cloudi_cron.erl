@@ -83,7 +83,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -104,8 +104,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2019-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_cron).
@@ -679,7 +679,15 @@ day_of_week(Date) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-parse_expression_test() ->
+-include("cloudi_service_cron_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"parse expression tests", ?_assertOk(t_parse_expression())},
+        {"next_datetime tests", ?_assertOk(t_next_datetime())}
+    ]}.
+
+t_parse_expression() ->
     ExpressionString0 = "  @midnight ",
     ExpressionStrings0 = {"0", "0", "0", "*", "*", "*", "*"},
     Expression0 = {[0], [0], [0], undefined, undefined, undefined, undefined},
@@ -723,7 +731,7 @@ parse_expression_test() ->
                  expression = Expression6} = new(ExpressionString6),
     ok.
 
-next_datetime_test() ->
+t_next_datetime() ->
     Cron0 = new("18,38,58 17 * * mon-fri"),
     DateTime0 = {{2019, 10, 25}, {17, 17, 59}},
     DateTime1 = {{2019, 10, 25}, {17, 18, 0}},

@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -1499,10 +1499,16 @@ pseudo_random(N) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-internal_test_() ->
-    [
+-ifdef(CLOUDI_TEST_TIMEOUT).
+-define(TEST_TIMEOUT, ?CLOUDI_TEST_TIMEOUT). % seconds
+-else.
+-define(TEST_TIMEOUT, 10). % seconds
+-endif.
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
         {"internal tests", ?_assertEqual(ok, test())}
-    ].
+    ]}.
 
 -endif.
 

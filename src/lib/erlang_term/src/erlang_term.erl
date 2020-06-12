@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(erlang_term).
@@ -141,7 +141,18 @@ byte_size_term_global(_) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-internal_test() ->
+-ifdef(CLOUDI_TEST_TIMEOUT).
+-define(TEST_TIMEOUT, ?CLOUDI_TEST_TIMEOUT). % seconds
+-else.
+-define(TEST_TIMEOUT, 10). % seconds
+-endif.
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"internal tests", ?_assertEqual(ok, t_basic())}
+    ]}.
+
+t_basic() ->
     RefcBinary = <<1:((?HEAP_BINARY_LIMIT + 1) * 8)>>,
     HeapBinary = <<1:(?HEAP_BINARY_LIMIT * 8)>>,
     true = (7 == (1 + erts_debug:flat_size(RefcBinary))),

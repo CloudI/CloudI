@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2009-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_lists).
@@ -273,27 +273,43 @@ take_values(Result, [{Key, Default} | DefaultList], List) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-delete_all_test() ->
+-include("cloudi_core_i_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"delete_all tests", ?_assertOk(t_delete_all())},
+        {"delete_checked tests", ?_assertOk(t_delete_checked())},
+        {"index tests", ?_assertOk(t_index())},
+        {"iodata_to_list tests", ?_assertOk(t_iodata_to_list())},
+        {"itera tests", ?_assertOk(t_itera())},
+        {"itera2 tests", ?_assertOk(t_itera2())},
+        {"member_all tests", ?_assertOk(t_member_all())},
+        {"member_any tests", ?_assertOk(t_member_any())},
+        {"split tests", ?_assertOk(t_split())},
+        {"take_values tests", ?_assertOk(t_take_values())}
+    ]}.
+
+t_delete_all() ->
     [b, c] = delete_all(a, [a, b, a, c, a]),
     ok.
 
-delete_checked_test() ->
+t_delete_checked() ->
     false = delete_checked(d, [a, b, c]),
     [b, a, c, a] = delete_checked(a, [a, b, a, c, a]),
     ok.
 
-index_test() ->
+t_index() ->
     4 = index(d, [a, b, c, d, e]),
     undefined = index(f, [a, b, c, d, e]),
     ok.
 
-iodata_to_list_test() ->
+t_iodata_to_list() ->
     {10, "abcdefghij"} = iodata_to_list([<<"abc">>, $d, "ef",
                                          [[$g]], ["hi", $j]]),
     {10, "abcdefghij"} = iodata_to_list(<<"abcdefghij">>),
     ok.
 
-itera_test() ->
+t_itera() ->
     [d, e, f] = itera(fun(V, A, Itr) ->
         if
             V > c ->
@@ -304,7 +320,7 @@ itera_test() ->
     end, [], [f, e, d, c, b, a]),
     ok.
 
-itera2_test() ->
+t_itera2() ->
     {[d, e, f], 3} = itera2(fun(V, A1, A2, Itr) ->
         if
             V > c ->
@@ -315,22 +331,22 @@ itera2_test() ->
     end, [], 0, [f, e, d, c, b, a]),
     ok.
 
-member_all_test() ->
+t_member_all() ->
     true = member_all([a, b], [a, b, c, d]),
     false = member_all([a, b], [a, c, d]),
     ok.
 
-member_any_test() ->
+t_member_any() ->
     true = member_any([a, b], [a]),
     false = member_any([a, b], [c]),
     ok.
 
-split_test() ->
+t_split() ->
     {[a, b, c], []} = split(10, [a, b, c]),
     {[a, b, c], [d, e, f]} = split(3, [a, b, c, d, e, f]),
     ok.
 
-take_values_test() ->
+t_take_values() ->
     [A,
      B] = take_values([{a, 3},
                        {b, 2}], [{a, 1}]),

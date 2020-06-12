@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2016 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_tests).
@@ -39,11 +39,31 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-cpg_start_test() ->
-    ok = reltool_util:application_start(cpg),
-    ok = application:start(sasl).
+-ifndef(_assertOk).
+-define(_assertOk(Expr), ?_assertEqual(ok, Expr)).
+-endif.
 
-via1_test() ->
+-ifdef(CLOUDI_TEST_TIMEOUT).
+-define(TEST_TIMEOUT, ?CLOUDI_TEST_TIMEOUT). % seconds
+-else.
+-define(TEST_TIMEOUT, 10). % seconds
+-endif.
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"cpg start", ?_assertOk(reltool_util:application_start(cpg))},
+        {"via test 1", ?_assertOk(t_via_1())},
+        {"via test 2", ?_assertOk(t_via_2())},
+        {"via test 3", ?_assertOk(t_via_3())},
+        {"supervisor_cpg via test", ?_assertOk(t_supervisor_via())},
+        {"pid age test 1", ?_assertOk(t_pid_age_1())},
+        {"pid age test 2", ?_assertOk(t_pid_age_2())},
+        {"callbacks test", ?_assertOk(t_callbacks())},
+        {"pid counts test", ?_assertOk(t_pid_counts())},
+        {"cpg stop", ?_assertOk(reltool_util:application_stop(cpg))}
+    ]}.
+
+t_via_1() ->
     {ok, Pid} = cpg_test_server:start_link("message"),
     % OTP behaviors require that the process group have only a single process
     {error, {already_started, Pid}} = cpg_test_server:start_link("message"),
@@ -53,7 +73,7 @@ via1_test() ->
     ok = kill_pid(Pid),
     ok.
 
-via2_test() ->
+t_via_2() ->
     {ok, Pid} = cpg_test_server:start_link("error"),
     MonitorRef = erlang:monitor(process, Pid),
     erlang:unlink(Pid),
@@ -65,7 +85,7 @@ via2_test() ->
     false = is_process_alive(Pid),
     ok.
 
-via3_test() ->
+t_via_3() ->
     ViaName = {"local group", 4},
     {ok, Pid1} = cpg_test_server:start_link(ViaName),
     {ok, Pid2} = cpg_test_server:start_link(ViaName),
@@ -102,7 +122,7 @@ via3_test() ->
     ok = kill_pids([Pid1, Pid2, Pid3, Pid4]),
     ok.
 
-supervisor_via_test() ->
+t_supervisor_via() ->
     SupViaName = {local, "supervisor group"},
     MaxR = 5,
     MaxT = 60,
@@ -174,7 +194,7 @@ supervisor_via_test() ->
     ok = kill_pid(SupPid),
     ok.
 
-pid_age_1_test() ->
+t_pid_age_1() ->
     Pid1 = erlang:spawn(fun busy_pid/0),
     Pid2 = erlang:spawn(fun busy_pid/0),
     Pid3 = erlang:spawn(fun busy_pid/0),
@@ -214,7 +234,7 @@ pid_age_1_test() ->
     ok = kill_pids([Pid2, Pid3]),
     ok.
 
-pid_age_2_test() ->
+t_pid_age_2() ->
     Pid1 = erlang:spawn(fun busy_pid/0),
     Pid2 = erlang:spawn(fun busy_pid/0),
     Pid3 = erlang:spawn(fun busy_pid/0),
@@ -251,7 +271,7 @@ pid_age_2_test() ->
     ok = kill_pids([Pid1, Pid2, Pid3]),
     ok.
 
-callbacks_test() ->
+t_callbacks() ->
     F = fun(F1, L) ->
         receive
             {put, E} ->
@@ -341,7 +361,7 @@ callbacks_test() ->
     ok = cpg:remove_leave_callback("GroupC", Callback6),
     ok.
 
-pid_counts_test() ->
+t_pid_counts() ->
     Pid1 = erlang:spawn(fun busy_pid/0),
     Pid2 = erlang:spawn(fun busy_pid/0),
     Pid3 = erlang:spawn(fun busy_pid/0),
@@ -372,9 +392,6 @@ pid_counts_test() ->
     [] = cpg:which_groups(Pid2),
     ok = kill_pids([Pid1, Pid2, Pid3]),
     ok.
-
-cpg_stop_test_() ->
-    {timeout, 10, ?_assertEqual(ok, reltool_util:application_stop(cpg))}.
 
 busy_pid() ->
     timer:sleep(1000),

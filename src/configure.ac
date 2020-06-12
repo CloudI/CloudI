@@ -333,30 +333,43 @@ else
 fi
 AC_MSG_RESULT([$integration_tests_ran])
 
+CLOUDI_TEST_VMARGS=""
 AC_MSG_CHECKING([the CloudI Erlang test timeout])
 AC_ARG_WITH([test-timeout],
     [AS_HELP_STRING([--with-test-timeout@<:@=ARG@:>@],
         [The maximum amount of time a CloudI test will wait for completion
          in seconds.  The default of 10 seconds is for bare-metal use
-         (ARG=dev).  Unreliable container execution should use ARG=container
-         to get 10 minutes (600) or provide the integer directly.
+         (ARG=dev).  Execution in a vm should use ARG=vm to get 1 minute (60).
+         Unreliable container execution should use ARG=container to get
+         10 minutes (600) with a single scheduler (use ARG=container_cpu_quota
+         to use the default schedulers).  Otherwise, the integer timeout
+         can be provided as the argument (in seconds).
          @<:@ARG=dev@:>@ ])],
     [
     if test "x$withval" = "xdev"; then
         CLOUDI_TEST_TIMEOUT="10"
+    elif test "x$withval" = "xvm"; then
+        CLOUDI_TEST_TIMEOUT="60"
     elif test "x$withval" = "xcontainer"; then
+        CLOUDI_TEST_TIMEOUT="600"
+        CLOUDI_TEST_VMARGS="+S 1"
+    elif test "x$withval" = "xcontainer_cpu_quota"; then
         CLOUDI_TEST_TIMEOUT="600"
     elif test "$withval" -ge 10; then
         CLOUDI_TEST_TIMEOUT="$withval"
     else
-        AC_MSG_ERROR([--with-test-timeout needs dev or container or
-                      an integer (greater than or equal to 10),
-                      not $withval])
+        AC_MSG_ERROR([--with-test-timeout needs dev, vm, container,
+                      container_cpu_quota or an integer
+                      (greater than or equal to 10), not $withval])
     fi
     ],
     [CLOUDI_TEST_TIMEOUT="10"])
 AC_MSG_RESULT([$CLOUDI_TEST_TIMEOUT])
 AC_SUBST(CLOUDI_TEST_TIMEOUT)
+
+AC_MSG_CHECKING([the CloudI Erlang test arguments])
+AC_MSG_RESULT([$CLOUDI_TEST_VMARGS])
+AC_SUBST(CLOUDI_TEST_VMARGS)
 
 AC_MSG_CHECKING([the CloudI Erlang long test timeout])
 AC_ARG_WITH([long-test-timeout],
@@ -828,6 +841,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
     lib/cloudi_service_validate/rebar.config
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
+    lib/syslog_socket/rebar.config
     api/Makefile
     api/c/Makefile
     api/erlang/Makefile

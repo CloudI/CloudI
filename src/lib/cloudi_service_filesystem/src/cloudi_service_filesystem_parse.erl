@@ -24,7 +24,7 @@
 %%%
 %%% @author Loïc Hoguin <essen@ninenines.eu>
 %%% @copyright 2011-2014 Loïc Hoguin
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem_parse).
@@ -50,6 +50,39 @@ datetime(Binary) ->
 
 range(Binary) ->
     token_ci(Binary, fun range/2).
+
+%%%------------------------------------------------------------------------
+%%% From cowboy1, in cowboy1_bstr.erl
+%%%------------------------------------------------------------------------
+
+-spec char_to_lower(char()) -> char().
+char_to_lower($A) -> $a;
+char_to_lower($B) -> $b;
+char_to_lower($C) -> $c;
+char_to_lower($D) -> $d;
+char_to_lower($E) -> $e;
+char_to_lower($F) -> $f;
+char_to_lower($G) -> $g;
+char_to_lower($H) -> $h;
+char_to_lower($I) -> $i;
+char_to_lower($J) -> $j;
+char_to_lower($K) -> $k;
+char_to_lower($L) -> $l;
+char_to_lower($M) -> $m;
+char_to_lower($N) -> $n;
+char_to_lower($O) -> $o;
+char_to_lower($P) -> $p;
+char_to_lower($Q) -> $q;
+char_to_lower($R) -> $r;
+char_to_lower($S) -> $s;
+char_to_lower($T) -> $t;
+char_to_lower($U) -> $u;
+char_to_lower($V) -> $v;
+char_to_lower($W) -> $w;
+char_to_lower($X) -> $x;
+char_to_lower($Y) -> $y;
+char_to_lower($Z) -> $z;
+char_to_lower(Ch) -> Ch.
 
 %%%------------------------------------------------------------------------
 %%% From cowboy1, in cowboy1_http.erl
@@ -422,37 +455,48 @@ whitespace(Data, Fun) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-http_date_test_() ->
+-include("cloudi_service_filesystem_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"http date tests", t_http_date()},
+        {"rfc1123 date tests", t_rfc1123_date()},
+        {"rfc850 date tests", t_rfc850_date()},
+        {"asctime date tests", t_asctime_date()},
+        {"http range tests", t_http_range()}
+    ]}.
+
+t_http_date() ->
     %% {Tokens, Result}
     Tests = [
         {<<"Sun, 06 Nov 1994 08:49:37 GMT">>, {{1994, 11, 6}, {8, 49, 37}}},
         {<<"Sunday, 06-Nov-94 08:49:37 GMT">>, {{1994, 11, 6}, {8, 49, 37}}},
         {<<"Sun Nov  6 08:49:37 1994">>, {{1994, 11, 6}, {8, 49, 37}}}
     ],
-    [{V, fun() -> R = http_date(V) end} || {V, R} <- Tests].
+    [{V, ?_assertEqual(R, http_date(V))} || {V, R} <- Tests].
 
-rfc1123_date_test_() ->
+t_rfc1123_date() ->
     %% {Tokens, Result}
     Tests = [
         {<<"Sun, 06 Nov 1994 08:49:37 GMT">>, {{1994, 11, 6}, {8, 49, 37}}}
     ],
-    [{V, fun() -> R = rfc1123_date(V) end} || {V, R} <- Tests].
+    [{V, ?_assertEqual(R, rfc1123_date(V))} || {V, R} <- Tests].
 
-rfc850_date_test_() ->
+t_rfc850_date() ->
     %% {Tokens, Result}
     Tests = [
         {<<"Sunday, 06-Nov-94 08:49:37 GMT">>, {{1994, 11, 6}, {8, 49, 37}}}
     ],
-    [{V, fun() -> R = rfc850_date(V) end} || {V, R} <- Tests].
+    [{V, ?_assertEqual(R, rfc850_date(V))} || {V, R} <- Tests].
 
-asctime_date_test_() ->
+t_asctime_date() ->
     %% {Tokens, Result}
     Tests = [
         {<<"Sun Nov  6 08:49:37 1994">>, {{1994, 11, 6}, {8, 49, 37}}}
     ],
-    [{V, fun() -> R = asctime_date(V) end} || {V, R} <- Tests].
+    [{V, ?_assertEqual(R, asctime_date(V))} || {V, R} <- Tests].
 
-http_range_test_() ->
+t_http_range() ->
     Tests = [
         {<<"bytes=1-20">>,
             {<<"bytes">>, [{1, 20}]}},
@@ -473,38 +517,7 @@ http_range_test_() ->
         {<<"bytes=-30,-">>,
             {error, badarg}}
     ],
-    [fun() -> R = range(V) end ||{V, R} <- Tests].
+    [?_assertEqual(R, range(V)) || {V, R} <- Tests].
+
 -endif.
 
-%%%------------------------------------------------------------------------
-%%% From cowboy1, in cowboy1_bstr.erl
-%%%------------------------------------------------------------------------
-
--spec char_to_lower(char()) -> char().
-char_to_lower($A) -> $a;
-char_to_lower($B) -> $b;
-char_to_lower($C) -> $c;
-char_to_lower($D) -> $d;
-char_to_lower($E) -> $e;
-char_to_lower($F) -> $f;
-char_to_lower($G) -> $g;
-char_to_lower($H) -> $h;
-char_to_lower($I) -> $i;
-char_to_lower($J) -> $j;
-char_to_lower($K) -> $k;
-char_to_lower($L) -> $l;
-char_to_lower($M) -> $m;
-char_to_lower($N) -> $n;
-char_to_lower($O) -> $o;
-char_to_lower($P) -> $p;
-char_to_lower($Q) -> $q;
-char_to_lower($R) -> $r;
-char_to_lower($S) -> $s;
-char_to_lower($T) -> $t;
-char_to_lower($U) -> $u;
-char_to_lower($V) -> $v;
-char_to_lower($W) -> $w;
-char_to_lower($X) -> $x;
-char_to_lower($Y) -> $y;
-char_to_lower($Z) -> $z;
-char_to_lower(Ch) -> Ch.

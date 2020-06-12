@@ -51,7 +51,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request_info).
@@ -291,7 +291,15 @@ value_to_binary(V) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-text_pairs_test() ->
+-include("cloudi_core_i_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"text_pairs tests", ?_assertOk(t_text_pairs())},
+        {"binary_pairs tests", ?_assertOk(t_binary_pairs())}
+    ]}.
+
+t_text_pairs() ->
     <<>> = key_value_new([]),
     <<>> = key_value_new([], text_pairs),
     0 = maps:size(key_value_parse(<<>>)),
@@ -334,7 +342,7 @@ text_pairs_test() ->
                           {<<"binary_key">>, <<"binary_value">>}],
     ok.
 
-binary_pairs_test() ->
+t_binary_pairs() ->
     <<0>> = key_value_new([], binary_pairs),
     0 = maps:size(key_value_parse(<<0>>)),
     KeyValues0 = [{atom_key, atom_value},

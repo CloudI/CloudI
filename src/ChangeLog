@@ -1,6 +1,21 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-06-12 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add --with-test-timeout arguments vm and container_cpu_quota
+    * Change --with-test-timeout=container to use only 1 scheduler for ct
+    * Add --with-test-timeout and --with-long-test-timeout
+      timeout value use in all eunit tests
+    * Update cpg
+    * Update erlang_term
+    * Update pqueue
+    * Update quickrand
+    * Update supool
+    * Update trie
+    * Update uuid
+    * Update varpool
+
 2020-06-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Increase configure flag --with-test-timeout=container value to

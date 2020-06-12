@@ -73,9 +73,8 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 all() ->
-    test_conditions_merge([
-        %test_condition_riak([{group, riak}]),
-        test_condition_pgsql([{group, pgsql}])]).
+    test_conditions_merge([%test_condition_riak([{group, riak}]),
+                           test_condition_pgsql([{group, pgsql}])]).
 
 groups() ->
     [{pgsql, [],
@@ -577,6 +576,14 @@ location_verifier(Location, Callback, TokenRequest) ->
      <<"oauth_verifier=", Verifier/binary>>] = binary:split(Location, <<"&">>),
     Verifier.
 
+test_conditions_merge(L) ->
+    case test_conditions_merge(L, []) of
+        [] ->
+            {skip, L};
+        [_ | _] = NewL ->
+            NewL
+    end.
+
 test_conditions_merge([], Output) ->
     lists:reverse(Output);
 test_conditions_merge([{skip, _} | L], Output) ->
@@ -584,20 +591,10 @@ test_conditions_merge([{skip, _} | L], Output) ->
 test_conditions_merge([Group | L], Output) ->
     test_conditions_merge(L, [Group | Output]).
 
-test_conditions_merge(L) ->
-    if
-        ?CLOUDI_LONG_TEST_TIMEOUT > 0 ->
-            case test_conditions_merge(L, []) of
-                [] ->
-                    {skip, L};
-                [_ | _] = NewL ->
-                    NewL
-            end;
-        ?CLOUDI_LONG_TEST_TIMEOUT =:= 0 ->
-            {skip, long_tests_disabled}
-    end.
-
-test_condition(L, Host, Port, ErrorReason) ->
+test_condition_db(_, _, _, _, 0) ->
+    {skip, long_tests_disabled};
+test_condition_db(L, Host, Port, ErrorReason, LongTestTimeout)
+    when LongTestTimeout > 0 ->
     case gen_tcp:connect(Host, Port, []) of
         {ok, Socket} ->
             catch gen_tcp:close(Socket),
@@ -613,8 +610,10 @@ test_condition(L, Host, Port, ErrorReason) ->
     end.
 
 test_condition_pgsql(L) ->
-    test_condition(L, ?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT, pgsql_dead).
+    test_condition_db(L, ?DEFAULT_PGSQL_HOST, ?DEFAULT_PGSQL_PORT,
+                      pgsql_dead, ?CLOUDI_LONG_TEST_TIMEOUT).
 
 test_condition_riak(L) ->
-    test_condition(L, ?DEFAULT_RIAK_HOST, ?DEFAULT_RIAK_PORT, riak_dead).
+    test_condition_db(L, ?DEFAULT_RIAK_HOST, ?DEFAULT_RIAK_PORT,
+                      riak_dead, ?CLOUDI_LONG_TEST_TIMEOUT).
 

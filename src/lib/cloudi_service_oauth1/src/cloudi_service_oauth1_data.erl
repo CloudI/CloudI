@@ -34,7 +34,7 @@
 %%%
 %%% @author Tim Fletcher <mail@tfletcher.com>
 %%% @copyright 2012 Tim Fletcher
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_data).
@@ -223,7 +223,16 @@ dec2hex(N) when N >= 0 andalso N =< 9 ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-hmac_sha1_signature_test_() ->
+-include("cloudi_service_oauth1_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"hmac sha1 signature tests", t_hmac_sha1_signature()},
+        {"signature base string tests", t_signature_base_string()},
+        {"oauth tests", t_oauth()}
+    ]}.
+
+t_hmac_sha1_signature() ->
     %% [BaseString, {_, ConsumerSecret, _}, TokenSecret] = Args
     Tests = [
         {"http://wiki.oauth.net/TestCases HMAC-SHA1 (section 9.2) #1",
@@ -254,10 +263,10 @@ hmac_sha1_signature_test_() ->
           {undefined, "kd94hf93k423kf44", undefined}, ""],
          "2nxXYRjOKrs4qL666Zzr1felAdY="}
     ],
-    [{T, fun() -> R = erlang:apply(fun hmac_sha1_signature/3, A) end} ||
+    [{T, ?_assertEqual(R, erlang:apply(fun hmac_sha1_signature/3, A))} ||
       {T, A, R} <- Tests].
 
-signature_base_string_test_() ->
+t_signature_base_string() ->
     %% [HttpMethod, URL, Params] = Args
     Tests = [
         {"http://wiki.oauth.net/TestCases HMAC-SHA1 (section 9.2) #3",
@@ -294,10 +303,10 @@ signature_base_string_test_() ->
          "oauth_signature_method%3DHMAC-SHA1%26"
          "oauth_timestamp%3D137131200"}
     ],
-    [{T, fun() -> R = erlang:apply(fun signature_base_string/3, A) end} ||
+    [{T, ?_assertEqual(R, erlang:apply(fun signature_base_string/3, A))} ||
       {T, A, R} <- Tests].
 
-oauth_test_() ->
+t_oauth() ->
     %% [Signature, HttpMethod, URL, Params, Consumer, TokenSecret] = Args
     Tests = [
         {"http://wiki.oauth.net/TestCases RSA-SHA1 (section 9.3) #1",
@@ -379,7 +388,7 @@ oauth_test_() ->
           "pfkkdhi9sl3r4s00"],
          true}
     ],
-    [{T, fun() -> R = erlang:apply(fun verify/6, A) end} ||
+    [{T, ?_assertEqual(R, erlang:apply(fun verify/6, A))} ||
       {T, A, R} <- Tests].
 
 -endif.

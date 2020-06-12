@@ -25,7 +25,7 @@
 %%%
 %%% @author Loïc Hoguin <essen@ninenines.eu>
 %%% @copyright 2011-2013 Loïc Hoguin
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_parse).
@@ -192,7 +192,14 @@ whitespace(Data, Fun) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-oauth_test_() ->
+-include("cloudi_service_oauth1_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"oauth tests", t_oauth()}
+    ]}.
+
+t_oauth() ->
     %% {Authorization, Result}
     Tests = [
         % from http://tools.ietf.org/html/rfc5849#section-1.2
@@ -211,7 +218,7 @@ oauth_test_() ->
           {"oauth_callback", "http://printer.example.com/ready"},
           {"oauth_signature", "74KNZJeDHnMBp0EMJ9ZHt/XKycU="}]}
     ],
-    [{A, fun() -> R = authorization(A) end} || {A, R} <- Tests].
+    [{A, ?_assertEqual(R, authorization(A))} || {A, R} <- Tests].
 
 -endif.
 

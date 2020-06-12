@@ -27,7 +27,7 @@
    {mod, {cpg_app, []}},
    {env, [
         {node_type, visible}, % visible | all
-        {group_storage, cloudi_x_trie}, % trie | dict | orddict | ...
+        {group_storage, cloudi_x_trie}, % set for eunit and ct
         {scope, [
             % automatically created scopes to keep process groups separate
             % (each becomes a locally registered name)

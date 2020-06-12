@@ -40,7 +40,8 @@
 
 all() ->
     test_condition([{group, table_create},
-                    {group, table_query}]).
+                    {group, table_query}],
+                   ?CLOUDI_LONG_TEST_TIMEOUT).
 
 groups() ->
     [{table_create, [],
@@ -387,26 +388,24 @@ t_table_query_3(_Config) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-test_condition(L) ->
-    if
-        ?CLOUDI_LONG_TEST_TIMEOUT > 0 ->
-            case gen_tcp:connect(?DEFAULT_PGSQL_HOST,
-                                 ?DEFAULT_PGSQL_PORT, []) of
-                {ok, Socket} ->
-                    catch gen_tcp:close(Socket),
-                    L;
-                {error, econnrefused} ->
-                    error_logger:error_msg("unable to test ~p",
-                                           [{?DEFAULT_PGSQL_HOST,
-                                             ?DEFAULT_PGSQL_PORT}]),
-                    {skip, pgsql_dead};
-                {error, Reason} ->
-                    error_logger:error_msg("unable to test ~p: ~p",
-                                           [{?DEFAULT_PGSQL_HOST,
-                                             ?DEFAULT_PGSQL_PORT}, Reason]),
-                    {skip, pgsql_dead}
-            end;
-        ?CLOUDI_LONG_TEST_TIMEOUT =:= 0 ->
-            {skip, long_tests_disabled}
+test_condition(_, 0) ->
+    {skip, long_tests_disabled};
+test_condition(L, LongTestTimeout)
+    when LongTestTimeout > 0 ->
+    case gen_tcp:connect(?DEFAULT_PGSQL_HOST,
+                         ?DEFAULT_PGSQL_PORT, []) of
+        {ok, Socket} ->
+            catch gen_tcp:close(Socket),
+            L;
+        {error, econnrefused} ->
+            error_logger:error_msg("unable to test ~p",
+                                   [{?DEFAULT_PGSQL_HOST,
+                                     ?DEFAULT_PGSQL_PORT}]),
+            {skip, pgsql_dead};
+        {error, Reason} ->
+            error_logger:error_msg("unable to test ~p: ~p",
+                                   [{?DEFAULT_PGSQL_HOST,
+                                     ?DEFAULT_PGSQL_PORT}, Reason]),
+            {skip, pgsql_dead}
     end.
 
