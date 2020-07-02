@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_msg_size).
@@ -101,23 +101,11 @@ aspect_terminate(_, _, #state{service = Service,
 aspect_terminate(_, _, #state{service = Service,
                               request_count = Count,
                               elapsed_seconds = ElapsedSeconds} = State) ->
-    % to trigger this:
-    % cloudi_service_api:services_remove([element(1, S) || S <- element(2, cloudi_service_api:services(infinity)), (element(2, element(2, S)) == "/tests/msg_size/")], infinity).
     ?LOG_INFO("msg_size ~p requests/second "
               "(during ~p seconds) forwarded for~n~p",
               [erlang:round((Count / ElapsedSeconds) * 10.0) / 10.0,
                erlang:round(ElapsedSeconds * 10.0) / 10.0,
                Service]),
-
-    % Core i7 2670QM 2.2GHz 4 cores, 8 hyper-threads
-    % L2:4×256KB L3:6MB RAM:8GB:DDR3-1333MHz
-    % Sandy Bridge-HE-4 (Socket G2)
-    % Erlang R16B03-1, Ubuntu 12.04.3 LTS (GNU/Linux 3.2.0-29-generic x86_64)
-
-    % ~28 requests/second split between each non-Erlang suffix
-    % then split between each programming language count_process
-    % (cloudi_service_msg_size acts as a middleman, so it handles the total)
-
     {ok, State}.
 
 %%%------------------------------------------------------------------------

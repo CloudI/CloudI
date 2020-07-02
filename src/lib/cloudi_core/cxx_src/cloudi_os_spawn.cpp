@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -371,57 +371,19 @@ namespace
                 case 133:
                     return "SIGTRAP";
                 case 134:
-                    return "SIGABRT";
-                case 135:
-                    return "SIGBUS/SIGEMT";
+                    return "SIGABRT/SIGIOT";
                 case 136:
                     return "SIGFPE";
                 case 137:
                     return "SIGKILL";
-                case 138:
-                    return "SIGUSR1/SIGBUS";
                 case 139:
                     return "SIGSEGV";
-                case 140:
-                    return "SIGUSR2/SIGSYS";
                 case 141:
                     return "SIGPIPE";
                 case 142:
                     return "SIGALRM";
                 case 143:
                     return "SIGTERM";
-                case 144:
-                    return "SIGUSR1/SIGURG";
-                case 145:
-                    return "SIGUSR2/SIGCHLD/SIGSTOP";
-                case 146:
-                    return "SIGCHLD/SIGCONT/SIGTSTP";
-                case 147:
-                    return "SIGCONT/SIGSTOP/SIGPWR";
-                case 148:
-                    return "SIGCHLD/SIGTSTP/SIGWINCH";
-                case 149:
-                    return "SIGTTIN/SIGURG";
-                case 150:
-                    return "SIGTTOU/SIGIO";
-                case 151:
-                    return "SIGSTOP/SIGURG/SIGIO";
-                case 152:
-                    return "SIGTSTP/SIGXCPU";
-                case 153:
-                    return "SIGCONT/SIGXFSZ";
-                case 154:
-                    return "SIGTTIN/SIGVTALRM";
-                case 155:
-                    return "SIGTTOU/SIGPROF";
-                case 156:
-                    return "SIGVTALRM/SIGWINCH";
-                case 157:
-                    return "SIGPROF/SIGIO/SIGPWR";
-                case 158:
-                    return "SIGUSR1/SIGXCPU/SIGPWR";
-                case 159:
-                    return "SIGUSR2/SIGXFSZ/SIGSYS";
                 default:
                     return 0;
             }
@@ -673,6 +635,8 @@ namespace
                     std::cerr << "OS pid " << m_pid << " exited with ";
                     if (error)
                         std::cerr << error << std::endl;
+                    else if (status > 128)
+                        std::cerr << "SIG#" << (status - 128) << std::endl;
                     else
                         std::cerr << status << std::endl;
                 }

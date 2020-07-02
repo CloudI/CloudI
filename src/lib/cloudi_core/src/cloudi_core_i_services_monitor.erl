@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -1280,7 +1280,8 @@ terminate_end_enforce_now(Pid, Reason, ServiceId,
             ok;
         is_integer(OSPid) ->
             % SIGKILL exit automatically logged if it occurs
-            os:cmd(cloudi_string:format("kill -9 ~w", [OSPid]))
+            _ = cloudi_os_process:kill(sigkill, OSPid),
+            ok
     end,
     case is_pid(Pid) andalso erlang:is_process_alive(Pid) of
         true ->

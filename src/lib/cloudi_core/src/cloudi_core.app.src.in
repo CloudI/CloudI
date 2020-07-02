@@ -41,6 +41,7 @@
         cloudi_logger_hut,
         cloudi_logger_lager,
         cloudi_math,
+        cloudi_os_process,
         cloudi_proplists,
         cloudi_queue,
         cloudi_request,

@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_spawn).
@@ -427,32 +427,13 @@ exit_status_to_list(130) -> "SIGINT";
 exit_status_to_list(131) -> "SIGQUIT";
 exit_status_to_list(132) -> "SIGILL";
 exit_status_to_list(133) -> "SIGTRAP";
-exit_status_to_list(134) -> "SIGABRT";
-exit_status_to_list(135) -> "SIGBUS/SIGEMT";
+exit_status_to_list(134) -> "SIGABRT/SIGIOT";
 exit_status_to_list(136) -> "SIGFPE";
 exit_status_to_list(137) -> "SIGKILL";
-exit_status_to_list(138) -> "SIGUSR1/SIGBUS";
 exit_status_to_list(139) -> "SIGSEGV";
-exit_status_to_list(140) -> "SIGUSR2/SIGSYS";
 exit_status_to_list(141) -> "SIGPIPE";
 exit_status_to_list(142) -> "SIGALRM";
 exit_status_to_list(143) -> "SIGTERM";
-exit_status_to_list(144) -> "SIGUSR1/SIGURG";
-exit_status_to_list(145) -> "SIGUSR2/SIGCHLD/SIGSTOP";
-exit_status_to_list(146) -> "SIGCHLD/SIGCONT/SIGTSTP";
-exit_status_to_list(147) -> "SIGCONT/SIGSTOP/SIGPWR";
-exit_status_to_list(148) -> "SIGCHLD/SIGTSTP/SIGWINCH";
-exit_status_to_list(149) -> "SIGTTIN/SIGURG";
-exit_status_to_list(150) -> "SIGTTOU/SIGIO";
-exit_status_to_list(151) -> "SIGSTOP/SIGURG/SIGIO";
-exit_status_to_list(152) -> "SIGTSTP/SIGXCPU";
-exit_status_to_list(153) -> "SIGCONT/SIGXFSZ";
-exit_status_to_list(154) -> "SIGTTIN/SIGVTALRM";
-exit_status_to_list(155) -> "SIGTTOU/SIGPROF";
-exit_status_to_list(156) -> "SIGVTALRM/SIGWINCH";
-exit_status_to_list(157) -> "SIGPROF/SIGIO/SIGPWR";
-exit_status_to_list(158) -> "SIGUSR1/SIGXCPU/SIGPWR";
-exit_status_to_list(159) -> "SIGUSR2/SIGXFSZ/SIGSYS";
 exit_status_to_list(Status) when is_integer(Status), Status > 128 ->
     "SIG#" ++ integer_to_list(Status - 128);
 exit_status_to_list(Status) when is_integer(Status) ->

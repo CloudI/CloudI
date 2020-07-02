@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2019-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_shell).
@@ -49,14 +49,16 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(DEFAULT_FILE_PATH,              "/bin/sh").
--define(DEFAULT_DIRECTORY,                    "/").
--define(DEFAULT_ENV,                           []).
--define(DEFAULT_USER,                   undefined).
--define(DEFAULT_SU_PATH,                "/bin/su").
--define(DEFAULT_LOGIN,                       true).
--define(DEFAULT_DEBUG,                       true).
--define(DEFAULT_DEBUG_LEVEL,                trace).
+-define(DEFAULT_FILE_PATH,                    "/bin/sh").
+-define(DEFAULT_DIRECTORY,                          "/").
+-define(DEFAULT_ENV,                                 []).
+-define(DEFAULT_USER,                         undefined).
+-define(DEFAULT_SU_PATH,                      "/bin/su").
+-define(DEFAULT_LOGIN,                             true).
+-define(DEFAULT_TIMEOUT_KILLS_PROCESS,            false).
+-define(DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL,   sigterm).
+-define(DEFAULT_DEBUG,                             true).
+-define(DEFAULT_DEBUG_LEVEL,                      trace).
 
 -record(state,
     {
@@ -67,6 +69,7 @@
         user :: nonempty_string() | undefined,
         su :: nonempty_string(),
         login :: boolean(),
+        kill_signal :: pos_integer() | undefined,
         debug_level :: off | trace | debug | info | warn | error | fatal
     }).
 
@@ -104,15 +107,18 @@ exec(Agent, Prefix, Command, Timeout) ->
 
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
-        {file_path,                    ?DEFAULT_FILE_PATH},
-        {directory,                    ?DEFAULT_DIRECTORY},
-        {env,                          ?DEFAULT_ENV},
-        {user,                         ?DEFAULT_USER},
-        {su_path,                      ?DEFAULT_SU_PATH},
-        {login,                        ?DEFAULT_LOGIN},
-        {debug,                        ?DEFAULT_DEBUG},
-        {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
+        {file_path,                     ?DEFAULT_FILE_PATH},
+        {directory,                     ?DEFAULT_DIRECTORY},
+        {env,                           ?DEFAULT_ENV},
+        {user,                          ?DEFAULT_USER},
+        {su_path,                       ?DEFAULT_SU_PATH},
+        {login,                         ?DEFAULT_LOGIN},
+        {timeout_kills_process,         ?DEFAULT_TIMEOUT_KILLS_PROCESS},
+        {timeout_kills_process_signal,  ?DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL},
+        {debug,                         ?DEFAULT_DEBUG},
+        {debug_level,                   ?DEFAULT_DEBUG_LEVEL}],
     [FilePath, Directory, Env, User, SUPath, Login,
+     TimeoutKill, TimeoutKillSignal,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     [_ | _] = FilePath,
     true = filelib:is_regular(FilePath),
@@ -138,6 +144,12 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         EnvPort =:= false ->
             EnvExpanded
     end,
+    KillSignal = if
+        TimeoutKill =:= true ->
+            cloudi_os_process:signal_to_integer(TimeoutKillSignal);
+        TimeoutKill =:= false ->
+            undefined
+    end,
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
@@ -159,14 +171,15 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 user = User,
                 su = SUPath,
                 login = Login,
+                kill_signal = KillSignal,
                 debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, Request,
-                              _Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Pid,
                               #state{debug_level = DebugLogLevel} = State,
                               _Dispatcher) ->
-    {Status, Output} = request(Request, State),
+    {Status, Output} = request(Request, Timeout, State),
     log_output(Status, Output, Request, DebugLogLevel),
     {reply, erlang:integer_to_binary(Status), State}.
 
@@ -220,13 +233,15 @@ env_set([{[_ | _] = Key, Value} | L], Directory, ShellInput) ->
     [[Key, $=, Value, "; export ", Key, $\n] |
      env_set(L, Directory, ShellInput)].
 
-request(Exec, #state{file_path = FilePath,
-                     directory = Directory,
-                     env = Env,
-                     env_port = EnvPort,
-                     user = User,
-                     su = SUPath,
-                     login = Login}) ->
+request(Exec, Timeout,
+        #state{file_path = FilePath,
+               directory = Directory,
+               env = Env,
+               env_port = EnvPort,
+               user = User,
+               su = SUPath,
+               login = Login,
+               kill_signal = KillSignal}) ->
     ShellInput0 = [unicode:characters_to_binary(Exec, utf8), "\n"
                    "exit $?\n"],
     PortOptions0 = [stream, binary, stderr_to_stdout, exit_status],
@@ -258,15 +273,52 @@ request(Exec, #state{file_path = FilePath,
     end,
     Shell = erlang:open_port({spawn_executable, ShellExecutable},
                              [{args, ShellArgs} | PortOptionsN]),
+    KillTimer = kill_timer_start(KillSignal, Shell, Timeout),
     true = erlang:port_command(Shell, ShellInputN),
-    request_output(Shell, []).
+    ShellOutput = request_output(Shell, []),
+    ok = kill_timer_stop(KillTimer, Shell),
+    ShellOutput.
 
 request_output(Shell, Output) ->
     receive
         {Shell, {data, Data}} ->
             request_output(Shell, [Data | Output]);
+        {Shell, {kill, KillSignal}} ->
+            ok = kill_shell(KillSignal, Shell),
+            request_output(Shell, Output);
         {Shell, {exit_status, Status}} ->
             {Status, lists:reverse(Output)}
+    end.
+
+kill_shell(KillSignal, Shell) ->
+    case erlang:port_info(Shell, os_pid) of
+        undefined ->
+            ok;
+        {os_pid, OSPid} ->
+            _ = cloudi_os_process:kill(KillSignal, OSPid),
+            ok
+    end.
+
+kill_timer_start(undefined, _, _) ->
+    undefined;
+kill_timer_start(KillSignal, Shell, Timeout)
+    when is_integer(KillSignal) ->
+    erlang:send_after(Timeout, self(), {Shell, {kill, KillSignal}}).
+
+kill_timer_stop(undefined, _) ->
+    ok;
+kill_timer_stop(KillTimer, Shell) ->
+    case erlang:cancel_timer(KillTimer) of
+        false ->
+            receive
+                {Shell, {kill, _}} ->
+                    ok
+            after
+                0 ->
+                    ok
+            end;
+        _ ->
+            ok
     end.
 
 log_output(Status, Output, Request, DebugLogLevel) ->
