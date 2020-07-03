@@ -295,7 +295,7 @@ kill_shell(KillSignal, Shell) ->
         undefined ->
             ok;
         {os_pid, OSPid} ->
-            _ = cloudi_os_process:kill(KillSignal, OSPid),
+            _ = cloudi_os_process:kill_group(KillSignal, OSPid),
             ok
     end.
 

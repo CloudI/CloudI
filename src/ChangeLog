@@ -8,6 +8,7 @@
       processes after the request timeout expires
       (timeout_kills_process defaults to false)
     * Add cloudi_core module cloudi_os_process
+    * Add the Erlang port cloudi_os_spawn kill_pids function
     * Limit signal name interpretation to signals common to all architectures
 
 2020-06-12 Michael Truog   <mjtruog at protonmail dot com>

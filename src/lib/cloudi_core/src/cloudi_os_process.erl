@@ -38,6 +38,7 @@
 
 %% external interface
 -export([kill/2,
+         kill_group/2,
          shell/1,
          shell/2,
          signal_to_integer/1]).
@@ -50,6 +51,19 @@
     sigwinch | sigio | sigpwr | sigsys | pos_integer().
 -export_type([signal/0]).
 
+-include("cloudi_core_i_constants.hrl").
+-ifdef(CLOUDI_CORE_STANDALONE).
+-compile({nowarn_unused_function,
+          [{os_spawn_ok, 3}]}).
+-else.
+-compile({nowarn_unused_function,
+          [{shell_ok, 1},
+           {ospids_to_iolist, 1},
+           {ospid_to_list, 1},
+           {ospgids_to_iolist, 1},
+           {ospgid_to_list, 1}]}).
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -59,16 +73,34 @@
     ok |
     {error, list(binary())}.
 
+-ifdef(CLOUDI_CORE_STANDALONE).
 kill(Signal, OSPids) ->
     SignalInteger = signal_to_integer(Signal),
-    OSPidsString = ospids_to_iolist(OSPids),
-    Exec = ["kill -", erlang:integer_to_list(SignalInteger) | OSPidsString],
-    case shell(Exec) of
-        {0, _} ->
-            ok;
-        {_, Output} ->
-            {error, Output}
-    end.
+    shell_ok(["kill -",
+              erlang:integer_to_list(SignalInteger) |
+              ospids_to_iolist(OSPids)]).
+-else.
+kill(Signal, OSPids) ->
+    SignalInteger = signal_to_integer(Signal),
+    os_spawn_ok(SignalInteger, false, OSPids).
+-endif.
+
+-spec kill_group(Signal :: signal(),
+                 OSPids :: pos_integer() | list(pos_integer())) ->
+    ok |
+    {error, list(binary())}.
+
+-ifdef(CLOUDI_CORE_STANDALONE).
+kill_group(Signal, OSPids) ->
+    SignalInteger = signal_to_integer(Signal),
+    shell_ok(["kill -",
+              erlang:integer_to_list(SignalInteger) |
+              ospgids_to_iolist(OSPids)]).
+-else.
+kill_group(Signal, OSPids) ->
+    SignalInteger = signal_to_integer(Signal),
+    os_spawn_ok(SignalInteger, true, OSPids).
+-endif.
 
 -spec shell(Exec :: iodata()) ->
     {non_neg_integer(), list(binary())}.
@@ -135,6 +167,33 @@ shell_output(Shell, Output) ->
             {Status, lists:reverse(Output)}
     end.
 
+shell_ok(Exec) ->
+    case shell(Exec) of
+        {0, _} ->
+            ok;
+        {_, Output} ->
+            {error, Output}
+    end.
+
+os_spawn_ok(SignalInteger, Group, OSPids)
+    when is_integer(OSPids) ->
+    os_spawn_ok(SignalInteger, Group, [OSPids]);
+os_spawn_ok(SignalInteger, Group, OSPids)
+    when is_integer(SignalInteger), is_boolean(Group), is_list(OSPids) ->
+    SpawnProcess = cloudi_x_supool:get(cloudi_core_i_os_spawn),
+    case cloudi_core_i_os_spawn:kill_pids(SpawnProcess,
+                                          SignalInteger, Group, OSPids) of
+        {ok, ErrorString} ->
+            if
+                ErrorString == "" ->
+                    ok;
+                is_list(ErrorString) ->
+                    {error, ErrorString}
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
 ospids_to_iolist(OSPids)
     when is_list(OSPids) ->
     [ospid_to_list(OSPid) || OSPid <- OSPids];
@@ -144,3 +203,13 @@ ospids_to_iolist(OSPids) ->
 ospid_to_list(OSPid)
     when is_integer(OSPid), OSPid > 0 ->
     [$  | erlang:integer_to_list(OSPid)].
+
+ospgids_to_iolist(OSPgids)
+    when is_list(OSPgids) ->
+    [ospgid_to_list(OSPgid) || OSPgid <- OSPgids];
+ospgids_to_iolist(OSPgids) ->
+    ospgid_to_list(OSPgids).
+
+ospgid_to_list(OSPgid)
+    when is_integer(OSPgid), OSPgid > 1 ->
+    [$ , $- | erlang:integer_to_list(OSPgid)].

@@ -1,5 +1,5 @@
-// -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
-// ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
+//-*-Mode:C++;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+// ex: set ft=cpp fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 //////////////////////////////////////////////////////////////////////////////
 //
 // GENERIC ERLANG PORT [DRIVER]
@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -53,7 +53,7 @@
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_uchar(N) \
     <<CREATE_FUNCTION_ARGUMENTS(_, N, _):8/unsigned-integer-native>>
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_bool(N) \
-    <<CREATE_FUNCTION_ARGUMENTS(_, N, _):8/unsigned-integer-native>>
+    encode_bool(CREATE_FUNCTION_ARGUMENTS(_, N, _))
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_int8_t(N) \
     <<CREATE_FUNCTION_ARGUMENTS(_, N, _):8/signed-integer-native>>
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_uint8_t(N) \
@@ -77,9 +77,9 @@
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_double(N) \
     <<CREATE_FUNCTION_ARGUMENTS(_, N, _):64/float-native>>
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_pchar_len(N) \
-    encode_uint8(CREATE_FUNCTION_ARGUMENTS(_, N, _))
+    encode_pchar_len(CREATE_FUNCTION_ARGUMENTS(_, N, _))
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_puint32_len(N) \
-    encode_uint32(CREATE_FUNCTION_ARGUMENTS(_, N, _))
+    encode_puint32_len(CREATE_FUNCTION_ARGUMENTS(_, N, _))
 
 #if defined(PORT_DRIVER_NAME)
 
@@ -159,8 +159,6 @@
 
 -define(ERL_PORT_NAME, \
         BOOST_PP_STRINGIZE(PORT_NAME)).
--define(ERL_PORT_NAME_PREFIX, \
-        BOOST_PP_STRINGIZE(PORT_NAME_PREFIX)).
 #define FUNCTIONS_SEQUENCE PORT_FUNCTIONS
 #else
 #error Neither PORT_DRIVER_NAME nor PORT_NAME defined
@@ -219,16 +217,26 @@ BOOST_PP_ENUM(BOOST_PP_SEQ_SIZE(FUNCTIONS_SEQUENCE),
 
 BOOST_PP_SEQ_FOR_EACH(CREATE_FUNCTION, _, FUNCTIONS_SEQUENCE)
 
-encode_uint8(Value) when is_binary(Value) ->
+-compile({nowarn_unused_function,
+          [{encode_bool, 1},
+           {encode_pchar_len, 1},
+           {encode_puint32_len, 1}]}).
+
+encode_bool(true) ->
+    <<1>>;
+encode_bool(false) ->
+    <<0>>.
+
+encode_pchar_len(Value) when is_binary(Value) ->
     DataSize = erlang:byte_size(Value),
     <<DataSize:32/unsigned-integer-native, Value/binary>>;
-encode_uint8(Value) when is_list(Value) ->
+encode_pchar_len(Value) when is_list(Value) ->
     ValueList = [<<E:8/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
     DataSize = erlang:byte_size(Data),
     <<DataSize:32/unsigned-integer-native, Data/binary>>.
 
-encode_uint32(Value) when is_list(Value) ->
+encode_puint32_len(Value) when is_list(Value) ->
     ValueList = [<<E:32/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
     DataSize = erlang:byte_size(Data) div 4,

@@ -42,4 +42,7 @@ int32_t spawn(char protocol,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len);
 
+char const * kill_pids(uint32_t signal, bool group,
+                       uint32_t * pids, uint32_t pids_len);
+
 #endif // CLOUDI_OS_SPAWN_HPP

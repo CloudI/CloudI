@@ -50,13 +50,16 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
--export([spawn/15]).
+-export([spawn/15,
+         kill_pids/4]).
 -define(ERL_PORT_NAME, "/dev/null").
 -compile({nowarn_unused_function, [{call_port_sync, 3}]}).
 spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports, _SpawnRlimits,
       _SpawnUserI, _SpawnUserStr, _SpawnGroupI, _SpawnGroupStr,
       _SpawnNice, _SpawnChroot, _SpawnDirectory,
       _SpawnFilename, _SpawnArguments, _SpawnEnvironment) ->
+    {error, badarg}.
+kill_pids(_SpawnProcess, _Signal, _Group, _OSPids) ->
     {error, badarg}.
 -else.
 -include("cloudi_core_i_os_spawn.hrl").
