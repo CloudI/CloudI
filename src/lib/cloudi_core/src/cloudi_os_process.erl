@@ -71,7 +71,7 @@
 -spec kill(Signal :: signal(),
            OSPids :: pos_integer() | list(pos_integer())) ->
     ok |
-    {error, list(binary())}.
+    {error, any()}.
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 kill(Signal, OSPids) ->
@@ -88,7 +88,7 @@ kill(Signal, OSPids) ->
 -spec kill_group(Signal :: signal(),
                  OSPids :: pos_integer() | list(pos_integer())) ->
     ok |
-    {error, list(binary())}.
+    {error, any()}.
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 kill_group(Signal, OSPids) ->
