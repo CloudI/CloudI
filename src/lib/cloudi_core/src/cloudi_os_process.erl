@@ -54,7 +54,7 @@
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
 -compile({nowarn_unused_function,
-          [{os_spawn_ok, 3}]}).
+          [{os_spawn_kill_pids, 3}]}).
 -else.
 -compile({nowarn_unused_function,
           [{shell_ok, 1},
@@ -75,14 +75,12 @@
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 kill(Signal, OSPids) ->
-    SignalInteger = signal_to_integer(Signal),
     shell_ok(["kill -",
-              erlang:integer_to_list(SignalInteger) |
+              erlang:integer_to_list(signal_to_integer(Signal)) |
               ospids_to_iolist(OSPids)]).
 -else.
 kill(Signal, OSPids) ->
-    SignalInteger = signal_to_integer(Signal),
-    os_spawn_ok(SignalInteger, false, OSPids).
+    os_spawn_kill_pids(signal_to_integer(Signal), false, OSPids).
 -endif.
 
 -spec kill_group(Signal :: signal(),
@@ -92,14 +90,12 @@ kill(Signal, OSPids) ->
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 kill_group(Signal, OSPids) ->
-    SignalInteger = signal_to_integer(Signal),
     shell_ok(["kill -",
-              erlang:integer_to_list(SignalInteger) |
+              erlang:integer_to_list(signal_to_integer(Signal)) |
               ospgids_to_iolist(OSPids)]).
 -else.
 kill_group(Signal, OSPids) ->
-    SignalInteger = signal_to_integer(Signal),
-    os_spawn_ok(SignalInteger, true, OSPids).
+    os_spawn_kill_pids(signal_to_integer(Signal), true, OSPids).
 -endif.
 
 -spec shell(Exec :: iodata()) ->
@@ -175,10 +171,10 @@ shell_ok(Exec) ->
             {error, Output}
     end.
 
-os_spawn_ok(SignalInteger, Group, OSPids)
+os_spawn_kill_pids(SignalInteger, Group, OSPids)
     when is_integer(OSPids) ->
-    os_spawn_ok(SignalInteger, Group, [OSPids]);
-os_spawn_ok(SignalInteger, Group, OSPids)
+    os_spawn_kill_pids(SignalInteger, Group, [OSPids]);
+os_spawn_kill_pids(SignalInteger, Group, OSPids)
     when is_integer(SignalInteger), is_boolean(Group), is_list(OSPids) ->
     SpawnProcess = cloudi_x_supool:get(cloudi_core_i_os_spawn),
     case cloudi_core_i_os_spawn:kill_pids(SpawnProcess,

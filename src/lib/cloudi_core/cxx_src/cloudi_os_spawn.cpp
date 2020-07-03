@@ -1016,7 +1016,7 @@ int32_t spawn(char protocol,
 }
 
 char const * kill_pids(uint32_t signal, bool group,
-                 uint32_t * pids, uint32_t pids_len)
+                       uint32_t * pids, uint32_t pids_len)
 {
     char const * result = "";
     for (size_t i = 0; i < pids_len; ++i)

@@ -74,7 +74,7 @@ Optional (default="yes"):
 * `JavaScript >= 0.12.18`
   * `(nodejs /Ubuntu)`
   * Use the "--enable-javascript-support=no" configure flag to disable
-* `Perl >= 5.10`
+* `Perl >= 5.10 (with Compress::Zlib)`
   * `(perl perl-modules /Ubuntu)`
   * Use the "--enable-perl-support=no" configure flag to disable
 * `PHP >= 5.3.6`
