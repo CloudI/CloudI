@@ -41,7 +41,8 @@
          kill_group/2,
          shell/1,
          shell/2,
-         signal_to_integer/1]).
+         signal_to_integer/1,
+         signal_to_string/1]).
 
 -type signal() ::
     sighup | sigint | sigquit | sigill | sigtrap | sigabrt | sigbus |
@@ -68,6 +69,12 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Kill OS processes.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec kill(Signal :: signal(),
            OSPids :: pos_integer() | list(pos_integer())) ->
     ok |
@@ -82,6 +89,12 @@ kill(Signal, OSPids) ->
 kill(Signal, OSPids) ->
     os_spawn_kill_pids(signal_to_integer(Signal), false, OSPids).
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Kill OS process groups.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec kill_group(Signal :: signal(),
                  OSPids :: pos_integer() | list(pos_integer())) ->
@@ -98,6 +111,12 @@ kill_group(Signal, OSPids) ->
     os_spawn_kill_pids(signal_to_integer(Signal), true, OSPids).
 -endif.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Execute a shell command.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec shell(Exec :: iodata()) ->
     {non_neg_integer(), list(binary())}.
 
@@ -108,12 +127,24 @@ shell(Exec) ->
     true = erlang:port_command(Shell, [Exec, "\nexit $?\n"]),
     shell_output(Shell, []).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Execute a shell command with a string format.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec shell(Command :: string(),
             Arguments :: list()) ->
     {non_neg_integer(), list(binary())}.
 
 shell(Command, Arguments) ->
     shell(io_lib:format(Command, Arguments)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert a signal to an integer.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec signal_to_integer(Signal :: signal()) ->
     pos_integer().
@@ -149,7 +180,34 @@ signal_to_integer(sigwinch ) -> 28;
 signal_to_integer(sigio    ) -> 29;
 signal_to_integer(sigpwr   ) -> 30;
 signal_to_integer(sigsys   ) -> 31;
-signal_to_integer(Signal) when is_integer(Signal), Signal > 0 -> Signal.
+signal_to_integer(Signal) when is_integer(Signal), Signal > 0 ->
+    Signal.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert a signal integer to a string.===
+%% Only signal integers that are consistent among all platforms use a
+%% specific string.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec signal_to_string(SignalInteger :: pos_integer()) ->
+    string().
+
+signal_to_string( 1) -> "SIGHUP";
+signal_to_string( 2) -> "SIGINT";
+signal_to_string( 3) -> "SIGQUIT";
+signal_to_string( 4) -> "SIGILL";
+signal_to_string( 5) -> "SIGTRAP";
+signal_to_string( 6) -> "SIGABRT";
+signal_to_string( 8) -> "SIGFPE";
+signal_to_string( 9) -> "SIGKILL";
+signal_to_string(11) -> "SIGSEGV";
+signal_to_string(13) -> "SIGPIPE";
+signal_to_string(14) -> "SIGALRM";
+signal_to_string(15) -> "SIGTERM";
+signal_to_string(Signal) when is_integer(Signal), Signal > 0 ->
+    "SIG#" ++ erlang:integer_to_list(Signal).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

@@ -328,12 +328,18 @@ log_output(Status, Output, Request, DebugLogLevel) ->
         true ->
             error
     end,
+    StatusStr = if
+        Status > 128 ->
+            cloudi_os_process:signal_to_string(Status - 128);
+        true ->
+            erlang:integer_to_list(Status)
+    end,
     if
         Output == [] ->
-            ?LOG(Level, "~ts = ~w",
-                 [Request, Status]);
+            ?LOG(Level, "~ts = ~s",
+                 [Request, StatusStr]);
         true ->
-            ?LOG(Level, "~ts = ~w (stdout/stderr below)~n~ts",
-                 [Request, Status, erlang:iolist_to_binary(Output)])
+            ?LOG(Level, "~ts = ~s (stdout/stderr below)~n~ts",
+                 [Request, StatusStr, erlang:iolist_to_binary(Output)])
     end.
 

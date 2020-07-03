@@ -424,21 +424,12 @@ exit_status_to_list(124) -> "erlang port close EBADF";
 exit_status_to_list(125) -> "erlang port close EINTR";
 exit_status_to_list(126) -> "erlang port close EIO";
 exit_status_to_list(127) -> "erlang port close unknown";
-%% exit status values due to signals
-exit_status_to_list(129) -> "SIGHUP";
-exit_status_to_list(130) -> "SIGINT";
-exit_status_to_list(131) -> "SIGQUIT";
-exit_status_to_list(132) -> "SIGILL";
-exit_status_to_list(133) -> "SIGTRAP";
-exit_status_to_list(134) -> "SIGABRT/SIGIOT";
-exit_status_to_list(136) -> "SIGFPE";
-exit_status_to_list(137) -> "SIGKILL";
-exit_status_to_list(139) -> "SIGSEGV";
-exit_status_to_list(141) -> "SIGPIPE";
-exit_status_to_list(142) -> "SIGALRM";
-exit_status_to_list(143) -> "SIGTERM";
-exit_status_to_list(Status) when is_integer(Status), Status > 128 ->
-    "SIG#" ++ integer_to_list(Status - 128);
 exit_status_to_list(Status) when is_integer(Status) ->
-    integer_to_list(Status).
+    if
+        Status > 128 ->
+            %% exit status values due to signals
+            cloudi_os_process:signal_to_string(Status - 128);
+        true ->
+            erlang:integer_to_list(Status)
+    end.
 

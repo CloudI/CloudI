@@ -371,7 +371,7 @@ namespace
                 case 133:
                     return "SIGTRAP";
                 case 134:
-                    return "SIGABRT/SIGIOT";
+                    return "SIGABRT";
                 case 136:
                     return "SIGFPE";
                 case 137:

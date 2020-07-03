@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add signal name debug output to cloudi_service_shell
+    * Add cloudi_os_process:signal_to_string/1 function
+
 2020-07-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_shell arguments timeout_kills_process and
