@@ -191,7 +191,7 @@ signal_to_integer(Signal) when is_integer(Signal), Signal > 0 ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec signal_to_string(SignalInteger :: pos_integer()) ->
+-spec signal_to_string(Signal :: pos_integer()) ->
     string().
 
 signal_to_string( 1) -> "SIGHUP";

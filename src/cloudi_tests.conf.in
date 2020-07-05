@@ -834,6 +834,7 @@
         immediate_closest,
         5000, 5000, 5000, [api], undefined, 2, 5, 300,
         [{request_timeout_adjustment, true},
+         {automatic_loading, false},
          {duo_mode, true},
          {aspects_request_before,
           [{cloudi_service_test_msg_size, aspect_request}]},
@@ -1145,4 +1146,22 @@
     %{redirect, undefined}
     {log_time_offset, info}
 ]}.
+{code, [
+    % internal service source code configuration
+    % (should only be used when absolutely necessary, i.e.,
+    %  typically an internal service with automatic_loading == true
+    %  will handle starting an application or loading the service module)
+    {paths,
+     ["@cloudi_prefix@/tests/count/erlang/ebin/",
+      "@cloudi_prefix@/tests/hexpi/erlang/ebin/",
+      "@cloudi_prefix@/tests/http_req/erlang/ebin/",
+      "@cloudi_prefix@/tests/msg_size/erlang/ebin/",
+      "@cloudi_prefix@/tests/messaging/erlang/ebin/",
+      "@cloudi_prefix@/tests/null/erlang/ebin/"]},
+    {modules,
+     [cloudi_service_test_msg_size]}
+    %{applications,
+    % [cloudi_x_msgpack]}
+]}.
+
 

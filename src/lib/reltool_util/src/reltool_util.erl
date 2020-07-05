@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -42,8 +42,6 @@
          application_start/1,
          application_start/2,
          application_start/3,
-         applications_start/1,
-         applications_start/2,
          application_stop/1,
          application_stop/2,
          application_remove/1,
@@ -56,23 +54,27 @@
          application_loaded/1,
          application_modules/1,
          application_modules/2,
+         applications_start/1,
+         applications_start/2,
+         applications_remove/3,
+         config_load/1,
          ensure_application_loaded/1,
          ensure_application_started/1,
          ensure_application_stopped/1,
-         config_load/1,
+         is_deprecated/3,
+         is_module_loaded/1,
+         is_module_loaded/2,
          module_load/1,
          module_loaded/1,
          module_unload/1,
          module_reload/1,
-         modules_reload/1,
-         is_module_loaded/1,
-         is_module_loaded/2,
          module_purged/1,
          module_purged/2,
          module_exports/1,
          module_behaviours/1,
-         is_deprecated/3,
          module_version/1,
+         modules_reload/1,
+         modules_purged/2,
          script_start/1,
          script_remove/1,
          script_remove/2,
@@ -187,33 +189,6 @@ application_start(Application, Env, Timeout)
         {error, _} = Error ->
             Error
     end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Start all the dependent applications manually.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec applications_start(Applications :: list(atom() | {atom(), list()})) ->
-    ok |
-    {error, any()}.
-
-applications_start([_ | _] = Applications) ->
-    applications_start(Applications, 5000).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Start all the dependent applications manually.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec applications_start(Applications :: list(atom() | {atom(), list()}),
-                         Timeout :: pos_integer() | infinity) ->
-    ok |
-    {error, any()}.
-
-applications_start([_ | _] = Applications, Timeout) ->
-    applications_start_element(Applications, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -464,6 +439,75 @@ application_modules(Application, Options)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Start all the dependent applications manually.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec applications_start(Applications :: list(atom() | {atom(), list()})) ->
+    ok |
+    {error, any()}.
+
+applications_start([_ | _] = Applications) ->
+    applications_start(Applications, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start all the dependent applications manually.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec applications_start(Applications :: list(atom() | {atom(), list()}),
+                         Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+applications_start([_ | _] = Applications, Timeout) ->
+    applications_start_element(Applications, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop and purge the modules of all applications and their dependencies with a timeout and a list of applications to ignore.===
+%% Only application dependencies that are not required for other
+%% applications are removed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec applications_remove(Applications :: list(atom()),
+                          Timeout :: pos_integer() | infinity,
+                          Ignore :: list(atom())) ->
+    ok |
+    {error, any()}.
+
+applications_remove([], _, _) ->
+    ok;
+applications_remove([Application | Applications], Timeout, Ignore) ->
+    case application_remove(Application, Timeout, Ignore) of
+        ok ->
+            applications_remove(Applications, Timeout, Ignore);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Load a config file from a release.===
+%% All applications with configuration values are loaded if they are not
+%% already loaded.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec config_load(FilePath :: string()) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+config_load(FilePath)
+    when is_list(FilePath) ->
+    true = lists:suffix(".config", FilePath),
+    {ok, [ApplicationEnvs]} = file:consult(FilePath),
+    config_load_application(ApplicationEnvs, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Make sure an application is loaded.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -559,21 +603,87 @@ ensure_application_stopped(Application) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Load a config file from a release.===
-%% All applications with configuration values are loaded if they are not
-%% already loaded.
+%% ===Check if a module function is marked as deprecated.===
+%% The value false will always be returned if the beam file was stripped.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec config_load(FilePath :: string()) ->
-    {ok, list(atom())} |
+-spec is_deprecated(Module :: module(),
+                    Function :: atom(),
+                    Arity :: non_neg_integer()) ->
+    boolean().
+
+is_deprecated(Module, Function, Arity) ->
+    Attributes = Module:module_info(attributes),
+    lists:any(fun(Attribute) ->
+        case Attribute of
+            {deprecated, [_ | _] = Deprecated} ->
+                lists:any(fun(Deprecate) ->
+                    case Deprecate of
+                        module ->
+                            true;
+                        {Function, FunctionArity}
+                            when FunctionArity == Arity;
+                                 FunctionArity == '_' ->
+                            true;
+                        {Function, FunctionArity, _}
+                            when FunctionArity == Arity;
+                                 FunctionArity == '_' ->
+                            true;
+                        _ ->
+                            false
+                    end
+                end, Deprecated);
+            _ ->
+                false
+        end
+    end, Attributes).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Wait to check if a module is loaded.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_module_loaded(Module :: atom()) ->
+    ok |
     {error, any()}.
 
-config_load(FilePath)
-    when is_list(FilePath) ->
-    true = lists:suffix(".config", FilePath),
-    {ok, [ApplicationEnvs]} = file:consult(FilePath),
-    config_load_application(ApplicationEnvs, []).
+is_module_loaded(Module)
+    when is_atom(Module) ->
+    case is_module_loaded(Module, 5000) of
+        {ok, _} ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Wait to check if a module is loaded.===
+%% Return a new timeout value with the elapsed time subtracted.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_module_loaded(Module :: atom(),
+                       Timeout :: non_neg_integer()) ->
+    {ok, non_neg_integer()} |
+    {error, any()}.
+
+is_module_loaded(Module, Timeout)
+    when is_atom(Module), is_integer(Timeout), Timeout >= 0 ->
+    case is_module_loaded_check(Module) of
+        true ->
+            {ok, Timeout};
+        false ->
+            case erlang:max(Timeout - ?IS_MODULE_LOADED_DELTA, 0) of
+                0 ->
+                    {error, timeout};
+                NextTimeout ->
+                    receive after ?IS_MODULE_LOADED_DELTA -> ok end,
+                    is_module_loaded(Module, NextTimeout)
+            end
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -667,73 +777,6 @@ module_reload(Module)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Reload a list of modules.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec modules_reload(Modules :: nonempty_list(atom())) ->
-    ok |
-    {error, any()}.
-
-modules_reload([Module | _] = Modules)
-    when is_atom(Module) ->
-    ok = modules_map(Modules, purge),
-    case code:atomic_load(Modules) of
-        ok ->
-            ok = modules_map(Modules, soft_purge),
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Wait to check if a module is loaded.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec is_module_loaded(Module :: atom()) ->
-    ok |
-    {error, any()}.
-
-is_module_loaded(Module)
-    when is_atom(Module) ->
-    case is_module_loaded(Module, 5000) of
-        {ok, _} ->
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Wait to check if a module is loaded.===
-%% Return a new timeout value with the elapsed time subtracted.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec is_module_loaded(Module :: atom(),
-                       Timeout :: non_neg_integer()) ->
-    {ok, non_neg_integer()} |
-    {error, any()}.
-
-is_module_loaded(Module, Timeout)
-    when is_atom(Module), is_integer(Timeout), Timeout >= 0 ->
-    case is_module_loaded_check(Module) of
-        true ->
-            {ok, Timeout};
-        false ->
-            case erlang:max(Timeout - ?IS_MODULE_LOADED_DELTA, 0) of
-                0 ->
-                    {error, timeout};
-                NextTimeout ->
-                    receive after ?IS_MODULE_LOADED_DELTA -> ok end,
-                    is_module_loaded(Module, NextTimeout)
-            end
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Make sure a module is purged.===
 %% If the module is not loaded, ignore it.
 %% @end
@@ -804,44 +847,6 @@ module_behaviours(Module)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Check if a module function is marked as deprecated.===
-%% The value false will always be returned if the beam file was stripped.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec is_deprecated(Module :: module(),
-                    Function :: atom(),
-                    Arity :: non_neg_integer()) ->
-    boolean().
-
-is_deprecated(Module, Function, Arity) ->
-    Attributes = Module:module_info(attributes),
-    lists:any(fun(Attribute) ->
-        case Attribute of
-            {deprecated, [_ | _] = Deprecated} ->
-                lists:any(fun(Deprecate) ->
-                    case Deprecate of
-                        module ->
-                            true;
-                        {Function, FunctionArity}
-                            when FunctionArity == Arity;
-                                 FunctionArity == '_' ->
-                            true;
-                        {Function, FunctionArity, _}
-                            when FunctionArity == Arity;
-                                 FunctionArity == '_' ->
-                            true;
-                        _ ->
-                            false
-                    end
-                end, Deprecated);
-            _ ->
-                false
-        end
-    end, Attributes).
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Provide the current version of the module.===
 %% A list is returned with an entry for each use of the -vsn attribute
 %% in the order within the module file for the currently loaded version
@@ -864,6 +869,46 @@ module_version(Module)
         end
     end, Module:module_info(attributes)),
     Version.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reload a list of modules.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec modules_reload(Modules :: nonempty_list(atom())) ->
+    ok |
+    {error, any()}.
+
+modules_reload([Module | _] = Modules)
+    when is_atom(Module) ->
+    ok = modules_map(Modules, purge),
+    case code:atomic_load(Modules) of
+        ok ->
+            ok = modules_map(Modules, soft_purge),
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Make sure modules are purged with a timeout.===
+%% If a module is not loaded, ignore it.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec modules_purged(Modules :: list(atom()),
+                     Timeout :: non_neg_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+modules_purged(Modules, infinity) ->
+    modules_purged(Modules, 5000);
+modules_purged(Modules, Timeout)
+    when is_list(Modules), is_integer(Timeout), Timeout >= 0 ->
+    ok = modules_unload(Modules),
+    modules_purged(Modules, [], Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1207,16 +1252,6 @@ application_stop_dependencies(Application, Ignore)
                 {error, _} = Error ->
                     Error
             end;
-        {error, _} = Error ->
-            Error
-    end.
-
-applications_remove([], _, _) ->
-    ok;
-applications_remove([Application | Applications], Timeout, Ignore) ->
-    case application_remove(Application, Timeout, Ignore) of
-        ok ->
-            applications_remove(Applications, Timeout, Ignore);
         {error, _} = Error ->
             Error
     end.
@@ -1643,13 +1678,6 @@ modules_unload([]) ->
 modules_unload([Module | Modules]) ->
     _ = module_unload(Module),
     modules_unload(Modules).
-
-modules_purged(Modules, infinity) ->
-    modules_purged(Modules, 5000);
-modules_purged(Modules, Timeout)
-    when is_list(Modules), is_integer(Timeout), Timeout >= 0 ->
-    ok = modules_unload(Modules),
-    modules_purged(Modules, [], Timeout).
 
 modules_purged([], [], _) ->
     ok;

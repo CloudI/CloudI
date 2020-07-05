@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -40,7 +40,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/1,
+-export([start_link/2,
          configure/0,
          acl_add/2,
          acl_remove/2,
@@ -141,6 +141,7 @@
     {
         node_name :: nonempty_string(),
         time_start :: cloudi_timestamp:native_monotonic(),
+        terminate_timeout :: pos_integer(),
         configuration :: #config{}
     }).
 
@@ -156,8 +157,9 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(#config{} = Config) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
+start_link(TerminateTimeout, #config{} = Config) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE,
+                          [TerminateTimeout, Config], []).
 
 configure() ->
     gen_server:call(?MODULE, configure, infinity).
@@ -399,11 +401,12 @@ service_terminated(ID)
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Config]) ->
+init([TerminateTimeout, Config]) ->
     TimeStart = cloudi_timestamp:native_monotonic(),
     NodeName = cloudi_core_i_nodes:node_name(node()),
     {ok, #state{node_name = NodeName,
                 time_start = TimeStart,
+                terminate_timeout = TerminateTimeout,
                 configuration = Config}}.
 
 handle_call(configure, _, State) ->
@@ -677,7 +680,14 @@ handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
 handle_info(Request, State) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
-terminate(_, _) ->
+terminate(_Reason,
+          #state{terminate_timeout = Timeout,
+                 configuration = #config{code = ConfigCode}}) ->
+    #config_code{modules = Modules,
+                 applications = Applications} = ConfigCode,
+    _ = cloudi_x_reltool_util:modules_purged(Modules, Timeout),
+    _ = cloudi_x_reltool_util:applications_remove(Applications, Timeout,
+                                                  [cloudi_core]),
     ok.
 
 code_change(_, State, _) ->

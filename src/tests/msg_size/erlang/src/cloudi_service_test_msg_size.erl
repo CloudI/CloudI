@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
+%%% @copyright 2011-2020 Michael Truog
 %%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -51,15 +51,18 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(SUFFIXES_OPTIONAL, ["go", "haskell", "ocaml"]).
+-define(SUFFIXES_REQUIRED,
+        ["cxx", "java", "javascript", "perl",
+         "php", "python", "python_c", "ruby"]).
+-define(SUFFIXES_OPTIONAL,
+        ["go", "haskell", "ocaml"]).
 
 -record(state,
     {
-        service :: module() | [string()],
+        service :: module() | list(string()),
         request_count = 0 :: non_neg_integer(),
         elapsed_seconds = undefined :: float() | undefined,
-        suffixes = ["cxx", "java", "javascript",
-                    "perl", "php", "python", "python_c", "ruby"]
+        suffixes = undefined :: nonempty_list(string()) | undefined
     }).
 
 %%%------------------------------------------------------------------------
@@ -101,6 +104,8 @@ aspect_terminate(_, _, #state{service = Service,
 aspect_terminate(_, _, #state{service = Service,
                               request_count = Count,
                               elapsed_seconds = ElapsedSeconds} = State) ->
+    % to trigger this:
+    % cloudi_service_api:services_remove([element(1, S) || S <- element(2, cloudi_service_api:services(infinity)), (element(2, element(2, S)) == "/tests/msg_size/")], infinity).
     ?LOG_INFO("msg_size ~p requests/second "
               "(during ~p seconds) forwarded for~n~p",
               [erlang:round((Count / ElapsedSeconds) * 10.0) / 10.0,
@@ -113,19 +118,18 @@ aspect_terminate(_, _, #state{service = Service,
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
-    State0 = #state{service = ?MODULE},
-    State2 = lists:foldl(fun(Suffix, #state{suffixes = L} = State1) ->
+    Suffixes = lists:sort(lists:foldl(fun(Suffix, L) ->
         case cloudi_service:get_pid(Dispatcher, Prefix ++ Suffix, limit_min) of
             {ok, _} ->
-                State1#state{suffixes = L ++ [Suffix]};
+                [Suffix | L];
             {error, _} ->
-                State1
+                L
         end
-    end, State0, ?SUFFIXES_OPTIONAL),
-    #state{suffixes = Suffixes} = State2,
-    StateN = #state{suffixes = lists:sort(Suffixes)},
+    end, ?SUFFIXES_REQUIRED, ?SUFFIXES_OPTIONAL)),
     cloudi_service:subscribe(Dispatcher, "erlang"),
-    {ok, StateN}.
+    {ok,
+     #state{service = ?MODULE,
+            suffixes = Suffixes}}.
 
 cloudi_service_handle_request(_RequestType, _Name, Pattern,
                               RequestInfo, Request,

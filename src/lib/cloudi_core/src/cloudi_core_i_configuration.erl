@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -331,11 +331,17 @@
               error_reason_logging_syslog_set/0,
               error_reason_logging_formatters_set/0,
               error_reason_code_status/0]).
+-type error_reason_code_configuration() ::
+    {code_invalid |
+     code_paths_invalid |
+     code_modules_invalid |
+     code_applications_invalid, any()}.
 -type error_reason_new() ::
     error_reason_acl_add_configuration() |
     error_reason_services_add_configuration() |
     error_reason_nodes_set_configuration() |
     error_reason_logging_set_configuration() |
+    error_reason_code_configuration() |
     {invalid, any()}.
 
 % cloudi_service_api.hrl records without defaults or types set so
@@ -408,12 +414,7 @@
 load([I | _] = Path) when is_integer(I) ->
     case file:consult(Path) of
         {ok, Terms} ->
-            case load_verify(Terms) of
-                ok ->
-                    new(Terms, #config{uuid_generator = uuid_generator()});
-                {error, _} = Error ->
-                    Error
-            end;
+            new(Terms);
         {error, enoent} = Error ->
             error_logger:error_msg("configuration file \"~s\" not found",
                                    [Path]),
@@ -434,12 +435,7 @@ load([I | _] = Path) when is_integer(I) ->
             Error
     end;
 load(Terms) when is_list(Terms) ->
-    case load_verify(Terms) of
-        ok ->
-            new(Terms, #config{uuid_generator = uuid_generator()});
-        {error, _} = Error ->
-            Error
-    end;
+    new(Terms);
 load(Data) ->
     {error, {configuration_invalid, Data}}.
 
@@ -506,7 +502,7 @@ acl(#config{acl = ACL}) ->
                                           service_proplist()),
                    Config :: #config{},
                    Timeout :: api_timeout_milliseconds()) ->
-    {ok, list(cloudi_service_api:service_id()), #config{}} |
+    {ok, nonempty_list(cloudi_service_api:service_id()), #config{}} |
     {error, error_reason_services_add(), #config{}}.
 
 services_add([T | _] = Value,
@@ -1715,14 +1711,33 @@ logging(#config{logging = #config_logging{
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-load_verify(Terms) ->
-    UnknownTerms = lists:foldl(fun(ConfigSection, L) ->
-        lists:keydelete(ConfigSection, 1, L)
-    end, Terms, ['services', 'acl', 'nodes', 'logging']),
-    if
-        UnknownTerms == [] ->
-            ok;
-        true ->
+-spec new(Terms :: list({atom(), any()})) ->
+    {ok, #config{}} |
+    {error,
+     {configuration_invalid, any()} |
+     error_reason_new()}.
+
+new(Terms) ->
+    Defaults = [
+        {'code',               []},
+        {'logging',            []},
+        {'acl',                []},
+        {'services',           []},
+        {'nodes',              []}],
+    case cloudi_proplists:take_values(Defaults, Terms) of
+        [Code, Logging, ACL, Services, Nodes] ->
+            case code_proplist(Code) of
+                {ok, CodeConfig} ->
+                    new([{'logging', Logging},
+                         {'acl', ACL},
+                         {'services', Services},
+                         {'nodes', Nodes}],
+                        #config{uuid_generator = uuid_generator(),
+                                code = CodeConfig});
+                {error, _} = Error ->
+                    Error
+            end;
+        [_, _, _, _, _ | UnknownTerms] ->
             {error, {configuration_invalid, UnknownTerms}}
     end.
 
@@ -1738,8 +1753,19 @@ new([], #config{services = Services, acl = ACL} = Config) ->
         {error, _} = Error ->
             Error
     end;
-new([{'services', []} | Terms], Config) ->
+new([{ConfigSection, []} | Terms], Config)
+    when ConfigSection =:= 'acl';
+         ConfigSection =:= 'services';
+         ConfigSection =:= 'nodes';
+         ConfigSection =:= 'logging' ->
     new(Terms, Config);
+new([{'acl', [_ | _] = Value} | Terms], Config) ->
+    case acl_lookup_new(Value) of
+        {ok, ACLNew} ->
+            new(Terms, Config#config{acl = ACLNew});
+        {error, _} = Error ->
+            Error
+    end;
 new([{'services', [T | _] = Value} | Terms],
     #config{uuid_generator = UUID} = Config)
     when is_record(T, internal); is_record(T, external); is_list(T) ->
@@ -1749,20 +1775,9 @@ new([{'services', [T | _] = Value} | Terms],
         {error, _} = Error ->
             Error
     end;
-new([{'acl', []} | Terms], Config) ->
-    new(Terms, Config);
-new([{'acl', [_ | _] = Value} | Terms], Config) ->
-    case acl_lookup_new(Value) of
-        {ok, ACLNew} ->
-            new(Terms, Config#config{acl = ACLNew});
-        {error, _} = Error ->
-            Error
-    end;
 new([{'nodes', automatic} | Terms], Config) ->
     {ok, NodesConfig} = nodes_options([], [{discovery, [{multicast, []}]}]),
     new(Terms, Config#config{nodes = NodesConfig});
-new([{'nodes', []} | Terms], Config) ->
-    new(Terms, Config);
 new([{'nodes', [_ | _] = Value} | Terms], Config) ->
     case nodes_proplist(Value) of
         {ok, NodesConfig} ->
@@ -1770,8 +1785,6 @@ new([{'nodes', [_ | _] = Value} | Terms], Config) ->
         {error, _} = Error ->
             Error
     end;
-new([{'logging', []} | Terms], Config) ->
-    new(Terms, Config);
 new([{'logging', [_ | _] = Value} | Terms], Config) ->
     case logging_proplist(Value) of
         {ok, LoggingConfig} ->
@@ -1781,14 +1794,6 @@ new([{'logging', [_ | _] = Value} | Terms], Config) ->
     end;
 new([Term | _], _) ->
     {error, {invalid, Term}}.
-
-uuid_generator() ->
-    Variant = application:get_env(cloudi_core, uuid_v1_variant,
-                                  ?UUID_V1_VARIANT_DEFAULT),
-    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
-    cloudi_x_uuid:new(self(), [{timestamp_type, erlang},
-                               {mac_address, MacAddress},
-                               {variant, Variant}]).
 
 services_add_service(ServicesNext, Timeout) ->
     services_add_service(ServicesNext, [], Timeout).
@@ -1803,12 +1808,13 @@ services_add_service([Service | Services], Added, Timeout) ->
             {error, Reason, lists:reverse(Added)}
     end.
 
--spec services_validate(Services :: list(#internal{} | #external{} |
-                                         cloudi_service_api:service_proplist()),
+-spec services_validate(Services :: nonempty_list(#internal{} | #external{} |
+                                                  cloudi_service_api:
+                                                  service_proplist()),
                         UUID :: cloudi_x_uuid:state()) ->
     {ok,
-     list(#config_service_internal{} | #config_service_external{}),
-     list(cloudi_service_api:service_id())} |
+     nonempty_list(#config_service_internal{} | #config_service_external{}),
+     nonempty_list(cloudi_service_api:service_id())} |
     {error,
      {service_internal_invalid |
       service_internal_prefix_invalid |
@@ -5514,6 +5520,113 @@ validate_node(Node) ->
         Valid =:= false ->
             {error, {node_invalid, Node}}
     end.
+
+code_proplist(Value) ->
+    CodeConfig = #config_code{},
+    Defaults = [
+        {paths,
+         CodeConfig#config_code.paths},
+        {modules,
+         CodeConfig#config_code.modules},
+        {applications,
+         CodeConfig#config_code.applications}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Paths, _, _]
+            when not is_list(Paths) ->
+            {error, {code_paths_invalid, Paths}};
+        [_, Modules, _]
+            when not is_list(Modules) ->
+            {error, {code_modules_invalid, Modules}};
+        [_, _, Applications]
+            when not is_list(Applications) ->
+            {error, {code_applications_invalid, Applications}};
+        [Paths, Modules, Applications] ->
+            accum([{Paths,
+                    fun code_load_paths/2},
+                   {Modules,
+                    fun code_load_modules/2},
+                   {Applications,
+                    fun code_load_applications/2}],
+                  CodeConfig);
+        [_, _, _ | Extra] ->
+            {error, {code_invalid, Extra}}
+    end.
+
+code_load_path([]) ->
+    ok;
+code_load_path([Path | _])
+    when not is_integer(hd(Path)) ->
+    {error, {code_paths_invalid, Path}};
+code_load_path([Path | Paths]) ->
+    case code:add_pathz(Path) of
+        true ->
+            code_load_path(Paths);
+        {error, Reason} ->
+            {error, {code_paths_invalid, {Reason, Path}}}
+    end.
+
+code_load_paths(Paths, CodeConfig) ->
+    case code_load_path(Paths) of
+        ok ->
+            {ok, CodeConfig#config_code{paths = Paths}};
+        {error, _} = Error ->
+            Error
+    end.
+
+code_load_module([]) ->
+    ok;
+code_load_module([Module | _])
+    when not is_atom(Module) ->
+    {error, {code_modules_invalid, Module}};
+code_load_module([Module | Modules]) ->
+    case code:is_loaded(Module) of
+        false ->
+            case code:load_file(Module) of
+                {module, Module} ->
+                    code_load_module(Modules);
+                {error, Reason} ->
+                    {error, {code_modules_invalid, {Reason, Module}}}
+            end;
+        _ ->
+            {error, {code_modules_invalid, {already_loaded, Module}}}
+    end.
+
+code_load_modules(Modules, CodeConfig) ->
+    case code_load_module(Modules) of
+        ok ->
+            {ok, CodeConfig#config_code{modules = Modules}};
+        {error, _} = Error ->
+            Error
+    end.
+
+code_load_application([]) ->
+    ok;
+code_load_application([Application | _])
+    when not is_atom(Application) ->
+    {error, {code_applications_invalid, Application}};
+code_load_application([Application | Applications]) ->
+    case cloudi_x_reltool_util:application_start(Application, [], infinity) of
+        ok ->
+            code_load_application(Applications);
+        {error, Reason} ->
+            {error, {code_applications_invalid, {Reason, Application}}}
+    end.
+
+code_load_applications(Applications, CodeConfig) ->
+    case code_load_application(Applications) of
+        ok ->
+            {ok, CodeConfig#config_code{applications = Applications}};
+        {error, _} = Error ->
+            Error
+    end.
+
+uuid_generator() ->
+    Variant = application:get_env(cloudi_core, uuid_v1_variant,
+                                  ?UUID_V1_VARIANT_DEFAULT),
+    {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
+    cloudi_x_uuid:new(self(), [{timestamp_type, erlang},
+                               {mac_address, MacAddress},
+                               {variant, Variant}]).
 
 -type eval_value() :: number() | atom() | list().
 -spec eval(L :: list({eval_value(),

@@ -73,8 +73,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit 78aead42bbf3544d59eec4ef6ff3466b7fdb35ca (v2.0.0)`
-- `Thu Jun  4 18:14:16 UTC 2020`
+- `commit 91e35eb7a8ca20ddd86f853d92d04b37867fc88e`
+- `Sun Jul  5 00:18:32 UTC 2020`
 - `MIT`
 
 `supool`

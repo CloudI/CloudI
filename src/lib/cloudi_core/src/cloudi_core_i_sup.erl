@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2009-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_sup).
@@ -137,7 +137,7 @@ child_specification(cloudi_core_i_nodes, Config) ->
 child_specification(cloudi_core_i_configurator, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_configurator,
-     {cloudi_core_i_configurator, start_link, [Config]},
+     {cloudi_core_i_configurator, start_link, [Shutdown, Config]},
      permanent, Shutdown, worker, [cloudi_core_i_configurator]}.
 
 child_specification(cloudi_core_i_services_monitor) ->

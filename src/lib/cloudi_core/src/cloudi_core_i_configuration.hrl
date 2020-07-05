@@ -29,6 +29,16 @@
 
 -include("cloudi_core_i_configuration_defaults.hrl").
 
+-record(config_code,
+    {
+        paths = []
+            :: list(string()),
+        modules = []
+            :: list(module()),
+        applications = []
+            :: list(atom())
+    }).
+
 -record(config_logging_syslog,
     {
         identity = "CloudI"
@@ -701,6 +711,8 @@
     {
         uuid_generator
             :: cloudi_x_uuid:state(),
+        code
+            :: #config_code{},
         logging = #config_logging{}
             :: #config_logging{},
         acl = #{}
