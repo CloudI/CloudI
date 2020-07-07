@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -1694,19 +1694,16 @@ logging(Timeout)
 -spec code_path_add(Dir :: file:filename(),
                     Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, bad_directory}.
+    {error,
+     timeout | noproc |
+     cloudi_core_i_configuration:error_reason_code_path_add()}.
 
 code_path_add(Dir, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
            (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
-    case code:add_pathz(Dir) of
-        true ->
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
+    cloudi_core_i_configurator:code_path_add(Dir, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1719,21 +1716,16 @@ code_path_add(Dir, Timeout)
 -spec code_path_remove(Dir :: file:filename(),
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, does_not_exist | bad_name}.
+    {error,
+     timeout | noproc |
+     cloudi_core_i_configuration:error_reason_code_path_remove()}.
 
 code_path_remove(Dir, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
            (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
-    case code:del_path(Dir) of
-        true ->
-            ok;
-        false ->
-            {error, does_not_exist};
-        {error, _} = Error ->
-            Error
-    end.
+    cloudi_core_i_configurator:code_path_remove(Dir, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1743,14 +1735,15 @@ code_path_remove(Dir, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path(Timeout :: api_timeout_milliseconds()) ->
-    {ok, nonempty_list(file:filename())}.
+    {ok, nonempty_list(file:filename())} |
+    {error, timeout | noproc}.
 
 code_path(Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
            (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
-    {ok, code:get_path()}.
+    cloudi_core_i_configurator:code_path(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

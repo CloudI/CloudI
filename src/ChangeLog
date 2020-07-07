@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the CloudI Service API code_path_add, code_path_remove and
+      code_path to use separate storage of paths with checking for
+      adding a path that has already been added
+
 2020-07-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the 'code' configuration file section

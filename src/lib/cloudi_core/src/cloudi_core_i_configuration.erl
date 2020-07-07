@@ -62,7 +62,10 @@
          logging_set/2,
          logging_syslog_set/2,
          logging_formatters_set/2,
-         logging/1]).
+         logging/1,
+         code_path_add/2,
+         code_path_remove/2,
+         code_path/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -277,6 +280,12 @@
      logging_formatter_output_max_t_invalid |
      logging_formatter_formatter_invalid |
      logging_formatter_formatter_config_invalid, any()}.
+-type error_reason_code_path_add_configuration() ::
+    already_exists |
+    bad_directory.
+-type error_reason_code_path_remove_configuration() ::
+    does_not_exist |
+    bad_name.
 -type error_reason_acl_add() ::
     error_reason_acl_add_configuration().
 -type error_reason_acl_remove() ::
@@ -313,6 +322,10 @@
     error_reason_logging_syslog_set_configuration().
 -type error_reason_logging_formatters_set() ::
     error_reason_logging_formatters_set_configuration().
+-type error_reason_code_path_add() ::
+    error_reason_code_path_add_configuration().
+-type error_reason_code_path_remove() ::
+    error_reason_code_path_remove_configuration().
 -type error_reason_code_status() ::
     cloudi_core_i_configurator:error_reason_code_status().
 -export_type([error_reason_acl_add/0,
@@ -330,6 +343,8 @@
               error_reason_logging_set/0,
               error_reason_logging_syslog_set/0,
               error_reason_logging_formatters_set/0,
+              error_reason_code_path_add/0,
+              error_reason_code_path_remove/0,
               error_reason_code_status/0]).
 -type error_reason_code_configuration() ::
     {code_invalid |
@@ -1706,6 +1721,46 @@ logging(#config{logging = #config_logging{
             [{aspects_log_after, AspectsLogAfter} | LoggingList8]
     end,
     lists:reverse(LoggingList9).
+
+-spec code_path_add(Path :: string(),
+                    Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_code_path_add_configuration()}.
+
+code_path_add(Path, #config{code = ConfigCode} = Config) ->
+    #config_code{paths = Paths} = ConfigCode,
+    case code_load_path_add(Path, Paths) of
+        {ok, PathNormalized} ->
+            {ok,
+             Config#config{
+                 code = ConfigCode#config_code{
+                     paths = Paths ++ [PathNormalized]}}};
+        {error, Reason, _} ->
+            {error, Reason}
+    end.
+
+-spec code_path_remove(Path :: string(),
+                       Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_code_path_remove_configuration()}.
+
+code_path_remove(Path, #config{code = ConfigCode} = Config) ->
+    #config_code{paths = Paths} = ConfigCode,
+    case code_load_path_remove(Path, Paths) of
+        {ok, PathsNew} ->
+            {ok,
+             Config#config{
+                 code = ConfigCode#config_code{
+                     paths = PathsNew}}};
+        {error, _} = Error ->
+            Error
+    end.
+
+-spec code_path(#config{}) ->
+    list(string()).
+
+code_path(#config{code = #config_code{paths = Paths}}) ->
+    Paths.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -5552,23 +5607,53 @@ code_proplist(Value) ->
             {error, {code_invalid, Extra}}
     end.
 
-code_load_path([]) ->
-    ok;
-code_load_path([Path | _])
+code_load_path_add(Path, PathsNormalized) ->
+    PathNormalized = path_normalize(Path),
+    case lists:member(PathNormalized, PathsNormalized) of
+        true ->
+            {error, already_exists, PathNormalized};
+        false ->
+            case code:add_pathz(PathNormalized) of
+                true ->
+                    {ok, PathNormalized};
+                {error, Reason} ->
+                    {error, Reason, PathNormalized}
+            end
+    end.
+
+code_load_path_remove(Path, PathsNormalized) ->
+    PathNormalized = path_normalize(Path),
+    case cloudi_lists:delete_checked(PathNormalized, PathsNormalized) of
+        false ->
+            {error, does_not_exist};
+        PathsNormalizedNew ->
+            case code:del_path(PathNormalized) of
+                true ->
+                    {ok, PathsNormalizedNew};
+                false ->
+                    {error, does_not_exist};
+                {error, _} = Error ->
+                    Error
+            end
+    end.
+
+code_load_path([], PathsNormalized) ->
+    {ok, lists:reverse(PathsNormalized)};
+code_load_path([Path | _], _)
     when not is_integer(hd(Path)) ->
     {error, {code_paths_invalid, Path}};
-code_load_path([Path | Paths]) ->
-    case code:add_pathz(Path) of
-        true ->
-            code_load_path(Paths);
-        {error, Reason} ->
-            {error, {code_paths_invalid, {Reason, Path}}}
+code_load_path([Path | Paths], PathsNormalized) ->
+    case code_load_path_add(Path, PathsNormalized) of
+        {ok, PathNormalized} ->
+            code_load_path(Paths, [PathNormalized | PathsNormalized]);
+        {error, Reason, PathNormalized} ->
+            {error, {code_paths_invalid, {Reason, PathNormalized}}}
     end.
 
 code_load_paths(Paths, CodeConfig) ->
-    case code_load_path(Paths) of
-        ok ->
-            {ok, CodeConfig#config_code{paths = Paths}};
+    case code_load_path(Paths, []) of
+        {ok, PathsNormalized} ->
+            {ok, CodeConfig#config_code{paths = PathsNormalized}};
         {error, _} = Error ->
             Error
     end.
@@ -5619,6 +5704,9 @@ code_load_applications(Applications, CodeConfig) ->
         {error, _} = Error ->
             Error
     end.
+
+path_normalize(Path) ->
+    filename:join([Path]).
 
 uuid_generator() ->
     Variant = application:get_env(cloudi_core, uuid_v1_variant,

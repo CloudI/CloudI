@@ -67,6 +67,9 @@
          logging_formatters_set/2,
          logging_redirect_set/2,
          logging/1,
+         code_path_add/2,
+         code_path_remove/2,
+         code_path/1,
          code_status/3,
          service_start/2,
          service_stop/3,
@@ -259,6 +262,17 @@ logging_redirect_set(L, Timeout) ->
 
 logging(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, logging, Timeout)).
+
+code_path_add(Path, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {code_path_add, Path}, Timeout)).
+
+code_path_remove(Path, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {code_path_remove, Path}, Timeout)).
+
+code_path(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE, code_path, Timeout)).
 
 code_status(TimeNative, TimeOffset, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
@@ -625,6 +639,28 @@ handle_call({logging_redirect_set, Node}, _,
 handle_call(logging, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:logging(Config)}, State};
+
+handle_call({code_path_add, Path}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_core_i_configuration:code_path_add(Path, Config) of
+        {ok, ConfigNew} ->
+            {reply, ok, State#state{configuration = ConfigNew}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({code_path_remove, Path}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_core_i_configuration:code_path_remove(Path, Config) of
+        {ok, ConfigNew} ->
+            {reply, ok, State#state{configuration = ConfigNew}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call(code_path, _,
+            #state{configuration = Config} = State) ->
+    {reply, {ok, cloudi_core_i_configuration:code_path(Config)}, State};
 
 handle_call({code_status, TimeNative, TimeOffset}, _,
             #state{time_start = TimeStart,
