@@ -5676,9 +5676,13 @@ code_load_module([Module | Modules]) ->
             {error, {code_modules_invalid, {already_loaded, Module}}}
     end.
 
+code_load_modules([], #config_code{modules = []} = CodeConfig) ->
+    {ok, CodeConfig};
 code_load_modules(Modules, CodeConfig) ->
     case code_load_module(Modules) of
         ok ->
+            error_logger:info_msg("code modules loaded~n  ~tp~n",
+                                  [Modules]),
             {ok, CodeConfig#config_code{modules = Modules}};
         {error, _} = Error ->
             Error
@@ -5697,9 +5701,13 @@ code_load_application([Application | Applications]) ->
             {error, {code_applications_invalid, {Reason, Application}}}
     end.
 
+code_load_applications([], #config_code{applications = []} = CodeConfig) ->
+    {ok, CodeConfig};
 code_load_applications(Applications, CodeConfig) ->
     case code_load_application(Applications) of
         ok ->
+            error_logger:info_msg("code applications loaded~n  ~tp~n",
+                                  [Applications]),
             {ok, CodeConfig#config_code{applications = Applications}};
         {error, _} = Error ->
             Error

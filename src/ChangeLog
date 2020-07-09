@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the Java CloudI API service request error handling
+      to return a null response for external Exceptions while
+      allowing any Error to terminate the service
+      (previously a thrown Error did not terminate the service
+       but some Errors are unrecoverable)
+    * Fix the cgroup service configuration option use with a v2 cgroups mount
+
 2020-07-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change the CloudI Service API code_path_add, code_path_remove and

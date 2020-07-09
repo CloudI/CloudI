@@ -10,8 +10,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang native cgroups interface`
 
 - `https://github.com/okeuday/cgroups`
-- `commit 2361c7c70ccaac6c45b77353af32fbd6425394fc`
-- `Thu Jul  2 08:38:01 UTC 2020`
+- `commit 153980c6710a061c4b7d8dd6da2720d70905a5e7`
+- `Thu Jul  9 00:40:12 UTC 2020`
 - `MIT`
 
 `cpg`

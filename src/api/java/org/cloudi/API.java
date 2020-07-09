@@ -1126,6 +1126,11 @@ public class API
                 e_forward.printStackTrace(API.err);
                 return;
             }
+            catch (Error e)
+            {
+                e.printStackTrace(API.err);
+                System.exit(1);
+            }
             catch (Throwable e)
             {
                 e.printStackTrace(API.err);
@@ -1215,6 +1220,11 @@ public class API
                 this.terminate = true;
                 e_forward.printStackTrace(API.err);
                 return;
+            }
+            catch (Error e)
+            {
+                e.printStackTrace(API.err);
+                System.exit(1);
             }
             catch (Throwable e)
             {

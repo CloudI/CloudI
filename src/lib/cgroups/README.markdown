@@ -23,14 +23,31 @@ then delete the cgroup path after moving the OS pid back to the root cgroup.
     2> OSPid0 = 19368.
     3> CGroupPath = "group1/nested1".
     4> {ok, CGroups} = cgroups:new().
-    5> cgroups:update_or_create(CGroupPath,
+    5> MemoryLimit = case cgroups:version(CGroups) of 1 -> "memory.limit_in_bytes"; 2 -> "memory.high" end.
+    6> cgroups:update_or_create(CGroupPath,
                                 [OSPid0],
-                                [{"memory.limit_in_bytes", "10000000"},
-                                 {"memory.memsw.limit_in_bytes", "12000000"}],
+                                [{MemoryLimit, "10000000"}],
                                 CGroups).
-    6> cgroups:update("", [OSPid0], [], CGroups).
-    7> cgroups:delete_recursive(CGroupPath, CGroups).
-    8> cgroups:destroy(CGroups).
+    7> cgroups:update("", [OSPid0], [], CGroups).
+    8> cgroups:delete_recursive(CGroupPath, CGroups).
+    9> cgroups:destroy(CGroups).
+
+
+Troubleshooting
+---------------
+
+**`cgroups:update/4` and `cgroups:update_or_create/4` Errors:**
+* A Linux/systemd setup may have the control group setup mode set to `hybrid`
+  due to it being the [recommended default](https://github.com/systemd/systemd/blob/v239/NEWS#L1365)
+  for distributions.  However, that mode blocks the use of cgroup controllers
+  (the file `/sys/fs/cgroup/unified/cgroup.controllers` is empty)
+  because the cgroup controllers can only be [mounted in one hierarchy](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html#mounting)
+  (v1 or v2).  If cgroup v1 should be used, the Linux kernel argument
+  `systemd.legacy_systemd_cgroup_controller=1` can be used.
+  If cgroup v2 should be used, the Linux kernel argument
+  `systemd.unified_cgroup_hierarchy=1` can be used
+  (with systemd >= `v226` and kernel >= `4.2`) or
+  `cgroup_no_v1=all` can be used (with kernel >= `4.6`).
 
 Author
 ------

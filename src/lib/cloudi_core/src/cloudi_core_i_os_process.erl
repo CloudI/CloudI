@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_process).
@@ -336,7 +336,12 @@ cgroup_validate(Values)
             {error, {service_options_cgroup_invalid,
                      [{update_or_create, UpdateOrCreate}]}};
         [_, _, _] ->
-            {ok, Values};
+            case cloudi_x_cgroups:new() of
+                {ok, _} ->
+                    {ok, Values};
+                {error, _} ->
+                    {error, {service_options_cgroup_invalid, does_not_exist}}
+            end;
         [_, _, _ | Extra] ->
             {error, {service_options_cgroup_invalid, Extra}}
     end;

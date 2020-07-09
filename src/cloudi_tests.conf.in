@@ -198,7 +198,8 @@
          %{cgroup,
          % [{name, "cloudi/integration_tests/hexpi"},
          %  {parameters,
-         %   [{"memory.limit_in_bytes", "64m"}]}]}
+         %   [{"memory.limit_in_bytes", "64m"}]}]} % cgroup v1
+         %   [{"memory.high", "64m"}]}]}           % cgroup v2
         ]},
     % (using the proplist method of specifying the configuration data...
     %  it provides defaults automatically)
@@ -1068,6 +1069,10 @@
         5000, 10000, 10000, [api], undefined, 1, 4, 5, 300,
         [{dispatcher_pid_options, [{priority, low}]},
          {nice, 15},
+         %{cgroup,
+         % [{name, "cloudi/integration_tests/messaging_java"},
+         %  {parameters,
+         %   [{"memory.max", "4m"}]}]}, % cgroup v2
          {scope, cloudi_service_test_messaging_java}]},
     {internal,
         "/tests/messaging/erlang/variation0/",
