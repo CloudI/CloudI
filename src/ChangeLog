@@ -1,9 +1,28 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve CloudI API service request exception handling
+      to ensure unrecoverable exceptions and assertions cause
+      the service process to restart
+        * JavaScript, Perl, Python, Python/C, Ruby will restart when
+          an assertion fails with an AssertionError exception
+          (C++, Java, PHP already did this)
+        * Python, Python/C, Ruby will restart when a service request handler
+          uses the exit function
+          (though Python/C forces the exit code to be 1)
+        * Python and Python/C provide null responses for Exceptions and
+          restarts for other BaseExceptions
+        * Ruby provides null responses for StandardError exceptions and
+          restarts for other Exceptions
+    * Fix the Perl CloudI API subscribe function so an execution thread
+      will properly cycle through the subscriptions using the same pattern
+    * Fix the Perl CloudI API exception traceback so stderr is used
+
 2020-07-08 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Change the Java CloudI API service request error handling
+    * Improve the Java CloudI API service request exception handling
       to return a null response for external Exceptions while
       allowing any Error to terminate the service
       (previously a thrown Error did not terminate the service

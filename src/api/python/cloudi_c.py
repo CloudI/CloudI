@@ -69,7 +69,7 @@ class API(object):
         try:
             self.__api = libcloudi_py.cloudi_c(thread_index)
         except Exception as exception:
-            API.__rethrow_exception(exception)
+            API.__raise_exception(exception)
 
     @staticmethod
     def thread_count():
@@ -101,7 +101,7 @@ class API(object):
         try:
             return self.__api.subscribe_count(pattern)
         except Exception as exception:
-            API.__rethrow_exception(exception)
+            API.__raise_exception(exception)
 
     def unsubscribe(self, pattern):
         """
@@ -126,7 +126,7 @@ class API(object):
         try:
             return self.__api.send_async(name, request, **kwargs)
         except Exception as exception:
-            API.__rethrow_exception(exception)
+            API.__raise_exception(exception)
 
     def send_sync(self, name, request,
                   timeout=None, request_info=None, priority=None):
@@ -145,7 +145,7 @@ class API(object):
         try:
             return self.__api.send_sync(name, request, **kwargs)
         except Exception as exception:
-            API.__rethrow_exception(exception)
+            API.__raise_exception(exception)
 
     def mcast_async(self, name, request,
                     timeout=None, request_info=None, priority=None):
@@ -166,7 +166,7 @@ class API(object):
         try:
             trans_ids = self.__api.mcast_async(name, request, **kwargs)
         except Exception as exception:
-            API.__rethrow_exception(exception)
+            API.__raise_exception(exception)
         if trans_ids is None:
             return tuple()
         return tuple([
@@ -258,7 +258,7 @@ class API(object):
         try:
             return self.__api.recv_async(**kwargs)
         except Exception as exception:
-            API.__rethrow_exception(exception)
+            API.__raise_exception(exception)
 
     def process_index(self):
         """
@@ -323,8 +323,10 @@ class API(object):
             timeout = -1
         try:
             return self.__api.poll(timeout)
+        except AssertionError:
+            sys.exit(1)
         except Exception as exception:
-            API.__rethrow_exception(exception)
+            API.__raise_exception(exception)
 
     def shutdown(self, reason=None):
         """
@@ -336,7 +338,7 @@ class API(object):
         return self.__api.shutdown(**kwargs)
 
     @staticmethod
-    def __rethrow_exception(exception):
+    def __raise_exception(exception):
         if isinstance(exception, libcloudi_py.message_decoding_exception):
             raise MessageDecodingException(str(exception))
         if isinstance(exception, libcloudi_py.invalid_input_exception):

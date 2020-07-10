@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -52,7 +52,6 @@ class Task(threading.Thread):
         """
         run the msg_size thread
         """
-        # pylint: disable=bare-except
         try:
             self.__api.subscribe(Task.api_name, _request)
 
@@ -60,7 +59,7 @@ class Task(threading.Thread):
             assert result is False
         except self.__terminate_exception:
             pass
-        except:
+        except Exception:
             traceback.print_exc(file=sys.stderr)
         print('terminate msg_size %s' % Task.api_name)
 

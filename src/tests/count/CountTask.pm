@@ -62,7 +62,7 @@ sub run
         }
         else
         {
-            print "$e";
+            print STDERR "$e";
         }
     }
     print "terminate count perl\n";
@@ -71,7 +71,7 @@ sub run
 sub assert
 {
     my ($test) = @_;
-    CloudI::API->assert($test);
+    CloudI::API::assert($test);
 }
 
 sub _request

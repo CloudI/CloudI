@@ -41,7 +41,6 @@ class _Task(threading.Thread):
         self.__api = api
 
     def run(self):
-        # pylint: disable=bare-except
         try:
             self.__api.subscribe('bounce/get', self.__request)
             self.__api.subscribe('bounce/delay', self.__delay)
@@ -54,7 +53,7 @@ class _Task(threading.Thread):
             assert result is False
         except TerminateException:
             pass
-        except:
+        except Exception:
             traceback.print_exc(file=sys.stderr)
         print('terminate websockets python_c')
 

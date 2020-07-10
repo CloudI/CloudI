@@ -74,7 +74,7 @@ sub task
         }
         else
         {
-            print "$e";
+            print STDERR "$e";
         }
     }
     print "terminate msg_size perl\n";
@@ -83,7 +83,7 @@ sub task
 sub assert
 {
     my ($test) = @_;
-    CloudI::API->assert($test);
+    CloudI::API::assert($test);
 }
 
 {

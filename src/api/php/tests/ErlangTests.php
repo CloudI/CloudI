@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -746,7 +746,7 @@ class EncodeTestCase extends PHPUnit\Framework\TestCase
     {
         $this->assertEquals("\x83s\4true", \Erlang\term_to_binary(true));
         $this->assertEquals("\x83s\5false", \Erlang\term_to_binary(false));
-        $this->assertEquals("\x83s\x09undefined", \Erlang\term_to_binary(NULL));
+        $this->assertEquals("\x83s\x09undefined", \Erlang\term_to_binary(null));
     }
     public function test_term_to_binary_short_integer()
     {

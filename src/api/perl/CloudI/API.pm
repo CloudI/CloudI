@@ -60,6 +60,7 @@ require CloudI::ForwardSyncException;
 require CloudI::ForwardAsyncException;
 require CloudI::MessageDecodingException;
 require CloudI::TerminateException;
+require CloudI::AssertionError;
 
 use constant ASYNC =>  1;
 use constant SYNC  => -1;
@@ -181,12 +182,12 @@ sub subscribe
     my $key = $self->{_prefix} . $pattern;
     if (! defined($self->{_callbacks}{$key}))
     {
-        $self->{_callbacks}{$key} = ($function);
+        $self->{_callbacks}{$key} = [$function];
     }
     else
     {
-        my @value = $self->{_callbacks}{$key};
-        push(@value, $function);
+        my $function_queue_ref = $self->{_callbacks}{$key};
+        push(@$function_queue_ref, $function);
     }
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('subscribe'), $pattern]));
@@ -206,10 +207,10 @@ sub unsubscribe
     my $self = shift;
     my ($pattern) = @_;
     my $key = $self->{_prefix} . $pattern;
-    my @value = $self->{_callbacks}{$key};
-    assert(scalar(@value) > 0);
-    shift(@value);
-    if (scalar(@value) == 0)
+    my $function_queue_ref = $self->{_callbacks}{$key};
+    assert(scalar(@$function_queue_ref) > 0);
+    shift(@$function_queue_ref);
+    if (scalar(@$function_queue_ref) == 0)
     {
         delete($self->{_callbacks}{$key});
     }
@@ -482,9 +483,9 @@ sub _callback
     }
     else
     {
-        my @function_queue = $self->{_callbacks}{$pattern};
-        $function = shift(@function_queue);
-        push(@function_queue, $function);
+        my $function_queue_ref = $self->{_callbacks}{$pattern};
+        $function = shift(@$function_queue_ref);
+        push(@$function_queue_ref, $function);
     }
     my $response_info;
     my $response;
@@ -534,12 +535,17 @@ sub _callback
                    $e->isa('CloudI::ForwardSyncException'))
             {
                 $self->{_terminate} = 1;
-                print "$e";
+                print STDERR "$e";
                 return;
+            }
+            elsif ($e->isa('CloudI::AssertionError'))
+            {
+                print STDERR "$e";
+                exit(1);
             }
             else
             {
-                print "$e";
+                print STDERR "$e";
             }
             $response_info = '';
             $response = '';
@@ -605,12 +611,17 @@ sub _callback
                    $e->isa('CloudI::ForwardAsyncException'))
             {
                 $self->{_terminate} = 1;
-                print "$e";
+                print STDERR "$e";
                 return;
+            }
+            elsif ($e->isa('CloudI::AssertionError'))
+            {
+                print STDERR "$e";
+                exit(1);
             }
             else
             {
-                print "$e";
+                print STDERR "$e";
             }
             $response_info = '';
             $response = '';
@@ -1179,7 +1190,7 @@ sub _recv
 sub assert
 {
     my ($test) = @_;
-    $test or die Erlang::Exception->new('Assertion failed !');
+    $test or die CloudI::AssertionError->new();
     return $test;
 }
 

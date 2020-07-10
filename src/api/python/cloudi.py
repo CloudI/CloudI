@@ -398,6 +398,7 @@ class API(object):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-locals
+        # pylint: disable=broad-except
         function_queue = self.__callbacks.get(pattern, None)
         if function_queue is None:
             function = self.__null_response
@@ -435,9 +436,18 @@ class API(object):
                 self.__terminate = True
                 traceback.print_exc(file=sys.stderr)
                 return
-            except:
+            except AssertionError:
+                traceback.print_exc(file=sys.stderr)
+                sys.exit(1)
+            except SystemExit:
+                traceback.print_exc(file=sys.stderr)
+                raise
+            except Exception:
                 return_null_response = True
                 traceback.print_exc(file=sys.stderr)
+            except:
+                traceback.print_exc(file=sys.stderr)
+                sys.exit(1)
             if return_null_response:
                 response_info = b''
                 response = b''
@@ -478,9 +488,18 @@ class API(object):
                 self.__terminate = True
                 traceback.print_exc(file=sys.stderr)
                 return
-            except:
+            except AssertionError:
+                traceback.print_exc(file=sys.stderr)
+                sys.exit(1)
+            except SystemExit:
+                traceback.print_exc(file=sys.stderr)
+                raise
+            except Exception:
                 return_null_response = True
                 traceback.print_exc(file=sys.stderr)
+            except:
+                traceback.print_exc(file=sys.stderr)
+                sys.exit(1)
             if return_null_response:
                 response_info = b''
                 response = b''

@@ -48,7 +48,6 @@ class Task(threading.Thread):
         """
         run the http_req thread
         """
-        # pylint: disable=bare-except
         try:
             if self.__name == 'python':
                 assert self.__api.subscribe_count('python.xml/get') == 0
@@ -62,7 +61,7 @@ class Task(threading.Thread):
             assert result is False
         except self.__terminate_exception:
             pass
-        except:
+        except Exception:
             traceback.print_exc(file=sys.stderr)
         print('terminate http_req %s' % self.__name)
 

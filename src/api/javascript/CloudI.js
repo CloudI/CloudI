@@ -597,6 +597,10 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     API._terminate = true;
                     CloudI.stderr_write(err.stack + '\n');
                 }
+                else if (err instanceof assert.AssertionError) {
+                    CloudI.stderr_write(err.stack + '\n');
+                    process.exit(1);
+                }
                 else {
                     return_null_response = true;
                     API._exception(err);
@@ -678,6 +682,10 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 }
                 else if (err instanceof ForwardSyncException) {
                     return;
+                }
+                else if (err instanceof assert.AssertionError) {
+                    CloudI.stderr_write(err.stack + '\n');
+                    process.exit(1);
                 }
                 else {
                     return_null_response = true;

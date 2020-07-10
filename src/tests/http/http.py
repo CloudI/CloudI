@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,6 @@ class _Task(threading.Thread):
         self.__api = API(thread_index)
 
     def run(self):
-        # pylint: disable=bare-except
         try:
             self.__api.subscribe('text/post', self.__text)
 
@@ -48,7 +47,7 @@ class _Task(threading.Thread):
             assert result is False
         except TerminateException:
             pass
-        except:
+        except Exception:
             traceback.print_exc(file=sys.stderr)
         print('terminate http python')
 

@@ -49,7 +49,6 @@ class Task(threading.Thread):
         """
         run the messaging thread
         """
-        # pylint: disable=bare-except
         try:
             self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
             self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
@@ -86,7 +85,7 @@ class Task(threading.Thread):
             assert result is False
         except self.__terminate_exception:
             pass
-        except:
+        except Exception:
             traceback.print_exc(file=sys.stderr)
         print('terminate messaging %s' % self.__name)
 

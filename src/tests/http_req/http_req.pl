@@ -80,7 +80,7 @@ sub task
         }
         else
         {
-            print "$e";
+            print STDERR "$e";
         }
     }
     print "terminate http_req perl\n";
@@ -89,7 +89,7 @@ sub task
 sub assert
 {
     my ($test) = @_;
-    CloudI::API->assert($test);
+    CloudI::API::assert($test);
 }
 
 {

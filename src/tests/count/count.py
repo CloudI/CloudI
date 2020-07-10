@@ -49,7 +49,6 @@ class Task(threading.Thread):
         """
         run the count thread
         """
-        # pylint: disable=bare-except
         try:
             self.__api.subscribe(self.__name + '/get', self.__request)
 
@@ -57,7 +56,7 @@ class Task(threading.Thread):
             assert result is False
         except self.__terminate_exception:
             pass
-        except:
+        except Exception:
             traceback.print_exc(file=sys.stderr)
         print('terminate count %s' % self.__name)
 

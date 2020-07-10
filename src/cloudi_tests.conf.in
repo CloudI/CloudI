@@ -377,6 +377,7 @@
     {external,
         "/tests/count/",
         "@PHP@",
+        "-d zend.assertions=1 "
         "-d include_path='@cloudi_prefix@/api/php/' "
         "-f @cloudi_prefix@/tests/count/count.php",
         [],
@@ -459,6 +460,7 @@
     {external,
         "/tests/http_req/",
         "@PHP@",
+        "-d zend.assertions=1 "
         "-d include_path='@cloudi_prefix@/api/php/' "
         "-f @cloudi_prefix@/tests/http_req/http_req.php",
         [],
@@ -577,6 +579,7 @@
     {external,
         "/tests/null/response/",
         "@PHP@",
+        "-d zend.assertions=1 "
         "-d include_path='@cloudi_prefix@/api/php/' "
         "-f @cloudi_prefix@/tests/null/null.php",
         [],
@@ -660,6 +663,7 @@
     {external,
         "/tests/null/timeout/",
         "@PHP@",
+        "-d zend.assertions=1 "
         "-d include_path='@cloudi_prefix@/api/php/' "
         "-f @cloudi_prefix@/tests/null/null.php",
         [],
@@ -913,6 +917,7 @@
     {external,
         "/tests/msg_size/",
         "@PHP@",
+        "-d zend.assertions=1 "
         "-d include_path='@cloudi_prefix@/api/php/' "
         "-f @cloudi_prefix@/tests/msg_size/msg_size.php",
         [],
@@ -1004,6 +1009,7 @@
     {external,
         "/tests/messaging/php/",
         "@PHP@",
+        "-d zend.assertions=1 "
         "-d include_path='@cloudi_prefix@/api/php/' "
         "-f @cloudi_prefix@/tests/messaging/messaging.php",
         [],

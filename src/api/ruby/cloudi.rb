@@ -182,7 +182,7 @@ module CloudI
                                         OtpErlangBinary.new(request),
                                         timeout, priority,
                                         OtpErlangBinary.new(trans_id), pid]))
-            raise ForwardAsyncException.new()
+            raise ForwardAsyncException
         end
 
         def forward_sync(name, request_info, request,
@@ -192,7 +192,7 @@ module CloudI
                                         OtpErlangBinary.new(request),
                                         timeout, priority,
                                         OtpErlangBinary.new(trans_id), pid]))
-            raise ForwardSyncException.new()
+            raise ForwardSyncException
         end
 
         def return_(request_type, name, pattern, response_info, response,
@@ -214,7 +214,7 @@ module CloudI
                                         OtpErlangBinary.new(response),
                                         timeout,
                                         OtpErlangBinary.new(trans_id), pid]))
-            raise ReturnAsyncException.new()
+            raise ReturnAsyncException
         end
 
         def return_sync(name, pattern, response_info, response,
@@ -224,7 +224,7 @@ module CloudI
                                         OtpErlangBinary.new(response),
                                         timeout,
                                         OtpErlangBinary.new(trans_id), pid]))
-            raise ReturnSyncException.new()
+            raise ReturnSyncException
         end
 
         def recv_async(timeout=nil, trans_id=nil, consume=true)
@@ -293,10 +293,18 @@ module CloudI
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
                     return
-                rescue
+                rescue StandardError => e
                     return_null_response = true
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
+                rescue SystemExit => e
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
+                    raise
+                rescue
                     $stderr.puts $!.message
                     $stderr.puts $!.backtrace
+                    exit(1)
                 end
                 if return_null_response
                     response_info = ''
@@ -344,10 +352,18 @@ module CloudI
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
                     return
-                rescue
+                rescue StandardError => e
                     return_null_response = true
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
+                rescue SystemExit => e
+                    $stderr.puts e.message
+                    $stderr.puts e.backtrace
+                    raise
+                rescue
                     $stderr.puts $!.message
                     $stderr.puts $!.backtrace
+                    exit(1)
                 end
                 if return_null_response
                     response_info = ''
@@ -679,7 +695,7 @@ module CloudI
         end
 
         def self.assert
-            raise 'Assertion failed !' unless yield # if $DEBUG
+            raise AssertionError unless yield # if $DEBUG
         end
 
         private :null_response
@@ -772,6 +788,9 @@ module CloudI
             @timeout = timeout
         end
         attr_reader :timeout
+    end
+
+    class AssertionError < Exception
     end
 end
 

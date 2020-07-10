@@ -90,7 +90,7 @@ sub run
         }
         else
         {
-            print "$e";
+            print STDERR "$e";
         }
     }
     print "terminate messaging perl\n";
@@ -99,7 +99,7 @@ sub run
 sub assert
 {
     my ($test) = @_;
-    CloudI::API->assert($test);
+    CloudI::API::assert($test);
 }
 
 sub _sequence1_abcd

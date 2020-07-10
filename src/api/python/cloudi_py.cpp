@@ -672,6 +672,7 @@ class callback : public CloudI::API::function_object_c
                 bool const forward_async_exception =
                     (::strcmp(exception_name, "ForwardAsyncException") == 0);
                 bool exception_invalid = false;
+                int immediate_exit_code = 0;
                 if (request_type == CloudI::API::SYNC &&
                     return_sync_exception)
                 {
@@ -695,15 +696,38 @@ class callback : public CloudI::API::function_object_c
                 else
                 {
                     if (::strcmp(exception_name, "TerminateException") == 0)
+                    {
                         PyErr_Clear();
+                    }
+                    else if (::strcmp(exception_name, "AssertionError") == 0)
+                    {
+                        immediate_exit_code = 1;
+                        PyErr_WriteUnraisable(m_f);
+                    }
+                    else if (::strcmp(exception_name, "SystemExit") == 0)
+                    {
+                        immediate_exit_code = 1;
+                        PyErr_WriteUnraisable(m_f);
+                    }
+                    else if (exception->tp_base &&
+                             ::strcmp(exception->tp_base->tp_name,
+                                      "Exception"))
+                    {
+                        PyErr_WriteUnraisable(m_f);
+                    }
                     else
-                        PyErr_Print();
+                    {
+                        immediate_exit_code = 1;
+                        PyErr_WriteUnraisable(m_f);
+                    }
                     exception_invalid = true;
                 }
                 THREADS_UNBLOCK;
 
                 if (exception_invalid)
                 {
+                    if (immediate_exit_code)
+                        ::exit(immediate_exit_code);
                     return;
                 }
 

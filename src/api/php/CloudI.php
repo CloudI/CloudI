@@ -30,7 +30,16 @@ namespace CloudI;
 for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
 ob_implicit_flush(true);
 // an assert failure needs to cause php to exit
-assert_options(ASSERT_BAIL);
+if (! ini_get('assert.active'))
+    ini_set('assert.active', '1');
+if (! ini_get('assert.warning'))
+    ini_set('assert.warning', '1');
+if (! ini_get('assert.bail'))
+    ini_set('assert.bail', '1');
+if (ini_get('assert.quiet_eval'))
+    ini_set('assert.quiet_eval', '0');
+if (ini_get('assert.callback'))
+    ini_set('assert.callback', null);
 
 require dirname(__FILE__) . '/Erlang.php';
 
