@@ -5,8 +5,6 @@ An interface for cgroups manipulation that handles cgroup version details
 (i.e., differences between v1 and v2) and provides safe usage of the
 cgroups filesystem mount.
 
-**Needs testing with [v2 cgroups](https://github.com/okeuday/cgroups/issues/1)**
-
 Build
 -----
 
