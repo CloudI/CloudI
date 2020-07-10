@@ -8,7 +8,7 @@
       the service process to restart
         * JavaScript, Perl, Python, Python/C, Ruby will restart when
           an assertion fails with an AssertionError exception
-          (C++, Java, PHP already did this)
+          (Java (in the previous commit) and PHP already did this)
         * Python, Python/C, Ruby will restart when a service request handler
           uses the exit function
           (though Python/C forces the exit code to be 1)
