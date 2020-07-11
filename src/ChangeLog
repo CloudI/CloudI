@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve Python/C CloudI API exception handling
+
 2020-07-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve CloudI API service request exception handling

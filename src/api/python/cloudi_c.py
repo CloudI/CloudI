@@ -65,11 +65,10 @@ class API(object):
     SYNC = -1
 
     def __init__(self, thread_index):
-        # pylint: disable=broad-except
-        try:
-            self.__api = libcloudi_py.cloudi_c(thread_index)
-        except Exception as exception:
-            API.__raise_exception(exception)
+        self.__api = libcloudi_py.cloudi_c(thread_index,
+                                           InvalidInputException,
+                                           MessageDecodingException,
+                                           TerminateException)
 
     @staticmethod
     def thread_count():
@@ -97,11 +96,7 @@ class API(object):
         """
         returns the number of subscriptions for a single service name pattern
         """
-        # pylint: disable=broad-except
-        try:
-            return self.__api.subscribe_count(pattern)
-        except Exception as exception:
-            API.__raise_exception(exception)
+        return self.__api.subscribe_count(pattern)
 
     def unsubscribe(self, pattern):
         """
@@ -114,7 +109,6 @@ class API(object):
         """
         sends an asynchronous service request
         """
-        # pylint: disable=broad-except
         # pylint: disable=too-many-arguments
         kwargs = {}
         if timeout is not None:
@@ -123,17 +117,13 @@ class API(object):
             kwargs['request_info'] = request_info
         if priority is not None:
             kwargs['priority'] = priority
-        try:
-            return self.__api.send_async(name, request, **kwargs)
-        except Exception as exception:
-            API.__raise_exception(exception)
+        return self.__api.send_async(name, request, **kwargs)
 
     def send_sync(self, name, request,
                   timeout=None, request_info=None, priority=None):
         """
         sends a synchronous service request
         """
-        # pylint: disable=broad-except
         # pylint: disable=too-many-arguments
         kwargs = {}
         if timeout is not None:
@@ -142,10 +132,7 @@ class API(object):
             kwargs['request_info'] = request_info
         if priority is not None:
             kwargs['priority'] = priority
-        try:
-            return self.__api.send_sync(name, request, **kwargs)
-        except Exception as exception:
-            API.__raise_exception(exception)
+        return self.__api.send_sync(name, request, **kwargs)
 
     def mcast_async(self, name, request,
                     timeout=None, request_info=None, priority=None):
@@ -153,7 +140,6 @@ class API(object):
         sends asynchronous service requests to all subscribers
         of the matching service name pattern
         """
-        # pylint: disable=broad-except
         # pylint: disable=too-many-arguments
         kwargs = {}
         if timeout is not None:
@@ -162,11 +148,7 @@ class API(object):
             kwargs['request_info'] = request_info
         if priority is not None:
             kwargs['priority'] = priority
-        exception = None
-        try:
-            trans_ids = self.__api.mcast_async(name, request, **kwargs)
-        except Exception as exception:
-            API.__raise_exception(exception)
+        trans_ids = self.__api.mcast_async(name, request, **kwargs)
         if trans_ids is None:
             return tuple()
         return tuple([
@@ -247,7 +229,6 @@ class API(object):
         """
         blocks to receive an asynchronous service request response
         """
-        # pylint: disable=broad-except
         kwargs = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
@@ -255,10 +236,7 @@ class API(object):
             kwargs['trans_id'] = trans_id
         if consume is not None:
             kwargs['consume'] = consume
-        try:
-            return self.__api.recv_async(**kwargs)
-        except Exception as exception:
-            API.__raise_exception(exception)
+        return self.__api.recv_async(**kwargs)
 
     def process_index(self):
         """
@@ -318,15 +296,12 @@ class API(object):
         """
         blocks to process incoming CloudI service requests
         """
-        # pylint: disable=broad-except
         if timeout is None:
             timeout = -1
         try:
             return self.__api.poll(timeout)
         except AssertionError:
             sys.exit(1)
-        except Exception as exception:
-            API.__raise_exception(exception)
 
     def shutdown(self, reason=None):
         """
@@ -336,16 +311,6 @@ class API(object):
         if reason is not None:
             kwargs['reason'] = reason
         return self.__api.shutdown(**kwargs)
-
-    @staticmethod
-    def __raise_exception(exception):
-        if isinstance(exception, libcloudi_py.message_decoding_exception):
-            raise MessageDecodingException(str(exception))
-        if isinstance(exception, libcloudi_py.invalid_input_exception):
-            raise InvalidInputException(str(exception))
-        if isinstance(exception, libcloudi_py.terminate_exception):
-            raise TerminateException(exception.timeout)
-        raise exception
 
     @staticmethod
     def __text_pairs_parse(text):

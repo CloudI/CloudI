@@ -56,19 +56,14 @@
 #include <string>
 #include <cstring>
 
-static PyObject *python_cloudi_assert_exception;
-static PyObject *python_cloudi_invalid_input_exception;
-static PyObject *python_cloudi_message_decoding_exception;
-static PyObject *python_cloudi_terminate_exception;
-
 #ifdef NDEBUG
 #define PY_ASSERT(X)
 #else
 #define PY_ASSERT(X)                                                       \
     if (! (X))                                                             \
     {                                                                      \
-        PyErr_Format(python_cloudi_assert_exception,                       \
-                     "%s:%d: ASSERT(%s) failed!",                          \
+        PyErr_Format(PyExc_AssertionError,                                 \
+                     "%s:%d: PY_ASSERT(%s) failed!",                       \
                      __FILE__, __LINE__, #X);                              \
         return NULL;                                                       \
     }
@@ -78,6 +73,9 @@ typedef struct {
     PyObject_HEAD;
     CloudI::API * api;
     PyThreadState * thread_state;
+    PyObject * invalid_input_exception;
+    PyObject * message_decoding_exception;
+    PyObject * terminate_exception;
 } python_cloudi_instance_object;
 
 static void
@@ -113,173 +111,175 @@ python_cloudi_instance_object_new(PyTypeObject * type, PyObject *, PyObject *)
 }
 
 static void
-python_terminate_error(uint32_t const timeout)
+python_terminate_exception(PyObject * terminate_exception,
+                           uint32_t const timeout)
 {
     PyObject * timeout_value = Py_BuildValue("I", timeout);
-    PyObject_SetAttrString(python_cloudi_terminate_exception,
+    PyObject_SetAttrString(terminate_exception,
                            "timeout", timeout_value);
     Py_DECREF(timeout_value);
-    PyErr_SetString(python_cloudi_terminate_exception, "Terminate");
+    PyErr_SetString(terminate_exception, "Terminate");
 }
 
 static void
-python_error(CloudI::API const & api, int const value)
+python_error(python_cloudi_instance_object * const object, int const value)
 {
     switch (value)
     {
         case CloudI::API::return_value::terminate:
-            python_terminate_error(api.timeout_terminate());
+            python_terminate_exception(object->terminate_exception,
+                                       object->api->timeout_terminate());
             return;
         case CloudI::API::return_value::timeout:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "timeout");
             return;
         case CloudI::API::return_value::error_function_parameter:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "function_parameter");
             return;
         case CloudI::API::return_value::error_read_underflow:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_underflow");
             return;
         case CloudI::API::return_value::error_ei_decode:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "ei_decode");
             return;
         case CloudI::API::return_value::invalid_input:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "cloudi_invalid_input");
             return;
         case CloudI::API::return_value::out_of_memory:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "cloudi_out_of_memory");
             return;
         case CloudI::API::return_value::error_read_EAGAIN:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_EAGAIN");
             return;
         case CloudI::API::return_value::error_read_EBADF:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_EBADF");
             return;
         case CloudI::API::return_value::error_read_EFAULT:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_EFAULT");
             return;
         case CloudI::API::return_value::error_read_EINTR:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_EINTR");
             return;
         case CloudI::API::return_value::error_read_EINVAL:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_EINVAL");
             return;
         case CloudI::API::return_value::error_read_EIO:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_EIO");
             return;
         case CloudI::API::return_value::error_read_EISDIR:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_EISDIR");
             return;
         case CloudI::API::return_value::error_read_null:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_null");
             return;
         case CloudI::API::return_value::error_read_overflow:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_overflow");
             return;
         case CloudI::API::return_value::error_read_unknown:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "read_unknown");
             return;
         case CloudI::API::return_value::error_write_EAGAIN:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EAGAIN");
             return;
         case CloudI::API::return_value::error_write_EBADF:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EBADF");
             return;
         case CloudI::API::return_value::error_write_EFAULT:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EFAULT");
             return;
         case CloudI::API::return_value::error_write_EFBIG:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EFBIG");
             return;
         case CloudI::API::return_value::error_write_EINTR:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EINTR");
             return;
         case CloudI::API::return_value::error_write_EINVAL:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EINVAL");
             return;
         case CloudI::API::return_value::error_write_EIO:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EIO");
             return;
         case CloudI::API::return_value::error_write_ENOSPC:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_ENOSPC");
             return;
         case CloudI::API::return_value::error_write_EPIPE:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_EPIPE");
             return;
         case CloudI::API::return_value::error_write_null:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_null");
             return;
         case CloudI::API::return_value::error_write_overflow:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_overflow");
             return;
         case CloudI::API::return_value::error_write_unknown:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "write_unknown");
             return;
         case CloudI::API::return_value::error_ei_encode:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "ei_encode");
             return;
         case CloudI::API::return_value::error_poll_EBADF:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_EBADF");
             return;
         case CloudI::API::return_value::error_poll_EFAULT:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_EFAULT");
             return;
         case CloudI::API::return_value::error_poll_EINTR:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_EINTR");
             return;
         case CloudI::API::return_value::error_poll_EINVAL:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_EINVAL");
             return;
         case CloudI::API::return_value::error_poll_ENOMEM:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_ENOMEM");
             return;
         case CloudI::API::return_value::error_poll_ERR:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_ERR");
             return;
         case CloudI::API::return_value::error_poll_NVAL:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_NVAL");
             return;
         case CloudI::API::return_value::error_poll_unknown:
-            PyErr_SetString(python_cloudi_message_decoding_exception,
+            PyErr_SetString(object->message_decoding_exception,
                             "poll_unknown");
             return;
         default:
-            PyErr_Format(python_cloudi_message_decoding_exception,
+            PyErr_Format(object->message_decoding_exception,
                          "unknown (%d)", value);
             return;
     }
@@ -291,7 +291,14 @@ python_cloudi_instance_object_init(PyObject * self, PyObject * args, PyObject *)
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
     unsigned int thread_index;
-    if (! PyArg_ParseTuple(args, "I:__init__()", &thread_index))
+    PyObject * invalid_input_exception;
+    PyObject * message_decoding_exception;
+    PyObject * terminate_exception;
+    if (! PyArg_ParseTuple(args, "IOOO:__init__()",
+                           &thread_index,
+                           &invalid_input_exception,
+                           &message_decoding_exception,
+                           &terminate_exception))
     {
         return -1;
     }
@@ -299,15 +306,18 @@ python_cloudi_instance_object_init(PyObject * self, PyObject * args, PyObject *)
     {
         object->api = new CloudI::API(thread_index, true);
         object->thread_state = 0;
+        object->invalid_input_exception = invalid_input_exception;
+        object->message_decoding_exception = message_decoding_exception;
+        object->terminate_exception = terminate_exception;
     }
     catch (CloudI::API::invalid_input_exception const & e)
     {
-        PyErr_SetString(python_cloudi_invalid_input_exception, e.what());
+        PyErr_SetString(invalid_input_exception, e.what());
         return -1;
     }
     catch (CloudI::API::terminate_exception const & e)
     {
-        python_terminate_error(e.timeout());
+        python_terminate_exception(terminate_exception, e.timeout());
         return -1;
     }
     return 0;
@@ -539,38 +549,6 @@ MODINIT_FUNC_DECLARE(libcloudi_py)
     PyModule_AddObject(m, "cloudi_c",
                        (PyObject *) &python_cloudi_instance_type);
 
-    python_cloudi_assert_exception = PyErr_NewException(
-        const_cast<char *>("libcloudi_py."
-                           "assert_exception"), NULL, NULL);
-    Py_INCREF(python_cloudi_assert_exception);
-    PyModule_AddObject(m, "assert_exception",
-                       python_cloudi_assert_exception);
-
-    python_cloudi_invalid_input_exception = PyErr_NewException(
-        const_cast<char *>("libcloudi_py."
-                           "invalid_input_exception"), NULL, NULL);
-    Py_INCREF(python_cloudi_invalid_input_exception);
-    PyModule_AddObject(m, "invalid_input_exception",
-                       python_cloudi_invalid_input_exception);
-
-    python_cloudi_message_decoding_exception = PyErr_NewException(
-        const_cast<char *>("libcloudi_py."
-                           "message_decoding_exception"), NULL, NULL);
-    Py_INCREF(python_cloudi_message_decoding_exception);
-    PyModule_AddObject(m, "message_decoding_exception",
-                       python_cloudi_message_decoding_exception);
-
-    PyObject * terminate_exception_attrs = PyDict_New();
-    PyDict_SetItemString(terminate_exception_attrs, "timeout", Py_None);
-    python_cloudi_terminate_exception = PyErr_NewException(
-        const_cast<char *>("libcloudi_py."
-                           "terminate_exception"), NULL,
-        terminate_exception_attrs);
-    Py_INCREF(python_cloudi_terminate_exception);
-    Py_DECREF(terminate_exception_attrs);
-    PyModule_AddObject(m, "terminate_exception",
-                       python_cloudi_terminate_exception);
-
 #ifdef PYTHON_VERSION_3_COMPATIBLE
     return m;
 #else
@@ -699,12 +677,12 @@ class callback : public CloudI::API::function_object_c
                     {
                         PyErr_Clear();
                     }
-                    else if (::strcmp(exception_name, "AssertionError") == 0)
-                    {
-                        immediate_exit_code = 1;
-                        PyErr_WriteUnraisable(m_f);
-                    }
-                    else if (::strcmp(exception_name, "SystemExit") == 0)
+                    else if (::strcmp(exception_name,
+                                      "MessageDecodingException") == 0 ||
+                             ::strcmp(exception_name,
+                                      "InvalidInputException") == 0 ||
+                             ::strcmp(exception_name, "AssertionError") == 0 ||
+                             ::strcmp(exception_name, "SystemExit") == 0)
                     {
                         immediate_exit_code = 1;
                         PyErr_WriteUnraisable(m_f);
@@ -909,7 +887,7 @@ python_cloudi_subscribe(PyObject * self, PyObject * args)
     }
     if (! f || ! PyCallable_Check(f))
     {
-        PyErr_SetString(python_cloudi_message_decoding_exception,
+        PyErr_SetString(object->message_decoding_exception,
                         "subscribe: not_callable");
         return NULL;
     }
@@ -919,7 +897,7 @@ python_cloudi_subscribe(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -942,7 +920,7 @@ python_cloudi_subscribe_count(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     return Py_BuildValue("I", api->get_subscribe_count());
@@ -965,7 +943,7 @@ python_cloudi_unsubscribe(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1007,7 +985,7 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     PY_ASSERT(api->get_trans_id_count() == 1);
@@ -1050,7 +1028,7 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     PY_ASSERT(api->get_trans_id_count() == 1);
@@ -1100,7 +1078,7 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     return Py_BuildValue(BUILDVALUE_BYTES, api->get_trans_id(0),
@@ -1150,7 +1128,7 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1199,7 +1177,7 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1247,7 +1225,7 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1295,7 +1273,7 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     Py_RETURN_NONE;
@@ -1332,7 +1310,7 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
         {
             Py_RETURN_NONE;
         }
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     PY_ASSERT(api->get_trans_id_count() == 1);
@@ -1450,7 +1428,7 @@ python_cloudi_poll(PyObject * self, PyObject * args)
         }
         else
         {
-            python_error(*api, result);
+            python_error(object, result);
             return NULL;
         }
     }
@@ -1479,7 +1457,7 @@ python_cloudi_shutdown(PyObject * self, PyObject * args, PyObject * kwargs)
     THREADS_END;
     if (result != 0)
     {
-        python_error(*api, result);
+        python_error(object, result);
         return NULL;
     }
     Py_RETURN_NONE;
