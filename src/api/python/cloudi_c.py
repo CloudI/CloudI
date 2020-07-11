@@ -32,6 +32,7 @@ integration tests <https://cloudi.org/tutorials.html#cloudi_examples>.
 
 import sys
 import os
+import traceback
 import inspect
 from functools import partial
 import libcloudi_py
@@ -301,6 +302,7 @@ class API(object):
         try:
             return self.__api.poll(timeout)
         except AssertionError:
+            traceback.print_exc(file=sys.stderr)
             sys.exit(1)
 
     def shutdown(self, reason=None):
