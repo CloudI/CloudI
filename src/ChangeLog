@@ -4,6 +4,12 @@
 2020-07-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve Python/C CloudI API exception handling
+    * Add the fatal_exception class to the C++ CloudI API
+      for usage as the base class of exceptions that must terminate
+      the service process
+      (assert functions will cause the service process to restart with
+       C usage of assert.h calling abort to send a SIGABRT signal and
+       C++ usage of CloudI::API::fatal_exception for any assert exceptions)
 
 2020-07-10 Michael Truog   <mjtruog at protonmail dot com>
 

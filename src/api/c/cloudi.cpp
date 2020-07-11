@@ -1409,6 +1409,11 @@ static void callback(cloudi_instance_t * api,
             std::cerr << boost::diagnostic_information(e);
             return;
         }
+        catch (CloudI::API::fatal_exception const & e)
+        {
+            std::cerr << boost::diagnostic_information(e);
+            ::exit(1);
+        }
         catch (boost::exception const & e)
         {
             std::cerr << boost::diagnostic_information(e);
@@ -1462,6 +1467,11 @@ static void callback(cloudi_instance_t * api,
             std::cerr << boost::diagnostic_information(e);
             return;
         }
+        catch (CloudI::API::fatal_exception const & e)
+        {
+            std::cerr << boost::diagnostic_information(e);
+            ::exit(1);
+        }
         catch (boost::exception const & e)
         {
             std::cerr << boost::diagnostic_information(e);
@@ -1501,7 +1511,7 @@ static void store_incoming_binary(buffer_t const & buffer,
     uint32_t size = *reinterpret_cast<uint32_t *>(&buffer[index]);
     index += sizeof(uint32_t);
     p = new char[size];
-    memcpy(p, &buffer[index], size);
+    ::memcpy(p, &buffer[index], size);
     index += size;
 }
 

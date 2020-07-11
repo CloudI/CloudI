@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,7 @@
 
 #include <sstream>
 #include <exception>
+#include "cloudi.hpp"
 #include "assert.hpp"
 
 namespace boost
@@ -33,7 +34,7 @@ namespace boost
     void assertion_failed_msg(char const * expr, char const * function,        
                               char const * file, char const * mm, long line)
     {  
-        class assert_exception_msg : public std::exception
+        class assert_exception_msg : public CloudI::API::fatal_exception
         {
             public:
                 assert_exception_msg(std::string const & message) throw () :
@@ -62,7 +63,7 @@ namespace boost
                           char const * file,
                           long line)
     {
-        class assert_exception : public std::exception
+        class assert_exception : public CloudI::API::fatal_exception
         {
             public:
                 assert_exception(std::string const & message) throw () :
