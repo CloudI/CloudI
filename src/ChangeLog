@@ -19,6 +19,7 @@
     * Fix the Perl CloudI API subscribe function so an execution thread
       will properly cycle through the subscriptions using the same pattern
     * Fix the Perl CloudI API exception traceback so stderr is used
+    * Update jsx
 
 2020-07-08 Michael Truog   <mjtruog at protonmail dot com>
 

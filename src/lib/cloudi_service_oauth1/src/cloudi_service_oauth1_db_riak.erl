@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_db_riak).
@@ -323,7 +323,7 @@ riak_signature_methods(Dispatcher, Database, Realm, ConsumerKey, Timeout) ->
 riak_token_nonce_check(Dispatcher, Name, Key, Nonce, Timeout) ->
     case cloudi_service_db_riak:get(Dispatcher, Name, Key, Timeout) of
         {{ok, Key, Value}, Dispatcher} ->
-            JSON = cloudi_x_jsx:decode(Value),
+            JSON = cloudi_x_jsx:decode(Value, [{return_maps, false}]),
             case lists:keyfind(<<"nonce_request">>, 1, JSON) of
                 {_, Nonce} ->
                     {error, nonce_exists};
@@ -397,7 +397,7 @@ riak_token_request_find(Dispatcher, Database, TokenRequest, Timeout) ->
     Key = match_value(TokenRequest),
     case cloudi_service_db_riak:get(Dispatcher, Name, Key, Timeout) of
         {{ok, Key, Value}, Dispatcher} ->
-            JSON = cloudi_x_jsx:decode(Value),
+            JSON = cloudi_x_jsx:decode(Value, [{return_maps, false}]),
             {_, CallbackURL} = lists:keyfind(<<"callback_url">>, 1, JSON),
             {_, CallbackQS} = lists:keyfind(<<"callback_qs">>, 1, JSON),
             {ok, CallbackURL, CallbackQS};
@@ -622,7 +622,7 @@ configuration_to_json(ConsumerKey, Realm,
 
 json_to_configuration(Value)
     when is_binary(Value) ->
-    JSON0 = cloudi_x_jsx:decode(Value),
+    JSON0 = cloudi_x_jsx:decode(Value, [{return_maps, false}]),
     {value, {_, ConsumerKey},
      JSON1} = lists:keytake(<<"consumer_key">>, 1, JSON0),
     {value, {_, Realm},
@@ -682,7 +682,7 @@ token_request_to_json(TokenRequest, TokenRequestSecret,
 
 json_to_token_request(Value)
     when is_binary(Value) ->
-    JSON0 = cloudi_x_jsx:decode(Value),
+    JSON0 = cloudi_x_jsx:decode(Value, [{return_maps, false}]),
     {value, {_, TokenRequest},
      JSON1} = lists:keytake(<<"token_request">>, 1, JSON0),
     {value, {_, TokenRequestSecret},
@@ -749,7 +749,7 @@ token_access_to_json(TokenAccess, TokenAccessSecret,
 
 json_to_token_access(Value)
     when is_binary(Value) ->
-    JSON0 = cloudi_x_jsx:decode(Value),
+    JSON0 = cloudi_x_jsx:decode(Value, [{return_maps, false}]),
     {value, {_, TokenAccess},
      JSON1} = lists:keytake(<<"token_access">>, 1, JSON0),
     {value, {_, TokenAccessSecret},

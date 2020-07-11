@@ -43,7 +43,7 @@ decoder(Handler, State, Config) ->
 -spec resume(
         Rest::binary(),
         State::atom(),
-        Handler::{atom(), any()},
+        Handler::module(),
         Acc::any(),
         Stack::list(atom()),
         Config::jsx:config()
@@ -364,7 +364,9 @@ string(<<226, 128, 168, Rest/binary>>, Handler, Acc, Stack, Config) ->
 %% u+2029
 string(<<226, 128, 169, Rest/binary>>, Handler, Acc, Stack, Config) ->
     string(Rest, Handler, [Acc, maybe_replace(16#2029, Config)], Stack, Config);
-string(<<_/utf8, _/binary>> = Bin, Handler, Acc, Stack, Config) ->
+string(<<X/utf8, _/binary>> = Bin, Handler, Acc, Stack, Config=#config{strict_control_codes=true}) when X > 16#1f ->
+    count(Bin, Handler, Acc, Stack, Config);
+string(<<_/utf8, _/binary>> = Bin, Handler, Acc, Stack, Config=#config{strict_control_codes=false}) ->
     count(Bin, Handler, Acc, Stack, Config);
 %% necessary for bytes that are badly formed utf8 that won't match in `count`
 string(<<X, Rest/binary>>, Handler, Acc, Stack, Config=#config{dirty_strings=true}) ->
@@ -376,7 +378,6 @@ string(<<239, 191, 191, Rest/binary>>, Handler, Acc, Stack, Config) ->
     string(Rest, Handler, [Acc, <<16#ffff/utf8>>], Stack, Config);
 string(<<>>, Handler, Acc, Stack, Config) ->
     incomplete(string, <<>>, Handler, Acc, Stack, Config);
-%% partial utf8 codepoints
 string(<<X>>, Handler, Acc, Stack, Config) when X >= 2#11000000 ->
     incomplete(string, <<X>>, Handler, Acc, Stack, Config);
 string(<<X, Y>>, Handler, Acc, Stack, Config) when X >= 2#11100000, Y >= 2#10000000 ->
@@ -414,70 +415,6 @@ count(Bin, Handler, Acc, Stack, Config) ->
 
 %% explicitly whitelist ascii set for faster parsing. really? really. someone should
 %%  submit a patch that unrolls simple guards
-count(<<0, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<1, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<2, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<3, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<4, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<5, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<6, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<7, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<8, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<9, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<10, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<11, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<12, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<13, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<14, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<15, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<16, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<17, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<18, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<19, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<20, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<21, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<22, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<23, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<24, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<25, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<26, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<27, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<28, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<29, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<30, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
-count(<<31, Rest/binary>>, N, Config) ->
-    count(Rest, N + 1, Config);
 count(<<32, Rest/binary>>, N, Config) ->
     count(Rest, N + 1, Config);
 count(<<33, Rest/binary>>, N, Config) ->
@@ -669,6 +606,9 @@ count(<<127, Rest/binary>>, N, Config) ->
 count(<<_, Rest/binary>>, N, Config=#config{dirty_strings=true}) ->
     count(Rest, N + 1, Config);
 count(<<_/utf8, _/binary>>, N, #config{uescape=true}) -> N;
+count(<<X/utf8, Rest/binary>>, N, Config=#config{strict_control_codes=false}) when X < 32 ->
+    count(Rest, N + 1, Config);
+count(<<X/utf8, _/binary>>, N, #config{strict_control_codes=true}) when X < 32 -> N;
 count(<<X/utf8, Rest/binary>>, N, Config) ->
     case X of
         X when X < 16#800 -> count(Rest, N + 2, Config);
@@ -755,13 +695,13 @@ unescape(<<$u, F, A, B, C, ?rsolidus, $u, G, X, Y, Z, Rest/binary>>, Handler, Ac
     Low = erlang:list_to_integer([$d, X, Y, Z], 16),
     Codepoint = (High - 16#d800) * 16#400 + (Low - 16#dc00) + 16#10000,
     string(Rest, Handler, [Acc, <<Codepoint/utf8>>], Stack, Config);
-unescape(<<$u, F, A, B, C, ?rsolidus, $u, W, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config)
+unescape(<<$u, F0, A, B, C, ?rsolidus, $u, W, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config)
         when (A == $8 orelse A == $9 orelse A == $a orelse A == $b orelse A == $A orelse A == $B),
-            (F == $d orelse F == $D),
+            (F0 == $d orelse F0 == $D),
             ?is_hex(B), ?is_hex(C), ?is_hex(W), ?is_hex(X), ?is_hex(Y), ?is_hex(Z)
         ->
     case Config#config.strict_utf8 of
-        true -> ?error(<<$u, $d, A, B, C, ?rsolidus, $u, W, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config);
+        true -> ?error(string, <<$u, $d, A, B, C, ?rsolidus, $u, W, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config);
         false -> string(Rest, Handler, [Acc, <<16#fffd/utf8>>, <<16#fffd/utf8>>], Stack, Config)
     end;
 unescape(<<$u, F, A, B, C, ?rsolidus, Rest/binary>>, Handler, Acc, Stack, Config)
@@ -1006,15 +946,8 @@ exp(_, N) -> {finish_float, N}.
 finish_number(Rest, Handler, Acc, Stack, Config) ->
     maybe_done(Rest, handle_event(format_number(Acc), Handler, Config), Stack, Config).
 
-
--ifndef(no_binary_to_whatever).
 format_number({integer, Acc}) -> {integer, binary_to_integer(Acc)};
 format_number({float, Acc}) -> {float, binary_to_float(Acc)}.
--else.
-format_number({integer, Acc}) -> {integer, list_to_integer(unicode:characters_to_list(Acc))};
-format_number({float, Acc}) -> {float, list_to_float(unicode:characters_to_list(Acc))}.
--endif.
-
 
 true(<<$r, $u, $e, Rest/binary>>, Handler, Stack, Config) ->
     maybe_done(Rest, handle_event({literal, true}, Handler, Config), Stack, Config);
@@ -1942,26 +1875,26 @@ custom_incomplete_handler_test_() ->
 return_tail_test_() ->
     [
         {"return_tail with tail", ?_assertEqual(
-            {with_tail,[{}],<<"3">>},
+            {with_tail,#{},<<"3">>},
             jsx:decode(<<"{} 3">>, [return_tail])
         )},
         {"return_tail without tail", ?_assertEqual(
-            {with_tail,[{}],<<"">>},
+            {with_tail,#{},<<"">>},
             jsx:decode(<<"{}">>, [return_tail])
         )},
         {"return_tail with trimmed whitespace", ?_assertEqual(
-            {with_tail,[{}],<<"">>},
+            {with_tail,#{},<<"">>},
             jsx:decode(<<"{} ">>, [return_tail])
         )},
         {"return_tail and streaming", ?_assertEqual(
-            {with_tail,[{}],<<"3">>},
+            {with_tail,#{},<<"3">>},
             begin
                 {incomplete, F} = jsx:decode(<<"{">>, [return_tail, stream]),
                 F(<<"} 3">>)
             end
         )},
         {"return_tail and streaming", ?_assertEqual(
-            {with_tail,[{}],<<"">>},
+            {with_tail,#{},<<"">>},
             begin
                 %% In case of infinite stream of objects a user does not know
                 %% when to call F(end_stream).

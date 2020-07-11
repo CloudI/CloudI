@@ -249,6 +249,7 @@ dialyze: all \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
               external/cloudi_x_folsom/ebin \
+              external/cloudi_x_jsx/ebin \
               external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin \
               external/cloudi_x_pgsql/ebin \

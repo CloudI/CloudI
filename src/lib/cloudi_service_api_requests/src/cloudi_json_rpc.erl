@@ -147,7 +147,7 @@ request_to_term(Data) ->
         is_binary(Data) ->
             Data
     end,
-    RPC0 = cloudi_x_jsx:decode(DataBin),
+    RPC0 = cloudi_x_jsx:decode(DataBin, [{return_maps, false}]),
     {value, {_, Method}, RPCN} = lists:keytake(<<"method">>, 1, RPC0),
     true = is_binary(Method),
     Id = case lists:keyfind(<<"id">>, 1, RPCN) of
@@ -226,7 +226,7 @@ response_to_term(Data) ->
         is_binary(Data) ->
             Data
     end,
-    RPC0 = cloudi_x_jsx:decode(DataBin),
+    RPC0 = cloudi_x_jsx:decode(DataBin, [{return_maps, false}]),
     Id = case lists:keyfind(<<"id">>, 1, RPC0) of
         {_, IdValue} ->
             IdValue;
