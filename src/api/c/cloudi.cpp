@@ -1409,7 +1409,7 @@ static void callback(cloudi_instance_t * api,
             std::cerr << boost::diagnostic_information(e);
             return;
         }
-        catch (CloudI::API::fatal_exception const & e)
+        catch (CloudI::API::fatal_error const & e)
         {
             std::cerr << boost::diagnostic_information(e);
             ::exit(1);
@@ -1467,7 +1467,7 @@ static void callback(cloudi_instance_t * api,
             std::cerr << boost::diagnostic_information(e);
             return;
         }
-        catch (CloudI::API::fatal_exception const & e)
+        catch (CloudI::API::fatal_error const & e)
         {
             std::cerr << boost::diagnostic_information(e);
             ::exit(1);

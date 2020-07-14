@@ -415,7 +415,12 @@ class API
                     echo "{$e->getMessage()}\n{$e}\n";
                     return;
                 }
-                catch (\Exception $e)
+                catch (\Error $e)
+                {
+                    echo "{$e->getMessage()}\n{$e}\n";
+                    exit(1);
+                }
+                catch (\Throwable $e)
                 {
                     $return_null_response = true;
                     echo "{$e->getMessage()}\n{$e}\n";
@@ -487,7 +492,12 @@ class API
                     echo "{$e->getMessage()}\n{$e}\n";
                     return;
                 }
-                catch (\Exception $e)
+                catch (\Error $e)
+                {
+                    echo "{$e->getMessage()}\n{$e}\n";
+                    exit(1);
+                }
+                catch (\Throwable $e)
                 {
                     $return_null_response = true;
                     echo "{$e->getMessage()}\n{$e}\n";
@@ -1024,6 +1034,14 @@ class TerminateException extends \Exception
     public function timeout()
     {
         return $this->timeout;
+    }
+}
+
+class FatalError extends \Error
+{
+    public function __construct($message)
+    {
+        parent::__construct($message, 0, null);
     }
 }
 

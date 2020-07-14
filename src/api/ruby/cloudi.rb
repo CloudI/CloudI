@@ -792,5 +792,8 @@ module CloudI
 
     class AssertionError < Exception
     end
+
+    class FatalError < Exception
+    end
 end
 

@@ -885,6 +885,14 @@ class TerminateException(Exception):
         """
         return self.__timeout
 
+class FatalError(BaseException):
+    """
+    Fatal Error
+    """
+    def __init__(self, message):
+        BaseException.__init__(self, message)
+
+
 # force unbuffered stdout/stderr handling without external configuration
 if sys.stderr.__class__.__name__ != '_unbuffered':
     class _unbuffered(object):

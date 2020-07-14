@@ -50,4 +50,6 @@ install-exec-hook:
                     $(instdir)/CloudI
 	$(INSTALL_DATA) $(srcdir)/CloudI/AssertionError.pm \
                     $(instdir)/CloudI
+	$(INSTALL_DATA) $(srcdir)/CloudI/FatalError.pm \
+                    $(instdir)/CloudI
 

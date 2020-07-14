@@ -562,12 +562,6 @@ MODINIT_FUNC_DECLARE(libcloudi_py)
 // Py_BEGIN_ALLOW_THREADS
 // Py_END_ALLOW_THREADS
 
-// callback class
-#define THREADS_BLOCK       PyEval_RestoreThread(m_thread_state); \
-                            m_thread_state = 0
-#define THREADS_UNBLOCK     m_thread_state = PyEval_SaveThread()
-
-// member functions
 #define THREADS_BEGIN       object->thread_state = PyEval_SaveThread()
 #define THREADS_END         PyEval_RestoreThread(object->thread_state); \
                             object->thread_state = 0
@@ -581,8 +575,8 @@ MODINIT_FUNC_DECLARE(libcloudi_py)
 class callback : public CloudI::API::function_object_c
 {
     public:
-        callback(PyObject * f, PyThreadState *& thread_state) :
-            m_f(f), m_thread_state(thread_state)
+        callback(PyObject * f, python_cloudi_instance_object * o) :
+            m_f(f), object(o)
         {
             Py_INCREF(m_f);
         }
@@ -592,7 +586,7 @@ class callback : public CloudI::API::function_object_c
         }
         callback(callback const & o) :
             CloudI::API::function_object_c(o),
-            m_f(o.m_f), m_thread_state(o.m_thread_state)
+            m_f(o.m_f), object(o.object)
         {
             Py_INCREF(m_f);
         }
@@ -611,7 +605,7 @@ class callback : public CloudI::API::function_object_c
                                   char const * const pid,
                                   uint32_t const pid_size)
         {
-            THREADS_BLOCK;
+            THREADS_END;
             PyObject * args = Py_BuildValue("(i,s,s,"
                                             BUILDVALUE_BYTES ","
                                             BUILDVALUE_BYTES ",I,i,"
@@ -625,7 +619,7 @@ class callback : public CloudI::API::function_object_c
             if (! args)
             {
                 PyErr_Print();
-                THREADS_UNBLOCK;
+                THREADS_BEGIN;
                 return;
             }
             PyObject * result = PyObject_CallObject(m_f, args);
@@ -637,7 +631,7 @@ class callback : public CloudI::API::function_object_c
                 if (exception == NULL ||
                     exception->tp_name == NULL)
                 {
-                    THREADS_UNBLOCK;
+                    THREADS_BEGIN;
                     return;
                 }
                 char const * exception_name = exception->tp_name;
@@ -673,23 +667,21 @@ class callback : public CloudI::API::function_object_c
                 }
                 else
                 {
-                    if (::strcmp(exception_name, "TerminateException") == 0)
+                    if (PyErr_ExceptionMatches(object->terminate_exception))
                     {
                         PyErr_Clear();
                     }
-                    else if (::strcmp(exception_name,
-                                      "MessageDecodingException") == 0 ||
-                             ::strcmp(exception_name,
-                                      "InvalidInputException") == 0 ||
-                             ::strcmp(exception_name, "AssertionError") == 0 ||
-                             ::strcmp(exception_name, "SystemExit") == 0)
+                    else if (PyErr_ExceptionMatches(
+                                 object->message_decoding_exception) ||
+                             PyErr_ExceptionMatches(
+                                 object->invalid_input_exception) ||
+                             PyErr_ExceptionMatches(PyExc_AssertionError) ||
+                             PyErr_ExceptionMatches(PyExc_SystemExit))
                     {
                         immediate_exit_code = 1;
                         PyErr_WriteUnraisable(m_f);
                     }
-                    else if (exception->tp_base &&
-                             ::strcmp(exception->tp_base->tp_name,
-                                      "Exception"))
+                    else if (PyErr_ExceptionMatches(PyExc_Exception))
                     {
                         PyErr_WriteUnraisable(m_f);
                     }
@@ -700,7 +692,7 @@ class callback : public CloudI::API::function_object_c
                     }
                     exception_invalid = true;
                 }
-                THREADS_UNBLOCK;
+                THREADS_BEGIN;
 
                 if (exception_invalid)
                 {
@@ -839,7 +831,7 @@ class callback : public CloudI::API::function_object_c
                     result_invalid = true;
                 }
                 Py_DECREF(result);
-                THREADS_UNBLOCK;
+                THREADS_BEGIN;
 
                 // return from the callback
                 if (result_invalid)
@@ -869,7 +861,7 @@ class callback : public CloudI::API::function_object_c
 
     private:
         PyObject * const m_f;
-        PyThreadState *& m_thread_state;
+        python_cloudi_instance_object * const object;
 
 };
 
@@ -893,7 +885,7 @@ python_cloudi_subscribe(PyObject * self, PyObject * args)
     }
     int result;
     THREADS_BEGIN;
-    result = api->subscribe(pattern, new callback(f, object->thread_state));
+    result = api->subscribe(pattern, new callback(f, object));
     THREADS_END;
     if (result != 0)
     {

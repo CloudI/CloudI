@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the C++ CloudI API fatal_exception name to fatal_error
+    * Add a FatalError exception class to the
+      Java, JavaScript, Perl, PHP, Python, Python/C, Ruby CloudI API
+      to be a base class for exceptions that must
+      cause the service process to restart
+    * Now require PHP 7 for the PHP CloudI API for its exception hierarchy
+
 2020-07-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve Python/C CloudI API exception handling

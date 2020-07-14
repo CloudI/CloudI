@@ -184,6 +184,17 @@ TerminateException.prototype = Object.create(Error.prototype, {
 TerminateException.prototype.timeout = function () {
     return this._timeout;
 };
+var FatalError = function FatalError (message) {
+    var error = new Error(message);
+    error.name = 'FatalError';
+    this.message = error.message;
+    if (error.stack) {
+        this.stack = error.stack;
+    }
+}
+FatalError.prototype = Object.create(Error.prototype, {
+    name: { value: 'FatalError' }
+});
 
 CloudI.stdout_write = function stdout_write (s) {
     fs.writeSync(1, s);
@@ -597,7 +608,8 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     API._terminate = true;
                     CloudI.stderr_write(err.stack + '\n');
                 }
-                else if (err instanceof assert.AssertionError) {
+                else if (err instanceof assert.AssertionError ||
+                         err instanceof FatalError) {
                     CloudI.stderr_write(err.stack + '\n');
                     process.exit(1);
                 }
@@ -683,7 +695,8 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 else if (err instanceof ForwardSyncException) {
                     return;
                 }
-                else if (err instanceof assert.AssertionError) {
+                else if (err instanceof assert.AssertionError ||
+                         err instanceof FatalError) {
                     CloudI.stderr_write(err.stack + '\n');
                     process.exit(1);
                 }
@@ -1169,5 +1182,6 @@ CloudI.ForwardSyncException = ForwardSyncException;
 CloudI.ForwardAsyncException = ForwardAsyncException;
 CloudI.MessageDecodingException = MessageDecodingException;
 CloudI.TerminateException = TerminateException;
+CloudI.FatalError = FatalError;
 
 };

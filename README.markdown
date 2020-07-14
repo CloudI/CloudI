@@ -77,7 +77,7 @@ Optional (default="yes"):
 * `Perl >= 5.10 (with Compress::Zlib)`
   * `(perl perl-modules /Ubuntu)`
   * Use the "--enable-perl-support=no" configure flag to disable
-* `PHP >= 5.3.6`
+* `PHP >= 7.0`
   * `(php /Ubuntu)`
   * Use the "--enable-php-support=no" configure flag to disable
 * `Python >= 2.7.0`

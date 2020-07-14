@@ -538,7 +538,8 @@ sub _callback
                 print STDERR "$e";
                 return;
             }
-            elsif ($e->isa('CloudI::AssertionError'))
+            elsif ($e->isa('CloudI::AssertionError') or
+                   $e->isa('CloudI::FatalError'))
             {
                 print STDERR "$e";
                 exit(1);
@@ -614,7 +615,8 @@ sub _callback
                 print STDERR "$e";
                 return;
             }
-            elsif ($e->isa('CloudI::AssertionError'))
+            elsif ($e->isa('CloudI::AssertionError') or
+                   $e->isa('CloudI::FatalError'))
             {
                 print STDERR "$e";
                 exit(1);

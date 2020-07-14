@@ -2028,7 +2028,7 @@ public class API
     public static class InvalidInputException extends Exception
     {
         private static final long serialVersionUID = 1L;
-        InvalidInputException()
+        private InvalidInputException()
         {
             super("Invalid Input");
         }
@@ -2037,7 +2037,7 @@ public class API
     public static class ReturnSyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-        ReturnSyncException()
+        private ReturnSyncException()
         {
             super("Synchronous Call Return Invalid");
         }
@@ -2046,7 +2046,7 @@ public class API
     public static class ReturnAsyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-        ReturnAsyncException()
+        private ReturnAsyncException()
         {
             super("Asynchronous Call Return Invalid");
         }
@@ -2055,7 +2055,7 @@ public class API
     public static class ForwardSyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-        ForwardSyncException()
+        private ForwardSyncException()
         {
             super("Synchronous Call Forward Invalid");
         }
@@ -2064,7 +2064,7 @@ public class API
     public static class ForwardAsyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-        ForwardAsyncException()
+        private ForwardAsyncException()
         {
             super("Asynchronous Call Forward Invalid");
         }
@@ -2073,7 +2073,7 @@ public class API
     public static class MessageDecodingException extends Exception
     {
         private static final long serialVersionUID = 1L;
-        MessageDecodingException()
+        private MessageDecodingException()
         {
             super("Message Decoding Error");
         }
@@ -2083,7 +2083,7 @@ public class API
     {
         private static final long serialVersionUID = 0L;
         private int timeout;
-        TerminateException(final int timeout)
+        private TerminateException(final int timeout)
         {
             super("Terminate");
             this.timeout = timeout;
@@ -2091,6 +2091,15 @@ public class API
         public int timeout()
         {
             return this.timeout;
+        }
+    }
+
+    public static class FatalError extends Error
+    {
+        private static final long serialVersionUID = 0L;
+        public FatalError(final String message)
+        {
+            super(message);
         }
     }
 

@@ -809,19 +809,19 @@ class API
         // (n.b., requires the --with-cxx-backtrace configuration option)
         static std::string backtrace();
 
-        // Use fatal_exception as the base class for exceptions
+        // Use fatal_error as the base class for exceptions
         // that must cause the service process to restart
         // (e.g., an assert exception).
         // Any exceptions that use std::exception as the base class
         // will cause a null response.
-        class fatal_exception : public std::exception
+        class fatal_error : public std::exception
         {
             public:
-                fatal_exception() throw() {}
-                virtual ~fatal_exception() throw() {}
+                fatal_error() throw() {}
+                virtual ~fatal_error() throw() {}
                 virtual char const * what() const throw()
                 {
-                    return "Fatal Exception!";
+                    return "Fatal Error!";
                 }
         };
 

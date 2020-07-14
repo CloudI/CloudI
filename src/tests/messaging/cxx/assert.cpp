@@ -34,7 +34,7 @@ namespace boost
     void assertion_failed_msg(char const * expr, char const * function,        
                               char const * file, char const * mm, long line)
     {  
-        class assert_exception_msg : public CloudI::API::fatal_exception
+        class assert_exception_msg : public CloudI::API::fatal_error
         {
             public:
                 assert_exception_msg(std::string const & message) throw () :
@@ -63,7 +63,7 @@ namespace boost
                           char const * file,
                           long line)
     {
-        class assert_exception : public CloudI::API::fatal_exception
+        class assert_exception : public CloudI::API::fatal_error
         {
             public:
                 assert_exception(std::string const & message) throw () :
