@@ -77,6 +77,7 @@ exception ReturnAsync
 exception ForwardSync
 exception ForwardAsync
 exception Terminate
+exception FatalError
 
 (** creates an instance of the CloudI API *)
 val api :

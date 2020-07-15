@@ -30,6 +30,7 @@
 module Main where
 
 import System.Exit (ExitCode(ExitFailure),exitWith)
+import Control.Exception (assert)
 import qualified Control.Concurrent as Concurrent
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
@@ -51,6 +52,7 @@ request_ requestType name pattern _ request timeout _ transId pid state api =
             Nothing ->
                 "<http_test><error>no value specified</error></http_test>"
             Just (i) ->
+                assert (i < 20)
                 "<http_test><value>" ++ (show i) ++ "</value></http_test>"
         httpResponseHeaders = Map.insert
             (Char8.pack "content-type")

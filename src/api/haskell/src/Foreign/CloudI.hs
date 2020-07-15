@@ -42,6 +42,7 @@ module Foreign.CloudI
     , messageDecodingError
     , terminateError
     , Exception
+    , FatalError
     , Result
     , api
     , threadCount
@@ -101,6 +102,8 @@ import qualified System.IO as SysIO
 import qualified System.IO.Error as SysIOErr
 import qualified System.IO.Unsafe as Unsafe
 import qualified System.Posix.Env as POSIX (getEnv)
+import qualified System.Posix.Process as POSIX (exitImmediately)
+import qualified System.Exit as Exit
 type Array = IArray.Array
 type Builder = Builder.Builder
 type ByteString = ByteString.ByteString
@@ -110,6 +113,10 @@ type LazyByteString = LazyByteString.ByteString
 type Map = Map.Map
 type RequestType = Instance.RequestType
 type SomeException = Exception.SomeException
+type SomeAsyncException = Exception.SomeAsyncException
+type AsyncException = Exception.AsyncException
+type AssertionFailed = Exception.AssertionFailed
+type ExitCode = Exit.ExitCode
 type Source = Instance.Source
 type ThreadId = Concurrent.ThreadId
 type Word32 = Word.Word32
@@ -164,6 +171,13 @@ data Exception s =
     deriving (Show, Typeable)
 
 instance Typeable s => Exception.Exception (Exception s)
+
+data FatalError = FatalError
+
+instance Exception.Exception FatalError
+
+instance Show FatalError where
+    showsPrec _ FatalError = showString "FatalError"
 
 printException :: String -> IO ()
 printException str =
@@ -636,6 +650,26 @@ nullResponse :: RequestType -> ByteString -> ByteString ->
 nullResponse _ _ _ _ _ _ _ _ _ state api0 =
     return $ Instance.Null (state, api0)
 
+callbackExceptionFatal :: SomeException -> IO ()
+callbackExceptionFatal e = do
+    printException $ show e
+    POSIX.exitImmediately (Exit.ExitFailure 1)
+
+callbackException :: SomeException -> IO ()
+callbackException e
+    | Just _ <- (Exception.fromException e :: Maybe AsyncException) =
+        callbackExceptionFatal e
+    | Just _ <- (Exception.fromException e :: Maybe SomeAsyncException) =
+        callbackExceptionFatal e
+    | Just _ <- (Exception.fromException e :: Maybe AssertionFailed) =
+        callbackExceptionFatal e
+    | Just _ <- (Exception.fromException e :: Maybe FatalError) =
+        callbackExceptionFatal e
+    | Just exitCode <- (Exception.fromException e :: Maybe ExitCode) =
+        POSIX.exitImmediately exitCode
+    | otherwise =
+        printException $ show e
+
 callback :: Typeable s => Instance.T s ->
     (RequestType, ByteString, ByteString, ByteString, ByteString,
      Int, Int, ByteString, Source) -> IO (Result (Instance.T s))
@@ -720,7 +754,7 @@ callback api0@Instance.T{
                     return $ ReturnI (empty, empty, v0, v1)
     callbackResultType <- case callbackResultValue of
         Left exception -> do
-            printException $ show (exception :: Exception.SomeException)
+            callbackException exception
             return $ ReturnI (empty, empty, state, api1)
         Right callbackResult ->
             return $ callbackResult

@@ -35,6 +35,7 @@ let request request_type name pattern _ request timeout _ trans_id pid _ api =
   | None ->
     "<http_test><error>no value specified</error></http_test>"
   | Some (value) ->
+    assert (value < 20) ;
     let s = string_of_int value in
     "<http_test><value>" ^ s ^ "</value></http_test>"
   and http_response_headers = Hashtbl.create 1 in

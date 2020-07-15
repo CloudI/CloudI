@@ -731,6 +731,10 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 			case *ForwardSyncError:
 				api.terminate = true
 				return err
+			case *AssertionError:
+				ErrorExit(os.Stderr, err)
+			case *FatalError:
+				ErrorExit(os.Stderr, err)
 			default:
 				os.Stderr.WriteString(err.Error() + "\n")
 				err = nil
@@ -756,6 +760,10 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 				return err
 			case *ForwardSyncError:
 				return nil
+			case *AssertionError:
+				ErrorExit(os.Stderr, err)
+			case *FatalError:
+				ErrorExit(os.Stderr, err)
 			default:
 				os.Stderr.WriteString(err.Error() + "\n")
 				err = nil
@@ -784,6 +792,10 @@ func (api *Instance) callbackExecute(function Callback, command uint32, name, pa
 			case *ForwardAsyncError:
 				err = errValue
 			case *ForwardSyncError:
+				err = errValue
+			case *AssertionError:
+				err = errValue
+			case *FatalError:
 				err = errValue
 			default:
 				err = StackErrorWrapNew(errValue)
@@ -1571,6 +1583,44 @@ func (e *TerminateError) Error() string {
 // Timeout provides the termination timeout configured for the service
 func (e *TerminateError) Timeout() uint32 {
 	return e.timeout
+}
+
+// AssertionError indicates an unrecoverable condition in a CloudI service
+type AssertionError struct {
+	stack []byte
+}
+
+// Assert that a value is true
+func Assert(value bool) {
+	if !value {
+		panic(&AssertionError{stack: debug.Stack()})
+	}
+}
+func (e *AssertionError) Error() string {
+	return "Assertion failed !"
+}
+
+// Stack return the stack stored when the error was created
+func (e *AssertionError) Stack() []byte {
+	return e.stack
+}
+
+// FatalError indicates an unrecoverable error in a CloudI service
+type FatalError struct {
+	stack []byte
+}
+
+// Create a FatalError
+func FatalErrorNew() error {
+	return &FatalError{stack: debug.Stack()}
+}
+func (e *FatalError) Error() string {
+	return "Fatal Error"
+}
+
+// Stack return the stack stored when the error was created
+func (e *FatalError) Stack() []byte {
+	return e.stack
 }
 
 // ErrorWrite outputs error information to the cloudi.log file through stderr

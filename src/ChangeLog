@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add a FatalError exception to the
+      Go, Haskell, OCaml CloudI API that must
+      cause the service process to restart
+    * Add an Assert function to the Go CloudI API with an
+      AssertionError exception
+    * Ensure all external service CloudI APIs handle an AssertionError
+      as a fatal error that causes the service process to restart
+    * Haskell, Python, Python/C, Ruby CloudI API now correctly
+      handle exit being called in a service request callback function
+
 2020-07-13 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change the C++ CloudI API fatal_exception name to fatal_error

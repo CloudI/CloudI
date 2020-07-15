@@ -189,6 +189,7 @@ exception ReturnAsync
 exception ForwardSync
 exception ForwardAsync
 exception Terminate
+exception FatalError
 
 let print_exception str =
   prerr_endline ("Exception: " ^ str)
@@ -655,7 +656,13 @@ and callback
           None
         | e ->
           print_exception (backtrace e) ;
-          Some (Null))
+          match e with
+          | Assert_failure _ ->
+            exit 1 ;
+          | FatalError ->
+            exit 1 ;
+          | _ ->
+            Some (Null))
     | SYNC -> (
       try Some (
         callback_f
@@ -678,7 +685,13 @@ and callback
           None
         | e ->
           print_exception (backtrace e) ;
-          Some (Null))
+          match e with
+          | Assert_failure _ ->
+            exit 1 ;
+          | FatalError ->
+            exit 1 ;
+          | _ ->
+            Some (Null))
   in
   let callback_result_type =
     match callback_result_value with

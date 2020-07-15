@@ -7,7 +7,7 @@ license:             MIT
 license-file:        ../../../LICENSE
 author:              Michael Truog
 maintainer:          mjtruog at protonmail dot com
-copyright:           2017-2018 Michael Truog
+copyright:           2017-2020 Michael Truog
 category:            Foreign
 stability:           provisional
 build-type:          Simple
@@ -15,7 +15,8 @@ cabal-version:       >= 1.22
 
 executable           null_haskell
   main-is:           Main.hs
-  ghc-options:       -Wall -Werror -funbox-strict-fields -threaded
+  ghc-options:       -Wall -Werror -funbox-strict-fields
+                     -fno-ignore-asserts -threaded
   build-depends:       base >= 4.8.2.0
                      , cloudi == @VERSION@
                      , bytestring

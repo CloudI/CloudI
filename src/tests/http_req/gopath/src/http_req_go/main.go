@@ -49,6 +49,7 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 	if value == nil {
 		response = []byte("<http_test><error>no value specified</error></http_test>")
 	} else {
+		cloudi.Assert(valueInt < 20)
 		response = []byte(fmt.Sprintf("<http_test><value>%d</value></http_test>", valueInt))
 	}
 	var responseInfo []byte

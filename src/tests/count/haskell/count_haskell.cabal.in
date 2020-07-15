@@ -15,7 +15,8 @@ cabal-version:       >= 1.22
 
 executable           count_haskell
   main-is:           Main.hs
-  ghc-options:       -Wall -Werror -funbox-strict-fields -threaded
+  ghc-options:       -Wall -Werror -funbox-strict-fields
+                     -fno-ignore-asserts -threaded
   build-depends:       base >= 4.8.2.0
                      , cloudi == @VERSION@
                      , bytestring
