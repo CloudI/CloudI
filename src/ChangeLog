@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-07-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix the Haskell CloudI API subscribe function so an execution thread
+      will properly cycle through the subscriptions using the same pattern
+
 2020-07-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add a FatalError exception to the

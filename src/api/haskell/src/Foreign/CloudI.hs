@@ -684,7 +684,7 @@ callback api0@Instance.T{
             Just functionQueue ->
                 let f = Sequence.index functionQueue 0
                     functionQueueNew = (Sequence.|>)
-                        (Sequence.drop 0 functionQueue) f
+                        (Sequence.drop 1 functionQueue) f
                 in
                 (f, Map.insert pattern functionQueueNew callbacks)
         api1 = api0{Instance.callbacks = callbacksNew}

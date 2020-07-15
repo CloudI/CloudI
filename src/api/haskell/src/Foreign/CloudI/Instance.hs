@@ -267,7 +267,7 @@ callbacksRemove api0@T{
             Nothing ->
                 error "callbacks empty"
             Just functionQueue ->
-                let functionQueueNew = Sequence.drop 0 functionQueue in
+                let functionQueueNew = Sequence.drop 1 functionQueue in
                 if Sequence.null functionQueueNew then
                     Map.delete key callbacks0
                 else
