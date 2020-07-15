@@ -5,6 +5,12 @@
 
     * Fix the Haskell CloudI API subscribe function so an execution thread
       will properly cycle through the subscriptions using the same pattern
+    * Remove SIGKILL use when an external service has closed its
+      stdout/stderr pipes to depend on cloudi_core_i_services_monitor
+      enforcing the termination timeout
+    * Use 2 pools of cloudi_core_i_os_spawn ports with
+      OS_SPAWN_POOL1 for creating and monitoring OS processes and
+      OS_SPAWN_POOL2 for killing OS processes
 
 2020-07-14 Michael Truog   <mjtruog at protonmail dot com>
 

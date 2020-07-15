@@ -625,9 +625,10 @@ namespace
             {
                 GEPD::nfds -= 2;
 
-                // kills the pid if it isn't dead,
-                // to avoid blocking on a closed pipe
-                ::kill(m_pid, 9);
+                // after the stdout/stderr pipes have closed,
+                // block execution here waiting for m_pid to terminate
+                // (depend on cloudi_core_i_services_monitor killing
+                //  the pid with SIGKILL after the termination timeout)
                 int status;
                 int const pid = ::waitpid(m_pid, &status, 0);
                 assert(pid == static_cast<signed>(m_pid));

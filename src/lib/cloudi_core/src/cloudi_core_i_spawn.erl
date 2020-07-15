@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -452,7 +452,7 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
     case start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
                                            EnvironmentLookup) of
         {ok, CommandLine, FilenameNew, ArgumentsNew, Chroot, Directory} ->
-            case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
+            case cloudi_x_supool:get(?OS_SPAWN_POOL1) of
                 SpawnProcess when is_pid(SpawnProcess) ->
                     SpawnProtocol = if
                         Protocol =:= tcp ->
