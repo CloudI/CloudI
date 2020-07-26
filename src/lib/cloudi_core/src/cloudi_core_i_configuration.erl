@@ -659,14 +659,8 @@ services_resume(Value, _, _) ->
      #config{}} |
     {error, error_reason_services_update_configuration()}.
 
-services_update([_ | _] = Plan,
-                #config{services = Services, acl = ACL} = Config, Timeout) ->
-    case services_update_plan(Plan, Services, ACL, Timeout) of
-        {ok, Result, ServicesNew} ->
-            {ok, Result, Config#config{services = ServicesNew}};
-        {error, _} = Error ->
-            Error
-    end;
+services_update([_ | _] = Plan, Config, Timeout) ->
+    services_update_plan(Plan, Config, Timeout);
 services_update(Value, _, _) ->
     {error, {update_invalid, Value}}.
 
@@ -3796,12 +3790,13 @@ services_change_all([Service | ChangeServices], Function, Timeout) ->
             Error
     end.
 
-services_update_plan(Value, Services, ACL, Timeout) ->
-    services_update_plan(Value, [], Services, ACL, Timeout).
+services_update_plan(Value, Config, Timeout) ->
+    services_update_plan(Value, [], Config, Timeout).
 
-services_update_plan([], UpdatePlans, Services, _, Timeout) ->
-    services_update_all(lists:reverse(UpdatePlans), Services, Timeout);
-services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
+services_update_plan([], UpdatePlans, Config, Timeout) ->
+    services_update_all(lists:reverse(UpdatePlans), Config, Timeout);
+services_update_plan([{ID, Plan} | L], UpdatePlans,
+                     #config{services = Services, acl = ACL} = Config, Timeout)
     when is_binary(ID), (byte_size(ID) == 16) orelse (byte_size(ID) == 0) ->
     UpdatePlan = #config_service_update{},
     Defaults = [
@@ -4129,8 +4124,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                              module_version_old = ModuleVersion,
                              reload_stop = ReloadStop} |
                          UpdatePlans],
-                    services_update_plan(L, UpdatePlansNew,
-                                         Services, ACL, Timeout);
+                    services_update_plan(L, UpdatePlansNew, Config, Timeout);
                 {error, _} = Error ->
                     Error
             end;
@@ -4173,8 +4167,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                              uuids = [ID],
                              spawn_os_process = SpawnOsProcess} |
                          UpdatePlans],
-                    services_update_plan(L, UpdatePlansNew,
-                                         Services, ACL, Timeout);
+                    services_update_plan(L, UpdatePlansNew, Config, Timeout);
                 {error, _} = Error ->
                     Error
             end;
@@ -4185,7 +4178,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
             {error, {service_update_invalid,
                      Invalid}}
     end;
-services_update_plan([{ID, _} | _], _, _, _, _) ->
+services_update_plan([{ID, _} | _], _, _, _) ->
     {error, {update_invalid, ID}}.
 
 services_update_plan_internal(Module, ModuleState,
@@ -4387,43 +4380,61 @@ services_update_plan_module_state(ModuleState) ->
     {error, {service_update_module_state_invalid,
              ModuleState}}.
 
-services_update_all(UpdatePlans, Services, Timeout) ->
-    services_update_all(UpdatePlans, [], Services, Timeout).
+services_update_all(UpdatePlans, Config, Timeout) ->
+    services_update_all(UpdatePlans, [], Config, Timeout).
 
-services_update_all([], ServiceIdLists, Services, _) ->
-    {ok, {ok, lists:reverse(ServiceIdLists)}, Services};
+services_update_all([], ServiceIdLists, Config, _) ->
+    {ok, {ok, lists:reverse(ServiceIdLists)}, Config};
 services_update_all([UpdatePlan | UpdatePlans], ServiceIdLists,
-                    Services, Timeout) ->
+                    Config, Timeout) ->
     case cloudi_core_i_configurator:service_update(UpdatePlan, Timeout) of
         {ok, ServiceIdList} ->
-            ServicesNew = service_update_done(ServiceIdList,
-                                              UpdatePlan,
-                                              Services),
+            ConfigNew = service_update_success(ServiceIdList,
+                                               UpdatePlan, Config),
             services_update_all(UpdatePlans, [ServiceIdList | ServiceIdLists],
-                                ServicesNew, Timeout);
+                                service_update_done(UpdatePlan, ConfigNew),
+                                Timeout);
         {error, ServiceIdList, Reason} ->
             Error = {error,
                      {ServiceIdList, Reason},
                      lists:reverse(ServiceIdLists)},
-            {ok, Error, Services}
+            {ok, Error, service_update_done(UpdatePlan, Config)}
     end.
 
-service_update_done(IDs,
-                    #config_service_update{
-                        type = internal} = UpdatePlan, Services0) ->
+service_update_done(#config_service_update{
+                        code_paths_add = PathsAdd,
+                        code_paths_remove = PathsRemove},
+                    #config{code = Code} = Config) ->
+    % only configuration changes that always occur based on the update plan
+    % (for both a successful update and one with an error)
+    #config_code{paths = CodePaths0} = Code,
+    % code_paths_add uses code:add_patha/1
+    % code_paths_remove uses code:del_path/1 (path may not exist in config)
+    PathsAddNormalized = [path_normalize(Path) || Path <- PathsAdd],
+    PathsRemoveNormalized = [path_normalize(Path) || Path <- PathsRemove],
+    CodePaths1 = lists:reverse(PathsAddNormalized, CodePaths0),
+    CodePathsN = CodePaths1 -- PathsRemoveNormalized,
+    CodeNew = Code#config_code{paths = CodePathsN},
+    Config#config{code = CodeNew}.
+
+service_update_success(IDs,
+                       #config_service_update{
+                           type = internal} = UpdatePlan,
+                       #config{services = Services0} = Config) ->
     ServicesN = lists:foldl(fun(ID, Services1) ->
         #config_service_internal{} = Service0 =
             lists:keyfind(ID, #config_service_internal.uuid, Services1),
-        ServiceN = service_update_done_common(Service0, UpdatePlan),
+        ServiceN = service_update_success_common(Service0, UpdatePlan),
         lists:keystore(ID, #config_service_internal.uuid, Services1, ServiceN)
     end, Services0, IDs),
-    ServicesN;
-service_update_done([ID],
-                    #config_service_update{
-                        type = external,
-                        file_path = FilePath,
-                        args = Args,
-                        env = Env} = UpdatePlan, Services) ->
+    Config#config{services = ServicesN};
+service_update_success([ID],
+                       #config_service_update{
+                           type = external,
+                           file_path = FilePath,
+                           args = Args,
+                           env = Env} = UpdatePlan,
+                       #config{services = Services} = Config) ->
     #config_service_external{} = Service0 =
         lists:keyfind(ID, #config_service_external.uuid, Services),
     Service1 = if
@@ -4447,20 +4458,22 @@ service_update_done([ID],
         Env =:= undefined ->
             Service2
     end,
-    ServiceN = service_update_done_common(Service3, UpdatePlan),
-    lists:keystore(ID, #config_service_external.uuid, Services, ServiceN).
+    ServiceN = service_update_success_common(Service3, UpdatePlan),
+    ServicesNew = lists:keystore(ID, #config_service_external.uuid,
+                                 Services, ServiceN),
+    Config#config{services = ServicesNew}.
 
-service_update_done_common(Service0,
-                           #config_service_update{
-                               type = Type,
-                               dest_refresh = DestRefresh,
-                               timeout_init = TimeoutInit,
-                               timeout_async = TimeoutAsync,
-                               timeout_sync = TimeoutSync,
-                               dest_list_deny = DestListDeny,
-                               dest_list_allow = DestListAllow,
-                               options_keys = OptionsKeys,
-                               options = OptionsNew}) ->
+service_update_success_common(Service0,
+                              #config_service_update{
+                                  type = Type,
+                                  dest_refresh = DestRefresh,
+                                  timeout_init = TimeoutInit,
+                                  timeout_async = TimeoutAsync,
+                                  timeout_sync = TimeoutSync,
+                                  dest_list_deny = DestListDeny,
+                                  dest_list_allow = DestListAllow,
+                                  options_keys = OptionsKeys,
+                                  options = OptionsNew}) ->
     Service1 = if
         DestRefresh =:= undefined ->
             Service0;
