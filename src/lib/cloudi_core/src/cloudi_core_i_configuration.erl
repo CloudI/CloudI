@@ -350,7 +350,8 @@
     {code_invalid |
      code_paths_invalid |
      code_modules_invalid |
-     code_applications_invalid, any()}.
+     code_applications_invalid |
+     code_releases_invalid, any()}.
 -type error_reason_new() ::
     error_reason_acl_add_configuration() |
     error_reason_services_add_configuration() |
@@ -5597,26 +5598,33 @@ code_proplist(Value) ->
         {modules,
          CodeConfig#config_code.modules},
         {applications,
-         CodeConfig#config_code.applications}],
+         CodeConfig#config_code.applications},
+        {releases,
+         CodeConfig#config_code.releases}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Paths, _, _]
+        [Paths, _, _, _]
             when not is_list(Paths) ->
             {error, {code_paths_invalid, Paths}};
-        [_, Modules, _]
+        [_, Modules, _, _]
             when not is_list(Modules) ->
             {error, {code_modules_invalid, Modules}};
-        [_, _, Applications]
+        [_, _, Applications, _]
             when not is_list(Applications) ->
             {error, {code_applications_invalid, Applications}};
-        [Paths, Modules, Applications] ->
+        [_, _, _, Releases]
+            when not is_list(Releases) ->
+            {error, {code_releases_invalid, Releases}};
+        [Paths, Modules, Applications, Releases] ->
             accum([{Paths,
                     fun code_load_paths/2},
                    {Modules,
                     fun code_load_modules/2},
                    {Applications,
-                    fun code_load_applications/2}],
+                    fun code_load_applications/2},
+                   {Releases,
+                    fun code_load_releases/2}],
                   CodeConfig);
-        [_, _, _ | Extra] ->
+        [_, _, _, _ | Extra] ->
             {error, {code_invalid, Extra}}
     end.
 
@@ -5722,6 +5730,48 @@ code_load_applications(Applications, CodeConfig) ->
             error_logger:info_msg("code applications loaded~n  ~tp~n",
                                   [Applications]),
             {ok, CodeConfig#config_code{applications = Applications}};
+        {error, _} = Error ->
+            Error
+    end.
+
+code_load_release([]) ->
+    ok;
+code_load_release([Release | _])
+    when not is_list(Release) ->
+    {error, {code_releases_invalid, Release}};
+code_load_release([Release | Releases]) ->
+    case filename:dirname(Release) of
+        "." ->
+            {error, {code_releases_invalid, Release}};
+        _ ->
+            case filename:extension(Release) of
+                ".script" ->
+                    case cloudi_x_reltool_util:script_start(Release) of
+                        {ok, _} ->
+                            code_load_release(Releases);
+                        {error, Reason} ->
+                            {error, {code_releases_invalid, {Reason, Release}}}
+                    end;
+                ".boot" ->
+                    case cloudi_x_reltool_util:boot_start(Release) of
+                        {ok, _} ->
+                            code_load_release(Releases);
+                        {error, Reason} ->
+                            {error, {code_releases_invalid, {Reason, Release}}}
+                    end;
+                _ ->
+                    {error, {code_releases_invalid, Release}}
+            end
+    end.
+
+code_load_releases([], #config_code{releases = []} = CodeConfig) ->
+    {ok, CodeConfig};
+code_load_releases(Releases, CodeConfig) ->
+    case code_load_release(Releases) of
+        ok ->
+            error_logger:info_msg("code releases loaded~n  ~tp~n",
+                                  [Releases]),
+            {ok, CodeConfig#config_code{releases = Releases}};
         {error, _} = Error ->
             Error
     end.

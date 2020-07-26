@@ -36,7 +36,9 @@
         modules = []
             :: list(module()),
         applications = []
-            :: list(atom())
+            :: list(atom()),
+        releases = []
+            :: list(string())
     }).
 
 -record(config_logging_syslog,

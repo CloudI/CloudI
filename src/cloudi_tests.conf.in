@@ -1172,7 +1172,10 @@
     {modules,
      [cloudi_service_test_msg_size]}
     %{applications,
-    % [cloudi_x_msgpack]}
+    % [cloudi_x_msgpack]},
+    %{releases,
+    % ["/full/path/to/release1/name1.boot",
+    %  "/full/path/to/release2/name2.script"]}
 ]}.
 
 
