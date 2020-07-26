@@ -5740,10 +5740,8 @@ code_load_release([Release | _])
     when not is_list(Release) ->
     {error, {code_releases_invalid, Release}};
 code_load_release([Release | Releases]) ->
-    case filename:dirname(Release) of
-        "." ->
-            {error, {code_releases_invalid, Release}};
-        _ ->
+    if
+        hd(Release) == $/ ->
             case filename:extension(Release) of
                 ".script" ->
                     case cloudi_x_reltool_util:script_start(Release) of
@@ -5761,7 +5759,9 @@ code_load_release([Release | Releases]) ->
                     end;
                 _ ->
                     {error, {code_releases_invalid, Release}}
-            end
+            end;
+        true ->
+            {error, {code_releases_invalid, Release}}
     end.
 
 code_load_releases([], #config_code{releases = []} = CodeConfig) ->
