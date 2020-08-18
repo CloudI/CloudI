@@ -57,6 +57,7 @@ module CloudI
                 @s.sync = true
                 @use_header = true
             else
+                $stderr.puts 'CloudI service execution must occur in CloudI'
                 raise InvalidInputException
             end
             @initialization_complete = false

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-08-17 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix PHP CloudI API error output so it uses stderr instead of stdout
+    * Add CloudI API stderr info when execution occurs outside CloudI
+    * Fix cloudi_service_cron usage of the year field
+
 2020-07-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix the configuration code paths so they are updated after a

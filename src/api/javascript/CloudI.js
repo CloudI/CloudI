@@ -226,6 +226,7 @@ CloudI.API = function API (thread_index, callback) {
                callback : function (API_) {};
     var protocol_str = process.env.CLOUDI_API_INIT_PROTOCOL;
     if (protocol_str === undefined) {
+        CloudI.stderr_write('CloudI service execution must occur in CloudI\n');
         throw new InvalidInputException();
     }
     var buffer_size_str = process.env.CLOUDI_API_INIT_BUFFER_SIZE;

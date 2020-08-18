@@ -107,6 +107,7 @@ func nullResponse(requestType int, name, pattern string, requestInfo, request []
 func API(threadIndex uint32, state interface{}) (*Instance, error) {
 	protocol := os.Getenv("CLOUDI_API_INIT_PROTOCOL")
 	if protocol == "" {
+		os.Stderr.WriteString("CloudI service execution must occur in CloudI\n")
 		return nil, invalidInputErrorNew()
 	}
 	bufferSize, err := uintGetenv("CLOUDI_API_INIT_BUFFER_SIZE")

@@ -4,11 +4,18 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Cron Service==
+%%% Cron expression events are supported within the limitation defined by
+%%% erlang:system_info(end_time) (events during a 250 year period).
+%%% The cron expression string may use the 5 required fields
+%%% (minutes, hours, day_of_month, month, day_of_week),
+%%% 6 fields with year as the last field,
+%%% 7 fields with seconds as the first field or a supported macro
+%%% (@yearly, @annually, @monthly, @weekly, @daily, @midnight, @hourly).
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +36,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2019-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_cron).
@@ -181,13 +188,15 @@ cloudi_service_handle_info({expression, Id},
 cloudi_service_handle_info({'CHANGE', Monitor, time_offset,
                             clock_service, TimeOffset},
                            #state{service = Service,
+                                  utc = UseUTC,
                                   time_offset_milliseconds = ValueOld,
                                   time_offset_monitor = Monitor,
                                   expressions = Expressions} = State,
                            _Dispatcher) ->
     ValueNew = time_offset_to_milliseconds(TimeOffset),
     ExpressionsNew = expressions_time_offset(Expressions,
-                                             ValueOld - ValueNew, Service),
+                                             ValueOld - ValueNew,
+                                             UseUTC, Service),
     {noreply, State#state{time_offset_milliseconds = ValueNew,
                           expressions = ExpressionsNew}}.
 
@@ -233,12 +242,15 @@ expressions_load(L, ProcessIndex, ProcessCount) ->
 expression_next(#expression{definition = Cron,
                             datetime_utc = DateTimeOldEventUTC} = Expression,
                 Id, UseUTC, Service) ->
-    {DateTimeNewEventUTC,
-     MilliSecondsEvent} = expression_next_event(DateTimeOldEventUTC,
-                                                Cron, UseUTC),
-    Timer = erlang:send_after(MilliSecondsEvent, Service, {expression, Id}),
-    Expression#expression{datetime_utc = DateTimeNewEventUTC,
-                          timer = Timer}.
+    case expression_next_event(DateTimeOldEventUTC, Cron, UseUTC) of
+        {DateTimeNewEventUTC, MilliSecondsEvent} ->
+            Timer = erlang:send_after(MilliSecondsEvent, Service,
+                                      {expression, Id}),
+            Expression#expression{datetime_utc = DateTimeNewEventUTC,
+                                  timer = Timer};
+        undefined ->
+            Expression#expression{timer = undefined}
+    end.
 
 expression_next_event(DateTimeOldEventUTC, Cron, UseUTC) ->
     {DateTimeNowUTC, PastMilliSeconds} = datetime_now_utc(),
@@ -260,42 +272,55 @@ expression_next_event(DateTimeOldEventUTC, Cron, UseUTC) ->
             calendar:universal_time_to_local_time(DateTimeNextEventUTC)
     end,
     DateTimeNewEventUTC = datetime_event_utc(DateTimeNextEvent, Cron, UseUTC),
-    MilliSecondsEvent = event_milliseconds(DateTimeNewEventUTC,
-                                           DateTimeNowUTC, PastMilliSeconds),
-    {DateTimeNewEventUTC,
-     MilliSecondsEvent}.
+    if
+        DateTimeNewEventUTC =:= undefined ->
+            undefined;
+        is_tuple(DateTimeNewEventUTC) ->
+            MilliSecondsEvent = event_milliseconds(DateTimeNewEventUTC,
+                                                   DateTimeNowUTC,
+                                                   PastMilliSeconds),
+            {DateTimeNewEventUTC,
+             MilliSecondsEvent}
+    end.
+
+expression_update(#expression{timer = undefined} = Expression,
+                  Id, _, UseUTC, Service) ->
+    expression_next(Expression, Id, UseUTC, Service);
+expression_update(#expression{datetime_utc = DateTimeEventUTC,
+                              timer = TimerOld} = Expression,
+                  Id, MilliSecondsOffset, _, Service) ->
+    TimerNew = case erlang:cancel_timer(TimerOld) of
+        false ->
+            TimerOld;
+        MilliSecondsOld ->
+            {DateTimeNowUTC, PastMilliSeconds} = datetime_now_utc(),
+            if
+                MilliSecondsOld + MilliSecondsOffset =< 0;
+                DateTimeNowUTC >= DateTimeEventUTC ->
+                    Service ! {expression, Id},
+                    TimerOld;
+                true ->
+                    % determining MilliSecondsNew from
+                    % DateTimeEventUTC is more accurate than using
+                    % (MilliSecondsOld + MilliSecondsOffset)
+                    % because multiple time_offsets may occur
+                    MilliSecondsNew = event_milliseconds(DateTimeEventUTC,
+                                                         DateTimeNowUTC,
+                                                         PastMilliSeconds),
+                    erlang:send_after(MilliSecondsNew, Service,
+                                      {expression, Id})
+            end
+    end,
+    Expression#expression{timer = TimerNew}.
 
 expressions_start(Expressions, UseUTC, Service) ->
     maps:map(fun(Id, Expression) ->
         expression_next(Expression, Id, UseUTC, Service)
     end, Expressions).
 
-expressions_time_offset(Expressions, MilliSecondsOffset, Service) ->
-    maps:map(fun(Id, #expression{datetime_utc = DateTimeEventUTC,
-                                 timer = TimerOld} = Expression) ->
-        TimerNew = case erlang:cancel_timer(TimerOld) of
-            false ->
-                TimerOld;
-            MilliSecondsOld ->
-                {DateTimeNowUTC, PastMilliSeconds} = datetime_now_utc(),
-                if
-                    MilliSecondsOld + MilliSecondsOffset =< 0;
-                    DateTimeNowUTC >= DateTimeEventUTC ->
-                        Service ! {expression, Id},
-                        TimerOld;
-                    true ->
-                        % determining MilliSecondsNew from
-                        % DateTimeEventUTC is more accurate than using
-                        % (MilliSecondsOld + MilliSecondsOffset)
-                        % because multiple time_offsets may occur
-                        MilliSecondsNew = event_milliseconds(DateTimeEventUTC,
-                                                             DateTimeNowUTC,
-                                                             PastMilliSeconds),
-                        erlang:send_after(MilliSecondsNew,
-                                          Service, {expression, Id})
-                end
-        end,
-        Expression#expression{timer = TimerNew}
+expressions_time_offset(Expressions, MilliSecondsOffset, UseUTC, Service) ->
+    maps:map(fun(Id, Expression) ->
+        expression_update(Expression, Id, MilliSecondsOffset, UseUTC, Service)
     end, Expressions).
 
 expression_event(Sends, Expressions, Id,
@@ -356,6 +381,8 @@ event_milliseconds(DateTimeEventUTC, DateTimeNowUTC, PastMilliSeconds) ->
 datetime_event_utc(DateTime, Cron, UseUTC) ->
     DateTimeEvent = cloudi_cron:next_datetime(DateTime, Cron),
     if
+        DateTimeEvent =:= undefined ->
+            undefined;
         UseUTC =:= true ->
             DateTimeEvent;
         UseUTC =:= false ->

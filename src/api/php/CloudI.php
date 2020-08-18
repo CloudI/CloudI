@@ -81,7 +81,10 @@ class API
     {
         $protocol_str = getenv('CLOUDI_API_INIT_PROTOCOL');
         if ($protocol_str == false)
+        {
+            fwrite(STDERR, "CloudI service execution must occur in CloudI\n");
             throw new InvalidInputException();
+        }
         $buffer_size_str = getenv('CLOUDI_API_INIT_BUFFER_SIZE');
         if ($buffer_size_str == false)
             throw new InvalidInputException();
@@ -402,7 +405,7 @@ class API
                 catch (ReturnSyncException $e)
                 {
                     $this->terminate = true;
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                     return;
                 }
                 catch (ForwardAsyncException $e)
@@ -412,18 +415,18 @@ class API
                 catch (ForwardSyncException $e)
                 {
                     $this->terminate = true;
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                     return;
                 }
                 catch (\Error $e)
                 {
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                     exit(1);
                 }
                 catch (\Throwable $e)
                 {
                     $return_null_response = true;
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                 }
                 if ($return_null_response)
                 {
@@ -479,7 +482,7 @@ class API
                 catch (ReturnAsyncException $e)
                 {
                     $this->terminate = true;
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                     return;
                 }
                 catch (ForwardSyncException $e)
@@ -489,18 +492,18 @@ class API
                 catch (ForwardAsyncException $e)
                 {
                     $this->terminate = true;
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                     return;
                 }
                 catch (\Error $e)
                 {
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                     exit(1);
                 }
                 catch (\Throwable $e)
                 {
                     $return_null_response = true;
-                    echo "{$e->getMessage()}\n{$e}\n";
+                    fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
                 }
                 if ($return_null_response)
                 {

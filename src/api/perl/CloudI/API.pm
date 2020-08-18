@@ -79,6 +79,7 @@ sub new
     my $protocol = getenv('CLOUDI_API_INIT_PROTOCOL');
     if (! defined($protocol))
     {
+        print STDERR "CloudI service execution must occur in CloudI";
         die CloudI::InvalidInputException->new();
     }
     my $buffer_size = getenv('CLOUDI_API_INIT_BUFFER_SIZE');

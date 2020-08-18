@@ -241,9 +241,9 @@ new([_ | _] = Input) ->
 
 -spec next_datetime(DateTime :: calendar:datetime(),
                     state()) ->
-    calendar:datetime().
+    calendar:datetime() | undefined.
 
-next_datetime({Date0, {_, _, _}} = DateTime0,
+next_datetime({Date0, _} = DateTime0,
               #cloudi_cron{expression = Expression}) ->
     Equal0 = false,
     {Equal1,
@@ -258,20 +258,33 @@ next_datetime({Date0, {_, _, _}} = DateTime0,
      DateTime5} = next_datetime_month(Expression, Equal4, DateTime4),
     {Equal6,
      DateTime6} = next_datetime_day_of_week(Expression, Equal5, DateTime5),
-    DateTimeN = case next_datetime_year(Expression, Equal6, DateTime6) of
-        {Date0, _} = DateTime7 ->
-            DateTime7;
-        {Date1, _} ->
-            DateTime8 = {Date1, {0, 0, 0}},
+    case next_datetime_year(Expression, Equal6, DateTime6) of
+        undefined ->
+            undefined;
+        {Date0, _} = DateTimeN ->
+            DateTimeN;
+        {DateN, _} ->
+            DateTime7 = {DateN, {0, 0, 0}},
             {true,
-             DateTime9} = next_datetime_seconds(Expression, true, DateTime8),
+             DateTime8} = next_datetime_seconds(Expression,
+                                                true, DateTime7),
             {true,
-             DateTime10} = next_datetime_minutes(Expression, true, DateTime9),
+             DateTime9} = next_datetime_minutes(Expression,
+                                                true, DateTime8),
             {true,
-             DateTime11} = next_datetime_hours(Expression, true, DateTime10),
-            DateTime11
-    end,
-    DateTimeN.
+             DateTime10} = next_datetime_hours(Expression,
+                                               true, DateTime9),
+            {true,
+             DateTime11} = next_datetime_day_of_month(Expression,
+                                                      true, DateTime10),
+            {true,
+             DateTime12} = next_datetime_month(Expression,
+                                               true, DateTime11),
+            {true,
+             DateTimeN} = next_datetime_day_of_week(Expression,
+                                                    true, DateTime12),
+            DateTimeN
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -541,14 +554,15 @@ next_datetime_day_of_week({_, _, _, _, _,
 next_datetime_year({_, _, _, _, _, _, undefined}, _, DateTime) ->
     DateTime;
 next_datetime_year({_, _, _, _, _, _,
-                    FieldYear} = Expression, Equal,
-                   {{DateYY, _, _} = Date, Time} = DateTime) ->
+                    FieldYear}, Equal,
+                   {{DateYY, _, _} = Date, _} = DateTime) ->
     case get_next_value(FieldYear, DateYY, Equal, Date) of
+        undefined ->
+            undefined;
         DateYY ->
             DateTime;
-        _ ->
-            next_datetime_year(Expression, true,
-                               {date_add(Date, 1), Time})
+        DateYYNew ->
+            {{DateYYNew, 1, 1}, {0, 0, 0}}
     end.
 
 get_next_value(L, I, Equal, Date) ->
@@ -762,6 +776,14 @@ t_next_datetime() ->
     DateTime12 = {{2019, 11, 3}, {12, 30, 53}},
     DateTime13 = {{2019, 11, 4}, {17, 18, 0}},
     DateTime13 = next_datetime(DateTime12, Cron0),
+    Cron6 = new("*/1 * * * * 1970"),
+    DateTime14 = {{2020, 8, 17}, {17, 0, 0}},
+    undefined = next_datetime(DateTime14, Cron6),
+    Cron7 = new("18,38,58 17 * * mon-fri 2020"),
+    DateTime15 = {{2020, 1, 1}, {17, 18, 0}},
+    DateTime15 = next_datetime(DateTime0, Cron7),
+    DateTime16 = {{2020, 1, 1}, {17, 38, 0}},
+    DateTime16 = next_datetime(DateTime15, Cron7),
     ok.
 
 -endif.

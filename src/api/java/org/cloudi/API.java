@@ -140,7 +140,10 @@ public class API
     {
         final String protocol = System.getenv("CLOUDI_API_INIT_PROTOCOL");
         if (protocol == null)
+        {
+            API.err.println("CloudI service execution must occur in CloudI");
             throw new InvalidInputException();
+        }
         final String buffer_size_str =
             System.getenv("CLOUDI_API_INIT_BUFFER_SIZE");
         if (buffer_size_str == null)

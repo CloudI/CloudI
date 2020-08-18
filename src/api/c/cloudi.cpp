@@ -553,7 +553,11 @@ int cloudi_initialize(cloudi_instance_t * api,
         return cloudi_out_of_memory;
     char const * const protocol = ::getenv("CLOUDI_API_INIT_PROTOCOL");
     if (protocol == 0)
+    {
+        std::cerr <<
+            "CloudI service execution must occur in CloudI" << std::endl;
         return cloudi_invalid_input;
+    }
     char const * const buffer_size_p = ::getenv("CLOUDI_API_INIT_BUFFER_SIZE");
     if (buffer_size_p == 0)
         return cloudi_invalid_input;

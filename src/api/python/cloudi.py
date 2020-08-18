@@ -88,6 +88,7 @@ class API(object):
     def __init__(self, thread_index):
         protocol_str = os.getenv('CLOUDI_API_INIT_PROTOCOL')
         if protocol_str is None:
+            sys.stderr.write('CloudI service execution must occur in CloudI\n')
             raise InvalidInputException()
         buffer_size_str = os.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
         if buffer_size_str is None:

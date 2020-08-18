@@ -1063,8 +1063,9 @@ let api
   ?terminate_return_value:(terminate_return_value = true)
   (thread_index : int) (state : 's): ('s Instance.t, string) result =
   let protocol = getenv "CLOUDI_API_INIT_PROTOCOL" in
-  if protocol = "" then
-    Error (invalid_input_error)
+  if protocol = "" then (
+    prerr_endline "CloudI service execution must occur in CloudI" ;
+    Error (invalid_input_error))
   else
     match getenv_to_uint "CLOUDI_API_INIT_BUFFER_SIZE" with
       | Error (error) ->

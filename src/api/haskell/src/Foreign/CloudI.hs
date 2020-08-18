@@ -233,7 +233,9 @@ api threadIndex state terminateReturnValueOpt = do
                             return $ Left err
                         Right (_, api1) ->
                             return $ Right api1
-        (_, _) ->
+        (_, _) -> do
+            SysIO.hPutStrLn SysIO.stderr
+                "CloudI service execution must occur in CloudI"
             return $ Left invalidInputError
 
 -- | returns the thread count from the service configuration
