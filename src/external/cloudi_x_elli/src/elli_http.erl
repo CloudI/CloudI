@@ -511,8 +511,9 @@ get_body(Socket, Headers, Buffer, Opts, Callback) ->
         ContentLengthBin ->
             maybe_send_continue(Socket, Headers),
 
-            ContentLength = ?B2I(binary:replace(ContentLengthBin,
-                                                <<" ">>, <<>>, [global])),
+            ContentLength = binary_to_integer(binary:replace(ContentLengthBin,
+                                                             <<" ">>, <<>>,
+                                                             [global])),
 
             ok = check_max_size(Socket, ContentLength, Buffer, Opts, Callback),
 
@@ -642,7 +643,7 @@ encode_headers([[] | H]) ->
 encode_headers([{K, V} | H]) ->
     [encode_value(K), <<": ">>, encode_value(V), <<"\r\n">>, encode_headers(H)].
 
-encode_value(V) when is_integer(V) -> ?I2L(V);
+encode_value(V) when is_integer(V) -> integer_to_binary(V);
 encode_value(V) when is_binary(V)  -> V;
 encode_value(V) when is_list(V)    -> list_to_binary(V).
 

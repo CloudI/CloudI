@@ -21,7 +21,7 @@
 [license badge]: https://img.shields.io/badge/license-MIT-blue.svg
 
 Elli is a webserver you can run inside your Erlang application to
-expose an HTTP API. Elli is a aimed exclusively at building
+expose an HTTP API. Elli is aimed exclusively at building
 high-throughput, low-latency HTTP APIs. If robustness and performance
 is more important than general purpose features, then `elli` might be
 for you. If you find yourself digging into the implementation of a

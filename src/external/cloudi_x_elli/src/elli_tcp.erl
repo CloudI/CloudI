@@ -38,18 +38,32 @@ accept({ssl, Socket}, Server, Timeout) ->
     case ssl:transport_accept(Socket, Timeout) of
         {ok, S} ->
             gen_server:cast(Server, accepted),
-            case ssl:ssl_accept(S, Timeout) of
-                ok ->
-                    {ok, {ssl, S}};
-                {error, closed} ->
-                    {error, econnaborted};
-                {error, Reason} ->
-                    {error, Reason}
-            end;
+            handshake(S, Timeout);
         {error, Reason} ->
             {error, Reason}
     end.
 
+-ifdef(post20).
+handshake(S, Timeout) ->
+    case ssl:handshake(S, Timeout) of
+        {ok, S1} ->
+            {ok, {ssl, S1}};
+        {error, closed} ->
+            {error, econnaborted};
+        {error, Reason} ->
+            {error, Reason}
+    end.
+-else.
+handshake(S, Timeout) ->
+    case ssl:ssl_accept(S, Timeout) of
+        ok ->
+            {ok, {ssl, S}};
+        {error, closed} ->
+            {error, econnaborted};
+        {error, Reason} ->
+            {error, Reason}
+    end.
+-endif.
 
 recv({plain, Socket}, Size, Timeout) ->
     gen_tcp:recv(Socket, Size, Timeout);

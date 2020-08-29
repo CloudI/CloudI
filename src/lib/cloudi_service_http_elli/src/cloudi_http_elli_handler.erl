@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -61,7 +61,11 @@ handle(Req,
        #elli_state{output_type = OutputType,
                    content_type_forced = ContentTypeForced,
                    content_types_accepted = ContentTypesAccepted,
+                   content_security_policy = ContentSecurityPolicy,
+                   content_security_policy_report = ContentSecurityPolicyReport,
                    set_x_forwarded_for = SetXForwardedFor,
+                   set_x_xss_protection = SetXXSSProtection,
+                   set_x_content_type_options = SetXContentTypeOptions,
                    status_code_timeout = StatusCodeTimeout,
                    query_get_format = QueryGetFormat,
                    use_host_prefix = UseHostPrefix,
@@ -217,7 +221,11 @@ handle(Req,
                      _} = Result = handle_response(NameIncoming,
                                                    HeadersOutgoing,
                                                    Response, Req, OutputType,
-                                                   ContentTypeForced),
+                                                   ContentTypeForced,
+                                                   SetXContentTypeOptions,
+                                                   SetXXSSProtection,
+                                                   ContentSecurityPolicy,
+                                                   ContentSecurityPolicyReport),
                     ?LOG_TRACE_APPLY(fun request_time_end_success/5,
                                      [HttpCode, MethodHTTP,
                                       NameIncoming, NameOutgoing,
@@ -371,6 +379,14 @@ headers_external_outgoing(ResponseInfo)
     when is_binary(ResponseInfo) ->
     cloudi_response_info:key_value_parse(ResponseInfo, list).
 
+header_set_if_not(Key, Value, Headers) ->
+    case lists:keyfind(Key, 1, Headers) of
+        {_, _} ->
+            Headers;
+        false ->
+            [{Key, Value} | Headers]
+    end.
+
 get_query_string_external(QsVals) ->
     cloudi_request_info:key_value_new(QsVals, text_pairs).
 
@@ -433,7 +449,9 @@ handle_request(Name, Headers, Body, _Req,
     end.
 
 handle_response(NameIncoming, HeadersOutgoing0, Response,
-                _Req, OutputType, ContentTypeForced) ->
+                _Req, OutputType, ContentTypeForced,
+                SetXContentTypeOptions, SetXXSSProtection,
+                ContentSecurityPolicy, ContentSecurityPolicyReport) ->
     ResponseBinary = if
         (((OutputType =:= external) orelse
           (OutputType =:= internal)) andalso
@@ -445,7 +463,7 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
          is_list(Response)) ->
             erlang:list_to_binary(Response)
     end,
-    {HttpCode, HeadersOutgoingN} = case lists:keytake(<<"status">>, 1,
+    {HttpCode, HeadersOutgoing2} = case lists:keytake(<<"status">>, 1,
                                                       HeadersOutgoing0) of
         false ->
             {200, HeadersOutgoing0};
@@ -454,9 +472,9 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
             {erlang:binary_to_integer(hd(binary:split(Status, <<" ">>))),
              HeadersOutgoing1}
     end,
-    ResponseHeadersOutgoing = if
-        HeadersOutgoingN =/= [] ->
-            HeadersOutgoingN;
+    HeadersOutgoing3 = if
+        HeadersOutgoing2 =/= [] ->
+            HeadersOutgoing2;
         ContentTypeForced =/= undefined ->
             [{<<"content-type">>, ContentTypeForced}];
         true ->
@@ -485,7 +503,59 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
                     end
             end
     end,
-    HttpCode = 200,
+    {ContentTypeHTML,
+     ContentTypeSet} = case lists:keyfind(<<"content-type">>, 1,
+                                          HeadersOutgoing3) of
+        {_,  <<"text/html", _/binary>>} ->
+            {true, true};
+        {_,  <<_/binary>>} ->
+            {false, true};
+        false ->
+            {false, false}
+    end,
+    HeadersOutgoing4 = if
+        ContentTypeSet =:= true ->
+            if
+                SetXContentTypeOptions =:= true ->
+                    header_set_if_not(<<"x-content-type-options">>,
+                                      <<"nosniff">>,
+                                      HeadersOutgoing3);
+                SetXContentTypeOptions =:= false ->
+                    HeadersOutgoing3
+            end;
+        ContentTypeSet =:= false ->
+            HeadersOutgoing3
+    end,
+    HeadersOutgoingN = if
+        ContentTypeHTML =:= true ->
+            HeadersOutgoing5 = if
+                SetXXSSProtection =:= true ->
+                    header_set_if_not(<<"x-xss-protection">>,
+                                      <<"0">>,
+                                      HeadersOutgoing4);
+                SetXXSSProtection =:= false ->
+                    HeadersOutgoing4
+            end,
+            HeadersOutgoing6 = if
+                is_binary(ContentSecurityPolicyReport) ->
+                    header_set_if_not(<<"content-security-policy-report-only">>,
+                                      ContentSecurityPolicyReport,
+                                      HeadersOutgoing5);
+                ContentSecurityPolicyReport =:= undefined ->
+                    HeadersOutgoing5
+            end,
+            if
+                is_binary(ContentSecurityPolicy) ->
+                    header_set_if_not(<<"content-security-policy">>,
+                                      ContentSecurityPolicy,
+                                      HeadersOutgoing6);
+                ContentSecurityPolicy =:= undefined ->
+                    HeadersOutgoing6
+            end;
+        ContentTypeHTML =:= false ->
+            HeadersOutgoing4
+    end,
+    ResponseHeadersOutgoing = HeadersOutgoingN,
     {HttpCode,
      ResponseHeadersOutgoing,
      ResponseBinary}.

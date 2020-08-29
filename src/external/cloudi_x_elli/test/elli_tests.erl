@@ -3,7 +3,6 @@
 -include("elli.hrl").
 -include("elli_test.hrl").
 
--define(I2L(I), integer_to_list(I)).
 -define(README, "README.md").
 -define(VTB(T1, T2, LB, UB),
         time_diff_to_micro_seconds(T1, T2) >= LB andalso
@@ -478,7 +477,7 @@ sendfile_range() ->
     ?assertMatch(206, status(Response)),
     ?assertEqual([{<<"Connection">>, <<"Keep-Alive">>},
                   {<<"Content-Length">>, <<"400">>},
-                  {<<"Content-Range">>, iolist_to_binary(["bytes 300-699/", ?I2L(Size)])}],
+                  {<<"Content-Range">>, iolist_to_binary(["bytes 300-699/", integer_to_binary(Size)])}],
                  headers(Response)),
     ?assertEqual(Expected, body(Response)).
 
@@ -720,7 +719,7 @@ normalize_range_test_() ->
 
 
 encode_range_test() ->
-    Expected = [<<"bytes ">>,<<"*">>,<<"/">>,"42"],
+    Expected = [<<"bytes ">>,<<"*">>,<<"/">>,<<"42">>],
     ?assertMatch(Expected, elli_util:encode_range(invalid_range, 42)).
 
 register_test() ->

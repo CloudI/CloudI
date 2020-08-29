@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -60,8 +60,28 @@
 -define(DEFAULT_SSL,                              false).
 -define(DEFAULT_MAX_BODY_SIZE,                  1024000).
 -define(DEFAULT_OUTPUT,                        external).
--define(DEFAULT_CONTENT_TYPE,                 undefined). % force a content type
+-define(DEFAULT_CONTENT_TYPE,                 undefined).
+        % Provide the exact value to set if no
+        % response headers were provided.
+        % If this value is not set and no response headers
+        % were provided, the value is guessed based on the
+        % file extension.
 -define(DEFAULT_CONTENT_TYPES_ACCEPTED,       undefined).
+-define(DEFAULT_CONTENT_SECURITY_POLICY,      undefined).
+        % Provide the exact value to set
+        % if it was not already provided and the content-type is text/html
+        % (e.g., "default-src 'self'").
+-define(DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY,
+                                              undefined).
+        % Provide the exact value to set
+        % if it was not already provided and the content-type is text/html
+-define(DEFAULT_SET_X_FORWARDED_FOR,              false). % if it is missing
+-define(DEFAULT_SET_X_XSS_PROTECTION,             false).
+        % If true, then use "0" for the value
+        % if it was not already provided and the content-type is text/html.
+-define(DEFAULT_SET_X_CONTENT_TYPE_OPTIONS,       false).
+        % If true, then use "nosniff" for the value
+        % if it was not already provided (when "content-type" is set).
 -define(DEFAULT_STATUS_CODE_TIMEOUT,                504). % "Gateway Timeout"
 -define(DEFAULT_QUERY_GET_FORMAT,                   raw). % see below:
         % If set to 'text_pairs' any GET query string is parsed and
@@ -77,7 +97,6 @@
         % GET query string data is always provided in the service request
         % Request data (so using GET request body data will be ignored,
         % due to being bad practice).
--define(DEFAULT_SET_X_FORWARDED_FOR,              false). % if it is missing
 -define(DEFAULT_USE_HOST_PREFIX,                  false). % for virtual hosts
 -define(DEFAULT_USE_CLIENT_IP_PREFIX,             false).
 -define(DEFAULT_USE_X_METHOD_OVERRIDE,            false).
@@ -124,7 +143,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {output,                        ?DEFAULT_OUTPUT},
         {content_type,                  ?DEFAULT_CONTENT_TYPE},
         {content_types_accepted,        ?DEFAULT_CONTENT_TYPES_ACCEPTED},
+        {content_security_policy,       ?DEFAULT_CONTENT_SECURITY_POLICY},
+        {content_security_policy_report_only,
+         ?DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY},
         {set_x_forwarded_for,           ?DEFAULT_SET_X_FORWARDED_FOR},
+        {set_x_xss_protection,          ?DEFAULT_SET_X_XSS_PROTECTION},
+        {set_x_content_type_options,    ?DEFAULT_SET_X_CONTENT_TYPE_OPTIONS},
         {status_code_timeout,           ?DEFAULT_STATUS_CODE_TIMEOUT},
         {query_get_format,              ?DEFAULT_QUERY_GET_FORMAT},
         {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
@@ -133,8 +157,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX},
         {update_delay,                  ?DEFAULT_UPDATE_DELAY}],
     [Interface, Port, AcceptTimeout, RecvTimeout, HeaderTimeout, BodyTimeout,
-     MinAcceptors, SSL, MaxBodySize,
-     OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
+     MinAcceptors, SSL, MaxBodySize, OutputType,
+     ContentTypeForced0, ContentTypesAccepted0, ContentSecurityPolicy0,
+     ContentSecurityPolicyReport0,
+     SetXForwardedFor, SetXXSSProtection, SetXContentTypeOptions,
      StatusCodeTimeout, QueryGetFormat,
      UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix,
      UpdateDelaySeconds] =
@@ -163,21 +189,45 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_integer(MaxBodySize),
     true = OutputType =:= external orelse OutputType =:= internal orelse
            OutputType =:= list orelse OutputType =:= binary,
-    ContentTypeForced1 = if
+    ContentTypeForcedN = if
         ContentTypeForced0 =:= undefined ->
             undefined;
-        is_list(ContentTypeForced0) ->
+        is_list(ContentTypeForced0),
+        is_integer(hd(ContentTypeForced0)) ->
             erlang:list_to_binary(ContentTypeForced0);
-        is_binary(ContentTypeForced0) ->
+        is_binary(ContentTypeForced0),
+        ContentTypeForced0 /= <<>> ->
             ContentTypeForced0
     end,
-    ContentTypesAccepted1 = if
+    ContentTypesAcceptedN = if
         ContentTypesAccepted0 =:= undefined ->
             undefined;
         is_list(ContentTypesAccepted0) ->
             content_types_accepted_pattern(ContentTypesAccepted0)
     end,
+    ContentSecurityPolicyN = if
+        ContentSecurityPolicy0 =:= undefined ->
+            undefined;
+        is_list(ContentSecurityPolicy0),
+        is_integer(hd(ContentSecurityPolicy0)) ->
+            erlang:list_to_binary(ContentSecurityPolicy0);
+        is_binary(ContentSecurityPolicy0),
+        ContentSecurityPolicy0 /= <<>> ->
+            ContentSecurityPolicy0
+    end,
+    ContentSecurityPolicyReportN = if
+        ContentSecurityPolicyReport0 =:= undefined ->
+            undefined;
+        is_list(ContentSecurityPolicyReport0),
+        is_integer(hd(ContentSecurityPolicyReport0)) ->
+            erlang:list_to_binary(ContentSecurityPolicyReport0);
+        is_binary(ContentSecurityPolicyReport0),
+        ContentSecurityPolicyReport0 /= <<>> ->
+            ContentSecurityPolicyReport0
+    end,
     true = is_boolean(SetXForwardedFor),
+    true = is_boolean(SetXXSSProtection),
+    true = is_boolean(SetXContentTypeOptions),
     true = is_integer(StatusCodeTimeout) andalso
            (StatusCodeTimeout > 100) andalso
            (StatusCodeTimeout =< 599),
@@ -196,9 +246,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         dispatcher = cloudi_service:dispatcher(Dispatcher),
         timeout_sync = cloudi_service:timeout_sync(Dispatcher),
         output_type = OutputType,
-        content_type_forced = ContentTypeForced1,
-        content_types_accepted = ContentTypesAccepted1,
+        content_type_forced = ContentTypeForcedN,
+        content_types_accepted = ContentTypesAcceptedN,
+        content_security_policy = ContentSecurityPolicyN,
+        content_security_policy_report = ContentSecurityPolicyReportN,
         set_x_forwarded_for = SetXForwardedFor,
+        set_x_xss_protection = SetXXSSProtection,
+        set_x_content_type_options = SetXContentTypeOptions,
         status_code_timeout = StatusCodeTimeout,
         query_get_format = QueryGetFormat,
         use_host_prefix = UseHostPrefix,

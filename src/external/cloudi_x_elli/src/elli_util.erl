@@ -47,10 +47,12 @@ normalize_range(_, _Size)  -> invalid_range.
 %% @doc: Encode Range to a Content-Range value.
 encode_range(Range, Size) ->
     [<<"bytes ">>, encode_range_bytes(Range),
-     <<"/">>, ?I2L(Size)].
+     <<"/">>, integer_to_binary(Size)].
 
 encode_range_bytes({Offset, Length}) ->
-    [?I2L(Offset), <<"-">>, ?I2L(Offset + Length - 1)];
+    [integer_to_binary(Offset),
+     <<"-">>,
+     integer_to_binary(Offset + Length - 1)];
 encode_range_bytes(invalid_range) -> <<"*">>.
 
 

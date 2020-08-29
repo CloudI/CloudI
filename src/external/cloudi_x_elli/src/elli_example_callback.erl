@@ -224,7 +224,7 @@ chunk_loop(Ref, 0) ->
 chunk_loop(Ref, N) ->
     timer:sleep(10),
 
-    case elli_request:send_chunk(Ref, [<<"chunk">>, ?I2L(N)]) of
+    case elli_request:send_chunk(Ref, [<<"chunk">>, integer_to_binary(N)]) of
         ok              -> ok;
         {error, Reason} -> ?LOG_ERROR("error in sending chunk: ~p~n", [Reason])
     end,

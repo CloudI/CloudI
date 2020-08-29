@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -35,7 +35,11 @@
         output_type :: external | internal | list | binary,
         content_type_forced :: undefined | binary(),
         content_types_accepted :: undefined | binary:cp(),
+        content_security_policy :: undefined | binary(),
+        content_security_policy_report :: undefined | binary(),
         set_x_forwarded_for :: boolean(),
+        set_x_xss_protection :: boolean(),
+        set_x_content_type_options :: boolean(),
         status_code_timeout :: 100..599,
         query_get_format :: raw | text_pairs,
         use_host_prefix :: boolean(),

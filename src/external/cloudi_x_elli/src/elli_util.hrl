@@ -1,6 +1,3 @@
--define(I2L(I), integer_to_list(I)).
-
--define(B2I(I), list_to_integer(binary_to_list(I))).
 
 -ifdef(OTP_RELEASE).
 -include_lib("kernel/include/logger.hrl").

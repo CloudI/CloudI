@@ -1,7 +1,7 @@
 {application, elli,
  [
   {description, "Erlang web server for HTTP APIs"},
-  {vsn, "3.1.0"},
+  {vsn, "3.3.0"},
   {modules, [
              elli,
              elli_example_callback,
@@ -22,8 +22,6 @@
                   stdlib
                  ]},
   {env, []},
-
-  {maintainers, ["Eric Bailey", "Knut Nesheim", "Tristan Sloughter"]},
   {licenses, ["MIT"]},
   {links,
    [

@@ -25,7 +25,7 @@ handle(Req, Args) ->
 
 handle('GET', [<<"hello">>, <<"world">>], Req, _Args) ->
     Body    = <<"Hello World!">>,
-    Size    = list_to_binary(?I2L(size(Body))),
+    Size    = integer_to_binary(size(Body)),
     Headers = [{"Connection", "close"}, {"Content-Length", Size}],
     elli_http:send_response(Req, 200, Headers, Body),
     {close, <<>>};

@@ -11,6 +11,18 @@
 %%% 6 fields with year as the last field,
 %%% 7 fields with seconds as the first field or a supported macro
 %%% (@yearly, @annually, @monthly, @weekly, @daily, @midnight, @hourly).
+%%%
+%%% If the system clock is adjusted backwards, the same sequence of
+%%% events (described by the cron expression) occurs without redoing
+%%% events that have already occurred before the time change.  That means
+%%% the adjustment backwards only delays the next event's occurrence
+%%% by the adjustment amount.
+%%%
+%%% If the system clock is adjusted forwards, an event may occur immediately
+%%% (when the system clock change is detected) due to the event time becoming
+%%% a time in the past.  Each cron expression's next event will be a
+%%% a time in the future based on the updated current time
+%%% (events may have been skipped by adjusting the system clock forwards).
 %%% @end
 %%%
 %%% MIT License

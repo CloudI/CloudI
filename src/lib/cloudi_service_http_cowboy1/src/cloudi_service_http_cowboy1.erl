@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2012-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy1).
@@ -132,12 +132,31 @@
 -define(DEFAULT_MAX_KEEPALIVE,                      100). % requests in session
 -define(DEFAULT_MAX_REQUEST_LINE_LENGTH,           4096).
 -define(DEFAULT_OUTPUT,                        external).
--define(DEFAULT_CONTENT_TYPE,                 undefined). % force a content type
+-define(DEFAULT_CONTENT_TYPE,                 undefined).
+        % Provide the exact value to set if no
+        % response headers were provided.
+        % If this value is not set and no response headers
+        % were provided, the value is guessed based on the
+        % file extension.
 -define(DEFAULT_CONTENT_TYPES_ACCEPTED,       undefined). % see below:
         % Provide a list of content types strings
         % (list of integers or binaries) which must match the
         % HTTP request "Accept" header value
+-define(DEFAULT_CONTENT_SECURITY_POLICY,      undefined).
+        % Provide the exact value to set
+        % if it was not already provided and the content-type is text/html
+        % (e.g., "default-src 'self'").
+-define(DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY,
+                                              undefined).
+        % Provide the exact value to set
+        % if it was not already provided and the content-type is text/html
 -define(DEFAULT_SET_X_FORWARDED_FOR,              false). % if it is missing
+-define(DEFAULT_SET_X_XSS_PROTECTION,             false).
+        % If true, then use "0" for the value
+        % if it was not already provided and the content-type is text/html.
+-define(DEFAULT_SET_X_CONTENT_TYPE_OPTIONS,       false).
+        % If true, then use "nosniff" for the value
+        % if it was not already provided (when "content-type" is set).
 -define(DEFAULT_STATUS_CODE_TIMEOUT,                504). % "Gateway Timeout"
 -define(DEFAULT_QUERY_GET_FORMAT,                   raw). % see below:
         % If set to 'text_pairs' any GET query string is parsed and
@@ -247,7 +266,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {output,                        ?DEFAULT_OUTPUT},
         {content_type,                  ?DEFAULT_CONTENT_TYPE},
         {content_types_accepted,        ?DEFAULT_CONTENT_TYPES_ACCEPTED},
+        {content_security_policy,       ?DEFAULT_CONTENT_SECURITY_POLICY},
+        {content_security_policy_report_only,
+         ?DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY},
         {set_x_forwarded_for,           ?DEFAULT_SET_X_FORWARDED_FOR},
+        {set_x_xss_protection,          ?DEFAULT_SET_X_XSS_PROTECTION},
+        {set_x_content_type_options,    ?DEFAULT_SET_X_CONTENT_TYPE_OPTIONS},
         {status_code_timeout,           ?DEFAULT_STATUS_CODE_TIMEOUT},
         {query_get_format,              ?DEFAULT_QUERY_GET_FORMAT},
         {use_websockets,                ?DEFAULT_USE_WEBSOCKETS},
@@ -268,8 +292,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      WebSocketPing, WebSocketProtocol0, WebSocketNameUnique,
      WebSocketSubscriptions0, SSL, Compress,
      MaxConnections, MaxEmptyLines, MaxHeaderNameLength, MaxHeaderValueLength,
-     MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
-     OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
+     MaxHeaders, MaxKeepAlive, MaxRequestLineLength, OutputType,
+     ContentTypeForced0, ContentTypesAccepted0, ContentSecurityPolicy0,
+     ContentSecurityPolicyReport0,
+     SetXForwardedFor, SetXXSSProtection, SetXContentTypeOptions,
      StatusCodeTimeout, QueryGetFormat, UseWebSockets, UseSpdy,
      UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix,
      UpdateDelaySeconds] =
@@ -312,7 +338,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = (WebSocketConnectSync =:= undefined) orelse
            (is_list(WebSocketConnectSync) andalso
             is_integer(hd(WebSocketConnectSync))),
-    WebSocketConnect1 = if
+    WebSocketConnectN = if
         WebSocketConnectAsync1 =/= undefined,
         WebSocketConnectSync =:= undefined ->
             {async, WebSocketConnectAsync1};
@@ -336,7 +362,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = (WebSocketDisconnectSync =:= undefined) orelse
            (is_list(WebSocketDisconnectSync) andalso
             is_integer(hd(WebSocketDisconnectSync))),
-    WebSocketDisconnect1 = if
+    WebSocketDisconnectN = if
         WebSocketDisconnectAsync1 =/= undefined,
         WebSocketDisconnectSync =:= undefined ->
             {async, WebSocketDisconnectAsync1};
@@ -349,10 +375,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end,
     true = (WebSocketPing =:= undefined) orelse
            (is_integer(WebSocketPing) andalso (WebSocketPing > 0)),
-    WebSocketProtocol1 = cloudi_args_type:
+    WebSocketProtocolN = cloudi_args_type:
                          function_optional(WebSocketProtocol0, 2),
     true = is_boolean(WebSocketNameUnique),
-    WebSocketSubscriptions1 = if
+    WebSocketSubscriptionsN = if
         WebSocketSubscriptions0 == [] ->
             undefined;
         is_list(WebSocketSubscriptions0) ->
@@ -368,21 +394,45 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_integer(MaxRequestLineLength),
     true = (OutputType =:= external) orelse (OutputType =:= internal) orelse
            (OutputType =:= list) orelse (OutputType =:= binary),
-    ContentTypeForced1 = if
+    ContentTypeForcedN = if
         ContentTypeForced0 =:= undefined ->
             undefined;
-        is_list(ContentTypeForced0) ->
+        is_list(ContentTypeForced0),
+        is_integer(hd(ContentTypeForced0)) ->
             erlang:list_to_binary(ContentTypeForced0);
-        is_binary(ContentTypeForced0) ->
+        is_binary(ContentTypeForced0),
+        ContentTypeForced0 /= <<>> ->
             ContentTypeForced0
     end,
-    ContentTypesAccepted1 = if
+    ContentTypesAcceptedN = if
         ContentTypesAccepted0 =:= undefined ->
             undefined;
         is_list(ContentTypesAccepted0) ->
             content_types_accepted_pattern(ContentTypesAccepted0)
     end,
+    ContentSecurityPolicyN = if
+        ContentSecurityPolicy0 =:= undefined ->
+            undefined;
+        is_list(ContentSecurityPolicy0),
+        is_integer(hd(ContentSecurityPolicy0)) ->
+            erlang:list_to_binary(ContentSecurityPolicy0);
+        is_binary(ContentSecurityPolicy0),
+        ContentSecurityPolicy0 /= <<>> ->
+            ContentSecurityPolicy0
+    end,
+    ContentSecurityPolicyReportN = if
+        ContentSecurityPolicyReport0 =:= undefined ->
+            undefined;
+        is_list(ContentSecurityPolicyReport0),
+        is_integer(hd(ContentSecurityPolicyReport0)) ->
+            erlang:list_to_binary(ContentSecurityPolicyReport0);
+        is_binary(ContentSecurityPolicyReport0),
+        ContentSecurityPolicyReport0 /= <<>> ->
+            ContentSecurityPolicyReport0
+    end,
     true = is_boolean(SetXForwardedFor),
+    true = is_boolean(SetXXSSProtection),
+    true = is_boolean(SetXContentTypeOptions),
     true = is_integer(StatusCodeTimeout) andalso
            (StatusCodeTimeout > 100) andalso
            (StatusCodeTimeout =< 599),
@@ -420,18 +470,22 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         length_part_body_chunk = MultipartBodyLengthChunk,
         parts_destination_lock = MultipartDestinationLock,
         output_type = OutputType,
-        content_type_forced = ContentTypeForced1,
-        content_types_accepted = ContentTypesAccepted1,
+        content_type_forced = ContentTypeForcedN,
+        content_types_accepted = ContentTypesAcceptedN,
+        content_security_policy = ContentSecurityPolicyN,
+        content_security_policy_report = ContentSecurityPolicyReportN,
         set_x_forwarded_for = SetXForwardedFor,
+        set_x_xss_protection = SetXXSSProtection,
+        set_x_content_type_options = SetXContentTypeOptions,
         status_code_timeout = StatusCodeTimeout,
         query_get_format = QueryGetFormat,
         websocket_output_type = WebSocketOutputType,
-        websocket_connect = WebSocketConnect1,
-        websocket_disconnect = WebSocketDisconnect1,
+        websocket_connect = WebSocketConnectN,
+        websocket_disconnect = WebSocketDisconnectN,
         websocket_ping = WebSocketPing,
-        websocket_protocol = WebSocketProtocol1,
+        websocket_protocol = WebSocketProtocolN,
         websocket_name_unique = WebSocketNameUnique,
-        websocket_subscriptions = WebSocketSubscriptions1,
+        websocket_subscriptions = WebSocketSubscriptionsN,
         use_websockets = UseWebSockets,
         use_host_prefix = UseHostPrefix,
         use_client_ip_prefix = UseClientIpPrefix,

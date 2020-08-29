@@ -13,7 +13,7 @@
 %% Originally from https://github.com/ninenines/ranch/pull/41/files
 %%
 %% @end
--spec sendfile(file:fd(), elli_tcp:socket(),
+-spec sendfile(file:fd(), inet:socket() | ssl:sslsocket(),
         non_neg_integer(), non_neg_integer(), sendfile_opts())
     -> {ok, non_neg_integer()} | {error, atom()}.
 sendfile(RawFile, Socket, Offset, Bytes, Opts) ->
@@ -45,7 +45,7 @@ chunk_size(Opts) ->
             16#1FFF
     end.
 
--spec sendfile_loop(elli_tcp:socket(), file:fd(), non_neg_integer(),
+-spec sendfile_loop(inet:socket() | ssl:sslsocket(), file:fd(), non_neg_integer(),
         non_neg_integer(), pos_integer())
     -> {ok, non_neg_integer()} | {error, term()}.
 sendfile_loop(_Socket, _RawFile, Sent, Sent, _ChunkSize)

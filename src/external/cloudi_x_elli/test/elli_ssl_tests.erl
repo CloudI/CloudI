@@ -27,15 +27,15 @@ get_timing_value(Key) ->
 %%% Tests
 
 hello_world() ->
-    Response = hackney:request(get, "https://localhost:3443/hello/world",
-                               [], <<>>, [insecure]),
+    Response = hackney:get("https://localhost:3443/hello/world",
+                           [], <<>>, [insecure]),
     ?assertMatch(200, status(Response)),
     ?assertMatch({ok, 200, _, _}, Response).
 
 chunked() ->
     Expected = <<"chunk10chunk9chunk8chunk7chunk6chunk5chunk4chunk3chunk2chunk1">>,
 
-    Response = hackney:get("https://localhost:3443/chunked"),
+    Response = hackney:get("https://localhost:3443/chunked", [], <<>>, [insecure]),
 
     ?assertMatch(200, status(Response)),
     ?assertEqual([{<<"Connection">>, <<"Keep-Alive">>},
@@ -44,7 +44,7 @@ chunked() ->
     ?assertMatch(Expected, body(Response)).
 
 sendfile() ->
-    Response       = hackney:get("https://localhost:3443/sendfile"),
+    Response       = hackney:get("https://localhost:3443/sendfile", [], <<>>, [insecure]),
     F              = ?README,
     {ok, Expected} = file:read_file(F),
 

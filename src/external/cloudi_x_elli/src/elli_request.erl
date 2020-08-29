@@ -34,6 +34,7 @@
         , get_range/1
         , to_proplist/1
         , is_request/1
+        , uri_decode/1
         ]).
 
 -export_type([http_range/0]).
@@ -65,19 +66,13 @@ host(#req{host = Host})          -> Host.
 %% @doc Return the `port'.
 port(#req{port = Port})          -> Port.
 
-peer(#req{socket = Socket} = Req) ->
-    case get_header(<<"X-Forwarded-For">>, Req, undefined) of
-        undefined ->
-            case elli_tcp:peername(Socket) of
-                {ok, {Address, _}} ->
-                    list_to_binary(inet_parse:ntoa(Address));
-                {error, _} ->
-                    undefined
-            end;
-        Ip ->
-            Ip
+peer(#req{socket = Socket} = _Req) ->
+    case elli_tcp:peername(Socket) of
+        {ok, {Address, _}} ->
+            list_to_binary(inet_parse:ntoa(Address));
+        {error, _} ->
+            undefined
     end.
-
 
 %% @equiv proplists:get_value(Key, Headers)
 get_header(Key, #req{headers = Headers}) ->
@@ -102,6 +97,7 @@ get_arg_decoded(Key, #req{} = Req) ->
 get_arg_decoded(Key, #req{args = Args}, Default) ->
     case proplists:get_value(Key, Args) of
         undefined    -> Default;
+        true         -> true;
         EncodedValue ->
             uri_decode(EncodedValue)
     end.
@@ -132,6 +128,7 @@ post_arg_decoded(Key, #req{} = Req) ->
 post_arg_decoded(Key, #req{} = Req, Default) ->
     case proplists:get_value(Key, body_qs(Req)) of
         undefined    -> Default;
+        true         -> true;
         EncodedValue ->
             uri_decode(EncodedValue)
     end.
@@ -196,7 +193,7 @@ parse_range_set(<<ByteRangeSet/binary>>) ->
 -spec parse_range(Bin::binary()) -> http_range() | parse_error.
 parse_range(<<$-, SuffixBin/binary>>) ->
     %% suffix-byte-range
-    try {suffix, ?B2I(SuffixBin)}
+    try {suffix, binary_to_integer(SuffixBin)}
     catch
         error:badarg -> parse_error
     end;
@@ -204,13 +201,15 @@ parse_range(<<ByteRange/binary>>) ->
     case binary:split(ByteRange, <<"-">>) of
         %% byte-range without last-byte-pos
         [FirstBytePosBin, <<>>] ->
-            try {offset, ?B2I(FirstBytePosBin)}
+            try {offset, binary_to_integer(FirstBytePosBin)}
             catch
                 error:badarg -> parse_error
             end;
         %% full byte-range
         [FirstBytePosBin, LastBytePosBin] ->
-            try {bytes, ?B2I(FirstBytePosBin), ?B2I(LastBytePosBin)}
+            try {bytes,
+                 binary_to_integer(FirstBytePosBin),
+                 binary_to_integer(LastBytePosBin)}
             catch
                 error:badarg -> parse_error
             end;
@@ -273,27 +272,24 @@ is_ref_alive(Ref) ->
 is_request(#req{}) -> true;
 is_request(_)      -> false.
 
+uri_decode(Bin) ->
+    case binary:match(Bin, [<<"+">>, <<"%">>]) of
+        nomatch -> Bin;
+        {Pos, _} ->
+            <<Prefix:Pos/binary, Rest/binary>> = Bin,
+            uri_decode(Rest, Prefix)
+    end.
 
--ifdef(binary_http_uri).
-uri_decode(<<$+, Rest/binary>>) ->
-    <<$ , (uri_decode(Rest))/binary>>;
-uri_decode(<<$%, Hex:2/bytes, Rest/binary>>) ->
-    <<(binary_to_integer(Hex, 16)), (uri_decode(Rest))/binary>>;
-uri_decode(<<C, Rest/binary>>) ->
-    <<C, (uri_decode(Rest))/binary>>;
-uri_decode(<<>>) ->
-    <<>>.
--else.
-uri_decode(<<$+, Rest/binary>>) ->
-    <<$ , (uri_decode(Rest))/binary>>;
-uri_decode(<<$%, HexA, HexB, Rest/binary>>) ->
-    <<(hex_to_int(HexA)*16+hex_to_int(HexB)), (uri_decode(Rest))/binary>>;
-uri_decode(<<C, Rest/binary>>) ->
-    <<C, (uri_decode(Rest))/binary>>;
-uri_decode(<<>>) ->
-    <<>>.
+uri_decode(<<>>, Acc) -> Acc;
+uri_decode(<<$+, Rest/binary>>, Acc) ->
+    uri_decode(Rest, <<Acc/binary, $\s>>);
+uri_decode(<<$%, H, L, Rest/binary>>, Acc) ->
+    uri_decode(Rest, <<Acc/binary, (hex_to_int(H)):4, (hex_to_int(L)):4>>);
+uri_decode(<<C, Rest/binary>>, Acc) ->
+    uri_decode(Rest, <<Acc/binary, C>>).
 
-hex_to_int(X) when X >= $0, X =< $9 -> X-$0;
-hex_to_int(X) when X >= $a, X =< $f -> X-$a+10;
-hex_to_int(X) when X >= $A, X =< $F -> X-$A+10.
--endif.
+-compile({inline, [hex_to_int/1]}).
+
+hex_to_int(X) when X >= $0, X =< $9 -> X - $0;
+hex_to_int(X) when X >= $a, X =< $f -> X - ($a-10);
+hex_to_int(X) when X >= $A, X =< $F -> X - ($A-10).

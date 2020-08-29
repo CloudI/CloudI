@@ -78,8 +78,8 @@ Erlang `elli`
 `Erlang HTTP Server`
 
 - `https://github.com/elli-lib/elli`
-- `commit 752e0f516d4be4be5f41810901362fbca77dde3c (3.1.0)`
-- `Sun Dec  2 00:06:04 UTC 2018`
+- `commit 968afee385f46c053fd46858713261db7dc03af4 (3.3.0)`
+- `Sun Aug 23 02:07:36 UTC 2020`
 - `MIT`
 
 Erlang `emysql`
