@@ -3180,7 +3180,7 @@ handle_info({'DOWNS', PidReasons}, State) ->
 
 handle_info({nodeup, Node, _InfoList},
             #state{node_name = NodeNameLocal} = State) ->
-    Ignore = ignore_node(Node, NodeNameLocal),
+    Ignore = (Node =:= node()) orelse ignore_node(Node, NodeNameLocal),
     if
         Ignore =:= true ->
             ok;

@@ -559,30 +559,6 @@
   Apache License 2.0
 
 ----------------------------------------------------------------- Apache License
-(Erlang) lib/cpg/src/cpg.erl
-
- Based on the pg2 module in the OTP kernel application
- (lib/kernel-x.x.x/src/pg2.erl)
- The pg2 module copyright is below:
- %CopyrightBegin%
-
- Copyright Ericsson AB 1997-2013. All Rights Reserved.
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-
- %CopyrightEnd%
-
------------------------------------------------------------------ Apache License
 (Erlang) lib/pqueue/src/pqueue4.erl
 
  queue_remove_unique/2 is based on queue:filter/2
@@ -1038,7 +1014,6 @@
 (as referenced by (Erlang) external/rebar)
 (as referenced by (Erlang) external/cloudi_x_setup)
 (as referenced by (Erlang) external/cloudi_x_unicode_util_compat)
-(as referenced by (Erlang) lib/cpg/src/cpg.erl)
 (as referenced by (Erlang) lib/pqueue/src/pqueue4.erl)
 (as referenced by (Erlang) lib/quickrand/src/random_wh06_int.erl)
 (as referenced by (Erlang) lib/quickrand/src/random_wh82.erl)
