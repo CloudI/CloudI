@@ -83,7 +83,7 @@
 
 -define(DEFAULT_NAME,                          "funnel").
         % Funnel name used for incoming service requests
-        % (Prefix ++ FunnelName ++ "/*")
+        % (Prefix ++ FunnelName ++ "*")
 -define(DEFAULT_NODE_COUNT,                           2).
         % Count of connected nodes using the funnel service
         % with the same name argument.
