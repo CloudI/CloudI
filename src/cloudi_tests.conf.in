@@ -313,6 +313,12 @@
         [{request_timeout_immediate_max, limit_min},
          {response_timeout_immediate_max, limit_min}]},
     {internal,
+        "/",
+        cloudi_service_funnel,
+        [{name, "funnel"}],
+        immediate_closest,
+        5000, 5000, 5000, undefined, undefined, 4, 5, 300, []},
+    {internal,
         "/byzantine",
         cloudi_service_quorum,
         [{quorum, byzantine}],
@@ -421,8 +427,8 @@
     {internal,
         "/tests/count/",
         cloudi_service_test_count,
-        [],
-        none, 5000, 5000, 5000, undefined, undefined, 4, 5, 300,
+        [{mode, crdt}],
+        immediate_closest, 5000, 5000, 5000, undefined, undefined, 4, 5, 300,
         []},
 @CONFIG_TESTS_GO_HTTP_REQ@
 @CONFIG_TESTS_HASKELL_HTTP_REQ@

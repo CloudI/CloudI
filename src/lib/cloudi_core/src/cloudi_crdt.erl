@@ -20,8 +20,9 @@
 %%%
 %%% The cloudi_crdt functions that may be called within
 %%% cloudi_service_init/4 are events_subscribe/3, events_subscribe/4,
-%%% events_clear/3, new/1 and new/2.  A CloudI service that uses
-%%% cloudi_crdt should have a destination refresh method that is immediate.
+%%% events_subscriptions/3, events_clear/2, events_clear/3, new/1 and new/2.
+%%% A CloudI service that uses cloudi_crdt should have a
+%%% destination refresh method that is immediate.
 %%%
 %%% The papers related to this implementation of the POLog CRDT are:
 %%%
@@ -53,7 +54,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -74,8 +75,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2017-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_crdt).
@@ -95,6 +96,8 @@
          decr_id/5,
          events_subscribe/3,
          events_subscribe/4,
+         events_subscriptions/3,
+         events_clear/2,
          events_clear/3,
          find/3,
          fold/4,
@@ -120,6 +123,10 @@
          update_assign/7,
          update_assign_id/7,
          update_assign_id/8,
+         update_clear/5,
+         update_clear/6,
+         update_clear_id/6,
+         update_clear_id/7,
          values/2,
          zero/3,
          zero_id/4]).
@@ -164,6 +171,13 @@
                     ModuleVersion :: list(),
                     Module :: module(), Function :: atom(),
                     Argument1 :: any()} |
+    {update_clear,  Id :: event_id(), Key :: key(),
+                    ModuleVersion :: list(),
+                    Module :: module(), Function :: atom()} |
+    {update_clear,  Id :: event_id(), Key :: key(),
+                    ModuleVersion :: list(),
+                    Module :: module(), Function :: atom(),
+                    Argument1 :: any()} |
     {put,           Id :: event_id(), Key :: key(), Value :: value()} |
     {clear,         Id :: event_id(), Key :: key()} |
     {clear_all,     Id :: event_id()}.
@@ -200,9 +214,15 @@
 % Events are changes to data()
 -type events() :: #{key() := list(event_type())}.
 
+% Initial data function to process data received after a restart
+% (data that won't be provided in events
+%  because the data is already stored remotely)
+-type initial_data_function() :: fun((data()) -> any()).
+
 -record(cloudi_crdt,
     {
         service_name_full :: cloudi_service:service_name(),
+        initial_data_function :: undefined | initial_data_function(),
         clean_vclocks_interval :: seconds(),
         clean_vclocks_failure :: number(),
         queue :: cloudi_queue:state(),
@@ -217,10 +237,15 @@
         bootstrap_requests = 0 :: non_neg_integer(),
         polog = [] :: polog(),
         data = #{} :: data(),
-        events = #{} :: events()
+        events = #{} :: events(),
+        events_any = [] :: list(event_type())
     }).
 
 -define(DEFAULT_SERVICE_NAME,                    "crdt").
+-define(DEFAULT_INITIAL_DATA_FUNCTION,        undefined).
+        % Provide an arity-1 function to read internal Erlang map data
+        % received after a restart before events are processed
+        % (for data that will not be present in events).
 -define(DEFAULT_CLEAN_VCLOCKS,                       60). % seconds
         % How often to check for the disappearance of CloudI service
         % processes (due to a process restart, netsplit, etc.).
@@ -267,6 +292,7 @@
 -type event_id() :: cloudi_service:trans_id() | any().
 -type options() ::
     list({service_name, string()} |
+         {initial_data_function, initial_data_function() | undefined} |
          {clean_vclocks, seconds()} |
          {clean_vclocks_failure, float() | 1..100} |
          {retry, non_neg_integer()} |
@@ -478,6 +504,37 @@ events_subscribe(Dispatcher, Key, EventTypes,
     when is_pid(Dispatcher) ->
     true = cloudi_lists:member_all(EventTypes, ?EVENT_TYPES),
     State#cloudi_crdt{events = maps:put(Key, lists:usort(EventTypes), Events)}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscriptions on all keys to specific events from the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec events_subscriptions(Dispatcher :: cloudi_service:dispatcher(),
+                           EventTypes :: list(event_type()),
+                           State :: state()) ->
+    state().
+
+events_subscriptions(Dispatcher, EventTypes, State)
+    when is_pid(Dispatcher) ->
+    true = cloudi_lists:member_all(EventTypes, ?EVENT_TYPES),
+    State#cloudi_crdt{events_any = lists:usort(EventTypes)}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Clear all event subscriptions from the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec events_clear(Dispatcher :: cloudi_service:dispatcher(),
+                   State :: state()) ->
+    state().
+
+events_clear(Dispatcher, State)
+    when is_pid(Dispatcher) ->
+    State#cloudi_crdt{events = #{},
+                      events_any = []}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -764,6 +821,7 @@ new(Dispatcher, Options)
     when is_pid(Dispatcher), is_list(Options) ->
     Defaults = [
         {service_name,                  ?DEFAULT_SERVICE_NAME},
+        {initial_data_function,         ?DEFAULT_INITIAL_DATA_FUNCTION},
         {clean_vclocks,                 ?DEFAULT_CLEAN_VCLOCKS},
         {clean_vclocks_failure,         ?DEFAULT_CLEAN_VCLOCKS_FAILURE},
         {retry,                         ?DEFAULT_RETRY},
@@ -771,7 +829,7 @@ new(Dispatcher, Options)
         {timeout_default,               ?DEFAULT_TIMEOUT_DEFAULT},
         {priority_default,              ?DEFAULT_PRIORITY_DEFAULT},
         {priority_default_offset,       ?DEFAULT_PRIORITY_DEFAULT_OFFSET}],
-    [ServiceName, CleanIntervalSeconds, CleanFailure,
+    [ServiceName, InitialDataF, CleanIntervalSeconds, CleanFailure,
      Retry, RetryDelay, TimeoutDefault,
      PriorityDefault0, PriorityDefaultOffset] =
         cloudi_proplists:take_values(Defaults, Options),
@@ -780,6 +838,8 @@ new(Dispatcher, Options)
     ServiceNameFull = Prefix ++ ServiceName,
     false = cloudi_x_trie:is_pattern2(ServiceNameFull),
     true = cloudi_service:process_count_min(Dispatcher) > 1,
+    true = (InitialDataF =:= undefined) orelse
+           is_function(InitialDataF, 1),
     true = is_integer(CleanIntervalSeconds) andalso
            (CleanIntervalSeconds >= 1) andalso
            (CleanIntervalSeconds =< 4294967),
@@ -818,6 +878,7 @@ new(Dispatcher, Options)
     ok = cloudi_service:subscribe(Dispatcher, ServiceName),
     WordSize = erlang:system_info(wordsize),
     #cloudi_crdt{service_name_full = ServiceNameFull,
+                 initial_data_function = InitialDataF,
                  clean_vclocks_interval = CleanIntervalSeconds,
                  clean_vclocks_failure = CleanFailure,
                  queue = Queue,
@@ -1091,6 +1152,116 @@ update_assign_id(Dispatcher, Key, Value, Module, Function, Argument1, Id, State)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Update a value or clear the value in the CloudI CRDT.===
+%% Function Module:Function/1 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% To clear the value, the function must return undefined.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_clear(Dispatcher :: cloudi_service:dispatcher(),
+                   Key :: key(),
+                   Module :: module(),
+                   Function :: atom(),
+                   State :: state()) ->
+    state().
+
+update_clear(Dispatcher, Key, Module, Function, State) ->
+    update_clear_id(Dispatcher, Key,
+                    Module, Function, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value or clear the value in the CloudI CRDT.===
+%% Function Module:Function/2 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% To clear the value, the function must return undefined.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_clear(Dispatcher :: cloudi_service:dispatcher(),
+                   Key :: key(),
+                   Module :: module(),
+                   Function :: atom(),
+                   Argument1 :: any(),
+                   State :: state()) ->
+    state().
+
+update_clear(Dispatcher, Key, Module, Function, Argument1, State) ->
+    update_clear_id(Dispatcher, Key,
+                    Module, Function, Argument1, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value or clear the value in the CloudI CRDT with an event_id.===
+%% Function Module:Function/1 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% To clear the value, the function must return undefined.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_clear_id(Dispatcher :: cloudi_service:dispatcher(),
+                      Key :: key(),
+                      Module :: module(),
+                      Function :: atom(),
+                      Id :: event_id(),
+                      State :: state()) ->
+    state().
+
+update_clear_id(Dispatcher, Key, Module, Function, Id, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 1),
+    event_local({update_clear, Id, Key,
+                 ModuleVersion, Module, Function},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value or clear the value in the CloudI CRDT with an event_id.===
+%% Function Module:Function/2 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% To clear the value, the function must return undefined.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_clear_id(Dispatcher :: cloudi_service:dispatcher(),
+                      Key :: key(),
+                      Module :: module(),
+                      Function :: atom(),
+                      Argument1 :: any(),
+                      Id :: event_id(),
+                      State :: state()) ->
+    state().
+
+update_clear_id(Dispatcher, Key, Module, Function, Argument1, Id, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 2),
+    event_local({update_clear, Id, Key,
+                 ModuleVersion, Module, Function, Argument1},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Get all values in the CloudI CRDT.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -1226,9 +1397,9 @@ event_local(Operation,
     {{vclock, node_id(), vclock()} | vclock_updated, state()}.
 
 event_remote(NodeIdRemote, VClockRemote, Operation,
-            #cloudi_crdt{service_name_full = ServiceNameFull,
-                         node_id = NodeId,
-                         polog_mode = bootstrap} = State, Dispatcher) ->
+             #cloudi_crdt{service_name_full = ServiceNameFull,
+                          node_id = NodeId,
+                          polog_mode = bootstrap} = State, Dispatcher) ->
     case bootstrap_local_check(NodeIdRemote, VClockRemote, Operation,
                                State, Dispatcher) of
         {true, #cloudi_crdt{queue = Queue,
@@ -1253,7 +1424,8 @@ event_remote(NodeIdRemote, VClockRemote0, Operation,
                           polog_mode = normal,
                           polog = POLog,
                           data = Data,
-                          events = Events} = State, _) ->
+                          events = Events,
+                          events_any = EventsAny} = State, _) ->
     % A remote write operation is received and added to the POLog
     % (from a CloudI service request sent by the broadcast in event_local/3).
     % The current vclock() is provided as a response for this
@@ -1269,7 +1441,7 @@ event_remote(NodeIdRemote, VClockRemote0, Operation,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
     {POLogNew, DataNew} = polog_stable(POLogNext, Data,
-                                       VClockMin, Events, NodeId),
+                                       VClockMin, Events, EventsAny, NodeId),
     {{vclock, NodeId, VClockN},
      State#cloudi_crdt{vclock = VClockN,
                        vclocks = VClocksNew,
@@ -1306,7 +1478,8 @@ event_local_vclock(NodeIdRemote, VClockRemote0,
                                 polog_mode = normal,
                                 polog = POLog,
                                 data = Data,
-                                events = Events} = State,
+                                events = Events,
+                                events_any = EventsAny} = State,
                    Dispatcher) ->
     % Update the vclock() from the local operation broadcast response
     % that was provided by event_remote/4.
@@ -1332,7 +1505,7 @@ event_local_vclock(NodeIdRemote, VClockRemote0,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
     {POLogNew, DataNew} = polog_stable(POLog, Data,
-                                       VClockMin, Events, NodeId),
+                                       VClockMin, Events, EventsAny, NodeId),
     State#cloudi_crdt{queue = QueueNew,
                       vclock = VClockN,
                       vclocks = VClocksNew,
@@ -1361,7 +1534,8 @@ event_remote_vclock(NodeIdRemote, VClockRemote0,
                                  polog_mode = normal,
                                  polog = POLog,
                                  data = Data,
-                                 events = Events} = State,
+                                 events = Events,
+                                 events_any = EventsAny} = State,
                     Dispatcher) ->
     % The vclock() broadcasted from event_local_vclock/4 updates the
     % the remote CloudI service process here.  The updated vclock() is
@@ -1388,7 +1562,7 @@ event_remote_vclock(NodeIdRemote, VClockRemote0,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
     {POLogNew, DataNew} = polog_stable(POLog, Data,
-                                       VClockMin, Events, NodeId),
+                                       VClockMin, Events, EventsAny, NodeId),
     {{vclock_updated, NodeId, VClockN},
      State#cloudi_crdt{queue = QueueNew,
                        vclock = VClockN,
@@ -1412,7 +1586,8 @@ event_local_vclock_updated(NodeIdRemote, VClockRemote0,
                                         polog_mode = normal,
                                         polog = POLog,
                                         data = Data,
-                                        events = Events} = State) ->
+                                        events = Events,
+                                        events_any = EventsAny} = State) ->
     % Update the vclock() from the local vclock() broadcast response
     % that was provided by event_remote_vclock/4.
 
@@ -1424,7 +1599,7 @@ event_local_vclock_updated(NodeIdRemote, VClockRemote0,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
     {POLogNew, DataNew} = polog_stable(POLog, Data,
-                                       VClockMin, Events, NodeId),
+                                       VClockMin, Events, EventsAny, NodeId),
     State#cloudi_crdt{vclock = VClockN,
                       vclocks = VClocksNew,
                       polog = POLogNew,
@@ -1468,7 +1643,6 @@ bootstrap_local(NodeIdRemote, VClockRemote,
                             State :: state(),
                             Dispatcher :: cloudi_service:dispatcher()) ->
     {boolean(), state()}.
-
 
 bootstrap_local_check(NodeIdRemote, VClockRemote, Operation,
                       #cloudi_crdt{service_name_full = ServiceNameFull,
@@ -1545,7 +1719,6 @@ bootstrap_update_start([PatternPid | PatternPids], Count, BootstrapNodeId,
                               State :: state()) ->
     state().
 
-
 bootstrap_update_finish(NodeIdRemote,
                         VClockRemote,
                         VClocksRemote,
@@ -1568,7 +1741,8 @@ bootstrap_update_finish(NodeIdRemote,
 -spec bootstrap_update_finished(State :: state()) ->
     state().
 
-bootstrap_update_finished(#cloudi_crdt{clean_vclocks_interval = CleanInterval,
+bootstrap_update_finished(#cloudi_crdt{initial_data_function = InitialDataF,
+                                       clean_vclocks_interval = CleanInterval,
                                        node_id = NodeId,
                                        node_ids = NodeIds,
                                        vclock = VClock0,
@@ -1587,6 +1761,13 @@ bootstrap_update_finished(#cloudi_crdt{clean_vclocks_interval = CleanInterval,
             StateNew#cloudi_crdt{polog_mode = normal};
         {ok, VClockRemote, VClocks, POLog, Data} ->
             % Use CRDT state from the NodeIdRemoteBlocked process.
+            if
+                InitialDataF =:= undefined ->
+                    ok;
+                is_function(InitialDataF, 1) ->
+                    _ = InitialDataF(Data),
+                    ok
+            end,
             VClockN = vclock_merge(VClockRemote,
                                    vclock_increment(NodeId, VClock0)), % event
             StateNew = clean_vclocks_store(StateNext#cloudi_crdt{
@@ -1675,25 +1856,26 @@ polog_effect(Operation, VClock, POLog0) ->
                    Data :: data(),
                    VClockMin :: vclock(),
                    Events :: events(),
+                   EventsAny :: list(event_type()),
                    NodeId :: node_id()) ->
     {polog(), data()}.
 
-polog_stable(POLog, Data, VClockMin, Events, NodeId) ->
+polog_stable(POLog, Data, VClockMin, Events, EventsAny, NodeId) ->
     polog_stable(lists:reverse(POLog), [], Data,
-                 VClockMin, Events, NodeId).
+                 VClockMin, Events, EventsAny, NodeId).
 
-polog_stable([], POLogNew, Data, _, _, _) ->
+polog_stable([], POLogNew, Data, _, _, _, _) ->
     {POLogNew, Data};
 polog_stable([{VClock, Operation} = POLogValue | POLogOld], POLogNew, Data,
-             VClockMin, Events, {_, Service} = NodeId) ->
+             VClockMin, Events, EventsAny, {_, Service} = NodeId) ->
     case vclock_less_than(VClock, VClockMin) of
         true ->
             polog_stable(POLogOld, POLogNew,
-                         write(Operation, Data, Events, Service),
-                         VClockMin, Events, NodeId);
+                         write(Operation, Data, Events, EventsAny, Service),
+                         VClockMin, Events, EventsAny, NodeId);
         false ->
             polog_stable(POLogOld, [POLogValue | POLogNew], Data,
-                         VClockMin, Events, NodeId)
+                         VClockMin, Events, EventsAny, NodeId)
     end.
 
 -spec polog_duplicate_operation(VClock :: vclock(),
@@ -1749,6 +1931,13 @@ polog_redundancy_relation({update_assign, _, _, _, _, _, _}, _, POLog) ->
     % (similar to update and assign when used separately).
     {add, POLog};
 polog_redundancy_relation({update_assign, _, _, _, _, _, _, _}, _, POLog) ->
+    {add, POLog};
+polog_redundancy_relation({update_clear, _, _, _, _, _}, _, POLog) ->
+    % update_clear is a combination of update and clear, it is not a put
+    % that replaces a value without depending on previous values, so it is
+    % unable to be redundant
+    {add, POLog};
+polog_redundancy_relation({update_clear, _, _, _, _, _, _}, _, POLog) ->
     {add, POLog};
 polog_redundancy_relation({put, _, Key, _}, VClock, POLog) ->
     % only removes the first redundant operation to prevent memory growth
@@ -1821,24 +2010,25 @@ read(values, Data) ->
 -spec write(Operation :: operation_write(),
             Data :: data(),
             Events :: events(),
+            EventsAny :: list(event_type()),
             Service :: cloudi_service:source()) ->
     DataNew :: data().
 
 write({assign, Id, Key, ValueNew},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     event(assign, Id, Key, [Data, ValueNew],
-          Events, Service),
+          Events, EventsAny, Service),
     maps:update_with(Key, fun(ValueOld) ->
         ValueOld
     end, ValueNew, Data);
 write({incr, Id, Key, Value},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     try maps:update_with(Key, fun(ValueOld) ->
             if
                 is_number(ValueOld) ->
                     ValueNew = ValueOld + Value,
                     event(incr, Id, Key, [ValueOld, ValueNew],
-                          Events, Service),
+                          Events, EventsAny, Service),
                     ValueNew;
                 true ->
                     ValueOld
@@ -1849,13 +2039,13 @@ write({incr, Id, Key, Value},
             Data
     end;
 write({decr, Id, Key, Value},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     try maps:update_with(Key, fun(ValueOld) ->
             if
                 is_number(ValueOld) ->
                     ValueNew = ValueOld - Value,
                     event(decr, Id, Key, [ValueOld, ValueNew],
-                          Events, Service),
+                          Events, EventsAny, Service),
                     ValueNew;
                 true ->
                     ValueOld
@@ -1866,12 +2056,12 @@ write({decr, Id, Key, Value},
             Data
     end;
 write({update, Id, Key, ModuleVersion, Module, Function},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 1),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(ValueOld),
             event(update, Id, Key, [ValueOld, ValueNew],
-                  Events, Service),
+                  Events, EventsAny, Service),
             ValueNew
         end, Data)
     catch
@@ -1879,12 +2069,12 @@ write({update, Id, Key, ModuleVersion, Module, Function},
             Data
     end;
 write({update, Id, Key, ModuleVersion, Module, Function, Argument1},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 2),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(Argument1, ValueOld),
             event(update, Id, Key, [ValueOld, ValueNew],
-                  Events, Service),
+                  Events, EventsAny, Service),
             ValueNew
         end, Data)
     catch
@@ -1893,89 +2083,149 @@ write({update, Id, Key, ModuleVersion, Module, Function, Argument1},
     end;
 write({update_assign, Id, Key, Value,
        ModuleVersion, Module, Function},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 1),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(ValueOld),
             event(update, Id, Key, [ValueOld, ValueNew],
-                  Events, Service),
+                  Events, EventsAny, Service),
             ValueNew
         end, Data)
     catch
         error:{badkey, Key} ->
             event(assign, Id, Key, [Value],
-                  Events, Service),
+                  Events, EventsAny, Service),
             maps:put(Key, Value, Data)
     end;
 write({update_assign, Id, Key, Value,
        ModuleVersion, Module, Function, Argument1},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 2),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(Argument1, ValueOld),
             event(update, Id, Key, [ValueOld, ValueNew],
-                  Events, Service),
+                  Events, EventsAny, Service),
             ValueNew
         end, Data)
     catch
         error:{badkey, Key} ->
             event(assign, Id, Key, [Value],
-                  Events, Service),
+                  Events, EventsAny, Service),
             maps:put(Key, Value, Data)
     end;
+write({update_clear, Id, Key,
+       ModuleVersion, Module, Function},
+      Data, Events, EventsAny, Service) ->
+    ok = update_remote_valid(ModuleVersion, Module, Function, 1),
+    try maps:update_with(Key, fun(ValueOld) ->
+            case Module:Function(ValueOld) of
+                undefined ->
+                    erlang:exit(clear);
+                ValueNew ->
+                    event(update, Id, Key, [ValueOld, ValueNew],
+                          Events, EventsAny, Service),
+                    ValueNew
+            end
+        end, Data)
+    catch
+        exit:clear ->
+            event(clear, Id, Key, [Data],
+                  Events, EventsAny, Service),
+            maps:remove(Key, Data);
+        error:{badkey, Key} ->
+            Data
+    end;
+write({update_clear, Id, Key,
+       ModuleVersion, Module, Function, Argument1},
+      Data, Events, EventsAny, Service) ->
+    ok = update_remote_valid(ModuleVersion, Module, Function, 2),
+    try maps:update_with(Key, fun(ValueOld) ->
+            case Module:Function(Argument1, ValueOld) of
+                undefined ->
+                    erlang:exit(clear);
+                ValueNew ->
+                    event(update, Id, Key, [ValueOld, ValueNew],
+                          Events, EventsAny, Service),
+                    ValueNew
+            end
+        end, Data)
+    catch
+        exit:clear ->
+            event(clear, Id, Key, [Data],
+                  Events, EventsAny, Service),
+            maps:remove(Key, Data);
+        error:{badkey, Key} ->
+            Data
+    end;
 write({put, Id, Key, ValueNew},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     event(put, Id, Key, [Data, ValueNew],
-          Events, Service),
+          Events, EventsAny, Service),
     maps:put(Key, ValueNew, Data);
 write({clear, Id, Key},
-      Data, Events, Service) ->
+      Data, Events, EventsAny, Service) ->
     event(clear, Id, Key, [Data],
-          Events, Service),
+          Events, EventsAny, Service),
     maps:remove(Key, Data);
 write({clear_all, Id},
-      Data, Events, Service) ->
-    event(clear, Id, [Data],
-          Events, Service),
+      Data, Events, EventsAny, Service) ->
+    events(clear, Id, maps:keys(Data), [Data],
+           Events, EventsAny, Service),
     maps:new().
-
--spec event(EventType :: clear,
-            EventId :: event_id(),
-            EventData :: list(data()),
-            Events :: events(),
-            Service :: cloudi_service:source()) ->
-    ok.
-
-event(EventType, EventId, EventData, Events, Service) ->
-    maps:fold(fun(Key, EventTypes, _) ->
-        case lists:member(EventType, EventTypes) of
-            true ->
-                event_send(EventType, EventId, Key, EventData, Service);
-            false ->
-                ok
-        end
-    end, ok, Events),
-    ok.
 
 -spec event(EventType :: event_type(),
             EventId :: event_id(),
             Key :: key(),
             EventData :: list(data() | value()),
             Events :: events(),
+            EventsAny :: list(event_type()),
             Service :: cloudi_service:source()) ->
     ok.
 
-event(EventType, EventId, Key, EventData, Events, Service) ->
-    case maps:find(Key, Events) of
-        {ok, EventTypes} ->
-            case lists:member(EventType, EventTypes) of
-                true ->
-                    event_send(EventType, EventId, Key, EventData, Service);
-                false ->
-                    ok
-            end;
-        error ->
+event(EventType, EventId, Key, EventData, Events, EventsAny, Service) ->
+    Send = case lists:member(EventType, EventsAny) of
+        true ->
+            true;
+        false ->
+            case maps:find(Key, Events) of
+                {ok, EventTypes} ->
+                    lists:member(EventType, EventTypes);
+                error ->
+                    false
+            end
+    end,
+    if
+        Send =:= true ->
+            event_send(EventType, EventId, Key, EventData, Service);
+        Send =:= false ->
             ok
+    end,
+    ok.
+
+-spec events(EventType :: clear,
+             EventId :: event_id(),
+             Keys :: list(key()),
+             EventData :: list(data()),
+             Events :: events(),
+             EventsAny :: list(event_type()),
+             Service :: cloudi_service:source()) ->
+    ok.
+
+events(EventType, EventId, Keys, EventData, Events, EventsAny, Service) ->
+    case lists:member(EventType, EventsAny) of
+        true ->
+            lists:foreach(fun(Key) ->
+                event_send(EventType, EventId, Key, EventData, Service)
+            end, Keys);
+        false ->
+            maps:fold(fun(Key, EventTypes, _) ->
+                case lists:member(EventType, EventTypes) of
+                    true ->
+                        event_send(EventType, EventId, Key, EventData, Service);
+                    false ->
+                        ok
+                end
+            end, ok, maps:with(Keys, Events))
     end,
     ok.
 
@@ -2099,7 +2349,8 @@ clean_vclocks_store(#cloudi_crdt{node_id = NodeId,
                                  vclocks = VClocks0,
                                  polog = POLog0,
                                  data = Data0,
-                                 events = Events} = State) ->
+                                 events = Events,
+                                 events_any = EventsAny} = State) ->
     VClockN = vclock_current(NodeIds, VClock0),
     VClocks1 = vclocks_update(NodeId, VClockN, VClocks0),
     VClocksN = vclocks_current(NodeIds, VClocks1),
@@ -2107,7 +2358,7 @@ clean_vclocks_store(#cloudi_crdt{node_id = NodeId,
               {VClockPOLog, Operation} <- POLog0],
     VClockMin = vclocks_minimum(VClocksN),
     {POLogN, DataN} = polog_stable(POLog1, Data0,
-                                   VClockMin, Events, NodeId),
+                                   VClockMin, Events, EventsAny, NodeId),
     State#cloudi_crdt{vclock = VClockN,
                       vclocks = VClocksN,
                       polog = POLogN,

@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-09-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_funnel for providing coordination
+      among duplicate service requests that receive a single response
+    * Add the cloudi_crdt functions events_subscriptions/3,
+      events_clear/2, update_clear/5, update_clear/6,
+      update_clear_id/6, update_clear_id/7
+    * Add the cloudi_crdt:new/2 argument initial_data_function
+
 2020-09-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update cpg

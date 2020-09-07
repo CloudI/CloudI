@@ -13,6 +13,7 @@ REBAR_DIRS="\
     lib/cloudi_service_db_mysql \
     lib/cloudi_service_db_pgsql \
     lib/cloudi_service_filesystem \
+    lib/cloudi_service_funnel \
     lib/cloudi_service_http_client \
     lib/cloudi_service_http_cowboy1 \
     lib/cloudi_service_http_elli \
