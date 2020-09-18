@@ -12,6 +12,7 @@
       as text_pairs info logged as shell comments to describe the Request
     * Change cloudi_string:term_to_binary_compact/1 and
       cloudi_string:term_to_list_compact/1 to output unicode
+    * Update jsx
 
 2020-09-06 Michael Truog   <mjtruog at protonmail dot com>
 

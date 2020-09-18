@@ -168,8 +168,8 @@ Erlang `jsx`
 `Erlang JSON Parsing`
 
 - `https://github.com/talentdeficit/jsx`
-- `commit a45c997cedc3bcc0bb014ac3faa7ec16bcd4f7b1 (v3.0.0)`
-- `Sat Jul 11 04:09:42 UTC 2020`
+- `commit 7c7a69c167aecd241a6676ab7e5a7665c782b976`
+- `Fri Sep 18 03:50:49 UTC 2020`
 - `MIT`
 
 Erlang `metrics`
