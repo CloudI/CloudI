@@ -4,6 +4,9 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Funnel Service==
+%%%
+%%% WARNING: EXPERIMENTAL
+%%%
 %%% The funnel service is a way of using duplicate service request sends
 %%% (possibly from separate service processes processing the same data)
 %%% with the goal of making the sending service fault-tolerant.
