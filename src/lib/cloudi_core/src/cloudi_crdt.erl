@@ -1313,7 +1313,7 @@ zero_id(Dispatcher, Key, Id, State) ->
 
 node_id(Service)
     when is_pid(Service) ->
-    % n.b., The Erlang Term Binary Format for an Erlang pid (PID_EXT)
+    % n.b., The Erlang Term Binary Format for an Erlang pid (NEW_PID_EXT)
     % includes the node, so only the Erlang pid would be necessary here
     % if a binary format was used.  The node is added here to make it
     % more obvious for human examination.

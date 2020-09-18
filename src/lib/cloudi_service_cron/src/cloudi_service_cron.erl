@@ -93,6 +93,12 @@
         % e.g. [{"0 9 * * mon-fri",
         %        [{description, "hello"},
         %         {send_args, ["/shell", "echo \"hello world\""]}]}]
+-define(DEFAULT_REQUEST_INFO_DEFAULT,
+        [{"cron_description", "\"$DESCRIPTION\""},
+         {"cron_datetime", "${DATETIME}"},
+         {"cron_datetime_next", "${DATETIME_NEXT}"}]).
+        % If a cron expression's send_args RequestInfo is set to default,
+        % use the provided data (normally for send_args_info set to true).
 -define(DEFAULT_USE_UTC,                    false).
 -define(DEFAULT_DEBUG,                       true).
 -define(DEFAULT_DEBUG_LEVEL,                trace).
@@ -150,10 +156,11 @@
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {expressions,                  ?DEFAULT_EXPRESSIONS},
+        {request_info_default,         ?DEFAULT_REQUEST_INFO_DEFAULT},
         {use_utc,                      ?DEFAULT_USE_UTC},
         {debug,                        ?DEFAULT_DEBUG},
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
-    [Expressions, UseUTC,
+    [Expressions, RequestInfoDefault, UseUTC,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(UseUTC),
     true = is_boolean(Debug),
@@ -173,7 +180,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     ProcessCount = cloudi_service:process_count(Dispatcher),
     {IdNext,
      ExpressionsLoaded} = expressions_load(Expressions,
-                                           ProcessIndex, ProcessCount),
+                                           ProcessIndex, ProcessCount,
+                                           RequestInfoDefault),
     Service = cloudi_service:self(Dispatcher),
     TimeOffsetMilliseconds = time_offset_milliseconds(),
     TimeOffsetMonitor = erlang:monitor(time_offset, clock_service),
@@ -246,10 +254,11 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-expressions_load([], Id, Expressions, _, _, _) ->
+expressions_load([], Id, Expressions, _, _, _, _) ->
     {Id, Expressions};
 expressions_load([{ExpressionStr, Args} | L], Id, Expressions,
-                 ProcessIndex, ProcessIndex, ProcessCount) ->
+                 ProcessIndex, ProcessIndex, ProcessCount,
+                 RequestInfoDefault) ->
     Defaults = [
         {description,                  undefined},
         {send_args,                    undefined},
@@ -266,24 +275,28 @@ expressions_load([{ExpressionStr, Args} | L], Id, Expressions,
     end,
     true = is_boolean(SendArgsInfo),
     true = is_boolean(SendMcast),
-    ok = send_args_valid(SendArgs, SendArgsInfo),
+    SendArgsNew = send_args_valid(SendArgs, SendArgsInfo, RequestInfoDefault),
     Cron = cloudi_cron:new(ExpressionStr),
     Expression = #expression{description = Description,
                              definition = Cron,
-                             send_args = SendArgs,
+                             send_args = SendArgsNew,
                              send_args_info = SendArgsInfo,
                              send_mcast = SendMcast},
     expressions_load(L, Id + 1, maps:put(Id, Expression, Expressions),
                      (ProcessIndex + 1) rem ProcessCount,
-                     ProcessIndex, ProcessCount);
+                     ProcessIndex, ProcessCount,
+                     RequestInfoDefault);
 expressions_load([{_, _} | L], Id, Expressions,
-                 Index, ProcessIndex, ProcessCount) ->
+                 Index, ProcessIndex, ProcessCount,
+                 RequestInfoDefault) ->
     expressions_load(L, Id, Expressions,
                      (Index + 1) rem ProcessCount,
-                     ProcessIndex, ProcessCount).
+                     ProcessIndex, ProcessCount,
+                     RequestInfoDefault).
 
-expressions_load(L, ProcessIndex, ProcessCount) ->
-    expressions_load(L, 1, #{}, 0, ProcessIndex, ProcessCount).
+expressions_load(L, ProcessIndex, ProcessCount, RequestInfoDefault) ->
+    expressions_load(L, 1, #{}, 0, ProcessIndex, ProcessCount,
+                     RequestInfoDefault).
 
 expression_next(#expression{definition = Cron,
                             datetime_utc = DateTimeOldEventUTC} = Expression,
@@ -490,28 +503,35 @@ description(#expression{description = [_ | _] = Description}) ->
 description(#expression{definition = Cron}) ->
     cloudi_cron:expression(Cron).
 
-send_args_valid([Name, _Request], false) ->
+send_args_valid([Name, _Request] = SendArgs, false, _) ->
     true = cloudi_args_type:service_name(Name),
-    ok;
-send_args_valid([Name, _Request, Timeout], false) ->
+    SendArgs;
+send_args_valid([Name, _Request, Timeout] = SendArgs, false, _) ->
     true = cloudi_args_type:service_name(Name),
     true = cloudi_args_type:timeout_milliseconds(Timeout),
-    ok;
-send_args_valid([Name, RequestInfo, _Request,
-                 Timeout, Priority], SendArgsInfo) ->
+    SendArgs;
+send_args_valid([Name, RequestInfo, Request, Timeout, Priority],
+                SendArgsInfo, RequestInfoDefault) ->
     true = cloudi_args_type:service_name(Name),
     true = cloudi_args_type:timeout_milliseconds(Timeout),
     true = cloudi_args_type:priority(Priority),
+    RequestInfoNew = if
+        RequestInfo =:= default ->
+            RequestInfoDefault;
+        true ->
+            RequestInfo
+    end,
     if
         SendArgsInfo =:= true ->
-            [_ | _] = RequestInfo,
+            [_ | _] = RequestInfoNew,
             true = lists:all(fun({Key, Value}) ->
                 is_integer(hd(Key)) andalso is_integer(hd(Value))
-            end, RequestInfo),
+            end, RequestInfoNew),
             ok;
         SendArgsInfo =:= false ->
             ok
-    end.
+    end,
+    [Name, RequestInfoNew, Request, Timeout, Priority].
 
 send_args_call([Name, [_ | _] = RequestInfo, Request, Timeout, Priority],
                true, DateTimeEventUTC, DateTimeNextEventUTC, Description,

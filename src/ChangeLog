@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-09-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the cloudi_service_cron configuration argument
+      request_info_default for simplifying send_args_info use
+
 2020-09-17 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_cron expressions arguments features:
