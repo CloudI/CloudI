@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2009-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -53,7 +53,8 @@
          format/2, format/3,
          microseconds_to_string/1,
          milliseconds_to_string/1,
-         seconds_to_string/1]).
+         seconds_to_string/1,
+         datetime_to_string/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -521,14 +522,20 @@ milliseconds_to_string(TotalMilliSeconds) ->
 seconds_to_string(TotalSeconds) ->
     MegaSeconds = TotalSeconds div 1000000,
     Seconds = TotalSeconds - MegaSeconds * 1000000,
-    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
-     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
-     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $.,
-     _, _, _, _, _, _,
-     $Z] = timestamp_iso8601({MegaSeconds, Seconds, 0}),
-    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
-     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
-     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $Z].
+    DateTimeUTC = calendar:now_to_universal_time({MegaSeconds, Seconds, 0}),
+    datetime_to_string(DateTimeUTC).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from a datetime in UTC.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec datetime_to_string(DateTimeUTC :: calendar:datetime()) ->
+    string().
+
+datetime_to_string(DateTimeUTC) ->
+    datetime_iso8601(DateTimeUTC, undefined).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -1027,9 +1034,25 @@ format_line(Level, Timestamp, Node, Pid,
      MetaDataStr, LogMessage, $\n].
 
 timestamp_iso8601({_, _, MicroSeconds} = Timestamp) ->
-    % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
-    {{DateYYYY, DateMM, DateDD},
-     {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Timestamp),
+    datetime_iso8601(calendar:now_to_universal_time(Timestamp), MicroSeconds).
+
+% ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
+datetime_iso8601({{DateYYYY, DateMM, DateDD},
+                  {TimeHH, TimeMM, TimeSS}},
+                 undefined) ->
+    [DateYYYY0, DateYYYY1,
+     DateYYYY2, DateYYYY3] = int_to_dec_list(DateYYYY, 4, $0),
+    [DateMM0, DateMM1] = int_to_dec_list(DateMM, 2, $0),
+    [DateDD0, DateDD1] = int_to_dec_list(DateDD, 2, $0),
+    [TimeHH0, TimeHH1] = int_to_dec_list(TimeHH, 2, $0),
+    [TimeMM0, TimeMM1] = int_to_dec_list(TimeMM, 2, $0),
+    [TimeSS0, TimeSS1] = int_to_dec_list(TimeSS, 2, $0),
+    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
+     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
+     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $Z];
+datetime_iso8601({{DateYYYY, DateMM, DateDD},
+                  {TimeHH, TimeMM, TimeSS}},
+                 MicroSeconds) ->
     [DateYYYY0, DateYYYY1,
      DateYYYY2, DateYYYY3] = int_to_dec_list(DateYYYY, 4, $0),
     [DateMM0, DateMM1] = int_to_dec_list(DateMM, 2, $0),

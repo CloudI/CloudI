@@ -66,6 +66,30 @@
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
 -define(DEFAULT_EXPRESSIONS,                   []).
+        % cron expression arguments:
+        %     description
+        %         A descriptive string for the cron expression.
+        %     send_args
+        %         Arguments to a cloudi_service:send_async_active function
+        %         call.  If the Timeout parameter is provided as undefined,
+        %         the number of milliseconds until the next event is used.
+        %         If RequestInfo is provided as a list of string
+        %         key/value tuples and send_args_info is set to true,
+        %         substitution of event data can occur in the string values
+        %         with (environment variable syntax):
+        %             DESCRIPTION - description provided above
+        %             DATETIME - event datetime in UTC that caused send
+        %             DATETIME_NEXT - next event datetime in UTC
+        %     send_args_info
+        %         Should the RequestInfo value in send_args be modified
+        %         with event data related to the cron expression.
+        %         (defaults to false)
+        %     send_mcast
+        %         Should the send occur as a call to the function
+        %         cloudi_service:mcast_async_active instead of
+        %         cloudi_service:send_async_active.
+        %         (defaults to false)
+        %
         % e.g. [{"0 9 * * mon-fri",
         %        [{description, "hello"},
         %         {send_args, ["/shell", "echo \"hello world\""]}]}]
@@ -80,6 +104,8 @@
         description :: nonempty_string() | undefined,
         definition :: cloudi_cron:state(),
         send_args :: nonempty_list(),
+        send_args_info :: boolean(),
+        send_mcast :: boolean(),
         datetime_utc = undefined :: calendar:datetime() | undefined,
         timer = undefined :: reference() | undefined
     }).
@@ -87,7 +113,8 @@
 -record(send_data,
     {
         id :: expression_id(),
-        send_start :: cloudi_timestamp:milliseconds_monotonic()
+        send_start :: cloudi_timestamp:milliseconds_monotonic(),
+        trans_ids = [] :: list(cloudi_service:trans_id())
     }).
 
 -record(state,
@@ -225,8 +252,11 @@ expressions_load([{ExpressionStr, Args} | L], Id, Expressions,
                  ProcessIndex, ProcessIndex, ProcessCount) ->
     Defaults = [
         {description,                  undefined},
-        {send_args,                    undefined}],
-    [Description, SendArgs] = cloudi_proplists:take_values(Defaults, Args),
+        {send_args,                    undefined},
+        {send_args_info,               false},
+        {send_mcast,                   false}],
+    [Description, SendArgs, SendArgsInfo,
+     SendMcast] = cloudi_proplists:take_values(Defaults, Args),
     [_ | _] = ExpressionStr,
     case Description of
         [_ | _] ->
@@ -234,11 +264,15 @@ expressions_load([{ExpressionStr, Args} | L], Id, Expressions,
         undefined ->
             ok
     end,
-    [_ | _] = SendArgs,
+    true = is_boolean(SendArgsInfo),
+    true = is_boolean(SendMcast),
+    ok = send_args_valid(SendArgs, SendArgsInfo),
     Cron = cloudi_cron:new(ExpressionStr),
     Expression = #expression{description = Description,
                              definition = Cron,
-                             send_args = SendArgs},
+                             send_args = SendArgs,
+                             send_args_info = SendArgsInfo,
+                             send_mcast = SendMcast},
     expressions_load(L, Id + 1, maps:put(Id, Expression, Expressions),
                      (ProcessIndex + 1) rem ProcessCount,
                      ProcessIndex, ProcessCount);
@@ -338,19 +372,28 @@ expressions_time_offset(Expressions, MilliSecondsOffset, UseUTC, Service) ->
 expression_event(Sends, Expressions, Id,
                  DebugLogLevel, UseUTC, Service, Dispatcher) ->
     Expression = maps:get(Id, Expressions),
-    #expression{send_args = [ServiceName | _] = SendArgs} = Expression,
+    #expression{send_args = [ServiceName | _] = SendArgs,
+                send_args_info = SendArgsInfo,
+                send_mcast = SendMcast,
+                datetime_utc = DateTimeEventUTC} = Expression,
+    ExpressionNew = expression_next(Expression, Id, UseUTC, Service),
+    #expression{datetime_utc = DateTimeNextEventUTC} = ExpressionNew,
+    Description = description(Expression),
+    SendArgsCall = send_args_call(SendArgs, SendArgsInfo,
+                                  DateTimeEventUTC, DateTimeNextEventUTC,
+                                  Description, Dispatcher),
     ?LOG(DebugLogLevel,
          "\"~ts\" event sent to ~ts",
-         [description(Expression), ServiceName]),
-    SendsNew = event_send(Sends, SendArgs, Id, Service, Dispatcher),
-    ExpressionNew = expression_next(Expression, Id, UseUTC, Service),
+         [Description, ServiceName]),
+    SendsNew = event_send(SendMcast, Sends, SendArgsCall, Id,
+                          Service, Dispatcher),
     {SendsNew,
      maps:put(Id, ExpressionNew, Expressions)}.
 
-event_send(Sends, SendArgs, Id, Service, Dispatcher) ->
+event_send(false, Sends, SendArgsCall, Id, Service, Dispatcher) ->
     SendStart = cloudi_timestamp:milliseconds_monotonic(),
     TransId = case erlang:apply(cloudi_service, send_async_active,
-                                [Dispatcher | SendArgs]) of
+                                SendArgsCall) of
         {ok, TransIdValue} ->
             TransIdValue;
         {error, timeout} ->
@@ -358,30 +401,55 @@ event_send(Sends, SendArgs, Id, Service, Dispatcher) ->
             Service ! #timeout_async_active{trans_id = TransIdValue},
             TransIdValue
     end,
-    SendData = #send_data{id = Id,
-                          send_start = SendStart},
-    maps:put(TransId, SendData, Sends).
+    maps:put(TransId,
+             #send_data{id = Id,
+                        send_start = SendStart}, Sends);
+event_send(true, Sends, SendArgsCall, Id, Service, Dispatcher) ->
+    SendStart = cloudi_timestamp:milliseconds_monotonic(),
+    case erlang:apply(cloudi_service, mcast_async_active,
+                      SendArgsCall) of
+        {ok, TransIdList} ->
+            lists:foldl(fun(TransId, SendsNew) ->
+                TransIdListNew = lists:delete(TransId, TransIdList),
+                maps:put(TransId,
+                         #send_data{id = Id,
+                                    send_start = SendStart,
+                                    trans_ids = TransIdListNew}, SendsNew)
+            end, Sends, TransIdList);
+        {error, timeout} ->
+            TransId = cloudi_service:trans_id(Dispatcher),
+            Service ! #timeout_async_active{trans_id = TransId},
+            maps:put(TransId,
+                     #send_data{id = Id,
+                                send_start = SendStart}, Sends)
+    end.
 
 event_recv(Sends, Expressions, Result, TransId, DebugLogLevel) ->
-    SendEnd = cloudi_timestamp:milliseconds_monotonic(),
-    {SendData, SendsNew} = maps:take(TransId, Sends),
-    #send_data{id = Id,
-               send_start = SendStart} = SendData,
-    Expression = maps:get(Id, Expressions),
-    SecondsElapsed = (SendEnd - SendStart) / 1000.0,
-    if
-        Result =:= ok ->
-            ?LOG(DebugLogLevel,
-                 "\"~ts\" event completed after ~p seconds",
-                 [description(Expression), SecondsElapsed]);
-        Result =:= timeout ->
-            ?LOG_ERROR("\"~ts\" event timeout after ~p seconds",
-                       [description(Expression), SecondsElapsed]);
-        Result =:= error ->
-            ?LOG_ERROR("\"~ts\" event failed after ~p seconds",
-                       [description(Expression), SecondsElapsed])
-    end,
-    SendsNew.
+    case maps:find(TransId, Sends) of
+        {ok, #send_data{id = Id,
+                        send_start = SendStart,
+                        trans_ids = TransIdList}} ->
+            SendEnd = cloudi_timestamp:milliseconds_monotonic(),
+            Expression = maps:get(Id, Expressions),
+            SecondsElapsed = (SendEnd - SendStart) / 1000.0,
+            if
+                Result =:= ok ->
+                    ?LOG(DebugLogLevel,
+                         "\"~ts\" event completed after ~p seconds",
+                         [description(Expression), SecondsElapsed]);
+                Result =:= timeout ->
+                    ?LOG_ERROR("\"~ts\" event timeout after ~p seconds",
+                               [description(Expression), SecondsElapsed]);
+                Result =:= error ->
+                    ?LOG_ERROR("\"~ts\" event failed after ~p seconds",
+                               [description(Expression), SecondsElapsed])
+            end,
+            lists:foldl(fun(TransIdOld, SendsNew) ->
+                maps:remove(TransIdOld, SendsNew)
+            end, maps:remove(TransId, Sends), TransIdList);
+        error ->
+            Sends
+    end.
 
 event_milliseconds(DateTimeEventUTC, DateTimeNowUTC, PastMilliSeconds) ->
     % subtraction must occur as gregorian seconds in UTC
@@ -421,6 +489,89 @@ description(#expression{description = [_ | _] = Description}) ->
     Description;
 description(#expression{definition = Cron}) ->
     cloudi_cron:expression(Cron).
+
+send_args_valid([Name, _Request], false) ->
+    true = cloudi_args_type:service_name(Name),
+    ok;
+send_args_valid([Name, _Request, Timeout], false) ->
+    true = cloudi_args_type:service_name(Name),
+    true = cloudi_args_type:timeout_milliseconds(Timeout),
+    ok;
+send_args_valid([Name, RequestInfo, _Request,
+                 Timeout, Priority], SendArgsInfo) ->
+    true = cloudi_args_type:service_name(Name),
+    true = cloudi_args_type:timeout_milliseconds(Timeout),
+    true = cloudi_args_type:priority(Priority),
+    if
+        SendArgsInfo =:= true ->
+            [_ | _] = RequestInfo,
+            true = lists:all(fun({Key, Value}) ->
+                is_integer(hd(Key)) andalso is_integer(hd(Value))
+            end, RequestInfo),
+            ok;
+        SendArgsInfo =:= false ->
+            ok
+    end.
+
+send_args_call([Name, [_ | _] = RequestInfo, Request, Timeout, Priority],
+               true, DateTimeEventUTC, DateTimeNextEventUTC, Description,
+               Dispatcher) ->
+    Environment0 = [{"DATETIME",
+                     cloudi_timestamp:datetime_utc_to_string(DateTimeEventUTC)},
+                    {"DESCRIPTION", Description}],
+    EnvironmentN = if
+        DateTimeNextEventUTC =:= undefined ->
+            Environment0;
+        is_tuple(DateTimeNextEventUTC) ->
+            [{"DATETIME_NEXT",
+              cloudi_timestamp:datetime_utc_to_string(DateTimeNextEventUTC)} |
+             Environment0]
+    end,
+    Lookup = cloudi_x_trie:new(EnvironmentN),
+    RequestInfoNew = [{Key, cloudi_environment:transform(Value, Lookup)}
+                      || {Key, Value} <- RequestInfo],
+    TimeoutNew = send_args_call_timeout(Timeout,
+                                        DateTimeEventUTC,
+                                        DateTimeNextEventUTC,
+                                        Description),
+    [Dispatcher, Name,
+     cloudi_request_info:key_value_new(RequestInfoNew, text_pairs),
+     Request, TimeoutNew, Priority];
+send_args_call([Name, Request, Timeout],
+               _, DateTimeEventUTC, DateTimeNextEventUTC, Description,
+               Dispatcher) ->
+    TimeoutNew = send_args_call_timeout(Timeout,
+                                        DateTimeEventUTC,
+                                        DateTimeNextEventUTC,
+                                        Description),
+    [Dispatcher, Name, Request, TimeoutNew];
+send_args_call(SendArgs, _, _, _, _, Dispatcher) ->
+    [Dispatcher | SendArgs].
+
+send_args_call_timeout(Timeout, _, undefined, _) ->
+    Timeout;
+send_args_call_timeout(Timeout,
+                       DateTimeEventUTC, DateTimeNextEventUTC, Description) ->
+    TimeoutMax = (calendar:datetime_to_gregorian_seconds(DateTimeNextEventUTC) -
+                  calendar:datetime_to_gregorian_seconds(DateTimeEventUTC)) *
+                 1000,
+    send_args_call_timeout(Timeout, TimeoutMax, Description).
+
+send_args_call_timeout(Timeout, TimeoutMax, _)
+    when is_atom(Timeout) ->
+    if
+        Timeout =:= undefined ->
+            TimeoutMax;
+        true ->
+            Timeout
+    end;
+send_args_call_timeout(Timeout, TimeoutMax, Description)
+    when Timeout > TimeoutMax ->
+    ?LOG_WARN("\"~ts\" event timeout ~w > ~w overlaps next event",
+              [Description, Timeout, TimeoutMax]),
+    Timeout;
+send_args_call_timeout(Timeout, _, _) ->
+    Timeout.
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 time_offset_milliseconds() ->

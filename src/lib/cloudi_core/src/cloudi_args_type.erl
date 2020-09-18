@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -41,10 +41,14 @@
 -export([function_required/2,
          function_required_pick/2,
          function_optional/2,
+         priority/1,
+         service_name/1,
          service_name_suffix/2,
-         service_name_pattern_suffix/2]).
+         service_name_pattern_suffix/2,
+         timeout_milliseconds/1]).
 
--include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include("cloudi_logger.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -135,6 +139,35 @@ function_optional(undefined, _) ->
 function_optional(Function, Arity) ->
     function_required(Function, Arity).
 
+-spec priority(Priority :: cloudi:priority()) ->
+    true.
+
+priority(undefined) ->
+    true;
+priority(Priority)
+    when is_integer(Priority),
+         Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
+    true;
+priority(Priority) ->
+    ?LOG_ERROR_SYNC("invalid priority: ~tp", [Priority]),
+    erlang:exit(badarg).
+
+-spec service_name(Name :: cloudi:service_name()) ->
+    true.
+
+service_name([NameC | _] = Name)
+    when is_integer(NameC) ->
+    case cloudi_x_trie:is_pattern2(Name) of
+        true ->
+            ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"", [Name]),
+            erlang:exit(badarg);
+        false ->
+            true
+    end;
+service_name(Name) ->
+    ?LOG_ERROR_SYNC("invalid service name: ~tp", [Name]),
+    erlang:exit(badarg).
+
 -spec service_name_suffix(Prefix :: cloudi:service_name_pattern(),
                           Name :: cloudi:service_name()) ->
     string().
@@ -185,6 +218,22 @@ service_name_pattern_suffix([PrefixC | _], Pattern)
 service_name_pattern_suffix(Prefix, [PatternC | _])
     when is_integer(PatternC) ->
     ?LOG_ERROR_SYNC("invalid prefix: ~tp", [Prefix]),
+    erlang:exit(badarg).
+
+-spec timeout_milliseconds(Timeout :: cloudi:timeout_milliseconds()) ->
+    true.
+
+timeout_milliseconds(undefined) ->
+    true;
+timeout_milliseconds(limit_min) ->
+    true;
+timeout_milliseconds(limit_max) ->
+    true;
+timeout_milliseconds(Timeout)
+    when is_integer(Timeout), Timeout >= 0, Timeout =< ?TIMEOUT_MAX_ERLANG ->
+    true;
+timeout_milliseconds(Timeout) ->
+    ?LOG_ERROR_SYNC("invalid timeout: ~tp", [Timeout]),
     erlang:exit(badarg).
 
 %%%------------------------------------------------------------------------

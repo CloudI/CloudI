@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-09-17 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_cron expressions arguments features:
+        * send_args_info to transform a list of string key/value tuples
+          provided as the RequestInfo with data specific to the
+          cron expression's event as text_pairs data
+        * send_mcast to send each event using mcast_async
+    * Add cloudi_service_shell interpretation of RequestInfo data
+      as text_pairs info logged as shell comments to describe the Request
+    * Change cloudi_string:term_to_binary_compact/1 and
+      cloudi_string:term_to_list_compact/1 to output unicode
+
 2020-09-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_funnel for providing coordination

@@ -175,12 +175,12 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
-                              _RequestInfo, Request,
+                              RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{debug_level = DebugLogLevel} = State,
                               _Dispatcher) ->
     {Status, Output} = request(Request, Timeout, State),
-    log_output(Status, Output, Request, DebugLogLevel),
+    log_output(Status, Output, RequestInfo, Request, DebugLogLevel),
     {reply, erlang:integer_to_binary(Status), State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
@@ -321,7 +321,7 @@ kill_timer_stop(KillTimer, Shell) ->
             ok
     end.
 
-log_output(Status, Output, Request, DebugLogLevel) ->
+log_output(Status, Output, RequestInfo, Request, DebugLogLevel) ->
     Level = if
         Status == 0 ->
             DebugLogLevel;
@@ -334,12 +334,25 @@ log_output(Status, Output, Request, DebugLogLevel) ->
         true ->
             erlang:integer_to_list(Status)
     end,
+    Info = log_output_info(RequestInfo),
     if
         Output == [] ->
-            ?LOG(Level, "~ts = ~s",
-                 [Request, StatusStr]);
+            ?LOG(Level, "~ts~ts = ~s",
+                 [Info, Request, StatusStr]);
         true ->
-            ?LOG(Level, "~ts = ~s (stdout/stderr below)~n~ts",
-                 [Request, StatusStr, erlang:iolist_to_binary(Output)])
+            ?LOG(Level, "~ts~ts = ~s (stdout/stderr below)~n~ts",
+                 [Info, Request, StatusStr, erlang:iolist_to_binary(Output)])
     end.
+
+log_output_info(RequestInfo)
+    when is_binary(RequestInfo), RequestInfo /= <<>> ->
+    InfoTextPairs = cloudi_request_info:key_value_parse(RequestInfo, list),
+    erlang:iolist_to_binary(log_output_info_format(InfoTextPairs));
+log_output_info(_) ->
+    <<"">>.
+
+log_output_info_format([]) ->
+    [];
+log_output_info_format([{Key, Value} | InfoTextPairs]) ->
+    ["# ", Key, ": ", Value, $\n | log_output_info_format(InfoTextPairs)].
 

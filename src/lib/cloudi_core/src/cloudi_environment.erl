@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_environment).
@@ -46,7 +46,7 @@
 -export_type([lookup/0]).
 
 -include("cloudi_environment.hrl").
--include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include("cloudi_logger.hrl").
 -include_lib("kernel/include/file.hrl").
 
 %%%------------------------------------------------------------------------

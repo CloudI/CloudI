@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -38,6 +38,7 @@
 
 %% external interface
 -export([convert/3,
+         datetime_utc_to_string/1,
          timestamp/0,
          native/0,
          native_monotonic/0,
@@ -141,6 +142,18 @@ convert(Time, FromUnit, ToUnit) ->
     end,
     erlang:convert_time_unit(Time, FromUnitDeprecated, ToUnitDeprecated).
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from a datetime in UTC.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec datetime_utc_to_string(DateTimeUTC :: calendar:datetime()) ->
+    string().
+
+datetime_utc_to_string(DateTimeUTC) ->
+    cloudi_core_i_logger:datetime_to_string(DateTimeUTC).
 
 %%-------------------------------------------------------------------------
 %% @doc

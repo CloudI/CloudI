@@ -684,7 +684,7 @@ term_to_binary(T) ->
     binary().
 
 term_to_binary_compact(T) ->
-    unicode:characters_to_binary(io_lib:format("~" ?COMPACT_LIMIT "p", [T])).
+    unicode:characters_to_binary(io_lib:format("~" ?COMPACT_LIMIT "tp", [T])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -713,7 +713,7 @@ term_to_list(T) ->
     string().
 
 term_to_list_compact(T) ->
-    format("~" ?COMPACT_LIMIT "p", [T]).
+    format("~" ?COMPACT_LIMIT "tp", [T]).
 
 %%-------------------------------------------------------------------------
 %% @doc
