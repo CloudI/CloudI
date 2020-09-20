@@ -24,6 +24,15 @@
 %%% A CloudI service that uses cloudi_crdt should have a
 %%% destination refresh method that is immediate.
 %%%
+%%% N.B., Any use of an update function or an assign function
+%%% requires special attention to ensure the data change is repeatable
+%%% for all CRDT instances.  The update functions and the assign functions
+%%% are not idempotent but can be used safely if the input data is not
+%%% unique to a service instance process or service request.
+%%% An assign function can cause concurrent assigns to occur for the same
+%%% key (e.g., caused by concurrent service requests) and the value
+%%% stored in each CRDT instance needs to be the same.
+%%%
 %%% The papers related to this implementation of the POLog CRDT are:
 %%%
 %%% Carlos Baquero, Paulo Sérgio Almeida, Ali Shoker.
@@ -310,6 +319,11 @@
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Assign a value iff none exists in the CloudI CRDT.===
+%% If the assign value is not the same value for each
+%% instance of the CloudI CRDT, it can create inconsistencies in
+%% the Erlang map that is used for all read operations
+%% (e.g., if two assigns occur concurrently for the same key with
+%%  different values based on two concurrent service requests).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -325,6 +339,11 @@ assign(Dispatcher, Key, Value, State) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Assign a value iff none exists in the CloudI CRDT with an event_id.===
+%% If the assign value is not the same value for each
+%% instance of the CloudI CRDT, it can create inconsistencies in
+%% the Erlang map that is used for all read operations
+%% (e.g., if two assigns occur concurrently for the same key with
+%%  different values based on two concurrent service requests).
 %% @end
 %%-------------------------------------------------------------------------
 

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-09-19 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_crdt comments
+
 2020-09-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the cloudi_service_cron configuration argument
