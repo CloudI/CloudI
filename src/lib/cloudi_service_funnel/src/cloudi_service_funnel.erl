@@ -70,7 +70,6 @@
 
 %% cloudi_crdt update functions
 -export([senders_crdt_merge/2,
-         senders_crdt_incr/1,
          request_crdt_merge/2,
          request_send_retry_crdt/1,
          response_store_crdt/2,
@@ -135,9 +134,8 @@
 
 -record(senders,
     {
-        sender_ids :: list(sender_id()),
-        length :: non_neg_integer(),
-        index = 0 :: non_neg_integer() % 0-based
+        sender_ids :: nonempty_list(sender_id()),
+        length :: non_neg_integer()
     }).
 
 -record(state,
@@ -320,10 +318,6 @@ senders_crdt_merge(#senders{sender_ids = [_] = SenderIds,
     SendersOld#senders{sender_ids = SenderIdsNew,
                        length = length(SenderIdsNew)}.
 
-senders_crdt_incr(#senders{length = Length,
-                           index = I} = SendersOld) ->
-    SendersOld#senders{index = (I + 1) rem Length}.
-
 restart_crdt_data_f(Service) ->
     fun(Data) ->
         Service ! {restart_crdt_data, Data}
@@ -346,9 +340,11 @@ request(FunnelName,
         {ok, #request{response = {ResponseInfo, Response}}} ->
             {reply, ResponseInfo, Response, State};
         _ ->
+            Senders = cloudi_crdt:get(Dispatcher, senders, CRDT0),
             #senders{sender_ids = SenderIds,
-                     index = I} = cloudi_crdt:get(Dispatcher, senders, CRDT0),
-            SenderId = lists:nth(I + 1, SenderIds),
+                     length = Length} = Senders,
+            SenderId = lists:nth(erlang:phash2(RequestKey, Length) + 1,
+                                 SenderIds),
             Pending = [{RequestType, Timeout, TransId, Pid}],
             RequestValue = #request{name = Name,
                                     pattern = Pattern,
@@ -416,7 +412,6 @@ request_send(RequestKey,
                       sender_id = SenderId,
                       response = undefined} = RequestValue,
              #state{sender_id = SenderId,
-                    crdt = CRDT0,
                     sent = Sent} = State, Dispatcher) ->
     {FunnelName, RequestInfo, Request} = RequestKey,
     Timeout = timeout_current(TimeoutLast, TransIdLast),
@@ -424,13 +419,7 @@ request_send(RequestKey,
                                           RequestInfo, Request,
                                           Timeout, PriorityMin) of
         {ok, TransId} ->
-            CRDTN = cloudi_crdt:update(Dispatcher,
-                                       senders,
-                                       ?MODULE,
-                                       senders_crdt_incr,
-                                       CRDT0),
-            State#state{crdt = CRDTN,
-                        sent = maps:put(TransId, RequestKey, Sent)};
+            State#state{sent = maps:put(TransId, RequestKey, Sent)};
         {error, timeout} ->
             request_send_retry(RequestKey, RequestValue, State, Dispatcher)
     end;
