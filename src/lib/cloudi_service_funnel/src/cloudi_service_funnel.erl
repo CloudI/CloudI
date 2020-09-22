@@ -135,7 +135,8 @@
 -record(senders,
     {
         sender_ids :: nonempty_list(sender_id()),
-        length :: non_neg_integer()
+        length :: pos_integer(),
+        merges :: pos_integer()
     }).
 
 -record(state,
@@ -148,6 +149,10 @@
         crdt :: cloudi_crdt:state(),
         sent = #{} :: #{cloudi_service:trans_id() := request_key()}
     }).
+
+% Delay to ensure all service processes have started before CRDT
+% service requests are sent (the destinaton processes need to exist)
+-define(INIT_CRDT_DATA_DELAY, 100). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -179,7 +184,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     SenderId = {node(), ProcessIndex},
     Service = cloudi_service:self(Dispatcher),
-    Service ! init_crdt_data,
+    erlang:send_after(?INIT_CRDT_DATA_DELAY, Service, init_crdt_data),
     InitialDataF = restart_crdt_data_f(Service),
     CRDT0 = cloudi_crdt:new(Dispatcher,
                             [{service_name, "crdt_" ++ Name},
@@ -245,7 +250,8 @@ cloudi_service_handle_info(init_crdt_data,
     % (required to ensure concurrent service requests choose the same sender_id
     %  when sending a service request for the first unique request).
     SendersValue = #senders{sender_ids = [SenderId],
-                            length = 1},
+                            length = 1,
+                            merges = 1},
     UpdateF = senders_crdt_merge,
     CRDTN = cloudi_crdt:update_assign_id(Dispatcher,
                                          senders,
@@ -253,7 +259,7 @@ cloudi_service_handle_info(init_crdt_data,
                                          ?MODULE,
                                          UpdateF,
                                          SendersValue,
-                                         UpdateF,
+                                         {UpdateF, SenderId},
                                          CRDT0),
     {noreply, State#state{crdt = CRDTN}};
 cloudi_service_handle_info({restart_crdt_data, Data}, State, Dispatcher) ->
@@ -274,10 +280,19 @@ cloudi_service_handle_info(#crdt_event{type = update,
                            _Dispatcher) ->
     erlang:send_after(RetryDelay, Service, {retry, RequestKey}),
     {noreply, State};
-cloudi_service_handle_info(#crdt_event{id = senders_crdt_merge,
-                                       key = senders},
-                           #state{name = Name} = State, Dispatcher) ->
-    ok = cloudi_service:subscribe(Dispatcher, Name ++ "*"),
+cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge, SenderIdMerge},
+                                       key = senders,
+                                       new = {value, SendersValue}},
+                           #state{sender_id = SenderId,
+                                  name = Name,
+                                  crdt = CRDT} = State, Dispatcher) ->
+    case senders_ready(SendersValue, cloudi_crdt:crdt_size(CRDT),
+                       SenderIdMerge, SenderId) of
+        true ->
+            ok = cloudi_service:subscribe(Dispatcher, Name ++ "*");
+        false ->
+            ok
+    end,
     {noreply, State};
 cloudi_service_handle_info(#crdt_event{}, State, _Dispatcher) ->
     {noreply, State};
@@ -312,11 +327,22 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 senders_crdt_merge(#senders{sender_ids = [_] = SenderIds,
-                            length = 1},
-                   #senders{sender_ids = SenderIdsOld} = SendersOld) ->
+                            length = 1,
+                            merges = 1},
+                   #senders{sender_ids = SenderIdsOld,
+                            merges = MergesOld} = SendersOld) ->
     SenderIdsNew = lists:umerge(SenderIdsOld, SenderIds),
     SendersOld#senders{sender_ids = SenderIdsNew,
-                       length = length(SenderIdsNew)}.
+                       length = length(SenderIdsNew),
+                       merges = MergesOld + 1}.
+
+senders_ready(#senders{merges = MergesExpected}, MergesExpected, _, _) ->
+    true;
+senders_ready(#senders{merges = Merges}, MergesExpected, SenderId, SenderId)
+    when Merges > MergesExpected ->
+    true; % restart occurred
+senders_ready(_, _, _, _) ->
+    false.
 
 restart_crdt_data_f(Service) ->
     fun(Data) ->
@@ -340,12 +366,8 @@ request(FunnelName,
         {ok, #request{response = {ResponseInfo, Response}}} ->
             {reply, ResponseInfo, Response, State};
         _ ->
-            Senders = cloudi_crdt:get(Dispatcher, senders, CRDT0),
-            #senders{sender_ids = SenderIds,
-                     length = Length} = Senders,
-            SenderId = lists:nth(erlang:phash2(RequestKey, Length) + 1,
-                                 SenderIds),
             Pending = [{RequestType, Timeout, TransId, Pid}],
+            SenderIdRequest = request_sender_id(RequestKey, CRDT0, Dispatcher),
             RequestValue = #request{name = Name,
                                     pattern = Pattern,
                                     timeout_last = Timeout,
@@ -353,7 +375,7 @@ request(FunnelName,
                                     trans_id_first = TransId,
                                     trans_id_last = TransId,
                                     pending = Pending,
-                                    sender_id = SenderId},
+                                    sender_id = SenderIdRequest},
             UpdateF = request_crdt_merge,
             CRDTN = cloudi_crdt:update_assign_id(Dispatcher,
                                                  RequestKey,
@@ -365,6 +387,16 @@ request(FunnelName,
                                                  CRDT0),
             {noreply, State#state{crdt = CRDTN}}
     end.
+
+request_sender_id(RequestKey, CRDT, Dispatcher) ->
+    % load balances with a hash function that is used in the same way
+    % in all service processes
+    % (to ensure the sender_id is consistently assigned when duplicate
+    %  service requests are concurrently received in separate processes)
+    SendersValue = cloudi_crdt:get(Dispatcher, senders, CRDT),
+    #senders{sender_ids = SenderIds,
+             length = Length} = SendersValue,
+    lists:nth(erlang:phash2(RequestKey, Length) + 1, SenderIds).
 
 request_crdt_merge(#request{name = Name,
                             pattern = Pattern,

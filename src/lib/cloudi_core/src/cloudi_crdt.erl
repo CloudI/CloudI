@@ -104,6 +104,7 @@
          clear/3,
          clear_id/3,
          clear_id/4,
+         crdt_size/1,
          decr/3,
          decr/4,
          decr_id/4,
@@ -435,6 +436,21 @@ clear_id(Dispatcher, Id, State)
 clear_id(Dispatcher, Key, Id, State)
     when is_pid(Dispatcher) ->
     event_local({clear, Id, Key}, State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the number of CloudI CRDT instances.===
+%% The number of CRDT instances should match the number of write operations.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec crdt_size(state()) ->
+    pos_integer().
+
+crdt_size(#cloudi_crdt{node_ids = [_]}) ->
+    erlang:exit(badarg);
+crdt_size(#cloudi_crdt{node_ids = NodeIds}) ->
+    length(NodeIds).
 
 %%-------------------------------------------------------------------------
 %% @doc

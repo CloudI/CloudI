@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-09-22 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_funnel selection of the sending process
+    * Add the function cloudi_crdt:crdt_size/1 for determining
+      key/value consistency based on #crdt_event{} messages
+
 2020-09-21 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_funnel handling of concurrent duplicate requests
