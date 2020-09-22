@@ -69,7 +69,9 @@
 -behaviour(cloudi_service).
 
 %% cloudi_crdt update functions
--export([request_crdt_merge/2,
+-export([senders_crdt_merge/2,
+         senders_crdt_incr/1,
+         request_crdt_merge/2,
          request_send_retry_crdt/1,
          response_store_crdt/2,
          response_timeout_crdt/2]).
@@ -86,7 +88,8 @@
 
 -define(DEFAULT_NAME,                          "funnel").
         % Funnel name used for incoming service requests
-        % (Prefix ++ FunnelName ++ "*")
+        % (creates subscription Prefix ++ FunnelName ++ "*" with the matching
+        %  suffix used as the request's service name)
 -define(DEFAULT_NODE_COUNT,                           2).
         % Count of connected nodes using the funnel service
         % with the same name argument.
@@ -130,10 +133,18 @@
             :: non_neg_integer()
     }).
 
+-record(senders,
+    {
+        sender_ids :: list(sender_id()),
+        length :: non_neg_integer(),
+        index = 0 :: non_neg_integer() % 0-based
+    }).
+
 -record(state,
     {
         sender_id :: sender_id(),
         service :: cloudi_service:source(),
+        name :: nonempty_string(),
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
         crdt :: cloudi_crdt:state(),
@@ -170,6 +181,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     SenderId = {node(), ProcessIndex},
     Service = cloudi_service:self(Dispatcher),
+    Service ! init_crdt_data,
     InitialDataF = restart_crdt_data_f(Service),
     CRDT0 = cloudi_crdt:new(Dispatcher,
                             [{service_name, "crdt_" ++ Name},
@@ -180,9 +192,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                              {priority_default_offset, -1}]),
     CRDTN = cloudi_crdt:events_subscriptions(Dispatcher,
                                              [assign, update], CRDT0),
-    cloudi_service:subscribe(Dispatcher, Name ++ "*"),
     {ok, #state{sender_id = SenderId,
                 service = Service,
+                name = Name,
                 retry = Retry,
                 retry_delay = RetryDelay,
                 crdt = CRDTN}}.
@@ -228,6 +240,24 @@ cloudi_service_handle_info({retry, RequestKey},
     RequestValue = cloudi_crdt:get(Dispatcher, RequestKey, CRDT),
     StateNew = request_send(RequestKey, RequestValue, State, Dispatcher),
     {noreply, StateNew};
+cloudi_service_handle_info(init_crdt_data,
+                           #state{sender_id = SenderId,
+                                  crdt = CRDT0} = State, Dispatcher) ->
+    % create a consistent store of sender_ids among all the service processes
+    % (required to ensure concurrent service requests choose the same sender_id
+    %  when sending a service request for the first unique request).
+    SendersValue = #senders{sender_ids = [SenderId],
+                            length = 1},
+    UpdateF = senders_crdt_merge,
+    CRDTN = cloudi_crdt:update_assign_id(Dispatcher,
+                                         senders,
+                                         SendersValue,
+                                         ?MODULE,
+                                         UpdateF,
+                                         SendersValue,
+                                         UpdateF,
+                                         CRDT0),
+    {noreply, State#state{crdt = CRDTN}};
 cloudi_service_handle_info({restart_crdt_data, Data}, State, Dispatcher) ->
     StateNew = restart_crdt_data(Data, State, Dispatcher),
     {noreply, StateNew};
@@ -245,6 +275,11 @@ cloudi_service_handle_info(#crdt_event{type = update,
                                   retry_delay = RetryDelay} = State,
                            _Dispatcher) ->
     erlang:send_after(RetryDelay, Service, {retry, RequestKey}),
+    {noreply, State};
+cloudi_service_handle_info(#crdt_event{id = senders_crdt_merge,
+                                       key = senders},
+                           #state{name = Name} = State, Dispatcher) ->
+    ok = cloudi_service:subscribe(Dispatcher, Name ++ "*"),
     {noreply, State};
 cloudi_service_handle_info(#crdt_event{}, State, _Dispatcher) ->
     {noreply, State};
@@ -278,6 +313,17 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+senders_crdt_merge(#senders{sender_ids = [_] = SenderIds,
+                            length = 1},
+                   #senders{sender_ids = SenderIdsOld} = SendersOld) ->
+    SenderIdsNew = lists:umerge(SenderIdsOld, SenderIds),
+    SendersOld#senders{sender_ids = SenderIdsNew,
+                       length = length(SenderIdsNew)}.
+
+senders_crdt_incr(#senders{length = Length,
+                           index = I} = SendersOld) ->
+    SendersOld#senders{index = (I + 1) rem Length}.
+
 restart_crdt_data_f(Service) ->
     fun(Data) ->
         Service ! {restart_crdt_data, Data}
@@ -289,18 +335,20 @@ restart_crdt_data(Data, State, Dispatcher) ->
     % if no response is already present
     maps:fold(fun(RequestKey, RequestValue, StateNext) ->
         request_send(RequestKey, RequestValue, StateNext, Dispatcher)
-    end, State, Data).
+    end, State, maps:remove(senders, Data)).
 
 request(FunnelName,
         RequestType, Name, Pattern, RequestInfo, Request,
         Timeout, Priority, TransId, Pid,
-        #state{sender_id = SenderId,
-               crdt = CRDT0} = State, Dispatcher) ->
+        #state{crdt = CRDT0} = State, Dispatcher) ->
     RequestKey = {FunnelName, RequestInfo, Request},
     case cloudi_crdt:find(Dispatcher, RequestKey, CRDT0) of
         {ok, #request{response = {ResponseInfo, Response}}} ->
             {reply, ResponseInfo, Response, State};
         _ ->
+            #senders{sender_ids = SenderIds,
+                     index = I} = cloudi_crdt:get(Dispatcher, senders, CRDT0),
+            SenderId = lists:nth(I + 1, SenderIds),
             Pending = [{RequestType, Timeout, TransId, Pid}],
             RequestValue = #request{name = Name,
                                     pattern = Pattern,
@@ -368,6 +416,7 @@ request_send(RequestKey,
                       sender_id = SenderId,
                       response = undefined} = RequestValue,
              #state{sender_id = SenderId,
+                    crdt = CRDT0,
                     sent = Sent} = State, Dispatcher) ->
     {FunnelName, RequestInfo, Request} = RequestKey,
     Timeout = timeout_current(TimeoutLast, TransIdLast),
@@ -375,7 +424,13 @@ request_send(RequestKey,
                                           RequestInfo, Request,
                                           Timeout, PriorityMin) of
         {ok, TransId} ->
-            State#state{sent = maps:put(TransId, RequestKey, Sent)};
+            CRDTN = cloudi_crdt:update(Dispatcher,
+                                       senders,
+                                       ?MODULE,
+                                       senders_crdt_incr,
+                                       CRDT0),
+            State#state{crdt = CRDTN,
+                        sent = maps:put(TransId, RequestKey, Sent)};
         {error, timeout} ->
             request_send_retry(RequestKey, RequestValue, State, Dispatcher)
     end;

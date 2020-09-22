@@ -32,6 +32,11 @@
 %%% An assign function can cause concurrent assigns to occur for the same
 %%% key (e.g., caused by concurrent service requests) and the value
 %%% stored in each CRDT instance needs to be the same.
+%%% To avoid the problem, data can be added to the CRDT instance
+%%% (achieving consistency there) before it is used as data input for
+%%% an update function or an assign function.  It is important to also
+%%% consider using the put function instead of update or assign to avoid
+%%% potential consistency problems.
 %%%
 %%% The papers related to this implementation of the POLog CRDT are:
 %%%
