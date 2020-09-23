@@ -197,7 +197,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Service = cloudi_service:self(Dispatcher),
     InitDelayNew = if
         NodeDelay =:= true ->
-            ok = net_kernel:monitor_nodes(true),
+            ok = net_kernel:monitor_nodes(true, [{node_type, all}]),
             InitDelay;
         NodeDelay =:= false ->
             ok = init_delay_start(InitDelay, Service),
@@ -286,20 +286,25 @@ cloudi_service_handle_info(init_crdt_data,
 cloudi_service_handle_info({restart_crdt_data, Data}, State, Dispatcher) ->
     StateNew = restart_crdt_data(Data, State, Dispatcher),
     {noreply, StateNew};
-cloudi_service_handle_info({nodeup, _},
+cloudi_service_handle_info({nodeup, _, _},
                            #state{service = Service,
                                   init_delay = InitDelay,
                                   node_count = NodeCount} = State, _) ->
-    NodesConnected = length(nodes()),
     InitDelayNew = if
-        is_integer(InitDelay), NodesConnected + 1 >= NodeCount ->
-            ok = init_delay_start(InitDelay, Service),
-            undefined;
-        true ->
+        is_integer(InitDelay) ->
+            {ok, NodesAlive} = cloudi_service_api:nodes_alive(infinity),
+            if
+                length(NodesAlive) + 1 >= NodeCount ->
+                    ok = init_delay_start(InitDelay, Service),
+                    undefined;
+                true ->
+                    InitDelay
+            end;
+        InitDelay =:= undefined ->
             InitDelay
     end,
     {noreply, State#state{init_delay = InitDelayNew}};
-cloudi_service_handle_info({nodedown, _}, State, _) ->
+cloudi_service_handle_info({nodedown, _, _}, State, _) ->
     {noreply, State};
 cloudi_service_handle_info(#crdt_event{type = assign,
                                        id = request_crdt_merge,
