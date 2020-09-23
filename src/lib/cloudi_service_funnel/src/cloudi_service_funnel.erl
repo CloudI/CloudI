@@ -101,6 +101,9 @@
 -define(DEFAULT_NODE_COUNT,                           2).
         % Count of connected nodes using the funnel service
         % with the same name argument.
+-define(DEFAULT_RECEIVE_ONLY,                     false).
+        % Do not send from this service instance
+        % (the node may be expected to be unreliable).
 -define(DEFAULT_RETRY,                                0).
 -define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
 
@@ -143,8 +146,8 @@
 
 -record(senders,
     {
-        sender_ids :: nonempty_list(sender_id()),
-        length :: pos_integer(),
+        sender_ids :: list(sender_id()),
+        length :: non_neg_integer(),
         merges :: pos_integer()
     }).
 
@@ -156,6 +159,7 @@
         init_delay :: pos_integer() | undefined,
         init_done :: boolean(),
         node_count :: pos_integer(),
+        receive_only :: boolean(),
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
         crdt :: cloudi_crdt:state(),
@@ -176,9 +180,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {init_delay,                    ?DEFAULT_INIT_DELAY},
         {node_delay,                    ?DEFAULT_NODE_DELAY},
         {node_count,                    ?DEFAULT_NODE_COUNT},
+        {receive_only,                  ?DEFAULT_RECEIVE_ONLY},
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY}],
-    [Name, InitDelay, NodeDelay, NodeCount,
+    [Name, InitDelay, NodeDelay, NodeCount, ReceiveOnly,
      Retry, RetryDelay] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = cloudi_service:destination_refresh_immediate(Dispatcher),
@@ -187,6 +192,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     false = cloudi_service_name:pattern(Name),
     true = is_integer(InitDelay) andalso (InitDelay > 0),
     true = is_integer(NodeCount) andalso (NodeCount > 0),
+    true = is_boolean(ReceiveOnly),
     true = is_integer(Retry) andalso (Retry >= 0),
     true = is_integer(RetryDelay) andalso
            (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
@@ -219,6 +225,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 init_delay = InitDelayNew,
                 init_done = false,
                 node_count = NodeCount,
+                receive_only = ReceiveOnly,
                 retry = Retry,
                 retry_delay = RetryDelay,
                 crdt = CRDTN}}.
@@ -248,16 +255,15 @@ cloudi_service_handle_info({response_return,
                          cloudi_trans_id:microseconds(), Dispatcher),
     {noreply, State};
 cloudi_service_handle_info({response_timeout, RequestKey},
-                           #state{service = Service,
+                           #state{sender_id = SenderId,
+                                  service = Service,
                                   crdt = CRDT0} = State, Dispatcher) ->
-    UpdateF = response_timeout_crdt,
-    CRDTN = cloudi_crdt:update_clear_id(Dispatcher,
-                                        RequestKey,
-                                        ?MODULE,
-                                        UpdateF,
-                                        [RequestKey, Service],
-                                        UpdateF,
-                                        CRDT0),
+    CRDTN = cloudi_crdt:update_clear(Dispatcher,
+                                     RequestKey,
+                                     ?MODULE,
+                                     response_timeout_crdt,
+                                     [RequestKey, Service, SenderId],
+                                     CRDT0),
     {noreply, State#state{crdt = CRDTN}};
 cloudi_service_handle_info({retry, RequestKey},
                            #state{crdt = CRDT} = State, Dispatcher) ->
@@ -266,13 +272,21 @@ cloudi_service_handle_info({retry, RequestKey},
     {noreply, StateNew};
 cloudi_service_handle_info(init_crdt_data,
                            #state{sender_id = SenderId,
+                                  receive_only = ReceiveOnly,
                                   crdt = CRDT0} = State, Dispatcher) ->
     % create a consistent store of sender_ids among all the service processes
     % (required to ensure concurrent service requests choose the same sender_id
     %  when sending a service request for the first unique request).
-    SendersValue = #senders{sender_ids = [SenderId],
-                            length = 1,
-                            merges = 1},
+    SendersValue = if
+        ReceiveOnly =:= true ->
+            #senders{sender_ids = [],
+                     length = 0,
+                     merges = 1};
+        ReceiveOnly =:= false ->
+            #senders{sender_ids = [SenderId],
+                     length = 1,
+                     merges = 1}
+    end,
     UpdateF = senders_crdt_merge,
     CRDTN = cloudi_crdt:update_assign_id(Dispatcher,
                                          senders,
@@ -314,14 +328,19 @@ cloudi_service_handle_info(#crdt_event{type = assign,
     StateNew = request_send(RequestKey, RequestValue, State, Dispatcher),
     {noreply, StateNew};
 cloudi_service_handle_info(#crdt_event{type = update,
-                                       id = request_send_retry_crdt,
+                                       id = {request_send_retry_crdt,
+                                             SenderIdRetry},
                                        key = RequestKey},
-                           #state{service = Service,
+                           #state{sender_id = SenderId,
+                                  service = Service,
                                   retry_delay = RetryDelay} = State,
                            _Dispatcher) ->
-    erlang:send_after(RetryDelay, Service, {retry, RequestKey}),
+    ok = sender_only(fun() ->
+        erlang:send_after(RetryDelay, Service, {retry, RequestKey})
+    end, SenderId, SenderIdRetry),
     {noreply, State};
-cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge, SenderIdMerge},
+cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge,
+                                             SenderIdMerge},
                                        key = senders,
                                        new = {value, SendersValue}},
                            #state{sender_id = SenderId,
@@ -331,6 +350,7 @@ cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge, SenderIdMerge},
                              SenderIdMerge, SenderId),
     if
         InitDone =:= true ->
+            #senders{sender_ids = [_ | _]} = SendersValue,
             ok = cloudi_service:subscribe(Dispatcher, Name ++ "*");
         InitDone =:= false ->
             ok
@@ -372,8 +392,7 @@ init_delay_start(InitDelay, Service) ->
     _ = erlang:send_after(InitDelay, Service, init_crdt_data),
     ok.
 
-senders_crdt_merge(#senders{sender_ids = [_] = SenderIds,
-                            length = 1,
+senders_crdt_merge(#senders{sender_ids = SenderIds,
                             merges = 1},
                    #senders{sender_ids = SenderIdsOld,
                             merges = MergesOld} = SendersOld) ->
@@ -511,7 +530,8 @@ request_send_retry(RequestKey,
 
 request_send_retry(RequestKey,
                    #request{retry_count = RetryCount},
-                   #state{retry = RetryCountMax,
+                   #state{sender_id = SenderId,
+                          retry = RetryCountMax,
                           crdt = CRDT0} = State, Dispatcher) ->
     if
         RetryCount < RetryCountMax ->
@@ -520,7 +540,7 @@ request_send_retry(RequestKey,
                                           RequestKey,
                                           ?MODULE,
                                           UpdateF,
-                                          UpdateF,
+                                          {UpdateF, SenderId},
                                           CRDT0),
             State#state{crdt = CRDTN};
         RetryCount == RetryCountMax ->
@@ -534,30 +554,33 @@ request_send_retry_crdt(#request{retry_count = RetryCount} = RequestValue) ->
     RequestValue#request{retry_count = RetryCount + 1}.
 
 response_store(RequestKey, ResponseInfo, Response,
-               #state{service = Service,
+               #state{sender_id = SenderId,
+                      service = Service,
                       crdt = CRDT0} = State, Dispatcher) ->
-    UpdateF = response_store_crdt,
     ResponseData = {ResponseInfo, Response},
-    CRDTN = cloudi_crdt:update_id(Dispatcher,
-                                  RequestKey,
-                                  ?MODULE,
-                                  UpdateF,
-                                  [RequestKey, ResponseData, Service],
-                                  UpdateF,
-                                  CRDT0),
+    CRDTN = cloudi_crdt:update(Dispatcher,
+                               RequestKey,
+                               ?MODULE,
+                               response_store_crdt,
+                               [RequestKey, ResponseData, Service, SenderId],
+                               CRDT0),
     State#state{crdt = CRDTN}.
 
-response_store_crdt([RequestKey, ResponseData, Service],
+response_store_crdt([RequestKey, ResponseData, Service, SenderId],
                     #request{name = Name,
                              pattern = Pattern,
                              timeout_last = TimeoutLast,
                              trans_id_last = TransIdLast,
-                             pending = Pending} = RequestValue) ->
+                             pending = Pending,
+                             sender_id = SenderIdRequest} = RequestValue) ->
     {ResponseInfo, Response} = ResponseData,
-    Service ! {response_return, Name, Pattern, ResponseInfo, Response, Pending},
-    ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
-    erlang:send_after(ResponseTimeout, Service,
-                      {response_timeout, RequestKey}),
+    ok = sender_only(fun() ->
+        Service ! {response_return,
+                   Name, Pattern, ResponseInfo, Response, Pending},
+        ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
+        erlang:send_after(ResponseTimeout, Service,
+                          {response_timeout, RequestKey})
+    end, SenderId, SenderIdRequest),
     RequestValue#request{pending = [],
                          response = ResponseData}.
 
@@ -580,15 +603,18 @@ response_return([{RequestType, Timeout, TransId, Pid} | Pending],
     response_return(Pending, Name, Pattern, ResponseInfo, Response,
                     MicroSecondsNow, Dispatcher).
 
-response_timeout_crdt([RequestKey, Service],
+response_timeout_crdt([RequestKey, Service, SenderId],
                       #request{timeout_last = TimeoutLast,
-                               trans_id_last = TransIdLast} = RequestValue) ->
+                               trans_id_last = TransIdLast,
+                               sender_id = SenderIdRequest} = RequestValue) ->
     case timeout_current(TimeoutLast, TransIdLast) of
         0 ->
             undefined;
         ResponseTimeout ->
-            erlang:send_after(ResponseTimeout, Service,
-                              {response_timeout, RequestKey}),
+            ok = sender_only(fun() ->
+                erlang:send_after(ResponseTimeout, Service,
+                                  {response_timeout, RequestKey})
+            end, SenderId, SenderIdRequest),
             RequestValue
     end.
 
@@ -601,4 +627,10 @@ timeout_current(TimeoutLast, TransIdLast) ->
         true ->
             TimeoutLast - MilliSecondsElapsed
     end.
+
+sender_only(F, SenderId, SenderId) ->
+    _ = F(),
+    ok;
+sender_only(_, _, _) ->
+    ok.
 
