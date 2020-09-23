@@ -4,6 +4,9 @@
 2020-09-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_funnel selection of the sending process
+    * Add the cloudi_service_funnel configuration arguments
+      init_delay and node_delay for delaying CRDT data initialization
+      until all service processes are ready
     * Add the function cloudi_crdt:crdt_size/1 for determining
       key/value consistency based on #crdt_event{} messages
 

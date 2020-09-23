@@ -89,6 +89,15 @@
         % Funnel name used for incoming service requests
         % (creates subscription Prefix ++ FunnelName ++ "*" with the matching
         %  suffix used as the request's service name)
+-define(DEFAULT_INIT_DELAY,                         100). % milliseconds
+        % The maximum amount of time all cloudi_service_funnel
+        % service processes take to start and initialize the
+        % cloudi_crdt State variable (cloudi_crdt has a subscription).
+        % The delay ensures that cloudi_crdt is able to send
+        % messages to all the available service processes.
+-define(DEFAULT_NODE_DELAY,                       false).
+        % Use node monitoring to ensure the correct number of nodes
+        % are connected before starting initialization.
 -define(DEFAULT_NODE_COUNT,                           2).
         % Count of connected nodes using the funnel service
         % with the same name argument.
@@ -144,15 +153,14 @@
         sender_id :: sender_id(),
         service :: cloudi_service:source(),
         name :: nonempty_string(),
+        init_delay :: pos_integer() | undefined,
+        init_done :: boolean(),
+        node_count :: pos_integer(),
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
         crdt :: cloudi_crdt:state(),
         sent = #{} :: #{cloudi_service:trans_id() := request_key()}
     }).
-
-% Delay to ensure all service processes have started before CRDT
-% service requests are sent (the destinaton processes need to exist)
--define(INIT_CRDT_DATA_DELAY, 100). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -165,16 +173,19 @@
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {name,                          ?DEFAULT_NAME},
+        {init_delay,                    ?DEFAULT_INIT_DELAY},
+        {node_delay,                    ?DEFAULT_NODE_DELAY},
         {node_count,                    ?DEFAULT_NODE_COUNT},
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY}],
-    [Name, NodeCount,
+    [Name, InitDelay, NodeDelay, NodeCount,
      Retry, RetryDelay] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = cloudi_service:destination_refresh_immediate(Dispatcher),
     true = is_list(Name) andalso is_integer(hd(Name)),
     false = lists:member($/, Name),
     false = cloudi_service_name:pattern(Name),
+    true = is_integer(InitDelay) andalso (InitDelay > 0),
     true = is_integer(NodeCount) andalso (NodeCount > 0),
     true = is_integer(Retry) andalso (Retry >= 0),
     true = is_integer(RetryDelay) andalso
@@ -184,7 +195,14 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     SenderId = {node(), ProcessIndex},
     Service = cloudi_service:self(Dispatcher),
-    erlang:send_after(?INIT_CRDT_DATA_DELAY, Service, init_crdt_data),
+    InitDelayNew = if
+        NodeDelay =:= true ->
+            ok = net_kernel:monitor_nodes(true),
+            InitDelay;
+        NodeDelay =:= false ->
+            ok = init_delay_start(InitDelay, Service),
+            undefined
+    end,
     InitialDataF = restart_crdt_data_f(Service),
     CRDT0 = cloudi_crdt:new(Dispatcher,
                             [{service_name, "crdt_" ++ Name},
@@ -198,6 +216,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     {ok, #state{sender_id = SenderId,
                 service = Service,
                 name = Name,
+                init_delay = InitDelayNew,
+                init_done = false,
+                node_count = NodeCount,
                 retry = Retry,
                 retry_delay = RetryDelay,
                 crdt = CRDTN}}.
@@ -265,6 +286,21 @@ cloudi_service_handle_info(init_crdt_data,
 cloudi_service_handle_info({restart_crdt_data, Data}, State, Dispatcher) ->
     StateNew = restart_crdt_data(Data, State, Dispatcher),
     {noreply, StateNew};
+cloudi_service_handle_info({nodeup, _},
+                           #state{service = Service,
+                                  init_delay = InitDelay,
+                                  node_count = NodeCount} = State, _) ->
+    NodesConnected = length(nodes()),
+    InitDelayNew = if
+        is_integer(InitDelay), NodesConnected + 1 >= NodeCount ->
+            ok = init_delay_start(InitDelay, Service),
+            undefined;
+        true ->
+            InitDelay
+    end,
+    {noreply, State#state{init_delay = InitDelayNew}};
+cloudi_service_handle_info({nodedown, _}, State, _) ->
+    {noreply, State};
 cloudi_service_handle_info(#crdt_event{type = assign,
                                        id = request_crdt_merge,
                                        key = RequestKey,
@@ -286,14 +322,15 @@ cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge, SenderIdMerge},
                            #state{sender_id = SenderId,
                                   name = Name,
                                   crdt = CRDT} = State, Dispatcher) ->
-    case senders_ready(SendersValue, cloudi_crdt:crdt_size(CRDT),
-                       SenderIdMerge, SenderId) of
-        true ->
+    InitDone = senders_ready(SendersValue, cloudi_crdt:crdt_size(CRDT),
+                             SenderIdMerge, SenderId),
+    if
+        InitDone =:= true ->
             ok = cloudi_service:subscribe(Dispatcher, Name ++ "*");
-        false ->
+        InitDone =:= false ->
             ok
     end,
-    {noreply, State};
+    {noreply, State#state{init_done = InitDone}};
 cloudi_service_handle_info(#crdt_event{}, State, _Dispatcher) ->
     {noreply, State};
 cloudi_service_handle_info(Request,
@@ -325,6 +362,10 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+init_delay_start(InitDelay, Service) ->
+    _ = erlang:send_after(InitDelay, Service, init_crdt_data),
+    ok.
 
 senders_crdt_merge(#senders{sender_ids = [_] = SenderIds,
                             length = 1,
