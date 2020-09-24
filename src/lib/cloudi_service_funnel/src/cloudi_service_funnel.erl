@@ -73,7 +73,7 @@
          request_crdt_merge/2,
          request_send_retry_crdt/1,
          response_store_crdt/2,
-         response_timeout_crdt/2]).
+         response_timeout_crdt/1]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -255,15 +255,14 @@ cloudi_service_handle_info({response_return,
                          cloudi_trans_id:microseconds(), Dispatcher),
     {noreply, State};
 cloudi_service_handle_info({response_timeout, RequestKey},
-                           #state{sender_id = SenderId,
-                                  service = Service,
-                                  crdt = CRDT0} = State, Dispatcher) ->
-    CRDTN = cloudi_crdt:update_clear(Dispatcher,
-                                     RequestKey,
-                                     ?MODULE,
-                                     response_timeout_crdt,
-                                     [RequestKey, Service, SenderId],
-                                     CRDT0),
+                           #state{crdt = CRDT0} = State, Dispatcher) ->
+    UpdateF = response_timeout_crdt,
+    CRDTN = cloudi_crdt:update_clear_id(Dispatcher,
+                                        RequestKey,
+                                        ?MODULE,
+                                        UpdateF,
+                                        UpdateF,
+                                        CRDT0),
     {noreply, State#state{crdt = CRDTN}};
 cloudi_service_handle_info({retry, RequestKey},
                            #state{crdt = CRDT} = State, Dispatcher) ->
@@ -338,6 +337,48 @@ cloudi_service_handle_info(#crdt_event{type = update,
     ok = sender_only(fun() ->
         erlang:send_after(RetryDelay, Service, {retry, RequestKey})
     end, SenderId, SenderIdRetry),
+    {noreply, State};
+cloudi_service_handle_info(#crdt_event{type = update,
+                                       id = response_store_crdt,
+                                       key = RequestKey,
+                                       old = {value, RequestValueOld},
+                                       new = {value, RequestValueNew}},
+                           #state{sender_id = SenderId,
+                                  service = Service} = State,
+                           _Dispatcher) ->
+    #request{name = Name,
+             pattern = Pattern,
+             pending = Pending,
+             sender_id = SenderIdRequest,
+             response = undefined} = RequestValueOld,
+    #request{timeout_last = TimeoutLast,
+             trans_id_last = TransIdLast,
+             pending = [],
+             response = {ResponseInfo, Response}} = RequestValueNew,
+    ok = sender_only(fun() ->
+        Service ! {response_return,
+                   Name, Pattern, ResponseInfo, Response, Pending},
+        ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
+        erlang:send_after(ResponseTimeout, Service,
+                          {response_timeout, RequestKey})
+    end, SenderId, SenderIdRequest),
+    {noreply, State};
+cloudi_service_handle_info(#crdt_event{type = update,
+                                       id = response_timeout_crdt,
+                                       key = RequestKey,
+                                       new = {value, RequestValue}},
+                           #state{sender_id = SenderId,
+                                  service = Service} = State,
+                           _Dispatcher) ->
+    #request{timeout_last = TimeoutLast,
+             trans_id_last = TransIdLast,
+             sender_id = SenderIdRequest,
+             response = {_, _}} = RequestValue,
+    ok = sender_only(fun() ->
+        ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
+        erlang:send_after(ResponseTimeout, Service,
+                          {response_timeout, RequestKey})
+    end, SenderId, SenderIdRequest),
     {noreply, State};
 cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge,
                                              SenderIdMerge},
@@ -554,33 +595,19 @@ request_send_retry_crdt(#request{retry_count = RetryCount} = RequestValue) ->
     RequestValue#request{retry_count = RetryCount + 1}.
 
 response_store(RequestKey, ResponseInfo, Response,
-               #state{sender_id = SenderId,
-                      service = Service,
-                      crdt = CRDT0} = State, Dispatcher) ->
+               #state{crdt = CRDT0} = State, Dispatcher) ->
     ResponseData = {ResponseInfo, Response},
-    CRDTN = cloudi_crdt:update(Dispatcher,
-                               RequestKey,
-                               ?MODULE,
-                               response_store_crdt,
-                               [RequestKey, ResponseData, Service, SenderId],
-                               CRDT0),
+    UpdateF = response_store_crdt,
+    CRDTN = cloudi_crdt:update_id(Dispatcher,
+                                  RequestKey,
+                                  ?MODULE,
+                                  UpdateF,
+                                  ResponseData,
+                                  UpdateF,
+                                  CRDT0),
     State#state{crdt = CRDTN}.
 
-response_store_crdt([RequestKey, ResponseData, Service, SenderId],
-                    #request{name = Name,
-                             pattern = Pattern,
-                             timeout_last = TimeoutLast,
-                             trans_id_last = TransIdLast,
-                             pending = Pending,
-                             sender_id = SenderIdRequest} = RequestValue) ->
-    {ResponseInfo, Response} = ResponseData,
-    ok = sender_only(fun() ->
-        Service ! {response_return,
-                   Name, Pattern, ResponseInfo, Response, Pending},
-        ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
-        erlang:send_after(ResponseTimeout, Service,
-                          {response_timeout, RequestKey})
-    end, SenderId, SenderIdRequest),
+response_store_crdt(ResponseData, RequestValue) ->
     RequestValue#request{pending = [],
                          response = ResponseData}.
 
@@ -603,18 +630,12 @@ response_return([{RequestType, Timeout, TransId, Pid} | Pending],
     response_return(Pending, Name, Pattern, ResponseInfo, Response,
                     MicroSecondsNow, Dispatcher).
 
-response_timeout_crdt([RequestKey, Service, SenderId],
-                      #request{timeout_last = TimeoutLast,
-                               trans_id_last = TransIdLast,
-                               sender_id = SenderIdRequest} = RequestValue) ->
+response_timeout_crdt(#request{timeout_last = TimeoutLast,
+                               trans_id_last = TransIdLast} = RequestValue) ->
     case timeout_current(TimeoutLast, TransIdLast) of
         0 ->
             undefined;
-        ResponseTimeout ->
-            ok = sender_only(fun() ->
-                erlang:send_after(ResponseTimeout, Service,
-                                  {response_timeout, RequestKey})
-            end, SenderId, SenderIdRequest),
+        _ ->
             RequestValue
     end.
 
