@@ -95,6 +95,8 @@
         % cloudi_crdt State variable (cloudi_crdt has a subscription).
         % The delay ensures that cloudi_crdt is able to send
         % messages to all the available service processes.
+        % When using separate nodes, the delay should be
+        % 5 or more seconds.
 -define(DEFAULT_NODE_DELAY,                       false).
         % Use node monitoring to ensure the correct number of nodes
         % are connected before starting initialization.
@@ -209,7 +211,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             ok = init_delay_start(InitDelay, Service),
             undefined
     end,
-    InitialDataF = restart_crdt_data_f(Service),
+    InitialDataF = crdt_data_restart_f(Service),
     CRDT0 = cloudi_crdt:new(Dispatcher,
                             [{service_name, "crdt_" ++ Name},
                              {initial_data_function, InitialDataF},
@@ -269,7 +271,7 @@ cloudi_service_handle_info({retry, RequestKey},
     RequestValue = cloudi_crdt:get(Dispatcher, RequestKey, CRDT),
     StateNew = request_send(RequestKey, RequestValue, State, Dispatcher),
     {noreply, StateNew};
-cloudi_service_handle_info(init_crdt_data,
+cloudi_service_handle_info(crdt_data_init,
                            #state{sender_id = SenderId,
                                   receive_only = ReceiveOnly,
                                   crdt = CRDT0} = State, Dispatcher) ->
@@ -296,8 +298,8 @@ cloudi_service_handle_info(init_crdt_data,
                                          {UpdateF, SenderId},
                                          CRDT0),
     {noreply, State#state{crdt = CRDTN}};
-cloudi_service_handle_info({restart_crdt_data, Data}, State, Dispatcher) ->
-    StateNew = restart_crdt_data(Data, State, Dispatcher),
+cloudi_service_handle_info({crdt_data_restart, Data}, State, Dispatcher) ->
+    StateNew = crdt_data_restart(Data, State, Dispatcher),
     {noreply, StateNew};
 cloudi_service_handle_info({nodeup, _, _},
                            #state{service = Service,
@@ -349,8 +351,7 @@ cloudi_service_handle_info(#crdt_event{type = update,
     #request{name = Name,
              pattern = Pattern,
              pending = Pending,
-             sender_id = SenderIdRequest,
-             response = undefined} = RequestValueOld,
+             sender_id = SenderIdRequest} = RequestValueOld,
     #request{timeout_last = TimeoutLast,
              trans_id_last = TransIdLast,
              pending = [],
@@ -430,7 +431,7 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 init_delay_start(InitDelay, Service) ->
-    _ = erlang:send_after(InitDelay, Service, init_crdt_data),
+    _ = erlang:send_after(InitDelay, Service, crdt_data_init),
     ok.
 
 senders_crdt_merge(#senders{sender_ids = SenderIds,
@@ -450,12 +451,12 @@ senders_ready(#senders{merges = Merges}, MergesExpected, SenderId, SenderId)
 senders_ready(_, _, _, _) ->
     false.
 
-restart_crdt_data_f(Service) ->
+crdt_data_restart_f(Service) ->
     fun(Data) ->
-        Service ! {restart_crdt_data, Data}
+        Service ! {crdt_data_restart, Data}
     end.
 
-restart_crdt_data(Data, State, Dispatcher) ->
+crdt_data_restart(Data, State, Dispatcher) ->
     % process data after a restart that will not be present in events
     % is used to create new service requests for this sender,
     % if no response is already present

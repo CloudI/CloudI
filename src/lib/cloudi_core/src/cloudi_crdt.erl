@@ -1834,10 +1834,10 @@ bootstrap_update_result(BootstrapNodeId, BootstrapStates, VClockAvg) ->
     VClockAvgL = [VClockAvg |
                   [VClockAvgRemote
                    || {VClockAvgRemote, _, _, _, _, _, _} <- BootstrapStates]],
+    Count = length(VClockAvgL),
+    VClockAvgNew = 2 * Count * Count, % new process defined, based on testing
     AllNewProcesses = lists:all(fun(VClockAvgValue) ->
-        % The comparison here uses an arbitrary number based on testing
-        % to determine what a new process really is.
-        VClockAvgValue < 30
+        VClockAvgValue < VClockAvgNew
     end, VClockAvgL),
     if
         AllNewProcesses =:= true ->
@@ -1851,13 +1851,12 @@ bootstrap_update_result(BootstrapNodeId, BootstrapStates, VClockAvg) ->
             % of a CloudI service, but is instead due to a restart or the
             % start of a new CloudI service instance.
             % (assumes a normal distribution of vclock() averages exists)
-            Count = length(BootstrapStates),
-            VClockAllAvg = lists:sum(VClockAvgL) / (Count + 1),
+            VClockAllAvg = lists:sum(VClockAvgL) / Count,
             VClockAllAvgStdDev = math:pow(lists:foldl(fun(VClockAvgValue,
                                                           SqsSum) ->
                 Diff = VClockAvgValue - VClockAllAvg,
                 Diff * Diff + SqsSum
-            end, 0, VClockAvgL) / Count, 0.5), % sample stddev
+            end, 0, VClockAvgL) / (Count - 1), 0.5), % sample stddev
 
             % 50% is 0.67448975019608171 * stddev
             VClockAllAvgThreshold = VClockAllAvg -

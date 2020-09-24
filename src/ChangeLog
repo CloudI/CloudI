@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-09-24 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_crdt bootstrap mode for a crdt_size other than 4
+
 2020-09-23 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the cloudi_service_funnel configuration argument
