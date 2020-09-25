@@ -34,7 +34,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -55,8 +55,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -78,6 +78,7 @@
          new/1,
          recv/3,
          recv_id/3,
+         resume/2,
          send/4,
          send/5,
          send/6,
@@ -89,6 +90,7 @@
          send_id/7,
          send_id/8,
          size/2,
+         suspend/2,
          timeout/3]).
 
 -include("cloudi_service.hrl").
@@ -106,6 +108,26 @@
         retry_pattern_pid :: boolean(),
         retry_count = 0 :: non_neg_integer(),
         retry_delay = false :: boolean()
+    }).
+
+-record(request_suspend_send,
+    {
+        name :: cloudi_service:service_name(),
+        request_info :: cloudi_service:request_info(),
+        request :: cloudi_service:request(),
+        timeout :: cloudi_service:timeout_milliseconds(),
+        priority :: cloudi_service:priority(),
+        id :: cloudi_service:trans_id(),
+        pattern_pid :: cloudi_service:pattern_pid() | undefined
+    }).
+
+-record(request_suspend_mcast,
+    {
+        name :: cloudi_service:service_name(),
+        request_info :: cloudi_service:request_info(),
+        request :: cloudi_service:request(),
+        timeout :: cloudi_service:timeout_milliseconds(),
+        priority :: cloudi_service:priority()
     }).
 
 -record(request_ordered_send,
@@ -128,6 +150,8 @@
         priority :: cloudi_service:priority()
     }).
 
+-type suspend_requests() :: queue:queue(#request_suspend_send{} |
+                                        #request_suspend_mcast{}).
 -type ordered_requests() :: queue:queue(#request_ordered_send{} |
                                         #request_ordered_mcast{}).
 -type requests() :: #{cloudi_service:trans_id() := #request{}}.
@@ -136,6 +160,7 @@
     {
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
+        suspended :: boolean(),
         ordered :: boolean(),
         timeout_default :: cloudi_service:timeout_milliseconds(),
         priority_default :: cloudi_service:priority(),
@@ -149,6 +174,7 @@
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
         failures_source = [] :: list(cloudi_timestamp:seconds_monotonic()),
+        suspend_requests = queue:new() :: suspend_requests(),
         ordered_requests = queue:new() :: ordered_requests(),
         ordered_pending = 0 :: non_neg_integer(),
         requests = #{} :: requests()
@@ -158,6 +184,7 @@
         % a retry doesn't count as a failure, until it fails completely
         % (i.e., hit the max retry count or send returns an error)
 -define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
+-define(DEFAULT_SUSPENDED,                        false).
 -define(DEFAULT_ORDERED,                          false).
 -define(DEFAULT_TIMEOUT_DEFAULT,              undefined).
         % provide a default timeout that will be used instead of
@@ -194,6 +221,7 @@
 -type options() ::
     list({retry, non_neg_integer()} |
          {retry_delay, non_neg_integer()} |
+         {suspended, boolean()} |
          {ordered, boolean()} |
          {timeout_default, cloudi_service:timeout_milliseconds()} |
          {priority_default, cloudi_service:priority()} |
@@ -430,6 +458,34 @@ mcast(Dispatcher, Name, Request, Timeout, State) ->
     {{error, Reason :: cloudi_service:error_reason()}, State :: state()}.
 
 mcast(Dispatcher, Name, RequestInfo, Request, Timeout, Priority,
+      #cloudi_queue{suspended = true,
+                    validate_request_info = RequestInfoF,
+                    validate_request = RequestF,
+                    failures_source_die = FailuresSrcDie,
+                    failures_source_max_count = FailuresSrcMaxCount,
+                    failures_source_max_period = FailuresSrcMaxPeriod,
+                    failures_source = FailuresSrc,
+                    suspend_requests = SuspendRequests} = State)
+    when is_pid(Dispatcher) ->
+    case validate(RequestInfoF, RequestF,
+                  RequestInfo, Request) of
+        true ->
+            SuspendRequest = #request_suspend_mcast{name = Name,
+                                                    request_info = RequestInfo,
+                                                    request = Request,
+                                                    timeout = Timeout,
+                                                    priority = Priority},
+            SuspendRequestsNew = queue:in(SuspendRequest, SuspendRequests),
+            {ok, State#cloudi_queue{suspend_requests = SuspendRequestsNew}};
+        false ->
+            FailuresSrcNew = failure(FailuresSrcDie,
+                                     FailuresSrcMaxCount,
+                                     FailuresSrcMaxPeriod,
+                                     FailuresSrc),
+            {{error, timeout},
+             State#cloudi_queue{failures_source = FailuresSrcNew}}
+    end;
+mcast(Dispatcher, Name, RequestInfo, Request, Timeout, Priority,
       #cloudi_queue{ordered = true,
                     validate_request_info = RequestInfoF,
                     validate_request = RequestF,
@@ -524,6 +580,7 @@ new(Options)
     Defaults = [
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY},
+        {suspended,                     ?DEFAULT_SUSPENDED},
         {ordered,                       ?DEFAULT_ORDERED},
         {timeout_default,               ?DEFAULT_TIMEOUT_DEFAULT},
         {priority_default,              ?DEFAULT_PRIORITY_DEFAULT},
@@ -534,7 +591,7 @@ new(Options)
         {failures_source_die,           ?DEFAULT_FAILURES_SOURCE_DIE},
         {failures_source_max_count,     ?DEFAULT_FAILURES_SOURCE_MAX_COUNT},
         {failures_source_max_period,    ?DEFAULT_FAILURES_SOURCE_MAX_PERIOD}],
-    [Retry, RetryDelay, Ordered, TimeoutDefault, PriorityDefault,
+    [Retry, RetryDelay, Suspended, Ordered, TimeoutDefault, PriorityDefault,
      ValidateRequestInfo0, ValidateRequest0,
      ValidateResponseInfo0, ValidateResponse0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod
@@ -543,6 +600,7 @@ new(Options)
     true = is_integer(Retry) andalso (Retry >= 0),
     true = is_integer(RetryDelay) andalso
            (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
+    true = is_boolean(Suspended),
     true = is_boolean(Ordered),
     true = (TimeoutDefault =:= undefined) orelse
            (TimeoutDefault =:= limit_min) orelse
@@ -571,6 +629,7 @@ new(Options)
     #cloudi_queue{
         retry = Retry,
         retry_delay = RetryDelay,
+        suspended = Suspended,
         ordered = Ordered,
         timeout_default = TimeoutDefault,
         priority_default = PriorityDefault,
@@ -657,6 +716,23 @@ recv_id(Dispatcher,
                                        requests = RequestsNew})}
             end
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Resume sending service requests.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec resume(Dispatcher :: cloudi_service:dispatcher(),
+             State :: state()) ->
+    StateNew :: state().
+
+resume(Dispatcher, #cloudi_queue{suspended = true} = State)
+    when is_pid(Dispatcher) ->
+    resume_all(Dispatcher, State);
+resume(Dispatcher, #cloudi_queue{suspended = false} = State)
+    when is_pid(Dispatcher) ->
+    State.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -851,6 +927,38 @@ send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, State) ->
     {{error, Reason :: cloudi_service:error_reason()}, StateNew :: state()}.
 
 send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
+        #cloudi_queue{suspended = true,
+                      validate_request_info = RequestInfoF,
+                      validate_request = RequestF,
+                      failures_source_die = FailuresSrcDie,
+                      failures_source_max_count = FailuresSrcMaxCount,
+                      failures_source_max_period = FailuresSrcMaxPeriod,
+                      failures_source = FailuresSrc,
+                      suspend_requests = SuspendRequests} = State)
+    when is_pid(Dispatcher) ->
+    case validate(RequestInfoF, RequestF,
+                  RequestInfo, Request) of
+        true ->
+            TransId = cloudi_service:trans_id(Dispatcher),
+            SuspendRequest = #request_suspend_send{name = Name,
+                                                   request_info = RequestInfo,
+                                                   request = Request,
+                                                   timeout = Timeout,
+                                                   priority = Priority,
+                                                   id = TransId,
+                                                   pattern_pid = PatternPid},
+            SuspendRequestsNew = queue:in(SuspendRequest, SuspendRequests),
+            {ok, TransId,
+             State#cloudi_queue{suspend_requests = SuspendRequestsNew}};
+        false ->
+            FailuresSrcNew = failure(FailuresSrcDie,
+                                     FailuresSrcMaxCount,
+                                     FailuresSrcMaxPeriod,
+                                     FailuresSrc),
+            {{error, timeout},
+             State#cloudi_queue{failures_source = FailuresSrcNew}}
+    end;
+send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
         #cloudi_queue{ordered = true,
                       validate_request_info = RequestInfoF,
                       validate_request = RequestF,
@@ -945,6 +1053,20 @@ size(Dispatcher,
                    requests = Requests})
     when is_pid(Dispatcher) ->
     queue:len(OrderedRequests) + maps:size(Requests).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Suspend sending service requests.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec suspend(Dispatcher :: cloudi_service:dispatcher(),
+              State :: state()) ->
+    StateNew :: state().
+
+suspend(Dispatcher, State)
+    when is_pid(Dispatcher) ->
+    State#cloudi_queue{suspended = true}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1094,9 +1216,9 @@ queue_send_first(Dispatcher, Name, RequestInfo, Request,
             Error
     end.
 
-queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
-                         Timeout, Priority, TransId, undefined,
-                         TimeoutDefault, PriorityDefault) ->
+queue_send_first(Dispatcher, Name, RequestInfo, Request,
+                 Timeout, Priority, TransId, undefined,
+                 TimeoutDefault, PriorityDefault) ->
     TimeoutNew = default(Timeout, TimeoutDefault),
     PriorityNew = default(Priority, PriorityDefault),
     case cloudi_service:get_pid(Dispatcher, Name, TimeoutNew) of
@@ -1121,9 +1243,9 @@ queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
         {error, _} = Error ->
             Error
     end;
-queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
-                         Timeout, Priority, TransId, PatternPid,
-                         TimeoutDefault, PriorityDefault) ->
+queue_send_first(Dispatcher, Name, RequestInfo, Request,
+                 Timeout, Priority, TransId, PatternPid,
+                 TimeoutDefault, PriorityDefault) ->
     TimeoutNew = default(Timeout, TimeoutDefault),
     PriorityNew = default(Priority, PriorityDefault),
     case cloudi_service:send_async_active(Dispatcher, Name,
@@ -1233,6 +1355,18 @@ queue_mcast_send([PatternPid | PatternPids], OrderedPending,
             {Error, OrderedPending, Requests}
     end.
 
+ordered_check(_, #cloudi_queue{suspended = true,
+                               ordered = Ordered,
+                               ordered_pending = OrderedPending} = State) ->
+    OrderedPendingNew = if
+        Ordered =:= true ->
+            true = OrderedPending > 0,
+            OrderedPending - 1;
+        Ordered =:= false ->
+            true = OrderedPending == 0,
+            0
+    end,
+    State#cloudi_queue{ordered_pending = OrderedPendingNew};
 ordered_check(Dispatcher,
               #cloudi_queue{ordered = true,
                             ordered_requests = OrderedRequests,
@@ -1290,9 +1424,9 @@ ordered_send(Dispatcher,
                            failures_source = FailuresSrc,
                            ordered_pending = 0,
                            requests = Requests} = State) ->
-    case queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
-                                  Timeout, Priority, TransId, PatternPid,
-                                  TimeoutDefault, PriorityDefault) of
+    case queue_send_first(Dispatcher, Name, RequestInfo, Request,
+                          Timeout, Priority, TransId, PatternPid,
+                          TimeoutDefault, PriorityDefault) of
         {ok, RequestState} ->
             {ok,
              State#cloudi_queue{ordered_pending = 1,
@@ -1338,6 +1472,141 @@ ordered_mcast(Dispatcher,
              State#cloudi_queue{failures_source = FailuresSrcNew,
                                 ordered_pending = OrderedPending,
                                 requests = RequestsNew}}
+    end.
+
+resume_all(Dispatcher,
+           #cloudi_queue{suspended = true,
+                         suspend_requests = SuspendRequests} = State) ->
+    case queue:out(SuspendRequests) of
+        {{value, #request_suspend_send{} = SuspendSend},
+         SuspendRequestsNew} ->
+            resume_all_send(Dispatcher,
+                            SuspendSend,
+                            State#cloudi_queue{
+                                suspend_requests = SuspendRequestsNew});
+        {{value, #request_suspend_mcast{} = SuspendMcast},
+         SuspendRequestsNew} ->
+            resume_all_mcast(Dispatcher,
+                             SuspendMcast,
+                             State#cloudi_queue{
+                                 suspend_requests = SuspendRequestsNew});
+        {empty, SuspendRequestsNew} ->
+            State#cloudi_queue{suspended = false,
+                               suspend_requests = SuspendRequestsNew}
+    end.
+
+resume_all_send(Dispatcher,
+                #request_suspend_send{name = Name,
+                                      request_info = RequestInfo,
+                                      request = Request,
+                                      timeout = Timeout,
+                                      priority = Priority,
+                                      id = TransId,
+                                      pattern_pid = PatternPid},
+                #cloudi_queue{ordered = true,
+                              ordered_requests = OrderedRequests,
+                              ordered_pending = OrderedPending} = State)
+    when OrderedPending > 0 ->
+    OrderedRequest = #request_ordered_send{name = Name,
+                                           request_info = RequestInfo,
+                                           request = Request,
+                                           timeout = Timeout,
+                                           priority = Priority,
+                                           id = TransId,
+                                           pattern_pid = PatternPid},
+    OrderedRequestsNew = queue:in(OrderedRequest, OrderedRequests),
+    resume_all(Dispatcher,
+               State#cloudi_queue{ordered_requests = OrderedRequestsNew});
+resume_all_send(Dispatcher,
+                #request_suspend_send{name = Name,
+                                      request_info = RequestInfo,
+                                      request = Request,
+                                      timeout = Timeout,
+                                      priority = Priority,
+                                      id = TransId,
+                                      pattern_pid = PatternPid},
+                #cloudi_queue{ordered = Ordered,
+                              timeout_default = TimeoutDefault,
+                              priority_default = PriorityDefault,
+                              failures_source_die = FailuresSrcDie,
+                              failures_source_max_count = FailuresSrcMaxCount,
+                              failures_source_max_period = FailuresSrcMaxPeriod,
+                              failures_source = FailuresSrc,
+                              ordered_pending = 0,
+                              requests = Requests} = State) ->
+    case queue_send_first(Dispatcher, Name, RequestInfo, Request,
+                          Timeout, Priority, TransId, PatternPid,
+                          TimeoutDefault, PriorityDefault) of
+        {ok, RequestState} ->
+            OrderedPending = if
+                Ordered =:= true ->
+                    1;
+                Ordered =:= false ->
+                    0
+            end,
+            resume_all(Dispatcher,
+                       State#cloudi_queue{ordered_pending = OrderedPending,
+                                          requests = maps:put(TransId,
+                                                              RequestState,
+                                                              Requests)});
+        {error, _} ->
+            FailuresSrcNew = failure(FailuresSrcDie,
+                                     FailuresSrcMaxCount,
+                                     FailuresSrcMaxPeriod,
+                                     FailuresSrc),
+            resume_all(Dispatcher,
+                       State#cloudi_queue{failures_source = FailuresSrcNew})
+    end.
+
+resume_all_mcast(Dispatcher,
+                 #request_suspend_mcast{name = Name,
+                                        request_info = RequestInfo,
+                                        request = Request,
+                                        timeout = Timeout,
+                                        priority = Priority},
+                 #cloudi_queue{ordered = true,
+                               ordered_requests = OrderedRequests,
+                               ordered_pending = OrderedPending} = State)
+    when OrderedPending > 0 ->
+    OrderedRequest = #request_ordered_mcast{name = Name,
+                                            request_info = RequestInfo,
+                                            request = Request,
+                                            timeout = Timeout,
+                                            priority = Priority},
+    OrderedRequestsNew = queue:in(OrderedRequest, OrderedRequests),
+    resume_all(Dispatcher,
+               State#cloudi_queue{ordered_requests = OrderedRequestsNew});
+resume_all_mcast(Dispatcher,
+                 #request_suspend_mcast{name = Name,
+                                        request_info = RequestInfo,
+                                        request = Request,
+                                        timeout = Timeout,
+                                        priority = Priority},
+                 #cloudi_queue{ordered = Ordered,
+                               timeout_default = TimeoutDefault,
+                               priority_default = PriorityDefault,
+                               failures_source_die = FailuresSrcDie,
+                               failures_source_max_count = FailuresSrcMaxCount,
+                               failures_source_max_period = FailuresSrcMaxPeriod,
+                               failures_source = FailuresSrc,
+                               ordered_pending = 0,
+                               requests = Requests} = State) ->
+    case queue_mcast(Dispatcher, Name, RequestInfo, Request,
+                     Timeout, Priority, Requests, Ordered,
+                     TimeoutDefault, PriorityDefault) of
+        {ok, OrderedPending, RequestsNew} ->
+            resume_all(Dispatcher,
+                       State#cloudi_queue{ordered_pending = OrderedPending,
+                                          requests = RequestsNew});
+        {{error, _}, OrderedPending, RequestsNew} ->
+            FailuresSrcNew = failure(FailuresSrcDie,
+                                     FailuresSrcMaxCount,
+                                     FailuresSrcMaxPeriod,
+                                     FailuresSrc),
+            resume_all(Dispatcher,
+                       State#cloudi_queue{failures_source = FailuresSrcNew,
+                                          ordered_pending = OrderedPending,
+                                          requests = RequestsNew})
     end.
 
 failure(false, _, _, FailureList) ->

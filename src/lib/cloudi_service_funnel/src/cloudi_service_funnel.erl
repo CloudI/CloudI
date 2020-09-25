@@ -89,18 +89,7 @@
         % Funnel name used for incoming service requests
         % (creates subscription Prefix ++ FunnelName ++ "*" with the matching
         %  suffix used as the request's service name)
--define(DEFAULT_INIT_DELAY,                         100). % milliseconds
-        % The maximum amount of time all cloudi_service_funnel
-        % service processes take to start and initialize the
-        % cloudi_crdt State variable (cloudi_crdt has a subscription).
-        % The delay ensures that cloudi_crdt is able to send
-        % messages to all the available service processes.
-        % When using separate nodes, the delay should be
-        % 5 or more seconds.
--define(DEFAULT_NODE_DELAY,                       false).
-        % Use node monitoring to ensure the correct number of nodes
-        % are connected before starting initialization.
--define(DEFAULT_NODE_COUNT,                           2).
+-define(DEFAULT_NODE_COUNT,                           1).
         % Count of connected nodes using the funnel service
         % with the same name argument.
 -define(DEFAULT_RECEIVE_ONLY,                     false).
@@ -158,9 +147,7 @@
         sender_id :: sender_id(),
         service :: cloudi_service:source(),
         name :: nonempty_string(),
-        init_delay :: pos_integer() | undefined,
         init_done :: boolean(),
-        node_count :: pos_integer(),
         receive_only :: boolean(),
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
@@ -179,21 +166,18 @@
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {name,                          ?DEFAULT_NAME},
-        {init_delay,                    ?DEFAULT_INIT_DELAY},
-        {node_delay,                    ?DEFAULT_NODE_DELAY},
         {node_count,                    ?DEFAULT_NODE_COUNT},
         {receive_only,                  ?DEFAULT_RECEIVE_ONLY},
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY}],
-    [Name, InitDelay, NodeDelay, NodeCount, ReceiveOnly,
+    [Name, NodeCount, ReceiveOnly,
      Retry, RetryDelay] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = cloudi_service:destination_refresh_immediate(Dispatcher),
     true = is_list(Name) andalso is_integer(hd(Name)),
     false = lists:member($/, Name),
     false = cloudi_service_name:pattern(Name),
-    true = is_integer(InitDelay) andalso (InitDelay > 0),
-    true = is_integer(NodeCount) andalso (NodeCount > 0),
+    true = is_integer(NodeCount) andalso (NodeCount >= 1),
     true = is_boolean(ReceiveOnly),
     true = is_integer(Retry) andalso (Retry >= 0),
     true = is_integer(RetryDelay) andalso
@@ -203,30 +187,21 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     SenderId = {node(), ProcessIndex},
     Service = cloudi_service:self(Dispatcher),
-    InitDelayNew = if
-        NodeDelay =:= true ->
-            ok = net_kernel:monitor_nodes(true, [{node_type, all}]),
-            InitDelay;
-        NodeDelay =:= false ->
-            ok = init_delay_start(InitDelay, Service),
-            undefined
-    end,
     InitialDataF = crdt_data_restart_f(Service),
     CRDT0 = cloudi_crdt:new(Dispatcher,
                             [{service_name, "crdt_" ++ Name},
+                             {node_count, NodeCount},
                              {initial_data_function, InitialDataF},
                              {retry, 20}, % 5 minutes total
                              {retry_delay, 15 * 1000}, % 15 seconds
-                             {clean_vclocks_failure, 100.0 / NodeCount},
                              {priority_default_offset, -1}]),
     CRDTN = cloudi_crdt:events_subscriptions(Dispatcher,
                                              [assign, update], CRDT0),
+    Service ! crdt_data_init,
     {ok, #state{sender_id = SenderId,
                 service = Service,
                 name = Name,
-                init_delay = InitDelayNew,
                 init_done = false,
-                node_count = NodeCount,
                 receive_only = ReceiveOnly,
                 retry = Retry,
                 retry_delay = RetryDelay,
@@ -301,26 +276,6 @@ cloudi_service_handle_info(crdt_data_init,
 cloudi_service_handle_info({crdt_data_restart, Data}, State, Dispatcher) ->
     StateNew = crdt_data_restart(Data, State, Dispatcher),
     {noreply, StateNew};
-cloudi_service_handle_info({nodeup, _, _},
-                           #state{service = Service,
-                                  init_delay = InitDelay,
-                                  node_count = NodeCount} = State, _) ->
-    InitDelayNew = if
-        is_integer(InitDelay) ->
-            {ok, NodesAlive} = cloudi_service_api:nodes_alive(infinity),
-            if
-                length(NodesAlive) + 1 >= NodeCount ->
-                    ok = init_delay_start(InitDelay, Service),
-                    undefined;
-                true ->
-                    InitDelay
-            end;
-        InitDelay =:= undefined ->
-            InitDelay
-    end,
-    {noreply, State#state{init_delay = InitDelayNew}};
-cloudi_service_handle_info({nodedown, _, _}, State, _) ->
-    {noreply, State};
 cloudi_service_handle_info(#crdt_event{type = assign,
                                        id = request_crdt_merge,
                                        key = RequestKey,
@@ -387,11 +342,14 @@ cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge,
                                        new = {value, SendersValue}},
                            #state{sender_id = SenderId,
                                   name = Name,
+                                  init_done = false,
                                   crdt = CRDT} = State, Dispatcher) ->
     InitDone = senders_ready(SendersValue, cloudi_crdt:crdt_size(CRDT),
                              SenderIdMerge, SenderId),
     if
         InitDone =:= true ->
+            % ensure that all cloudi_service_funnel service instances
+            % do not have receive_only set to true
             #senders{sender_ids = [_ | _]} = SendersValue,
             ok = cloudi_service:subscribe(Dispatcher, Name ++ "*");
         InitDone =:= false ->
@@ -429,10 +387,6 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-init_delay_start(InitDelay, Service) ->
-    _ = erlang:send_after(InitDelay, Service, crdt_data_init),
-    ok.
 
 senders_crdt_merge(#senders{sender_ids = SenderIds,
                             merges = 1},

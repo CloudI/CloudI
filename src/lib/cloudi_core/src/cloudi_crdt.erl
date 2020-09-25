@@ -237,6 +237,8 @@
 -record(cloudi_crdt,
     {
         service_name_full :: cloudi_service:service_name(),
+        init_delay :: undefined | milliseconds(),
+        node_count :: non_neg_integer(),
         initial_data_function :: undefined | initial_data_function(),
         clean_vclocks_interval :: seconds(),
         clean_vclocks_failure :: number(),
@@ -257,6 +259,14 @@
     }).
 
 -define(DEFAULT_SERVICE_NAME,                    "crdt").
+-define(DEFAULT_INIT_DELAY,                   undefined). % milliseconds
+        % Delay initialization to ensure services have had
+        % time to execute cloudi_crdt:new in all their processes.
+        % If set to undefined, a default value is assigned
+        % based on the node_count value.
+-define(DEFAULT_NODE_COUNT,                           1).
+        % If the node count is greater than 1, use node monitoring
+        % to delay initialization until all nodes are present.
 -define(DEFAULT_INITIAL_DATA_FUNCTION,        undefined).
         % Provide an arity-1 function to read internal Erlang map data
         % received after a restart before events are processed
@@ -267,7 +277,7 @@
         % The vclock() is cleaned to allow POLog operations to complete
         % after a CloudI service process has restarted or stopped
         % (in those cases, the old vclock() will never get incremented).
--define(DEFAULT_CLEAN_VCLOCKS_FAILURE,             50.0). % percentage
+-define(DEFAULT_CLEAN_VCLOCKS_FAILURE,        undefined). % percentage
         % If the number of CloudI service processes is reduced by
         % this amount or greater, then do not clean the vclocks
         % (the problem is assumed to be transient, not permanent).
@@ -275,6 +285,8 @@
         % after a net-split occurs.  The percentage should be lower
         % with higher Distributed Erlang node counts
         % (e.g., 2 nodes can use 50.0, 3 nodes can use 33.3, etc.).
+        % Use the node_count value to determine clean_vclocks_failure
+        % if it is set to undefined.
 -define(DEFAULT_RETRY,                                0). % see below:
         % a retry doesn't count as a failure, until it fails completely
         % (i.e., hit the max retry count or send returns an error)
@@ -307,9 +319,11 @@
 -type event_id() :: cloudi_service:trans_id() | any().
 -type options() ::
     list({service_name, string()} |
+         {init_delay, milliseconds()} |
+         {node_count, non_neg_integer()} |
          {initial_data_function, initial_data_function() | undefined} |
          {clean_vclocks, seconds()} |
-         {clean_vclocks_failure, float() | 1..100} |
+         {clean_vclocks_failure, undefined | float() | 1..100} |
          {retry, non_neg_integer()} |
          {retry_delay, non_neg_integer()} |
          {timeout_default, cloudi_service:timeout_milliseconds()} |
@@ -657,8 +671,14 @@ get(Dispatcher, Key,
     {{error, Reason :: cloudi_service:error_reason()}, StateNew :: state()} |
     {ignored, State :: state()}.
 
+handle_info(cloudi_crdt_init_delay, State, Dispatcher) ->
+    {ok, init_delay(State, Dispatcher)};
 handle_info(cloudi_crdt_clean_vclocks, State, Dispatcher) ->
     {ok, clean_vclocks(State, Dispatcher)};
+handle_info({nodeup, _, _}, State, _) ->
+    {ok, node_count_init(State)};
+handle_info({nodedown, _, _}, State, _) ->
+    {ok, State};
 handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
     {Result, QueueNew} = cloudi_queue:handle_info(Request, Queue, Dispatcher),
     StateNew = State#cloudi_crdt{queue = QueueNew},
@@ -861,6 +881,8 @@ new(Dispatcher, Options)
     when is_pid(Dispatcher), is_list(Options) ->
     Defaults = [
         {service_name,                  ?DEFAULT_SERVICE_NAME},
+        {init_delay,                    ?DEFAULT_INIT_DELAY},
+        {node_count,                    ?DEFAULT_NODE_COUNT},
         {initial_data_function,         ?DEFAULT_INITIAL_DATA_FUNCTION},
         {clean_vclocks,                 ?DEFAULT_CLEAN_VCLOCKS},
         {clean_vclocks_failure,         ?DEFAULT_CLEAN_VCLOCKS_FAILURE},
@@ -869,7 +891,8 @@ new(Dispatcher, Options)
         {timeout_default,               ?DEFAULT_TIMEOUT_DEFAULT},
         {priority_default,              ?DEFAULT_PRIORITY_DEFAULT},
         {priority_default_offset,       ?DEFAULT_PRIORITY_DEFAULT_OFFSET}],
-    [ServiceName, InitialDataF, CleanIntervalSeconds, CleanFailure,
+    [ServiceName, InitDelay0, NodeCount, InitialDataF,
+     CleanIntervalSeconds, CleanFailure0,
      Retry, RetryDelay, TimeoutDefault,
      PriorityDefault0, PriorityDefaultOffset] =
         cloudi_proplists:take_values(Defaults, Options),
@@ -878,13 +901,32 @@ new(Dispatcher, Options)
     ServiceNameFull = Prefix ++ ServiceName,
     false = cloudi_x_trie:is_pattern2(ServiceNameFull),
     true = cloudi_service:process_count_min(Dispatcher) > 1,
+    true = is_integer(NodeCount) andalso
+           (NodeCount >= 1),
+    InitDelay1 = if
+        InitDelay0 =:= undefined ->
+            if
+                NodeCount == 1 ->
+                    100;
+                NodeCount > 1 ->
+                    5000
+            end;
+        is_integer(InitDelay0) andalso
+        (InitDelay0 > 0) ->
+            InitDelay0
+    end,
     true = (InitialDataF =:= undefined) orelse
            is_function(InitialDataF, 1),
     true = is_integer(CleanIntervalSeconds) andalso
            (CleanIntervalSeconds >= 1) andalso
            (CleanIntervalSeconds =< 4294967),
-    true = is_number(CleanFailure) andalso
-           (CleanFailure > 0) andalso (CleanFailure =< 100),
+    CleanFailureN = if
+        CleanFailure0 =:= undefined ->
+            100.0 / NodeCount;
+        is_number(CleanFailure0) andalso
+        (CleanFailure0 > 0) andalso (CleanFailure0 =< 100) ->
+            CleanFailure0
+    end,
     true = not ((PriorityDefault0 /= undefined) andalso
                 (PriorityDefaultOffset /= undefined)),
     PriorityDefaultN = if
@@ -908,19 +950,31 @@ new(Dispatcher, Options)
     % that occurs after a failed send does not allow a duplicate of an
     % operation to arrive after the operation has been removed from the POLog
     % (i.e., taken effect in the data type, the Erlang map).
+    % Sends are suspended while nodes and services are starting.
     Queue = cloudi_queue:new([{retry, Retry},
                               {retry_delay, RetryDelay},
+                              {suspended, true},
                               {ordered, true},
                               {timeout_default, TimeoutDefault},
                               {priority_default, PriorityDefaultN},
                               {failures_source_die, true}]),
+    InitDelayN = if
+        NodeCount == 1 ->
+            ok = init_delay_start(InitDelay1, NodeId),
+            undefined;
+        NodeCount > 1 ->
+            ok = node_count_init_start(),
+            InitDelay1
+    end,
 
     ok = cloudi_service:subscribe(Dispatcher, ServiceName),
     WordSize = erlang:system_info(wordsize),
     #cloudi_crdt{service_name_full = ServiceNameFull,
+                 init_delay = InitDelayN,
+                 node_count = NodeCount,
                  initial_data_function = InitialDataF,
                  clean_vclocks_interval = CleanIntervalSeconds,
-                 clean_vclocks_failure = CleanFailure,
+                 clean_vclocks_failure = CleanFailureN,
                  queue = Queue,
                  word_size = WordSize,
                  node_id = NodeId,
@@ -2333,6 +2387,53 @@ event_send(clear, EventId, Key, [Data], Service) ->
         error ->
             ok
     end.
+
+-spec init_delay_start(InitDelay :: milliseconds(),
+                       NodeId :: node_id()) ->
+    ok.
+
+init_delay_start(InitDelay, {_, Service}) ->
+    _ = erlang:send_after(InitDelay, Service, cloudi_crdt_init_delay),
+    ok.
+
+-spec init_delay(State :: state(),
+                 Dispatcher :: cloudi_service:dispatcher()) ->
+    state().
+
+init_delay(#cloudi_crdt{queue = Queue} = State,
+           Dispatcher) ->
+    State#cloudi_crdt{queue = cloudi_queue:resume(Dispatcher, Queue)}.
+
+-spec node_count_init_start() ->
+    ok | error | {error, any()}.
+
+node_count_init_start() ->
+    net_kernel:monitor_nodes(true, [{node_type, all}]).
+
+-spec node_count_init_stop() ->
+    ok | error | {error, any()}.
+
+node_count_init_stop() ->
+    net_kernel:monitor_nodes(false, [{node_type, all}]).
+
+-spec node_count_init(State :: state()) ->
+    state().
+
+node_count_init(#cloudi_crdt{init_delay = undefined} = State) ->
+    State;
+node_count_init(#cloudi_crdt{init_delay = InitDelay0,
+                             node_count = NodeCount,
+                             node_id = NodeId} = State) ->
+    {ok, NodesAlive} = cloudi_service_api:nodes_alive(infinity),
+    InitDelayN = if
+        length(NodesAlive) + 1 >= NodeCount ->
+            ok = init_delay_start(InitDelay0, NodeId),
+            ok = node_count_init_stop(),
+            undefined;
+        true ->
+            InitDelay0
+    end,
+    State#cloudi_crdt{init_delay = InitDelayN}.
 
 -spec clean_vclocks_send(Interval :: milliseconds(),
                          NodeId :: node_id()) ->
