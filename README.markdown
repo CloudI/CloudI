@@ -151,7 +151,7 @@ Routing:
 * Caching Static File Data with [`cloudi_service_filesystem`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.erl)
 * HTTP Client Requests with [`cloudi_service_http_client`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_client/src/cloudi_service_http_client.erl)
 * HTTP REST Handlers with [`cloudi_service_http_rest`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_rest/src/cloudi_service_http_rest.erl)
-* Fault-Tolerant Map-Reduce with [`cloudi_service_map_reduce`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.erl) (See the [`hexpi` integration test controller](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl))
+* Fault-Tolerant Map-Reduce with [`cloudi_service_map_reduce`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.erl) (See the [`hexpi` integration test controller](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/erlang/src/cloudi_service_test_hexpi.erl))
 * Durable Service Requests with [`cloudi_service_queue`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl)
 * Service Redundancy with [`cloudi_service_quorum`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl)
 * Service Request Redundancy with [`cloudi_service_funnel`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_funnel/src/cloudi_service_funnel.erl)
