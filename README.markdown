@@ -154,6 +154,7 @@ Routing:
 * Fault-Tolerant Map-Reduce with [`cloudi_service_map_reduce`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.erl) (See the [`hexpi` integration test controller](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl))
 * Durable Service Requests with [`cloudi_service_queue`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl)
 * Service Redundancy with [`cloudi_service_quorum`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl)
+* Service Request Redundancy with [`cloudi_service_funnel`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_funnel/src/cloudi_service_funnel.erl)
 * Schedule Service Requests with [`cloudi_service_cron`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_cron/src/cloudi_service_cron.erl)
 * Local/Remote(SSH) Request Routing with [`cloudi_service_router`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_router/src/cloudi_service_router.erl)
 * Validation with [`cloudi_service_validate`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_validate/src/cloudi_service_validate.erl)
