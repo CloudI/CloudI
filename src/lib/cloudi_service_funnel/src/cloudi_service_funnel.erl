@@ -4,9 +4,6 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Funnel Service==
-%%%
-%%% WARNING: EXPERIMENTAL
-%%%
 %%% The funnel service is a way of using duplicate service request sends
 %%% (possibly from separate service processes processing the same data)
 %%% with the goal of making the sending service fault-tolerant.
@@ -26,14 +23,26 @@
 %%%
 %%% With the funnel service's sensitivity to a service request's
 %%% timeout value, other more robust approaches to fault-tolerance
-%%% should be preferred.  The funnel service provides a way to make
-%%% a CloudI service fault-tolerant without modifying the service
+%%% should be preferred
+%%% (e.g., cloudi_service_queue and/or cloudi_service_quorum).
+%%% The funnel service provides a way to make a CloudI service
+%%% fault-tolerant without modifying the service
 %%% (assuming the send destinations are easy to point at the funnel service)
 %%% but it does add latency to the service request sends and may require
 %%% larger timeout values.  If timeout values are too small,
 %%% duplicate service requests may not be recognized by the funnel service
 %%% and it could send more than a single service request for a group
 %%% of duplicate service requests it receives.
+%%%
+%%% The funnel service could receive separate service request sends from
+%%% separate instances of cloudi_service_cron that are using the
+%%% same initialization arguments
+%%% (the cron expression arguments could also include {send_mcast, true}
+%%%  to ensure all cloudi_service_funnel processes get the cron expression
+%%%  service request data, {send_args_info, true} is necessary to make each
+%%%  cron event's service request unique).  That would provide
+%%% cloudi_service_cron execution with distributed fault-tolerance that
+%%% relies on cloudi_service_funnel execution.
 %%% @end
 %%%
 %%% MIT License

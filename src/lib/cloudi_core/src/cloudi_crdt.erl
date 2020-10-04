@@ -319,7 +319,7 @@
 -type event_id() :: cloudi_service:trans_id() | any().
 -type options() ::
     list({service_name, string()} |
-         {init_delay, milliseconds()} |
+         {init_delay, undefined | milliseconds()} |
          {node_count, non_neg_integer()} |
          {initial_data_function, initial_data_function() | undefined} |
          {clean_vclocks, seconds()} |

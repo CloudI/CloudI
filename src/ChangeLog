@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_service_cron expression send_args_info use
+    * Improve cloudi_service_funnel comments
+    * Fix cloudi_crdt type spec
+
 2020-09-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the cloudi_crdt arguments init_delay and node_count

@@ -162,6 +162,9 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
     [Expressions, RequestInfoDefault, UseUTC,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
+    true = lists:all(fun({Key, Value}) ->
+        is_integer(hd(Key)) andalso is_integer(hd(Value))
+    end, RequestInfoDefault),
     true = is_boolean(UseUTC),
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
@@ -503,13 +506,25 @@ description(#expression{description = [_ | _] = Description}) ->
 description(#expression{definition = Cron}) ->
     cloudi_cron:expression(Cron).
 
-send_args_valid([Name, _Request] = SendArgs, false, _) ->
+send_args_valid([Name, Request] = SendArgs,
+                SendArgsInfo, RequestInfoDefault) ->
     true = cloudi_args_type:service_name(Name),
-    SendArgs;
-send_args_valid([Name, _Request, Timeout] = SendArgs, false, _) ->
+    if
+        SendArgsInfo =:= true ->
+            [Name, RequestInfoDefault, Request, undefined, undefined];
+        SendArgsInfo =:= false ->
+            SendArgs
+    end;
+send_args_valid([Name, Request, Timeout] = SendArgs,
+                SendArgsInfo, RequestInfoDefault) ->
     true = cloudi_args_type:service_name(Name),
     true = cloudi_args_type:timeout_milliseconds(Timeout),
-    SendArgs;
+    if
+        SendArgsInfo =:= true ->
+            [Name, RequestInfoDefault, Request, Timeout, undefined];
+        SendArgsInfo =:= false ->
+            SendArgs
+    end;
 send_args_valid([Name, RequestInfo, Request, Timeout, Priority],
                 SendArgsInfo, RequestInfoDefault) ->
     true = cloudi_args_type:service_name(Name),
