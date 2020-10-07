@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -23,24 +23,52 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-#ifndef CLOUDI_OS_SPAWN_HPP
-#define CLOUDI_OS_SPAWN_HPP
+#include <sys/types.h>
+#include <errno.h>
+#include <signal.h>
+#include "port.hpp"
+#include "cloudi_os_command.hpp"
+#include "assert.hpp"
 
-#include <stdint.h>
+namespace
+{
+    char const * errno_kill_string()
+    {
+        switch (errno)
+        {
+            case EINVAL:
+                return "EINVAL";
+            case EPERM:
+                return "EPERM";
+            case ESRCH:
+                return "ESRCH";
+            default:
+                return "unknown";
+        }
+    }
+}
 
-int32_t spawn(char protocol,
-              char * socket_path, uint32_t socket_path_len,
-              uint32_t * ports, uint32_t ports_len,
-              char * rlimits, uint32_t rlimits_len,
-              uint64_t user_i,
-              char * user_str, uint32_t user_str_len,
-              uint64_t group_i,
-              char * group_str, uint32_t group_str_len,
-              int32_t nice,
-              char * chroot_directory, uint32_t chroot_directory_len,
-              char * directory, uint32_t directory_len,
-              char * filename, uint32_t filename_len,
-              char * argv, uint32_t argv_len,
-              char * env, uint32_t env_len);
+char const * kill_pids(uint32_t signal, bool group,
+                       uint32_t * pids, uint32_t pids_len)
+{
+    char const * result = "";
+    for (size_t i = 0; i < pids_len; ++i)
+    {
+        pid_t pid = static_cast<pid_t>(pids[i]);
+        if (group)
+            pid *= -1;
+        int const status = ::kill(pid, static_cast<int>(signal));
+        if (status == -1)
+        {
+            result = errno_kill_string();
+            break;
+        }
+    }
+    return result;
+}
 
-#endif // CLOUDI_OS_SPAWN_HPP
+int main()
+{
+    return GEPD::default_main();
+}
+

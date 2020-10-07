@@ -452,7 +452,7 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
     case start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
                                            EnvironmentLookup) of
         {ok, CommandLine, FilenameNew, ArgumentsNew, Chroot, Directory} ->
-            case cloudi_x_supool:get(?OS_SPAWN_POOL1) of
+            case cloudi_x_supool:get(?OS_SPAWN_POOL) of
                 SpawnProcess when is_pid(SpawnProcess) ->
                     SpawnProtocol = if
                         Protocol =:= tcp ->

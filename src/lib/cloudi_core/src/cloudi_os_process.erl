@@ -234,9 +234,9 @@ os_spawn_kill_pids(SignalInteger, Group, OSPids)
     os_spawn_kill_pids(SignalInteger, Group, [OSPids]);
 os_spawn_kill_pids(SignalInteger, Group, OSPids)
     when is_integer(SignalInteger), is_boolean(Group), is_list(OSPids) ->
-    SpawnProcess = cloudi_x_supool:get(?OS_SPAWN_POOL2),
-    case cloudi_core_i_os_spawn:kill_pids(SpawnProcess,
-                                          SignalInteger, Group, OSPids) of
+    CommandProcess = cloudi_x_supool:get(?OS_COMMAND_POOL),
+    case cloudi_core_i_os_command:kill_pids(CommandProcess,
+                                            SignalInteger, Group, OSPids) of
         {ok, ErrorString} ->
             if
                 ErrorString == "" ->

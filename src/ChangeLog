@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Split the non-spawn functionality (kill_pids) from the
+      cloudi_os_spawn OS process and put it into the
+      cloudi_os_command OS process
+    * Generalize the CloudI/GEPD Erlang port usage in the
+      cloudi_core_i_os_port module
+
 2020-10-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi_service_cron expression send_args_info use

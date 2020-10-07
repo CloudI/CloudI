@@ -122,13 +122,15 @@
                                     erlang:integer_to_list(Instance))
         end).
 
-% locally registered names for the supool cloudi_core_i_os_spawn processes
-% OS_SPAWN_POOL1 is used for creating service OS processes and
-%                collecting stdout/stderr stream data
-% OS_SPAWN_POOL2 is used for separate functionality that must not block on
-%                managing service OS processes, like kill function calls
--define(OS_SPAWN_POOL1, cloudi_core_i_os_spawn_pool1).
--define(OS_SPAWN_POOL2, cloudi_core_i_os_spawn_pool2).
+% locally registered name for the supool cloudi_core_i_os_spawn processes
+% OS_SPAWN_POOL is used for creating service OS processes and
+%               collecting stdout/stderr stream data
+-define(OS_SPAWN_POOL, cloudi_core_i_os_spawn_pool).
+
+% locally registered name for the supool cloudi_core_i_os_command processes
+% OS_COMMAND_POOL is used for separate functionality that must not block on
+%                 managing service OS processes, like kill function calls
+-define(OS_COMMAND_POOL, cloudi_core_i_os_command_pool).
 
 % maximum timeout value for erlang:send_after/3, gen_server:call and
 % internal/external service requests

@@ -590,21 +590,6 @@ namespace
         }
     }
 
-    char const * errno_kill_string()
-    {
-        switch (errno)
-        {
-            case EINVAL:
-                return "EINVAL";
-            case EPERM:
-                return "EPERM";
-            case ESRCH:
-                return "ESRCH";
-            default:
-                return "unknown";
-        }
-    }
-
     class process_data
     {
         public:
@@ -1014,25 +999,6 @@ int32_t spawn(char protocol,
         processes.push_back(P);
     }
     return pid;
-}
-
-char const * kill_pids(uint32_t signal, bool group,
-                       uint32_t * pids, uint32_t pids_len)
-{
-    char const * result = "";
-    for (size_t i = 0; i < pids_len; ++i)
-    {
-        pid_t pid = static_cast<pid_t>(pids[i]);
-        if (group)
-            pid *= -1;
-        int const status = ::kill(pid, static_cast<int>(signal));
-        if (status == -1)
-        {
-            result = errno_kill_string();
-            break;
-        }
-    }
-    return result;
 }
 
 int main()

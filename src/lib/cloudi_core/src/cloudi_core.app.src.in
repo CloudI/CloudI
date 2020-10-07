@@ -18,6 +18,8 @@
         cloudi_core_i_logger_output_sup,
         cloudi_core_i_logger_sup,
         cloudi_core_i_nodes,
+        cloudi_core_i_os_command,
+        cloudi_core_i_os_port,
         cloudi_core_i_os_process,
         cloudi_core_i_os_spawn,
         cloudi_core_i_rate_based_configuration,

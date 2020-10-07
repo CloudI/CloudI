@@ -119,6 +119,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
         test ! -e cloudi_os_spawn && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
+        test ! -e cloudi_os_command && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_command || exit 0)
 
 erlang-applications-scope-add: scoped
 
@@ -151,6 +154,9 @@ rebar-directories-clean: rebar-clean
 	 exit 0)
 	(test -h $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn && \
 	 rm $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn || \
+	 exit 0)
+	(test -h $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_command && \
+	 rm $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_command || \
 	 exit 0)
 
 clean-configure: distclean
@@ -199,6 +205,9 @@ erlang-applications-scope-remove:
 	rm -f scoped
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
 
+# -Wunderspecs may want to be used gradually
+# -Wunknown and -Werror_handling haven't been helpful
+#              -Wunmatched_returns
 dialyze: all \
          $(top_srcdir)/dialyzer.plt
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \

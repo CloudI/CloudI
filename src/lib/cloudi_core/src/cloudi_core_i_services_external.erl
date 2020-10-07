@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -288,13 +288,13 @@ stdout(OSPid, Output) ->
     % uses a fake module name and a fake line number
     cloudi_core_i_logger_interface:info('STDOUT', OSPid,
                                         undefined, undefined,
-                                        filter_stream(Output), undefined).
+                                        Output, undefined).
 
 stderr(OSPid, Output) ->
     % uses a fake module name and a fake line number
     cloudi_core_i_logger_interface:error('STDERR', OSPid,
                                          undefined, undefined,
-                                         filter_stream(Output), undefined).
+                                         Output, undefined).
 
 get_status(Dispatcher) ->
     get_status(Dispatcher, 5000).
@@ -1521,15 +1521,6 @@ format_status(_Opt,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-filter_stream(Output0) ->
-    % just consume the last newline character, if one exists
-    case lists:reverse(Output0) of
-        [10 | Output1] ->
-            lists:reverse(Output1);
-        _ ->
-            Output0
-    end.
 
 os_pid_set(OSPid, State) ->
     % forked process has connected before CloudI API initialization

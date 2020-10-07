@@ -120,6 +120,7 @@
 
 -define(ERL_PORT_DRIVER_NAME, \
         BOOST_PP_STRINGIZE(PORT_DRIVER_NAME)).
+-define(ERL_PORT_MODULE, cloudi_core_i_os_port). % no async support!
 #define FUNCTIONS_SEQUENCE PORT_DRIVER_FUNCTIONS
 #if defined(PORT_NAME)
 -define(ERL_PORT_NAME, \
@@ -159,6 +160,7 @@
 
 -define(ERL_PORT_NAME, \
         BOOST_PP_STRINGIZE(PORT_NAME)).
+-define(ERL_PORT_MODULE, cloudi_core_i_os_port).
 #define FUNCTIONS_SEQUENCE PORT_FUNCTIONS
 #else
 #error Neither PORT_DRIVER_NAME nor PORT_NAME defined
@@ -192,8 +194,8 @@
     -> \
     BOOST_PP_IF(\
         GET_ASYNC(FUNCTION), \
-        call_port_async, \
-        call_port_sync \
+        ?ERL_PORT_MODULE:async, \
+        ?ERL_PORT_MODULE:sync \
     )\
     BOOST_PP_LPAREN() \
     Process, \

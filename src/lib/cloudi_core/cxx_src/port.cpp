@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -42,7 +42,6 @@
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/seq/elem.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
-//#include <boost/preprocessor/tuple/to_seq.hpp> // broken with boost >= 1.5?
 #include <boost/preprocessor/tuple/to_list.hpp>
 #include <boost/preprocessor/tuple/elem.hpp>
 #include <boost/preprocessor/list/for_each.hpp>

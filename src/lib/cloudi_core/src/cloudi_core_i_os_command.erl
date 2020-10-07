@@ -3,13 +3,13 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==OS Process Spawn==
-%%% Used interaction with the cloudi_os_spawn process.
+%%% ==OS Process Command==
+%%% Used interaction with the cloudi_os_command process.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,14 +30,18 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
+%%% @copyright 2020 Michael Truog
 %%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_core_i_os_spawn).
+-module(cloudi_core_i_os_command).
 -author('mjtruog at protonmail dot com').
 
 -behavior(gen_server).
+
+%% external interface
+-export([stdout/2,
+         stderr/2]).
 
 %% gen_server interface
 -export([start_link/0]).
@@ -47,18 +51,26 @@
          handle_call/3, handle_cast/2, handle_info/2, 
          terminate/2, code_change/3]).
 
+-include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
--export([spawn/15]).
+-export([kill_pids/4]).
 -define(ERL_PORT_NAME, undefined).
-spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports, _SpawnRlimits,
-      _SpawnUserI, _SpawnUserStr, _SpawnGroupI, _SpawnGroupStr,
-      _SpawnNice, _SpawnChroot, _SpawnDirectory,
-      _SpawnFilename, _SpawnArguments, _SpawnEnvironment) ->
+kill_pids(_SpawnProcess, _Signal, _Group, _OSPids) ->
     {error, badarg}.
 -else.
--include("cloudi_core_i_os_spawn.hrl").
+-include("cloudi_core_i_os_command.hrl").
 -endif.
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
+stdout(OSPid, Output) ->
+    ?LOG_INFO("OS pid ~w command failed: ~s", [OSPid, Output]).
+
+stderr(OSPid, Output) ->
+    ?LOG_ERROR("OS pid ~w command failed: ~s", [OSPid, Output]).
 
 %%%------------------------------------------------------------------------
 %%% Interface functions from gen_server
@@ -73,8 +85,8 @@ start_link() ->
 
 init([]) ->
     ?ERL_PORT_MODULE:init(?ERL_PORT_NAME, false,
-                          fun cloudi_core_i_services_external:stdout/2,
-                          fun cloudi_core_i_services_external:stderr/2).
+                          fun ?MODULE:stdout/2,
+                          fun ?MODULE:stderr/2).
 
 handle_call(Request, Client, State) ->
     ?ERL_PORT_MODULE:handle_call(Request, Client, State).

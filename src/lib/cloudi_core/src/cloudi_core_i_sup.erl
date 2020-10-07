@@ -91,17 +91,17 @@ start_link(Config) when is_record(Config, config) ->
 -define(CHECK,
         (is_tuple(child_specification(cloudi_core_i_services_external_sup))
          andalso
-         is_tuple(child_specification(?OS_SPAWN_POOL1))
+         is_tuple(child_specification(?OS_SPAWN_POOL))
          andalso
-         is_tuple(child_specification(?OS_SPAWN_POOL2)))).
+         is_tuple(child_specification(?OS_COMMAND_POOL)))).
 -else.
 -define(CHILDSPECS,
         [child_specification(cloudi_core_i_logger_sup, Config),
          child_specification(cloudi_core_i_logger, Config),
          child_specification(cloudi_core_i_nodes, Config),
          child_specification(cloudi_core_i_services_monitor),
-         child_specification(?OS_SPAWN_POOL1),
-         child_specification(?OS_SPAWN_POOL2),
+         child_specification(?OS_SPAWN_POOL),
+         child_specification(?OS_COMMAND_POOL),
          child_specification(cloudi_core_i_services_external_sup),
          child_specification(cloudi_core_i_services_internal_sup),
          child_specification(cloudi_core_i_configurator, Config),
@@ -160,15 +160,22 @@ child_specification(cloudi_core_i_services_internal_sup) ->
      {cloudi_core_i_services_internal_sup, start_link, []},
      permanent, infinity, supervisor, [cloudi_core_i_services_internal_sup]};
 
-child_specification(OsSpawnPool)
-    when OsSpawnPool =:= ?OS_SPAWN_POOL1;
-         OsSpawnPool =:= ?OS_SPAWN_POOL2 ->
+child_specification(?OS_SPAWN_POOL = OSSpawnPool) ->
     Shutdown = 2000, % milliseconds
-    {OsSpawnPool,
+    {OSSpawnPool,
      {cloudi_x_supool_sup, start_link,
-      [OsSpawnPool, os_process_count(),
+      [OSSpawnPool, os_process_count(),
        {undefined, {cloudi_core_i_os_spawn, start_link, []},
         permanent, Shutdown, worker, [cloudi_core_i_os_spawn]}, []]},
+     permanent, infinity, supervisor, [cloudi_x_supool_sup]};
+
+child_specification(?OS_COMMAND_POOL = OSCommandPool) ->
+    Shutdown = 2000, % milliseconds
+    {OSCommandPool,
+     {cloudi_x_supool_sup, start_link,
+      [OSCommandPool, os_process_count(),
+       {undefined, {cloudi_core_i_os_command, start_link, []},
+        permanent, Shutdown, worker, [cloudi_core_i_os_command]}, []]},
      permanent, infinity, supervisor, [cloudi_x_supool_sup]};
 
 child_specification(cloudi_core_i_services_external_sup) ->
