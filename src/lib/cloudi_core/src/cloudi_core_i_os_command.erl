@@ -56,6 +56,7 @@
 -ifdef(CLOUDI_CORE_STANDALONE).
 -export([kill_pids/4]).
 -define(ERL_PORT_NAME, undefined).
+-define(ERL_PORT_MODULE, cloudi_core_i_os_port).
 kill_pids(_SpawnProcess, _Signal, _Group, _OSPids) ->
     {error, badarg}.
 -else.

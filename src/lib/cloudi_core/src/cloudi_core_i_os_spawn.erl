@@ -51,6 +51,7 @@
 -ifdef(CLOUDI_CORE_STANDALONE).
 -export([spawn/15]).
 -define(ERL_PORT_NAME, undefined).
+-define(ERL_PORT_MODULE, cloudi_core_i_os_port).
 spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports, _SpawnRlimits,
       _SpawnUserI, _SpawnUserStr, _SpawnGroupI, _SpawnGroupStr,
       _SpawnNice, _SpawnChroot, _SpawnDirectory,
