@@ -28,6 +28,8 @@
 
 #include <stdint.h>
 
+bool terminate_now();
+
 int32_t spawn(char protocol,
               char * socket_path, uint32_t socket_path_len,
               uint32_t * ports, uint32_t ports_len,

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -46,6 +46,11 @@ namespace
                 return "unknown";
         }
     }
+}
+
+bool terminate_now()
+{
+    return true;
 }
 
 char const * kill_pids(uint32_t signal, bool group,

@@ -68,10 +68,10 @@ kill_pids(_SpawnProcess, _Signal, _Group, _OSPids) ->
 %%%------------------------------------------------------------------------
 
 stdout(OSPid, Output) ->
-    ?LOG_INFO("OS pid ~w command failed: ~s", [OSPid, Output]).
+    ?LOG_INFO("OS pid ~w command output: ~s", [OSPid, Output]).
 
 stderr(OSPid, Output) ->
-    ?LOG_ERROR("OS pid ~w command failed: ~s", [OSPid, Output]).
+    ?LOG_ERROR("OS pid ~w command error: ~s", [OSPid, Output]).
 
 %%%------------------------------------------------------------------------
 %%% Interface functions from gen_server

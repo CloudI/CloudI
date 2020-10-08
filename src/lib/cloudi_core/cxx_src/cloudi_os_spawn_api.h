@@ -14,13 +14,14 @@
 #define PORT_CXX_FUNCTIONS_HEADER_FILE "cloudi_os_spawn.hpp"
 
 // specify all the functions to generate bindings for
-//  __________________________________________________________________________
-//  || FUNCTION     || ARITY/TYPES                           || RETURN TYPE ||
-#define PORT_FUNCTIONS \
+//  ________________________________________________________________________
+//  || FUNCTION     || ARITY/TYPES                         || RETURN TYPE ||
+#define PORT_FUNCTIONS                                                       \
+    ((terminate_now,   0, (),                                 bool        )) \
     ((spawn,           14, (char, pchar_len, puint32_len, pchar_len,         \
                             uint64_t, pchar_len, uint64_t, pchar_len,        \
                             int32_t, pchar_len, pchar_len,                   \
-                            pchar_len, pchar_len, pchar_len),     int32_t ))
+                            pchar_len, pchar_len, pchar_len), int32_t     ))
 
 //////////////////////////////////////////////////////////////////////////////
 

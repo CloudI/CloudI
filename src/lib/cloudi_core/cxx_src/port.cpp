@@ -783,6 +783,12 @@ case BOOST_PP_DEC(I):\
         return GEPD::ExitStatus::success;
     }
 
+    bool orphaned(unsigned long const ppid)
+    {
+        unsigned long const ppid_now = getppid();
+        return (ppid_now != ppid);
+    }
+
     enum
     {
         INDEX_STDOUT = 0,
@@ -929,7 +935,6 @@ nfds_t GEPD::nfds = 0;
 
 int GEPD::default_main()
 {
-    int const timeout = -1; // milliseconds
     // use the option {packet, 4} for open_port/2
     // (limited by 4MB buffer size below)
     realloc_ptr<unsigned char> buffer(32768, 4194304);
@@ -939,7 +944,7 @@ int GEPD::default_main()
     if ((status = GEPD::init()))
         return status;
     int count;
-    return GEPD::wait(count, timeout, buffer, stream1, stream2);
+    return GEPD::wait(count, buffer, stream1, stream2);
 }
 
 int GEPD::init()
@@ -961,6 +966,29 @@ int GEPD::init()
     fds[INDEX_ERLANG].revents = 0;
     nfds += 3;
     return GEPD::ExitStatus::success;
+}
+
+int GEPD::wait(int & count,
+               realloc_ptr<unsigned char> & buffer,
+               realloc_ptr<unsigned char> & stream1,
+               realloc_ptr<unsigned char> & stream2)
+{
+    static unsigned long const ppid = getppid();
+    // based on TIMEOUT_TERMINATE_MAX in cloudi_core_i_constants.hrl
+    int const timeout = 60000; // milliseconds
+    int status;
+    while ((status = GEPD::wait(count, timeout, buffer,
+                                stream1, stream2)) == GEPD::ExitStatus::timeout)
+    {
+        if (orphaned(ppid))
+            return GEPD::ExitStatus::erlang_exit;
+    }
+    if (status == GEPD::ExitStatus::ready)
+    {
+        if (orphaned(ppid))
+            status = GEPD::ExitStatus::erlang_exit;
+    }
+    return status;
 }
 
 int GEPD::wait(int & count, int const timeout,

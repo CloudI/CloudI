@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -27,6 +27,8 @@
 #define CLOUDI_OS_COMMAND_HPP
 
 #include <stdint.h>
+
+bool terminate_now();
 
 char const * kill_pids(uint32_t signal, bool group,
                        uint32_t * pids, uint32_t pids_len);

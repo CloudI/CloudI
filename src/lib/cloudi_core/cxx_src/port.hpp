@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -110,6 +110,10 @@ namespace GEPD
 
     int default_main();
     int init();
+    int wait(int & count,
+             realloc_ptr<unsigned char> & buffer,
+             realloc_ptr<unsigned char> & stream1,
+             realloc_ptr<unsigned char> & stream2);
     int wait(int & count, int const timeout,
              realloc_ptr<unsigned char> & buffer,
              realloc_ptr<unsigned char> & stream1,

@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -1836,7 +1836,7 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
     hibernate_check(case Result of
         {ok, ServiceStateNew} ->
             ConfigOptionsNew = check_init_receive(ConfigOptions),
-            erlang:process_flag(trap_exit, true),
+            false = erlang:process_flag(trap_exit, true),
             ok = cloudi_core_i_services_monitor:
                  process_init_end(Dispatcher),
             StateNew = StateNext#state{service_state = ServiceStateNew,
@@ -1855,7 +1855,7 @@ handle_info({'cloudi_service_init_state', ProcessDictionaryNew, StateNew},
     true = is_pid(DuoModePid),
     ok = cloudi_core_i_services_internal_init:
          process_dictionary_set(ProcessDictionaryNew),
-    erlang:process_flag(trap_exit, true),
+    false = erlang:process_flag(trap_exit, true),
     hibernate_check({noreply, StateNew});
 
 handle_info({'DOWN', _MonitorRef, process, Pid, _Info} = Request, State) ->
@@ -3467,7 +3467,7 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                         queued = undefined,
                         queued_info = undefined,
                         options = DispatcherConfigOptionsNew},
-                    erlang:process_flag(trap_exit, true),
+                    false = erlang:process_flag(trap_exit, true),
                     Dispatcher ! {'cloudi_service_init_state',
                                   DispatcherProcessDictionaryNew,
                                   DispatcherStateNew},
@@ -3550,7 +3550,7 @@ duo_mode_loop_terminate(Reason,
                                                      Reason, TimeoutTerm,
                                                      ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
-    erlang:process_flag(trap_exit, false),
+    _ = erlang:process_flag(trap_exit, false),
     erlang:exit(DuoModePid, Reason).
 
 duo_mode_dispatcher_options(ConfigOptions) ->

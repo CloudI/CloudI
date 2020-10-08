@@ -602,7 +602,8 @@ namespace
                 m_index_stream1(0),
                 m_index_stream2(0),
                 m_stream1(1, 16384),
-                m_stream2(1, 16384)
+                m_stream2(1, 16384),
+                m_killed(false)
             {
             }
 
@@ -610,36 +611,39 @@ namespace
             {
                 GEPD::nfds -= 2;
 
-                // after the stdout/stderr pipes have closed,
-                // block execution here waiting for m_pid to terminate
-                // (depend on cloudi_core_i_services_monitor killing
-                //  the pid with SIGKILL after the termination timeout)
-                int status;
-                int const pid = ::waitpid(m_pid, &status, 0);
-                assert(pid == static_cast<signed>(m_pid));
+                if (m_killed == false)
+                {
+                    // after the stdout/stderr pipes have closed,
+                    // block execution here waiting for m_pid to terminate
+                    // (depend on cloudi_core_i_services_monitor killing
+                    //  the pid with SIGKILL after the termination timeout)
+                    int status;
+                    int const pid = ::waitpid(m_pid, &status, 0);
+                    assert(pid == static_cast<signed>(m_pid));
 
-                if (WIFEXITED(status))
-                {
-                    status = WEXITSTATUS(status);
-                }
-                else if (WIFSIGNALED(status))
-                {
-                    status = WTERMSIG(status) + 128;
-                }
-                else
-                {
-                    assert(false);
-                }
-                if (status != 0)
-                {
-                    char const * const error = spawn_status::string(status);
-                    std::cerr << "OS pid " << m_pid << " exited with ";
-                    if (error)
-                        std::cerr << error << std::endl;
-                    else if (status > 128)
-                        std::cerr << "SIG#" << (status - 128) << std::endl;
+                    if (WIFEXITED(status))
+                    {
+                        status = WEXITSTATUS(status);
+                    }
+                    else if (WIFSIGNALED(status))
+                    {
+                        status = WTERMSIG(status) + 128;
+                    }
                     else
-                        std::cerr << status << std::endl;
+                    {
+                        assert(false);
+                    }
+                    if (status != 0)
+                    {
+                        char const * const error = spawn_status::string(status);
+                        std::cerr << "OS pid " << m_pid << " exited with ";
+                        if (error)
+                            std::cerr << error << std::endl;
+                        else if (status > 128)
+                            std::cerr << "SIG#" << (status - 128) << std::endl;
+                        else
+                            std::cerr << status << std::endl;
+                    }
                 }
             }
 
@@ -647,6 +651,14 @@ namespace
             {
                 ::close(GEPD::fds[m_index_stdout].fd);
                 ::close(GEPD::fds[m_index_stderr].fd);
+            }
+
+            void kill()
+            {
+                close();
+                assert(SIGKILL == 9);
+                ::kill(m_pid, SIGKILL);
+                m_killed = true;
             }
 
             void shift()
@@ -717,9 +729,15 @@ namespace
             size_t m_index_stream2;
             realloc_ptr<unsigned char> m_stream1;
             realloc_ptr<unsigned char> m_stream2;
+            bool m_killed;
     };
 
     std::vector< copy_ptr<process_data> > processes;
+}
+
+bool terminate_now()
+{
+    return processes.empty();
 }
 
 int32_t spawn(char protocol,
@@ -1007,7 +1025,6 @@ int main()
     typedef std::vector< copy_ptr<process_data> >::iterator iterator;
     assert(spawn_status::last_value == GEPD::ExitStatus::min);
 
-    int const timeout = -1; // milliseconds
     realloc_ptr<unsigned char> erlang_buffer(32768, 4194304); // 4MB
     realloc_ptr<unsigned char> stream1(1, 16384);
     realloc_ptr<unsigned char> stream2(1, 16384);
@@ -1015,7 +1032,7 @@ int main()
     if ((status = GEPD::init()))
         return status;
     int count;
-    while ((status = GEPD::wait(count, timeout, erlang_buffer,
+    while ((status = GEPD::wait(count, erlang_buffer,
                                 stream1, stream2)) == GEPD::ExitStatus::ready)
     {
         iterator itr = processes.begin();
@@ -1039,6 +1056,12 @@ int main()
             }
         }
     }
+    // kill all remaining processes with SIGKILL
+    for (iterator itr = processes.begin(); itr != processes.end(); ++itr)
+    {
+        (*itr)->kill();
+    }
+    processes.clear();
     return status;
 }
 

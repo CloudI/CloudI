@@ -79,6 +79,8 @@
 -define(LOG_T1_INFO(Format, Args, State),
     ?LOG_T1(info, Format, Args, State)).
 
+-define(TERMINATE_DELAY, 1000). % milliseconds
+
 -record(state,
     {
         file_path = undefined
@@ -590,6 +592,7 @@ init([#config_logging{file = FilePath,
         true ->
             {?MODULE, NodeLogger}
     end,
+    false = erlang:process_flag(trap_exit, true),
     case load_interface_module(Level, Mode, Destination) of
         {ok, Binary} when Destination == ?MODULE ->
             case log_file_open(FilePath,
@@ -774,6 +777,38 @@ handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
             {noreply, StateNew};
         {{error, Reason}, StateNew} ->
             {stop, Reason, StateNew}
+    end;
+handle_info({'EXIT', _, Reason},
+            #state{logger_self = Self} = State) ->
+    if
+        Reason =:= shutdown;
+        element(1, Reason) =:= shutdown ->
+            TerminateTimeMax = cloudi_timestamp:milliseconds_monotonic() +
+                               ?TIMEOUT_TERMINATE_MAX,
+            _ = erlang:send_after(?TERMINATE_DELAY, Self,
+                                  {terminate, Reason, TerminateTimeMax}),
+            {noreply, State};
+        true ->
+            {stop, Reason, State}
+    end;
+handle_info({terminate, Reason, TerminateTimeMax} = Terminate,
+            #state{logger_self = Self} = State) ->
+    {message_queue_len,
+     MessageQueueLength} = erlang:process_info(Self, message_queue_len),
+    TerminateNow = if
+        MessageQueueLength > 0 ->
+            RemainingMilliSeconds = TerminateTimeMax -
+                                    cloudi_timestamp:milliseconds_monotonic(),
+            RemainingMilliSeconds =< ?TERMINATE_DELAY;
+        true ->
+            true
+    end,
+    if
+        TerminateNow =:= true ->
+            {stop, Reason, State};
+        TerminateNow =:= false ->
+            _ = erlang:send_after(?TERMINATE_DELAY, Self, Terminate),
+            {noreply, State}
     end;
 handle_info(Request, State) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.

@@ -345,7 +345,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
             #config_service_options{
                 dest_refresh_start = Delay,
                 scope = Scope} = ConfigOptionsNew,
-            erlang:process_flag(trap_exit, true),
+            false = erlang:process_flag(trap_exit, true),
             destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
             State = #state{dispatcher = Dispatcher,
                            queued_word_size = WordSize,

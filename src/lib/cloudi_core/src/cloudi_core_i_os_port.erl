@@ -46,6 +46,8 @@
          terminate/2,
          code_change/3]).
 
+-include("cloudi_core_i_constants.hrl").
+
 -type output_handler() ::
     fun((OSPid :: pos_integer(), Output :: string()) -> ok).
 -type stdout_handler() :: output_handler().
@@ -93,7 +95,7 @@ init(FileName, OutputNewline, StdOutHandler, StdErrHandler) ->
     true = is_boolean(OutputNewline),
     true = is_function(StdOutHandler, 2),
     true = is_function(StdErrHandler, 2),
-    erlang:process_flag(trap_exit, true),
+    false = erlang:process_flag(trap_exit, true),
     {ok, #state{file_name = FileName,
                 port = Port,
                 output_newline = OutputNewline,
@@ -117,10 +119,6 @@ handle_call(Request, _, State) ->
 handle_cast(Request, State) ->
     {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
 
-handle_info({Port, {exit_status, Status}},
-            #state{port = Port} = State) ->
-    {stop, "port exited with " ++ exit_status_to_string(Status), State};
-
 handle_info({Port, {data, Data}},
             #state{port = Port,
                    output_newline = OutputNewline,
@@ -141,6 +139,10 @@ handle_info({Port, {data, Data}},
             {noreply, State}
     end;
 
+handle_info({Port, {exit_status, Status}},
+            #state{port = Port} = State) ->
+    {stop, "port exited with " ++ exit_status_to_string(Status), State};
+
 handle_info({'EXIT', Port, PosixCode},
             #state{port = Port} = State) ->
     {stop, port_exit_to_string(PosixCode), State};
@@ -148,7 +150,8 @@ handle_info({'EXIT', Port, PosixCode},
 handle_info(Request, State) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
-terminate(_, #state{port = Port}) ->
+terminate(Reason, #state{port = Port} = State) ->
+    ok = terminate_now(Reason, State),
     _ = (catch erlang:port_close(Port)),
     ok.
 
@@ -213,6 +216,71 @@ trim_output(false, Output) ->
             lists:reverse(OutputReversed);
         _ ->
             Output
+    end.
+
+terminate_now(Reason, State)
+    when Reason =:= shutdown;
+         element(1, Reason) =:= shutdown ->
+    % ensure the Erlang port is ready to terminate with the terminate_now
+    % function that is always the Command == 1 for CloudI Erlang port processes
+    TerminateTimeMax = cloudi_timestamp:milliseconds_monotonic() +
+                       ?TIMEOUT_TERMINATE_MAX,
+    terminate_now_wait(TerminateTimeMax, State);
+terminate_now(_, _) ->
+    ok.
+
+terminate_now_wait(TerminateTimeMax,
+                   #state{port = Port} = State) ->
+    case call_port(Port, [<<1:16/unsigned-integer-native>>]) of
+        ok ->
+            terminate_now_wait_response(TerminateTimeMax, State);
+        {error, badarg} ->
+            ok
+    end.
+
+terminate_now_wait_response(TerminateTimeMax,
+                            #state{port = Port,
+                                   output_newline = OutputNewline,
+                                   stdout_handler = StdOutHandler,
+                                   stderr_handler = StdErrHandler} = State) ->
+    receive
+        {Port, {data, Data}} ->
+            case erlang:binary_to_term(Data, [safe]) of
+                {1, TerminateNow} ->
+                    terminate_now_wait_check(TerminateNow,
+                                             TerminateTimeMax, State);
+                {_, _} ->
+                    terminate_now_wait_response(TerminateTimeMax, State);
+                {error, _, _} ->
+                    ok;
+                {stdout, OSPid, Output} ->
+                    ok = StdOutHandler(OSPid,
+                                       trim_output(OutputNewline, Output)),
+                    terminate_now_wait_response(TerminateTimeMax, State);
+                {stderr, OSPid, Output} ->
+                    ok = StdErrHandler(OSPid,
+                                       trim_output(OutputNewline, Output)),
+                    terminate_now_wait_response(TerminateTimeMax, State)
+            end;
+        {Port, {exit_status, _}} ->
+            ok;
+        {'EXIT', Port, _} ->
+            ok
+    end.
+
+terminate_now_wait_check(true, _, _) ->
+    ok;
+terminate_now_wait_check(false, TerminateTimeMax, State) ->
+    RemainingMilliSeconds = TerminateTimeMax -
+                            cloudi_timestamp:milliseconds_monotonic(),
+    if
+        RemainingMilliSeconds > 1500 ->
+            receive after 1000 -> ok end,
+            terminate_now_wait(TerminateTimeMax, State);
+        RemainingMilliSeconds >= 1000 ->
+            receive after 1000 -> ok end;
+        true ->
+            ok
     end.
 
 port_exit_to_string(eacces) ->

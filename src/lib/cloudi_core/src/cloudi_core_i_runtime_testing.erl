@@ -205,7 +205,7 @@ monkey_chaos_check(#monkey_chaos{method = probability_day,
                                  value1 = Percent,
                                  pid = undefined} = MonkeyChaos) ->
     Pid = erlang:spawn_link(fun() ->
-        erlang:process_flag(trap_exit, true),
+        false = erlang:process_flag(trap_exit, true),
         monkey_chaos_pid_day(Percent)
     end),
     MonkeyChaos#monkey_chaos{pid = Pid};

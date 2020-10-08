@@ -14,10 +14,11 @@
 #define PORT_CXX_FUNCTIONS_HEADER_FILE "cloudi_os_command.hpp"
 
 // specify all the functions to generate bindings for
-//  __________________________________________________________________________
-//  || FUNCTION     || ARITY/TYPES                           || RETURN TYPE ||
-#define PORT_FUNCTIONS \
-    ((kill_pids,        3, (uint32_t, bool, puint32_len),    pchar_nofree ))
+//  ________________________________________________________________________
+//  || FUNCTION     || ARITY/TYPES                         || RETURN TYPE ||
+#define PORT_FUNCTIONS                                                       \
+    ((terminate_now,   0, (),                                 bool        )) \
+    ((kill_pids,       3, (uint32_t, bool, puint32_len),      pchar_nofree))
 
 //////////////////////////////////////////////////////////////////////////////
 

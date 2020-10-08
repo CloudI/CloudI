@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Delay shutdown termination in the CloudI logger
+      based on the message queue size to ensure pending data gets logged
+    * Delay CloudI/GEPD Erlang port process shutdown termination
+      to accumulate stdout/stderr service termination output
+    * Require all CloudI Erlang port OS processes to provide
+      a terminate_now function (cloudi_os_spawn, cloudi_os_command)
+    * Add CloudI/GEPD Erlang port OS process orphaned detection
+      (used if the Erlang VM crashed in a weird way)
+
 2020-10-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Split the non-spawn functionality (kill_pids) from the
