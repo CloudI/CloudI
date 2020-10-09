@@ -277,8 +277,8 @@ terminate_now_wait_check(false, TerminateTimeMax, State) ->
         RemainingMilliSeconds > 1500 ->
             receive after 1000 -> ok end,
             terminate_now_wait(TerminateTimeMax, State);
-        RemainingMilliSeconds >= 1000 ->
-            receive after 1000 -> ok end;
+        RemainingMilliSeconds > 0 ->
+            receive after RemainingMilliSeconds -> ok end;
         true ->
             ok
     end.

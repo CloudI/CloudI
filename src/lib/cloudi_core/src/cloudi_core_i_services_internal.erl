@@ -367,7 +367,7 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
     #config_service_options{
         dest_refresh_start = Delay,
         scope = Scope} = ConfigOptionsNew,
-    destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
+    ok = destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
     {ok, State}.
 
 handle_call(process_index, _,
@@ -1531,7 +1531,7 @@ handle_info({cloudi_cpg_data, Groups},
                    options = #config_service_options{
                        dest_refresh_delay = Delay,
                        scope = Scope}} = State) ->
-    destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
+    ok = destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
     hibernate_check({noreply, State#state{cpg_data = Groups}});
 
 handle_info('cloudi_hibernate_rate',
@@ -4563,7 +4563,7 @@ update_state(#state{dispatcher = Dispatcher,
             #config_service_options{
                 dest_refresh_delay = Delay,
                 scope = Scope} = ConfigOptionsN,
-            destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
+            ok = destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
         true ->
             ok
     end,

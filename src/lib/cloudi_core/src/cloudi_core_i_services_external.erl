@@ -346,7 +346,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
                 dest_refresh_start = Delay,
                 scope = Scope} = ConfigOptionsNew,
             false = erlang:process_flag(trap_exit, true),
-            destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
+            ok = destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
             State = #state{dispatcher = Dispatcher,
                            queued_word_size = WordSize,
                            process_index = ProcessIndex,
@@ -447,7 +447,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             % CloudI API poll function has been called for the
             % first time (i.e., by the service code)
             % and all the aspects_init_after functions have been called.
-            cancel_timer_async(InitTimer),
+            ok = cancel_timer_async(InitTimer),
             ok = cloudi_core_i_services_monitor:
                  process_init_end(Dispatcher, OSPid),
             if
@@ -651,11 +651,11 @@ handle_event(EventType, EventContent, StateName, State) ->
                                 TimeoutNew >= ResponseTimeoutImmediateMax ->
                                     Source ! {'cloudi_service_return_async',
                                               Name, Pattern, <<>>, <<>>,
-                                              TimeoutNew, TransId, Source};
+                                              TimeoutNew, TransId, Source},
+                                    ok;
                                 true ->
                                     ok
-                            end,
-                            ok;
+                            end;
                         {error, _}
                             when TimeoutNew >= ?FORWARD_ASYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_async_retry',
@@ -673,7 +673,8 @@ handle_event(EventType, EventContent, StateName, State) ->
                                        NameNext, PatternNext,
                                        RequestInfoNext, RequestNext,
                                        TimeoutNew - ?FORWARD_DELTA,
-                                       PriorityNext, TransId, Source};
+                                       PriorityNext, TransId, Source},
+                            ok;
                         _ ->
                             ok
                     end;
@@ -740,11 +741,11 @@ handle_event(EventType, EventContent, StateName, State) ->
                                 TimeoutNew >= ResponseTimeoutImmediateMax ->
                                     Source ! {'cloudi_service_return_sync',
                                               Name, Pattern, <<>>, <<>>,
-                                              TimeoutNew, TransId, Source};
+                                              TimeoutNew, TransId, Source},
+                                    ok;
                                 true ->
                                     ok
-                            end,
-                            ok;
+                            end;
                         {error, _}
                             when TimeoutNew >= ?FORWARD_SYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_sync_retry',
@@ -762,7 +763,8 @@ handle_event(EventType, EventContent, StateName, State) ->
                                        NameNext, PatternNext,
                                        RequestInfoNext, RequestNext,
                                        TimeoutNew - ?FORWARD_DELTA,
-                                       PriorityNext, TransId, Source};
+                                       PriorityNext, TransId, Source},
+                            ok;
                         _ ->
                             ok
                     end;
@@ -825,11 +827,13 @@ handle_event(EventType, EventContent, StateName, State) ->
                 ReturnType =:= 'return_async' ->
                     Source ! {'cloudi_service_return_async',
                               Name, Pattern, ResponseInfo, Response,
-                              TimeoutNew, TransId, Source};
+                              TimeoutNew, TransId, Source},
+                    ok;
                 ReturnType =:= 'return_sync' ->
                     Source ! {'cloudi_service_return_sync',
                               Name, Pattern, ResponseInfo, Response,
-                              TimeoutNew, TransId, Source}
+                              TimeoutNew, TransId, Source},
+                    ok
             end,
             {keep_state,
              process_queues(State#state{service_state = ServiceStateNew,
@@ -865,7 +869,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     if
         is_reference(InitTimer) ->
             % initialization was interrupted by the shutdown request
-            cancel_timer_async(InitTimer),
+            ok = cancel_timer_async(InitTimer),
             % initialization is considered successful
             ok = cloudi_core_i_services_monitor:
                  process_init_end(Dispatcher, OSPid),
@@ -919,7 +923,8 @@ handle_event(EventType, EventContent, StateName, State) ->
             PidNext ! {'cloudi_service_send_async', Name, Pattern,
                        RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
-                       Priority, TransId, Source};
+                       Priority, TransId, Source},
+            ok;
         _ ->
             ok
     end,
@@ -952,7 +957,8 @@ handle_event(EventType, EventContent, StateName, State) ->
             PidNext ! {'cloudi_service_send_sync', Name, Pattern,
                        RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
-                       Priority, TransId, Source};
+                       Priority, TransId, Source},
+            ok;
         _ ->
             ok
     end,
@@ -980,11 +986,13 @@ handle_event(EventType, EventContent, StateName, State) ->
                 SendType =:= 'cloudi_service_send_async' ->
                     Source ! {'cloudi_service_return_async',
                               Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source};
+                              Timeout, TransId, Source},
+                    ok;
                 SendType =:= 'cloudi_service_send_sync' ->
                     Source ! {'cloudi_service_return_sync',
                               Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source}
+                              Timeout, TransId, Source},
+                    ok
             end;
         true ->
             ok
@@ -1061,11 +1069,13 @@ handle_event(EventType, EventContent, StateName, State) ->
                         SendType =:= 'cloudi_service_send_async' ->
                             Source ! {'cloudi_service_return_async',
                                       Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source};
+                                      Timeout, TransId, Source},
+                            ok;
                         SendType =:= 'cloudi_service_send_sync' ->
                             Source ! {'cloudi_service_return_sync',
                                       Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source}
+                                      Timeout, TransId, Source},
+                            ok
                     end;
                 true ->
                     ok
@@ -1184,7 +1194,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             if
                 ResponseTimeoutAdjustment;
                 TimeoutOld >= RequestTimeoutImmediateMax ->
-                    cancel_timer_async(Tref);
+                    ok = cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
                     ok
@@ -1236,7 +1246,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             if
                 ResponseTimeoutAdjustment;
                 TimeoutOld >= RequestTimeoutImmediateMax ->
-                    cancel_timer_async(Tref);
+                    ok = cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
                     ok
@@ -1573,7 +1583,8 @@ connection_init(#state{dispatcher = Dispatcher,
     if
         Protocol =:= udp ->
             ok = send('keepalive_out'(), State),
-            erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp);
+            _ = erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp),
+            ok;
         true ->
             ok
     end,
@@ -1637,7 +1648,7 @@ handle_info({cloudi_cpg_data, Groups}, _,
                    options = #config_service_options{
                        dest_refresh_delay = Delay,
                        scope = Scope}} = State) ->
-    destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
+    ok = destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
     {keep_state, State#state{cpg_data = Groups}};
 
 handle_info({'EXIT', _, Reason}, _, _) ->
@@ -2799,7 +2810,7 @@ update_state(#state{dispatcher = Dispatcher,
             #config_service_options{
                 dest_refresh_delay = Delay,
                 scope = Scope} = ConfigOptionsN,
-            destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
+            ok = destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
         true ->
             ok
     end,

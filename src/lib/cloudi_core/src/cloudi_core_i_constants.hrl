@@ -138,6 +138,10 @@
 % maximum timeout value for blocking on a response in Erlang source code
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
+% for gen_server:call/3 and similar functions that exit on timeout, etc.
+-define(CATCH_EXIT(F),
+        try F catch exit:{Reason, _} -> {error, Reason} end).
+
 % time-related constants
 -define(DAYS_IN_YEAR, 365.25).
 -define(DAYS_IN_MONTH, (?DAYS_IN_YEAR / 12)).

@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -299,10 +299,10 @@ new(Options)
             destination_refresh_groups(DestRefresh,
                                        OldGroups);
         GroupsStatic =:= false ->
-            destination_refresh(DestRefresh,
-                                Receiver,
-                                DestRefreshStart,
-                                ConfiguredScope),
+            ok = destination_refresh(DestRefresh,
+                                     Receiver,
+                                     DestRefreshStart,
+                                     ConfiguredScope),
             if
                 ((DestRefresh =:= lazy_closest) orelse
                  (DestRefresh =:= lazy_furthest) orelse
@@ -316,10 +316,10 @@ new(Options)
                         {cloudi_cpg_data, G} ->
                             % DestRefreshStart was small enough to
                             % immediately cache the groups
-                            destination_refresh(DestRefresh,
-                                                Receiver,
-                                                DestRefreshDelay,
-                                                ConfiguredScope),
+                            ok = destination_refresh(DestRefresh,
+                                                     Receiver,
+                                                     DestRefreshDelay,
+                                                     ConfiguredScope),
                             G
                     after
                         ?DEFAULT_DEST_REFRESH_START ->
@@ -366,7 +366,7 @@ destinations_refresh(#cloudi_context{
                          scope = Scope,
                          receiver = Receiver} = Context,
                      {cloudi_cpg_data, Groups}) ->
-    destination_refresh(DestRefresh, Receiver, DestRefreshDelay, Scope),
+    ok = destination_refresh(DestRefresh, Receiver, DestRefreshDelay, Scope),
     Context#cloudi_context{cpg_data = Groups}.
 
 %%-------------------------------------------------------------------------
@@ -1694,8 +1694,8 @@ result(#cloudi_context{
            cpg_data_stale = SendGroups} = Context, Result) ->
     if
         SendGroups =:= true ->
-            destination_refresh(DestRefresh, Receiver,
-                                DestRefreshDelay, Scope),
+            ok = destination_refresh(DestRefresh, Receiver,
+                                     DestRefreshDelay, Scope),
             {Result, Context#cloudi_context{cpg_data_stale = false}};
         SendGroups =:= false ->
             {Result, Context}

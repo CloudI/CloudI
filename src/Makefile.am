@@ -92,6 +92,7 @@ endif
     rebar-directories-distclean \
     erlang-applications-scope-remove \
     dialyze \
+    dialyze-internal \
     dialyzer \
     doc \
     docs \
@@ -205,9 +206,6 @@ erlang-applications-scope-remove:
 	rm -f scoped
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
 
-# -Wunderspecs may want to be used gradually
-# -Wunknown and -Werror_handling haven't been helpful
-#              -Wunmatched_returns
 dialyze: all \
          $(top_srcdir)/dialyzer.plt
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
@@ -265,6 +263,58 @@ dialyze: all \
               external/cloudi_x_nodefinder/ebin \
               external/cloudi_x_pgsql/ebin \
               external/cloudi_x_setup/ebin
+	@echo "No Errors or Warnings Found!"
+
+# -Wunderspecs may want to be used gradually
+# -Wunknown and -Werror_handling haven't been helpful
+dialyze-internal: all \
+                  $(top_srcdir)/dialyzer.plt
+	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
+              -Wunmatched_returns \
+              -I lib/cloudi_core/include/ \
+              lib/cloudi_core/ebin/ \
+              lib/cloudi_service_api_batch/ebin/ \
+              lib/cloudi_service_api_requests/ebin/ \
+              lib/cloudi_service_cron/ebin/ \
+              lib/cloudi_service_db_mysql/ebin/ \
+              lib/cloudi_service_db_pgsql/ebin/ \
+              lib/cloudi_service_filesystem/ebin/ \
+              lib/cloudi_service_funnel/ebin/ \
+              lib/cloudi_service_http_client/ebin/ \
+              lib/cloudi_service_http_cowboy1/ebin/ \
+              lib/cloudi_service_http_elli/ebin/ \
+              lib/cloudi_service_http_rest/ebin/ \
+              lib/cloudi_service_map_reduce/ebin/ \
+              lib/cloudi_service_monitoring/ebin/ \
+              lib/cloudi_service_null/ebin/ \
+              lib/cloudi_service_oauth1/ebin/ \
+              lib/cloudi_service_queue/ebin/ \
+              lib/cloudi_service_quorum/ebin/ \
+              lib/cloudi_service_request_rate/ebin/ \
+              lib/cloudi_service_router/ebin/ \
+              lib/cloudi_service_shell/ebin/ \
+              lib/cloudi_service_tcp/ebin/ \
+              lib/cloudi_service_udp/ebin/ \
+              lib/cloudi_service_validate/ebin/ \
+              lib/cgroups/ebin/ \
+              lib/cpg/ebin/ \
+              lib/erlang_term/ebin/ \
+              lib/key2value/ebin/ \
+              lib/keys1value/ebin/ \
+              lib/pqueue/ebin/ \
+              lib/quickrand/ebin/ \
+              lib/reltool_util/ebin/ \
+              lib/supool/ebin/ \
+              lib/syslog_socket/ebin/ \
+              lib/trie/ebin/ \
+              lib/uuid/ebin/ \
+              lib/varpool/ebin/ \
+              tests/count/erlang/src/ \
+              tests/hexpi/erlang/src/ \
+              tests/http_req/erlang/src/ \
+              tests/messaging/erlang/src/ \
+              tests/msg_size/erlang/src/ \
+              tests/null/erlang/src/
 	@echo "No Errors or Warnings Found!"
 
 dialyzer: dialyze

@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -338,7 +338,7 @@ send_timeout_dead(Pid,
     end.
 
 cancel_timer_async(Tref) ->
-    erlang:cancel_timer(Tref, [{async, true}, {info, false}]).
+    ok = erlang:cancel_timer(Tref, [{async, true}, {info, false}]).
 
 async_response_timeout_start(_, _, 0, _, State) ->
     State;

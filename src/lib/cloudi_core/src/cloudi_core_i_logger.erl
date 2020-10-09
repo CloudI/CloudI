@@ -49,6 +49,8 @@
          redirect_set/1,
          redirect_update/1,
          fatal/8, error/8, warn/8, info/8, debug/8, trace/8,
+         status/1,
+         status_reset/1,
          metadata_get/0, metadata_set/1,
          format/2, format/3,
          microseconds_to_string/1,
@@ -122,7 +124,17 @@
         logger_node
             :: node(),
         logger_self
-            :: pid()
+            :: pid(),
+        file_counts = #{}
+            :: #{cloudi_service_api:loglevel() := pos_integer()},
+        error_write_count = 0
+            :: non_neg_integer(),
+        error_write_types = []
+            :: list(file:posix() | badarg | terminated),
+        error_sync_count = 0
+            :: non_neg_integer(),
+        error_sync_types = []
+            :: list(file:posix() | badarg | terminated)
     }).
 
 %%%------------------------------------------------------------------------
@@ -154,9 +166,8 @@ set(#config_logging{file = FilePath} = LoggingConfig) ->
         FilePath =:= undefined ->
             gen_server:cast(?MODULE, {set, LoggingConfig});
         is_list(FilePath) ->
-            case file:open(FilePath, [raw, append]) of
-                {ok, Fd} ->
-                    file:close(Fd),
+            case filepath_exists(FilePath) of
+                ok ->
                     gen_server:cast(?MODULE, {set, LoggingConfig});
                 {error, _} = Error ->
                     Error
@@ -176,9 +187,8 @@ file_set(undefined) ->
     gen_server:cast(?MODULE, {file_set, undefined});
 file_set(FilePath)
     when is_list(FilePath) andalso is_integer(hd(FilePath)) ->
-    case file:open(FilePath, [raw, append]) of
-        {ok, Fd} ->
-            file:close(Fd),
+    case filepath_exists(FilePath) of
+        ok ->
             gen_server:cast(?MODULE, {file_set, FilePath});
         {error, _} = Error ->
             Error
@@ -397,6 +407,30 @@ debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 trace(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
     log_message_external(Mode, Process, trace, Module, Line,
                          Function, Arity, Format, Args).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get logging status.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec status(Timeout :: pos_integer() | infinity) ->
+    {ok, cloudi_service_api:logging_status()} | {error, timeout | noproc}.
+
+status(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE, status, Timeout)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reset logging status.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec status_reset(Timeout :: pos_integer() | infinity) ->
+    ok | {error, timeout | noproc}.
+
+status_reset(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE, status_reset, Timeout)).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -637,6 +671,70 @@ handle_call({Level, Timestamp, Node, Pid,
         {{error, Reason}, StateNext} ->
             {stop, Reason, ok, StateNext}
     end;
+handle_call(status, _,
+            #state{file_counts = FileCounts,
+                   error_write_count = ErrorWriteCount,
+                   error_write_types = ErrorWriteTypes,
+                   error_sync_count = ErrorSyncCount,
+                   error_sync_types = ErrorSyncTypes} = State) ->
+    Status0 = if
+        ErrorWriteCount > 0 ->
+            [{file_write_fail_count, ErrorWriteCount},
+             {file_write_fail_types, ErrorWriteTypes}];
+        ErrorWriteCount == 0 ->
+            []
+    end,
+    Status1 = if
+        ErrorSyncCount > 0 ->
+            [{file_sync_fail_count, ErrorSyncCount},
+             {file_sync_fail_types, ErrorSyncTypes} | Status0];
+        ErrorSyncCount == 0 ->
+            Status0
+    end,
+    Status2 = case maps:find(trace, FileCounts) of
+        {ok, FileCountTrace} ->
+            [{file_messages_trace, FileCountTrace} | Status1];
+        error ->
+            Status1
+    end,
+    Status3 = case maps:find(debug, FileCounts) of
+        {ok, FileCountDebug} ->
+            [{file_messages_debug, FileCountDebug} | Status2];
+        error ->
+            Status2
+    end,
+    Status4 = case maps:find(info, FileCounts) of
+        {ok, FileCountInfo} ->
+            [{file_messages_info, FileCountInfo} | Status3];
+        error ->
+            Status3
+    end,
+    Status5 = case maps:find(warn, FileCounts) of
+        {ok, FileCountWarn} ->
+            [{file_messages_warn, FileCountWarn} | Status4];
+        error ->
+            Status4
+    end,
+    Status6 = case maps:find(error, FileCounts) of
+        {ok, FileCountError} ->
+            [{file_messages_error, FileCountError} | Status5];
+        error ->
+            Status5
+    end,
+    StatusN = case maps:find(fatal, FileCounts) of
+        {ok, FileCountFatal} ->
+            [{file_messages_fatal, FileCountFatal} | Status6];
+        error ->
+            Status6
+    end,
+    {reply, {ok, StatusN}, State};
+handle_call(status_reset, _, State) ->
+    {reply, ok,
+     State#state{file_counts = #{},
+                 error_write_count = 0,
+                 error_write_types = [],
+                 error_sync_count = 0,
+                 error_sync_types = []}};
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
@@ -785,6 +883,7 @@ handle_info({'EXIT', _, Reason},
         element(1, Reason) =:= shutdown ->
             TerminateTimeMax = cloudi_timestamp:milliseconds_monotonic() +
                                ?TIMEOUT_TERMINATE_MAX,
+            true = ?TERMINATE_DELAY < ?TIMEOUT_TERMINATE_MAX,
             _ = erlang:send_after(?TERMINATE_DELAY, Self,
                                   {terminate, Reason, TerminateTimeMax}),
             {noreply, State};
@@ -795,19 +894,26 @@ handle_info({terminate, Reason, TerminateTimeMax} = Terminate,
             #state{logger_self = Self} = State) ->
     {message_queue_len,
      MessageQueueLength} = erlang:process_info(Self, message_queue_len),
-    TerminateNow = if
+    TerminateDelay = if
         MessageQueueLength > 0 ->
             RemainingMilliSeconds = TerminateTimeMax -
                                     cloudi_timestamp:milliseconds_monotonic(),
-            RemainingMilliSeconds =< ?TERMINATE_DELAY;
+            if
+                RemainingMilliSeconds =< 0 ->
+                    undefined;
+                RemainingMilliSeconds < ?TERMINATE_DELAY ->
+                    RemainingMilliSeconds;
+                true ->
+                    ?TERMINATE_DELAY
+            end;
         true ->
-            true
+            undefined
     end,
     if
-        TerminateNow =:= true ->
+        TerminateDelay =:= undefined ->
             {stop, Reason, State};
-        TerminateNow =:= false ->
-            _ = erlang:send_after(?TERMINATE_DELAY, Self, Terminate),
+        is_integer(TerminateDelay) ->
+            _ = erlang:send_after(TerminateDelay, Self, Terminate),
             {noreply, State}
     end;
 handle_info(Request, State) ->
@@ -898,7 +1004,7 @@ log_config_file_set(FilePathNew,
     case ?LOG_T0_INFO("changing file path from ~ts to ~ts",
                       [FilePathOldStr, FilePathNewStr], State) of
         {ok, #state{fd = FdOld} = StateNew} ->
-            file:close(FdOld),
+            _ = file:close(FdOld),
             {ok, StateNew#state{file_path = FilePathNew,
                                 fd = undefined,
                                 inode = undefined}};
@@ -1355,7 +1461,7 @@ log_message_internal(Level, Timestamp, Node, Pid,
     {FileResult, StateNew} = case log_level_allowed(MainLevel, Level) of
         true ->
             ok = log_stdout(Message, StdoutPort),
-            log_file(Message, State);
+            log_file(Level, Message, State);
         false ->
             {ok, State}
     end,
@@ -1394,9 +1500,9 @@ log_message(Format, Args) ->
 log_level([_ | _] = L) ->
     cloudi_core_i_configuration:logging_level_highest([off | L]).
 
-log_file(_, #state{file_path = undefined} = State) ->
+log_file(_, _, #state{file_path = undefined} = State) ->
     {ok, State};
-log_file(Message,
+log_file(Level, Message,
          #state{file_path = FilePath,
                 fd = FdOld,
                 inode = InodeOld} = State) ->
@@ -1404,29 +1510,22 @@ log_file(Message,
         {ok, #file_info{inode = CurrentInode}} ->
             if
                 CurrentInode == InodeOld ->
-                    file:write(FdOld, Message),
-                    file:datasync(FdOld),
-                    {ok, State};
+                    log_file_write(Level, Message, State);
                 true ->
-                    file:close(FdOld),
-                    case log_file_reopen(FilePath,
-                                         CurrentInode, State) of
-                        {ok, #state{fd = FdNew} = StateNew} ->
-                            file:write(FdNew, Message),
-                            file:datasync(FdNew),
-                            {ok, StateNew};
+                    _ = file:close(FdOld),
+                    case log_file_reopen(FilePath, CurrentInode, State) of
+                        {ok, StateNew} ->
+                            log_file_write(Level, Message, StateNew);
                         {error, _} = Error ->
                             {Error, State#state{fd = undefined,
                                                 inode = undefined}}
                     end
             end;
         {error, enoent} ->
-            file:close(FdOld),
+            _ = file:close(FdOld),
             case log_file_open(FilePath, State) of
-                {ok, #state{fd = FdNew} = StateNew} ->
-                    file:write(FdNew, Message),
-                    file:datasync(FdNew),
-                    {ok, StateNew};
+                {ok, StateNew} ->
+                    log_file_write(Level, Message, StateNew);
                 {error, _} = Error ->
                     {Error, State#state{fd = undefined,
                                         inode = undefined}}
@@ -1460,6 +1559,36 @@ log_file_reopen(FilePath, Inode, State) ->
                              inode = Inode}};
         {error, _} = Error ->
             Error
+    end.
+
+log_file_write(Level, Message,
+               #state{fd = Fd,
+                      file_counts = FileCounts,
+                      error_write_count = ErrorWriteCount,
+                      error_write_types = ErrorWriteTypes,
+                      error_sync_count = ErrorSyncCount,
+                      error_sync_types = ErrorSyncTypes} = State) ->
+    case file:write(Fd, Message) of
+        ok ->
+            case file:datasync(Fd) of
+                ok ->
+                    FileCountsNew = maps:update_with(Level, fun(Count) ->
+                        Count + 1
+                    end, 1, FileCounts),
+                    {ok, State#state{file_counts = FileCountsNew}};
+                {error, Reason} ->
+                    true = is_atom(Reason),
+                    ErrorSyncTypesNew = lists:umerge(ErrorSyncTypes, [Reason]),
+                    {ok,
+                     State#state{error_sync_count = ErrorSyncCount + 1,
+                                 error_sync_types = ErrorSyncTypesNew}}
+            end;
+        {error, Reason} ->
+            true = is_atom(Reason),
+            ErrorWriteTypesNew = lists:umerge(ErrorWriteTypes, [Reason]),
+            {ok,
+             State#state{error_write_count = ErrorWriteCount + 1,
+                         error_write_types = ErrorWriteTypesNew}}
     end.
 
 log_stdout(_, undefined) ->
@@ -2202,6 +2331,14 @@ syslog_close(undefined) ->
     ok;
 syslog_close(Syslog) when is_pid(Syslog) ->
     cloudi_x_syslog_socket:stop_monitor(Syslog). % asynchronous stop
+
+filepath_exists(FilePath) ->
+    case file:open(FilePath, [raw, append]) of
+        {ok, Fd} ->
+            file:close(Fd);
+        {error, _} = Error ->
+            Error
+    end.
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 time_offset_nanoseconds() ->

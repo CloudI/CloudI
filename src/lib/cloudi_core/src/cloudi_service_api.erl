@@ -66,6 +66,8 @@
          logging_syslog_set/2,
          logging_formatters_set/2,
          logging_redirect_set/2,
+         logging_status/1,
+         logging_status_reset/1,
          logging/1,
          code_path_add/2,
          code_path_remove/2,
@@ -922,6 +924,17 @@
                {output_max_t, cloudi_service_api:seconds()} |
                {formatter, module() | undefined} |
                {formatter_config, list()})}).
+-type logging_status() ::
+    list({file_messages_fatal, pos_integer()} |
+         {file_messages_error, pos_integer()} |
+         {file_messages_warn, pos_integer()} |
+         {file_messages_info, pos_integer()} |
+         {file_messages_debug, pos_integer()} |
+         {file_messages_trace, pos_integer()} |
+         {file_sync_fail_count, pos_integer()} |
+         {file_sync_fail_types, nonempty_list(atom())} |
+         {file_write_fail_count, pos_integer()} |
+         {file_write_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
     nonempty_list({file, string() | undefined} |
                   {stdout, boolean()} |
@@ -944,6 +957,7 @@
               logging_syslog_port/0,
               logging_syslog_set_proplist/0,
               logging_formatters_set_proplist/0,
+              logging_status/0,
               logging_proplist/0]).
 
 -type code_status() ::
@@ -1665,6 +1679,40 @@ logging_redirect_set(Node, Timeout)
            (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_redirect_set(Node, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the current logging status.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_status(Timeout :: api_timeout_milliseconds()) ->
+    {ok, logging_status()} |
+    {error, timeout | noproc}.
+
+logging_status(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_logger:status(Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reset the logging status.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_status_reset(Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error, timeout | noproc}.
+
+logging_status_reset(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_logger:status_reset(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

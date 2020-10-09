@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -84,9 +84,6 @@
         cost_precision :: 0..253,
         log_reconnect :: cloudi_service_api:loglevel()
     }).
-
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

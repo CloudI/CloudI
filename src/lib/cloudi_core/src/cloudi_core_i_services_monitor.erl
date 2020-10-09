@@ -179,9 +179,6 @@
         service :: #service{}
     }).
 
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
-
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------

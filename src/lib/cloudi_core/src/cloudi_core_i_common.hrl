@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2016-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2016-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -27,9 +27,6 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%%------------------------------------------------------------------------
-
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
 
 destination_refresh_groups(DestRefresh, OldGroups)
     when (DestRefresh =:= lazy_closest orelse
@@ -67,7 +64,8 @@ destination_refresh(DestRefresh, Pid, Delay, Scope)
           DestRefresh =:= lazy_remote orelse
           DestRefresh =:= lazy_newest orelse
           DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Pid, Delay);
+    _ = cloudi_x_cpg_data:get_groups(Scope, Pid, Delay),
+    ok;
 
 destination_refresh(DestRefresh, _, _, _)
     when (DestRefresh =:= immediate_closest orelse

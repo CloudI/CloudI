@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add CloudI Service API functions logging_status and
+      logging_status_reset for tracking file output details
+
 2020-10-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Delay shutdown termination in the CloudI logger

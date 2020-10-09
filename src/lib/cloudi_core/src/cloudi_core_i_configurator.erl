@@ -148,9 +148,6 @@
         configuration :: #config{}
     }).
 
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
-
 -ifdef(CLOUDI_CORE_STANDALONE).
 -dialyzer({no_match,
            [service_update_external/6]}).
