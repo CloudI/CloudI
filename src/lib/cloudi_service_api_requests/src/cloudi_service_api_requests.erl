@@ -684,6 +684,7 @@ convert_term_to_json({ok, Statuses}, nodes_status = Method, Space) ->
 convert_term_to_json({ok, Options}, Method, Space)
     when Method =:= acl;
          Method =:= nodes_get;
+         Method =:= logging_status;
          Method =:= logging;
          Method =:= code_status ->
     json_encode([{<<"success">>, true},

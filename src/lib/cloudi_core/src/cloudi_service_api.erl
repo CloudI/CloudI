@@ -925,15 +925,15 @@
                {formatter, module() | undefined} |
                {formatter_config, list()})}).
 -type logging_status() ::
-    list({file_messages_fatal, pos_integer()} |
-         {file_messages_error, pos_integer()} |
-         {file_messages_warn, pos_integer()} |
-         {file_messages_info, pos_integer()} |
-         {file_messages_debug, pos_integer()} |
-         {file_messages_trace, pos_integer()} |
-         {file_sync_fail_count, pos_integer()} |
+    list({file_messages_fatal, nonempty_string()} |
+         {file_messages_error, nonempty_string()} |
+         {file_messages_warn, nonempty_string()} |
+         {file_messages_info, nonempty_string()} |
+         {file_messages_debug, nonempty_string()} |
+         {file_messages_trace, nonempty_string()} |
+         {file_sync_fail_count, nonempty_string()} |
          {file_sync_fail_types, nonempty_list(atom())} |
-         {file_write_fail_count, pos_integer()} |
+         {file_write_fail_count, nonempty_string()} |
          {file_write_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
     nonempty_list({file, string() | undefined} |

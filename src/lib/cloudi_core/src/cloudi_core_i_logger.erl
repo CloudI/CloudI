@@ -679,51 +679,57 @@ handle_call(status, _,
                    error_sync_types = ErrorSyncTypes} = State) ->
     Status0 = if
         ErrorWriteCount > 0 ->
-            [{file_write_fail_count, ErrorWriteCount},
+            [{file_write_fail_count, erlang:integer_to_list(ErrorWriteCount)},
              {file_write_fail_types, ErrorWriteTypes}];
         ErrorWriteCount == 0 ->
             []
     end,
     Status1 = if
         ErrorSyncCount > 0 ->
-            [{file_sync_fail_count, ErrorSyncCount},
+            [{file_sync_fail_count, erlang:integer_to_list(ErrorSyncCount)},
              {file_sync_fail_types, ErrorSyncTypes} | Status0];
         ErrorSyncCount == 0 ->
             Status0
     end,
     Status2 = case maps:find(trace, FileCounts) of
         {ok, FileCountTrace} ->
-            [{file_messages_trace, FileCountTrace} | Status1];
+            [{file_messages_trace,
+              erlang:integer_to_list(FileCountTrace)} | Status1];
         error ->
             Status1
     end,
     Status3 = case maps:find(debug, FileCounts) of
         {ok, FileCountDebug} ->
-            [{file_messages_debug, FileCountDebug} | Status2];
+            [{file_messages_debug,
+              erlang:integer_to_list(FileCountDebug)} | Status2];
         error ->
             Status2
     end,
     Status4 = case maps:find(info, FileCounts) of
         {ok, FileCountInfo} ->
-            [{file_messages_info, FileCountInfo} | Status3];
+            [{file_messages_info,
+              erlang:integer_to_list(FileCountInfo)} | Status3];
         error ->
             Status3
     end,
     Status5 = case maps:find(warn, FileCounts) of
         {ok, FileCountWarn} ->
-            [{file_messages_warn, FileCountWarn} | Status4];
+            [{file_messages_warn,
+              erlang:integer_to_list(FileCountWarn)} | Status4];
         error ->
             Status4
     end,
     Status6 = case maps:find(error, FileCounts) of
         {ok, FileCountError} ->
-            [{file_messages_error, FileCountError} | Status5];
+            [{file_messages_error,
+              erlang:integer_to_list(FileCountError)} | Status5];
         error ->
             Status5
     end,
     StatusN = case maps:find(fatal, FileCounts) of
         {ok, FileCountFatal} ->
-            [{file_messages_fatal, FileCountFatal} | Status6];
+            [{file_messages_fatal,
+              erlang:integer_to_list(FileCountFatal)} | Status6];
         error ->
             Status6
     end,

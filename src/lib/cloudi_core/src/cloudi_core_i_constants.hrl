@@ -138,7 +138,7 @@
 % maximum timeout value for blocking on a response in Erlang source code
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
-% for gen_server:call/3 and similar functions that exit on timeout, etc.
+% for gen_server:call/3 and similar functions that exit on timeout or noproc
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
