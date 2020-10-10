@@ -3,7 +3,7 @@
 
 2020-10-09 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Improve CloudI Service API functions logging_status by having
+    * Improve CloudI Service API function logging_status by having
       file_sync_fail_types and file_write_fail_types lists
       in order of occurrence
     * Fix dialyzer unmatched_returns errors in cloudi_core
