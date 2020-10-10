@@ -12,7 +12,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -33,8 +33,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_init).
@@ -81,7 +81,7 @@ process_dictionary_get() ->
     erlang:get().
 
 process_dictionary_set(ProcessDictionary) ->
-    erlang:erase(),
+    _ = erlang:erase(),
     lists:foreach(fun({K, V}) ->
         erlang:put(K, V)
     end, ProcessDictionary),
@@ -103,7 +103,7 @@ init([Timeout, PidOptions, ProcessDictionary, InternalState]) ->
 
 handle_call(stop, {Pid, _}, #state{service_state = InternalState,
                                    init_timeout = InitTimeout} = State) ->
-    erlang:cancel_timer(InitTimeout),
+    ok = cancel_timer_async(InitTimeout),
     Result = {erlang:get(), InternalState},
     NewState = State#state{service_state = undefined,
                            init_timeout = undefined},

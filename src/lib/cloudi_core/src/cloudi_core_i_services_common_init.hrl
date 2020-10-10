@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2016-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2016-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -27,6 +27,12 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%%------------------------------------------------------------------------
+
+-compile({inline,
+          [{cancel_timer_async, 1}]}).
+
+cancel_timer_async(Tref) ->
+    ok = erlang:cancel_timer(Tref, [{async, true}, {info, false}]).
 
 spawn_opt_options_before(Options0) ->
     OptionsN = lists:keydelete(sensitive, 1, Options0),

@@ -830,18 +830,7 @@ handle_cast(Request, State) ->
 handle_info({'cloudi_service_request_success', RequestResponse,
              ServiceStateNew},
             #state{dispatcher = Dispatcher} = State) ->
-    case RequestResponse of
-        undefined ->
-            ok;
-        {'cloudi_service_return_async', _, _, _, _, _, _, Source} = T ->
-            Source ! T;
-        {'cloudi_service_return_sync', _, _, _, _, _, _, Source} = T ->
-            Source ! T;
-        {'cloudi_service_forward_async_retry', _, _, _, _, _, _, _, _, _} = T ->
-            Dispatcher ! T;
-        {'cloudi_service_forward_sync_retry', _, _, _, _, _, _, _, _, _} = T ->
-            Dispatcher ! T
-    end,
+    ok = handle_module_request_success(RequestResponse, Dispatcher),
     StateNew = process_queues(State#state{service_state = ServiceStateNew}),
     hibernate_check({noreply, StateNew});
 
@@ -928,7 +917,7 @@ handle_info({'cloudi_service_mcast_async_active_retry',
                                               Timeout, Priority,
                                               Client, State));
 
-handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
+handle_info({'cloudi_service_forward_async_retry' = ForwardType, Name, Pattern,
              NameNext, RequestInfoNext, RequestNext,
              Timeout, Priority, TransId, Source},
             #state{dest_refresh = DestRefresh,
@@ -942,24 +931,19 @@ handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
                        scope = Scope}} = State) ->
     hibernate_check(case destination_allowed(NameNext, DestDeny, DestAllow) of
         true ->
+            SendType = 'cloudi_service_send_async',
             case destination_get(DestRefresh, Scope, NameNext, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
                     {noreply, State};
                 {error, _} when RequestNameLookup =:= async ->
-                    if
-                        Timeout >= ResponseTimeoutImmediateMax ->
-                            Source ! {'cloudi_service_return_async',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source};
-                        true ->
-                            ok
-                    end,
+                    ok = return_null_response(SendType, Name, Pattern,
+                                              Timeout, TransId, Source,
+                                              ResponseTimeoutImmediateMax),
                     {noreply, State};
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
-                                      {'cloudi_service_forward_async_retry',
-                                       Name, Pattern,
+                                      {ForwardType, Name, Pattern,
                                        NameNext, RequestInfoNext, RequestNext,
                                        Timeout - ?FORWARD_ASYNC_INTERVAL,
                                        Priority, TransId, Source}),
@@ -968,8 +952,7 @@ handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
                 {error, _} ->
                     {noreply, State};
                 {ok, PatternNext, PidNext} when Timeout >= ?FORWARD_DELTA ->
-                    PidNext ! {'cloudi_service_send_async',
-                               NameNext, PatternNext,
+                    PidNext ! {SendType, NameNext, PatternNext,
                                RequestInfoNext, RequestNext,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Source},
@@ -981,7 +964,7 @@ handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
             {noreply, State}
     end);
 
-handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
+handle_info({'cloudi_service_forward_sync_retry' = ForwardType, Name, Pattern,
              NameNext, RequestInfoNext, RequestNext,
              Timeout, Priority, TransId, Source},
             #state{dest_refresh = DestRefresh,
@@ -995,24 +978,19 @@ handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
                        scope = Scope}} = State) ->
     hibernate_check(case destination_allowed(NameNext, DestDeny, DestAllow) of
         true ->
+            SendType = 'cloudi_service_send_sync',
             case destination_get(DestRefresh, Scope, NameNext, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
                     {noreply, State};
                 {error, _} when RequestNameLookup =:= async ->
-                    if
-                        Timeout >= ResponseTimeoutImmediateMax ->
-                            Source ! {'cloudi_service_return_sync',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source};
-                        true ->
-                            ok
-                    end,
+                    ok = return_null_response(SendType, Name, Pattern,
+                                              Timeout, TransId, Source,
+                                              ResponseTimeoutImmediateMax),
                     {noreply, State};
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
-                                      {'cloudi_service_forward_sync_retry',
-                                       Name, Pattern,
+                                      {ForwardType, Name, Pattern,
                                        NameNext, RequestInfoNext, RequestNext,
                                        Timeout - ?FORWARD_SYNC_INTERVAL,
                                        Priority, TransId, Source}),
@@ -1021,8 +999,7 @@ handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
                 {error, _} ->
                     {noreply, State};
                 {ok, PatternNext, PidNext} when Timeout >= ?FORWARD_DELTA ->
-                    PidNext ! {'cloudi_service_send_sync',
-                               NameNext, PatternNext,
+                    PidNext ! {SendType, NameNext, PatternNext,
                                RequestInfoNext, RequestNext,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Source},
@@ -1044,7 +1021,7 @@ handle_info({'cloudi_service_recv_asyncs_retry',
     hibernate_check(handle_recv_asyncs(Timeout, Results, Consume,
                                        Client, State));
 
-handle_info({'cloudi_service_send_async',
+handle_info({'cloudi_service_send_async' = SendType,
              Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Source},
             #state{dispatcher = Dispatcher,
@@ -1083,21 +1060,16 @@ handle_info({'cloudi_service_send_async',
                                      ConfigOptionsNew, Dispatcher),
                                  options = ConfigOptionsNew}});
         RateRequestOk =:= false ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    Source ! {'cloudi_service_return_async',
-                              Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source};
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             hibernate_check({noreply,
                              State#state{
                                  options = ConfigOptions#config_service_options{
                                      rate_request_max = RateRequestNew}}})
     end;
 
-handle_info({'cloudi_service_send_sync',
+handle_info({'cloudi_service_send_sync' = SendType,
              Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Source},
             #state{dispatcher = Dispatcher,
@@ -1136,14 +1108,9 @@ handle_info({'cloudi_service_send_sync',
                                      ConfigOptionsNew, Dispatcher),
                                  options = ConfigOptionsNew}});
         RateRequestOk =:= false ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    Source ! {'cloudi_service_return_sync',
-                              Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source};
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             hibernate_check({noreply,
                              State#state{
                                  options = ConfigOptions#config_service_options{
@@ -1159,16 +1126,8 @@ handle_info({SendType, Name, Pattern, _, _, 0, _, TransId, Source},
          SendType =:= 'cloudi_service_send_sync' ->
     if
         0 =:= ResponseTimeoutImmediateMax ->
-            if
-                SendType =:= 'cloudi_service_send_async' ->
-                    Source ! {'cloudi_service_return_async',
-                              Name, Pattern, <<>>, <<>>,
-                              0, TransId, Source};
-                SendType =:= 'cloudi_service_send_sync' ->
-                    Source ! {'cloudi_service_return_sync',
-                              Name, Pattern, <<>>, <<>>,
-                              0, TransId, Source}
-            end;
+            ok = return_null_response(SendType, Name, Pattern,
+                                      0, TransId, Source);
         true ->
             ok
     end,
@@ -1218,21 +1177,9 @@ handle_info({SendType, Name, Pattern, _, _,
              recv_timeout_start(Timeout, Priority, TransId,
                                 Size, T, StateNew)};
         true ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    if
-                        SendType =:= 'cloudi_service_send_async' ->
-                            Source ! {'cloudi_service_return_async',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source};
-                        SendType =:= 'cloudi_service_send_sync' ->
-                            Source ! {'cloudi_service_return_sync',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source}
-                    end;
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             {noreply, StateNew}
     end);
 
@@ -1544,13 +1491,15 @@ handle_info('cloudi_hibernate_rate',
                             hibernate_reinit(Hibernate),
     if
         is_pid(RequestPid) ->
-            RequestPid ! {'cloudi_hibernate', Value};
+            RequestPid ! {'cloudi_hibernate', Value},
+            ok;
         true ->
             ok
     end,
     if
         is_pid(InfoPid) ->
-            InfoPid ! {'cloudi_hibernate', Value};
+            InfoPid ! {'cloudi_hibernate', Value},
+            ok;
         true ->
             ok
     end,
@@ -2814,6 +2763,20 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
              ErrorType, Error, ErrorStackTrace, ServiceState}
     end.
 
+handle_module_request_success(undefined, _) ->
+    ok;
+handle_module_request_success({ReturnType, _, _, _, _, _, _, Source} = T, _)
+    when ReturnType =:= 'cloudi_service_return_async';
+         ReturnType =:= 'cloudi_service_return_sync' ->
+    Source ! T,
+    ok;
+handle_module_request_success({ForwardType, _, _, _, _, _, _, _, _, _} = T,
+                              Dispatcher)
+    when ForwardType =:= 'cloudi_service_forward_async_retry';
+         ForwardType =:= 'cloudi_service_forward_sync_retry' ->
+    Dispatcher ! T,
+    ok.
+
 handle_module_info(Request, ServiceState, Dispatcher, Module,
                    #config_service_options{
                        aspects_info_before =
@@ -3578,18 +3541,7 @@ duo_handle_info({'cloudi_service_return_sync',
 duo_handle_info({'cloudi_service_request_success', RequestResponse,
                  ServiceStateNew},
                 #state_duo{dispatcher = Dispatcher} = State) ->
-    case RequestResponse of
-        undefined ->
-            ok;
-        {'cloudi_service_return_async', _, _, _, _, _, _, Source} = T ->
-            Source ! T;
-        {'cloudi_service_return_sync', _, _, _, _, _, _, Source} = T ->
-            Source ! T;
-        {'cloudi_service_forward_async_retry', _, _, _, _, _, _, _, _, _} = T ->
-            Dispatcher ! T;
-        {'cloudi_service_forward_sync_retry', _, _, _, _, _, _, _, _, _} = T ->
-            Dispatcher ! T
-    end,
+    ok = handle_module_request_success(RequestResponse, Dispatcher),
     StateNew = State#state_duo{service_state = ServiceStateNew},
     {noreply, duo_process_queues(StateNew)};
 
@@ -3652,7 +3604,7 @@ duo_handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~tp", [Pid, Reason]),
     {stop, Reason, State};
 
-duo_handle_info({'cloudi_service_send_async',
+duo_handle_info({'cloudi_service_send_async' = SendType,
                  Name, Pattern, RequestInfo, Request,
                  Timeout, Priority, TransId, Source},
                 #state_duo{duo_mode_pid = DuoModePid,
@@ -3689,20 +3641,15 @@ duo_handle_info({'cloudi_service_send_async',
                      Module, ConfigOptionsNew}, ConfigOptionsNew, DuoModePid),
                 options = ConfigOptionsNew}};
         RateRequestOk =:= false ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    Source ! {'cloudi_service_return_async',
-                              Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source};
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             {noreply, State#state_duo{
                 options = ConfigOptions#config_service_options{
                     rate_request_max = RateRequestNew}}}
     end;
 
-duo_handle_info({'cloudi_service_send_sync',
+duo_handle_info({'cloudi_service_send_sync' = SendType,
                  Name, Pattern, RequestInfo, Request,
                  Timeout, Priority, TransId, Source},
                 #state_duo{duo_mode_pid = DuoModePid,
@@ -3739,14 +3686,9 @@ duo_handle_info({'cloudi_service_send_sync',
                      Module, ConfigOptionsNew}, ConfigOptionsNew, DuoModePid),
                 options = ConfigOptionsNew}};
         RateRequestOk =:= false ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    Source ! {'cloudi_service_return_sync',
-                              Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source};
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             {noreply, State#state_duo{
                 options = ConfigOptions#config_service_options{
                     rate_request_max = RateRequestNew}}}
@@ -3762,16 +3704,8 @@ duo_handle_info({SendType, Name, Pattern, _, _,
          SendType =:= 'cloudi_service_send_sync' ->
     if
         0 =:= ResponseTimeoutImmediateMax ->
-            if
-                SendType =:= 'cloudi_service_send_async' ->
-                    Source ! {'cloudi_service_return_async',
-                              Name, Pattern, <<>>, <<>>,
-                              0, TransId, Source};
-                SendType =:= 'cloudi_service_send_sync' ->
-                    Source ! {'cloudi_service_return_sync',
-                              Name, Pattern, <<>>, <<>>,
-                              0, TransId, Source}
-            end;
+            ok = return_null_response(SendType, Name, Pattern,
+                                      0, TransId, Source);
         true ->
             ok
     end,
@@ -3821,21 +3755,9 @@ duo_handle_info({SendType, Name, Pattern, _, _,
              duo_recv_timeout_start(Timeout, Priority, TransId,
                                     Size, T, StateNew)};
         true ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    if
-                        SendType =:= 'cloudi_service_send_async' ->
-                            Source ! {'cloudi_service_return_async',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source};
-                        SendType =:= 'cloudi_service_send_sync' ->
-                            Source ! {'cloudi_service_return_sync',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source}
-                    end;
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             {noreply, StateNew}
     end;
 
@@ -3876,7 +3798,8 @@ duo_handle_info('cloudi_hibernate_rate',
     Dispatcher ! {'cloudi_hibernate', Value},
     if
         is_pid(RequestPid) ->
-            RequestPid ! {'cloudi_hibernate', Value};
+            RequestPid ! {'cloudi_hibernate', Value},
+            ok;
         true ->
             ok
     end,

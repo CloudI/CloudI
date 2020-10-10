@@ -604,7 +604,7 @@ handle_event(EventType, EventContent, StateName, State) ->
           TimeoutNext, PriorityNext, TransId, Source},
          #state{dispatcher = Dispatcher,
                 service_state = ServiceState,
-                request_data = {{_, Name, Pattern, RequestInfo, Request,
+                request_data = {{SendType, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
                                 RequestTimeoutF},
                 dest_refresh = DestRefresh,
@@ -624,6 +624,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     true = is_integer(PriorityNext),
     true = (PriorityNext >= ?PRIORITY_HIGH) andalso
            (PriorityNext =< ?PRIORITY_LOW),
+    true = (SendType =:= 'cloudi_service_send_async'),
     Type = send_async,
     Result = {forward, NameNext,
               RequestInfoNext, RequestNext,
@@ -639,7 +640,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 true ->
                     TimeoutNext
             end,
-            case destination_allowed(NameNext, DestDeny, DestAllow) of
+            ok = case destination_allowed(NameNext, DestDeny, DestAllow) of
                 true ->
                     case destination_get(DestRefresh, Scope, NameNext, Source,
                                          Groups, TimeoutNew) of
@@ -647,15 +648,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                             ok;
                         {error, _}
                             when RequestNameLookup =:= async ->
-                            if
-                                TimeoutNew >= ResponseTimeoutImmediateMax ->
-                                    Source ! {'cloudi_service_return_async',
-                                              Name, Pattern, <<>>, <<>>,
-                                              TimeoutNew, TransId, Source},
-                                    ok;
-                                true ->
-                                    ok
-                            end;
+                            return_null_response(SendType, Name, Pattern,
+                                                 TimeoutNew, TransId, Source,
+                                                 ResponseTimeoutImmediateMax);
                         {error, _}
                             when TimeoutNew >= ?FORWARD_ASYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_async_retry',
@@ -669,8 +664,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                             ok;
                         {ok, PatternNext, PidNext}
                             when TimeoutNew >= ?FORWARD_DELTA ->
-                            PidNext ! {'cloudi_service_send_async',
-                                       NameNext, PatternNext,
+                            PidNext ! {SendType, NameNext, PatternNext,
                                        RequestInfoNext, RequestNext,
                                        TimeoutNew - ?FORWARD_DELTA,
                                        PriorityNext, TransId, Source},
@@ -695,7 +689,7 @@ handle_event(EventType, EventContent, StateName, State) ->
           TimeoutNext, PriorityNext, TransId, Source},
          #state{dispatcher = Dispatcher,
                 service_state = ServiceState,
-                request_data = {{_, Name, Pattern, RequestInfo, Request,
+                request_data = {{SendType, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
                                 RequestTimeoutF},
                 dest_refresh = DestRefresh,
@@ -715,6 +709,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     true = is_integer(PriorityNext),
     true = (PriorityNext >= ?PRIORITY_HIGH) andalso
            (PriorityNext =< ?PRIORITY_LOW),
+    true = (SendType =:= 'cloudi_service_send_sync'),
     Type = send_sync,
     Result = {forward, NameNext, RequestInfoNext, RequestNext,
               TimeoutNext, PriorityNext},
@@ -729,7 +724,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 true ->
                     TimeoutNext
             end,
-            case destination_allowed(NameNext, DestDeny, DestAllow) of
+            ok = case destination_allowed(NameNext, DestDeny, DestAllow) of
                 true ->
                     case destination_get(DestRefresh, Scope, NameNext, Source,
                                          Groups, TimeoutNew) of
@@ -737,15 +732,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                             ok;
                         {error, _}
                             when RequestNameLookup =:= async ->
-                            if
-                                TimeoutNew >= ResponseTimeoutImmediateMax ->
-                                    Source ! {'cloudi_service_return_sync',
-                                              Name, Pattern, <<>>, <<>>,
-                                              TimeoutNew, TransId, Source},
-                                    ok;
-                                true ->
-                                    ok
-                            end;
+                            return_null_response(SendType, Name, Pattern,
+                                                 TimeoutNew, TransId, Source,
+                                                 ResponseTimeoutImmediateMax);
                         {error, _}
                             when TimeoutNew >= ?FORWARD_SYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_sync_retry',
@@ -759,8 +748,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                             ok;
                         {ok, PatternNext, PidNext}
                             when TimeoutNew >= ?FORWARD_DELTA ->
-                            PidNext ! {'cloudi_service_send_sync',
-                                       NameNext, PatternNext,
+                            PidNext ! {SendType, NameNext, PatternNext,
                                        RequestInfoNext, RequestNext,
                                        TimeoutNew - ?FORWARD_DELTA,
                                        PriorityNext, TransId, Source},
@@ -980,23 +968,9 @@ handle_event(EventType, EventContent, StateName, State) ->
          is_binary(Request) =:= false orelse
          is_binary(RequestInfo) =:= false orelse
          Timeout =:= 0 ->
-    if
-        Timeout >= ResponseTimeoutImmediateMax ->
-            if
-                SendType =:= 'cloudi_service_send_async' ->
-                    Source ! {'cloudi_service_return_async',
-                              Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source},
-                    ok;
-                SendType =:= 'cloudi_service_send_sync' ->
-                    Source ! {'cloudi_service_return_sync',
-                              Name, Pattern, <<>>, <<>>,
-                              Timeout, TransId, Source},
-                    ok
-            end;
-        true ->
-            ok
-    end,
+    ok = return_null_response(SendType, Name, Pattern,
+                              Timeout, TransId, Source,
+                              ResponseTimeoutImmediateMax),
     keep_state_and_data;
 
 'HANDLE'(info,
@@ -1063,23 +1037,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                                  options = ConfigOptionsNew}}
             end;
         RateRequestOk =:= false ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    if
-                        SendType =:= 'cloudi_service_send_async' ->
-                            Source ! {'cloudi_service_return_async',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source},
-                            ok;
-                        SendType =:= 'cloudi_service_send_sync' ->
-                            Source ! {'cloudi_service_return_sync',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source},
-                            ok
-                    end;
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             {keep_state,
              State#state{options = ConfigOptions#config_service_options{
                              rate_request_max = RateRequestNew}}}
@@ -1129,21 +1089,9 @@ handle_event(EventType, EventContent, StateName, State) ->
              recv_timeout_start(Timeout, Priority, TransId,
                                 Size, T, StateNew)};
         true ->
-            if
-                Timeout >= ResponseTimeoutImmediateMax ->
-                    if
-                        SendType =:= 'cloudi_service_send_async' ->
-                            Source ! {'cloudi_service_return_async',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source};
-                        SendType =:= 'cloudi_service_send_sync' ->
-                            Source ! {'cloudi_service_return_sync',
-                                      Name, Pattern, <<>>, <<>>,
-                                      Timeout, TransId, Source}
-                    end;
-                true ->
-                    ok
-            end,
+            ok = return_null_response(SendType, Name, Pattern,
+                                      Timeout, TransId, Source,
+                                      ResponseTimeoutImmediateMax),
             {keep_state, StateNew}
     end;
 
@@ -1601,7 +1549,7 @@ handle_info({udp, Socket, _, IncomingPort, Data}, StateName,
             #state{protocol = udp,
                    incoming_port = IncomingPort,
                    socket = Socket} = State) ->
-    inet:setopts(Socket, [{active, once}]),
+    ok = inet:setopts(Socket, [{active, once}]),
     try erlang:binary_to_term(Data, [safe]) of
         Request ->
             ?MODULE:StateName(connection, Request, State)
@@ -1615,7 +1563,7 @@ handle_info({tcp, Socket, Data}, StateName,
             #state{protocol = Protocol,
                    socket = Socket} = State)
     when Protocol =:= tcp; Protocol =:= local ->
-    inet:setopts(Socket, [{active, once}]),
+    ok = inet:setopts(Socket, [{active, once}]),
     try erlang:binary_to_term(Data, [safe]) of
         Request ->
             ?MODULE:StateName(connection, Request, State)
@@ -2263,10 +2211,10 @@ socket_recv(#state_socket{protocol = udp,
                           incoming_port = IncomingPort} = StateSocket) ->
     receive
         {udp, Socket, _, IncomingPort, Data} when IncomingPort =:= undefined ->
-            inet:setopts(Socket, [{active, once}]),
+            ok = inet:setopts(Socket, [{active, once}]),
             {ok, Data, StateSocket#state_socket{incoming_port = IncomingPort}};
         {udp, Socket, _, IncomingPort, Data} ->
-            inet:setopts(Socket, [{active, once}]),
+            ok = inet:setopts(Socket, [{active, once}]),
             {ok, Data, StateSocket};
         {udp_closed, Socket} ->
             {error, socket_closed};
@@ -2280,7 +2228,7 @@ socket_recv(#state_socket{protocol = Protocol,
     when Protocol =:= tcp; Protocol =:= local ->
     receive
         {tcp, Socket, Data} ->
-            inet:setopts(Socket, [{active, once}]),
+            ok = inet:setopts(Socket, [{active, once}]),
             {ok, Data, StateSocket};
         {tcp_closed, Socket} ->
             {error, socket_closed};

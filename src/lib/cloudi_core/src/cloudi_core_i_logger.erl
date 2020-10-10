@@ -1584,18 +1584,25 @@ log_file_write(Level, Message,
                     {ok, State#state{file_counts = FileCountsNew}};
                 {error, Reason} ->
                     true = is_atom(Reason),
-                    ErrorSyncTypesNew = lists:umerge(ErrorSyncTypes, [Reason]),
+                    ErrorSyncTypesNew = log_error_type(ErrorSyncTypes, Reason),
                     {ok,
                      State#state{error_sync_count = ErrorSyncCount + 1,
                                  error_sync_types = ErrorSyncTypesNew}}
             end;
         {error, Reason} ->
             true = is_atom(Reason),
-            ErrorWriteTypesNew = lists:umerge(ErrorWriteTypes, [Reason]),
+            ErrorWriteTypesNew = log_error_type(ErrorWriteTypes, Reason),
             {ok,
              State#state{error_write_count = ErrorWriteCount + 1,
                          error_write_types = ErrorWriteTypesNew}}
     end.
+
+log_error_type([], Reason) ->
+    [Reason];
+log_error_type([Reason | _] = L, Reason) ->
+    L;
+log_error_type([ReasonOld | L], Reason) ->
+    [ReasonOld | log_error_type(L, Reason)].
 
 log_stdout(_, undefined) ->
     ok;

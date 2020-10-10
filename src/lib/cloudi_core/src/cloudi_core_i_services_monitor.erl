@@ -2065,7 +2065,7 @@ restart_pids([Pid | PidList]) ->
 
 suspend_pids(PidList) ->
     Self = self(),
-    [Pid ! {'cloudi_service_suspended', Self, true} || Pid <- PidList],
+    _ = [Pid ! {'cloudi_service_suspended', Self, true} || Pid <- PidList],
     suspend_pids_recv(PidList, ok).
 
 suspend_pids_recv([], Result) ->
@@ -2089,7 +2089,7 @@ suspend_pids_recv([Pid | PidList], Result)
 
 resume_pids(PidList, DurationsSuspend, DurationsUpdate, ServiceId) ->
     Self = self(),
-    [Pid ! {'cloudi_service_suspended', Self, false} || Pid <- PidList],
+    _ = [Pid ! {'cloudi_service_suspended', Self, false} || Pid <- PidList],
     case resume_pids_recv(PidList, ok, undefined) of
         {ok, undefined} ->
             {ok, DurationsSuspend};
@@ -2133,7 +2133,7 @@ resume_pids_recv([Pid | PidList], Result, Duration)
 
 update_start(PidList, UpdatePlan) ->
     Self = self(),
-    [Pid ! {'cloudi_service_update', Self, UpdatePlan} || Pid <- PidList],
+    _ = [Pid ! {'cloudi_service_update', Self, UpdatePlan} || Pid <- PidList],
     update_start_recv(PidList, [], []).
 
 update_start_recv([], PidListNew, UpdateResults) ->
@@ -2258,13 +2258,13 @@ update_before(#config_service_update{
 update_unload_module([]) ->
     ok;
 update_unload_module([CodePathRemove | CodePathsRemove]) ->
-    code:del_path(CodePathRemove),
+    _ = code:del_path(CodePathRemove),
     update_unload_module(CodePathsRemove).
 
 update_unload_module([], CodePathsRemove) ->
     update_unload_module(CodePathsRemove);
 update_unload_module([Module | ModulesUnload], CodePathsRemove) ->
-    cloudi_x_reltool_util:module_unload(Module),
+    _ = cloudi_x_reltool_util:module_unload(Module),
     update_unload_module(ModulesUnload, CodePathsRemove).
 
 update_service(_, _,
@@ -2349,7 +2349,8 @@ update_service(Pids, Ports,
                                [Error, service_id(ServiceId)]),
                     error
             end,
-            [Pid ! {'cloudi_service_update_after', Result} || Pid <- Pids]
+            _ = [Pid ! {'cloudi_service_update_after', Result} || Pid <- Pids],
+            ok
     end,
     ServicesN.
 

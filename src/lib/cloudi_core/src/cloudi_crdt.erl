@@ -2292,8 +2292,7 @@ event(EventType, EventId, Key, EventData, Events, EventsAny, Service) ->
             event_send(EventType, EventId, Key, EventData, Service);
         Send =:= false ->
             ok
-    end,
-    ok.
+    end.
 
 -spec events(EventType :: clear,
              EventId :: event_id(),
@@ -2327,7 +2326,7 @@ events(EventType, EventId, Keys, EventData, Events, EventsAny, Service) ->
                  Key :: key(),
                  EventData :: list(data() | value()),
                  Service :: cloudi_service:source()) ->
-    any().
+    ok.
 
 event_send(assign, EventId, Key, EventData, Service) ->
     case EventData of
@@ -2335,7 +2334,8 @@ event_send(assign, EventId, Key, EventData, Service) ->
             Service ! #crdt_event{type = assign,
                                   id = EventId,
                                   key = Key,
-                                  new = {value, ValueNew}};
+                                  new = {value, ValueNew}},
+            ok;
         [Data, ValueNew] ->
             case maps:find(Key, Data) of
                 {ok, _} ->
@@ -2344,7 +2344,8 @@ event_send(assign, EventId, Key, EventData, Service) ->
                     Service ! #crdt_event{type = assign,
                                           id = EventId,
                                           key = Key,
-                                          new = {value, ValueNew}}
+                                          new = {value, ValueNew}},
+                    ok
             end
     end;
 event_send(incr, EventId, Key, [ValueOld, ValueNew], Service) ->
@@ -2352,19 +2353,22 @@ event_send(incr, EventId, Key, [ValueOld, ValueNew], Service) ->
                           id = EventId,
                           key = Key,
                           old = {value, ValueOld},
-                          new = {value, ValueNew}};
+                          new = {value, ValueNew}},
+    ok;
 event_send(decr, EventId, Key, [ValueOld, ValueNew], Service) ->
     Service ! #crdt_event{type = decr,
                           id = EventId,
                           key = Key,
                           old = {value, ValueOld},
-                          new = {value, ValueNew}};
+                          new = {value, ValueNew}},
+    ok;
 event_send(update, EventId, Key, [ValueOld, ValueNew], Service) ->
     Service ! #crdt_event{type = update,
                           id = EventId,
                           key = Key,
                           old = {value, ValueOld},
-                          new = {value, ValueNew}};
+                          new = {value, ValueNew}},
+    ok;
 event_send(put, EventId, Key, [Data, ValueNew], Service) ->
     Old = case maps:find(Key, Data) of
         {ok, Value} ->
@@ -2376,14 +2380,16 @@ event_send(put, EventId, Key, [Data, ValueNew], Service) ->
                           id = EventId,
                           key = Key,
                           old = Old,
-                          new = {value, ValueNew}};
+                          new = {value, ValueNew}},
+    ok;
 event_send(clear, EventId, Key, [Data], Service) ->
     case maps:find(Key, Data) of
         {ok, Value} ->
             Service ! #crdt_event{type = clear,
                                   id = EventId,
                                   key = Key,
-                                  old = {value, Value}};
+                                  old = {value, Value}},
+            ok;
         error ->
             ok
     end.

@@ -37,10 +37,12 @@
 
 -compile({nowarn_unused_function,
           [{recv_async_select_random, 1},
-           {recv_async_select_oldest, 1}]}).
+           {recv_async_select_oldest, 1},
+           {return_null_response, 6}]}).
 -compile({inline,
-          [{cancel_timer_async, 1},
-           {request_timeout_adjustment_f, 1}]}).
+          [{request_timeout_adjustment_f, 1},
+           {return_null_response, 6},
+           {return_null_response, 7}]}).
 
 uptime(TimeStart, TimeRestart, Restarts) ->
     TimeSystemStart = erlang:system_info(start_time),
@@ -312,7 +314,8 @@ send_timeout_dead(Pid,
                             _ ->
                                 Dispatcher !
                                     {'cloudi_service_send_async_timeout',
-                                     TransId}
+                                     TransId},
+                                ok
                         end,
                         maps:put(TransId, {Type, undefined, Tref}, D);
                     {ok, {Client, _, Tref}} ->
@@ -322,7 +325,8 @@ send_timeout_dead(Pid,
                             _ ->
                                 Dispatcher !
                                     {'cloudi_service_send_sync_timeout',
-                                     TransId}
+                                     TransId},
+                                ok
                         end,
                         maps:put(TransId, {Client, undefined, Tref}, D);
                     error ->
@@ -336,9 +340,6 @@ send_timeout_dead(Pid,
         error ->
             {false, State}
     end.
-
-cancel_timer_async(Tref) ->
-    ok = erlang:cancel_timer(Tref, [{async, true}, {info, false}]).
 
 async_response_timeout_start(_, _, 0, _, State) ->
     State;
@@ -518,4 +519,33 @@ aspects_terminate_before([F | L],
                        [F, ErrorType, Error, ErrorStackTrace]),
             {ok, ServiceState}
     end.
+
+return_null_response('cloudi_service_send_async',
+                     Name, Pattern, Timeout, TransId, Source) ->
+    Source ! {'cloudi_service_return_async',
+              Name, Pattern, <<>>, <<>>,
+              Timeout, TransId, Source},
+    ok;
+return_null_response('cloudi_service_send_sync',
+                     Name, Pattern, Timeout, TransId, Source) ->
+    Source ! {'cloudi_service_return_sync',
+              Name, Pattern, <<>>, <<>>,
+              Timeout, TransId, Source},
+    ok.
+
+return_null_response(_, _, _, Timeout, _, _, ResponseTimeoutImmediateMax)
+    when Timeout < ResponseTimeoutImmediateMax ->
+    ok;
+return_null_response('cloudi_service_send_async',
+                     Name, Pattern, Timeout, TransId, Source, _) ->
+    Source ! {'cloudi_service_return_async',
+              Name, Pattern, <<>>, <<>>,
+              Timeout, TransId, Source},
+    ok;
+return_null_response('cloudi_service_send_sync',
+                     Name, Pattern, Timeout, TransId, Source, _) ->
+    Source ! {'cloudi_service_return_sync',
+              Name, Pattern, <<>>, <<>>,
+              Timeout, TransId, Source},
+    ok.
 
