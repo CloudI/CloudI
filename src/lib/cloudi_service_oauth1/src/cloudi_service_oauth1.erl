@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1).
@@ -196,9 +196,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         TokensClean =:= undefined ->
             ok;
         is_integer(TokensClean), TokensClean > 0, TokensClean =< 4294967 ->
-            erlang:send_after(TokensClean * 1000,
-                              cloudi_service:self(Dispatcher),
-                              {tokens_clean, TokensClean})
+            _ = erlang:send_after(TokensClean * 1000,
+                                  cloudi_service:self(Dispatcher),
+                                  {tokens_clean, TokensClean}),
+            ok
     end,
     true = (is_integer(TokenRequestLength) andalso
             (TokenRequestLength > 0)),

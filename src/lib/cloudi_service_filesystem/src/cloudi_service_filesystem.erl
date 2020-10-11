@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -620,7 +620,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Service = cloudi_service:self(Dispatcher),
     if
         is_integer(Refresh) ->
-            erlang:send_after(Refresh * 1000, Service, refresh);
+            _ = erlang:send_after(Refresh * 1000, Service, refresh),
+            ok;
         true ->
             ok
     end,
@@ -750,7 +751,7 @@ cloudi_service_handle_info(refresh,
                                     UseContentDisposition, UseHttpGetSuffix,
                                     FilesSizeLimit, PrefixLength,
                                     Prefix, Dispatcher),
-    erlang:send_after(Refresh * 1000, Service, refresh),
+    _ = erlang:send_after(Refresh * 1000, Service, refresh),
     {noreply, State#state{files_size = NewFilesSize,
                           toggle = NewToggle,
                           files = NewFiles}};
@@ -1057,7 +1058,9 @@ request_append_take(Id, Appends) ->
             Value = lists:map(fun({_Index, Tref, RangeRequest}) ->
                 if
                     Tref /= undefined ->
-                        erlang:cancel_timer(Tref);
+                        ok = erlang:cancel_timer(Tref,
+                                                 [{async, true},
+                                                  {info, false}]);
                     true ->
                         ok
                 end,
@@ -1633,7 +1636,7 @@ file_read_data(#file_info{access = Access}, FilePath, I, Size)
             case file:open(FilePath, [raw, read, binary]) of
                 {ok, F} ->
                     Result = file_read_data_position(F, I, Size),
-                    file:close(F),
+                    _ = file:close(F),
                     Result;
                 {error, _} = Error ->
                     Error

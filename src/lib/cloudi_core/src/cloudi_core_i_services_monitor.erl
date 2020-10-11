@@ -1890,8 +1890,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearSuspend > 0 ->
                     [{interrupt_year_suspended,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsYearSuspend,
-                                            ApproximateYearSuspend)} |
+                      nanoseconds_to_string_gt(NanoSecondsYearSuspend,
+                                               ApproximateYearSuspend)} |
                      Status13];
                 true ->
                     Status13
@@ -1902,8 +1902,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearSuspend > 0 ->
                     [{interrupt_month_suspended,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsMonthSuspend,
-                                            ApproximateMonthSuspend)} |
+                      nanoseconds_to_string_gt(NanoSecondsMonthSuspend,
+                                               ApproximateMonthSuspend)} |
                      Status14];
                 true ->
                     Status14
@@ -1915,8 +1915,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearSuspend > 0 ->
                     [{interrupt_week_suspended,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsWeekSuspend,
-                                            ApproximateWeekSuspend)} |
+                      nanoseconds_to_string_gt(NanoSecondsWeekSuspend,
+                                               ApproximateWeekSuspend)} |
                      Status15];
                 true ->
                     Status15
@@ -1927,8 +1927,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsMonthSuspend > 0 ->
                     [{interrupt_day_suspended,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsDaySuspend,
-                                            ApproximateDaySuspend)} |
+                      nanoseconds_to_string_gt(NanoSecondsDaySuspend,
+                                               ApproximateDaySuspend)} |
                      Status16];
                 true ->
                     Status16
@@ -1938,8 +1938,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearUpdate > 0 ->
                     [{interrupt_year_updating,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsYearUpdate,
-                                            ApproximateYearUpdate)} |
+                      nanoseconds_to_string_gt(NanoSecondsYearUpdate,
+                                               ApproximateYearUpdate)} |
                      Status17];
                 true ->
                     Status17
@@ -1950,8 +1950,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearUpdate > 0 ->
                     [{interrupt_month_updating,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsMonthUpdate,
-                                            ApproximateMonthUpdate)} |
+                      nanoseconds_to_string_gt(NanoSecondsMonthUpdate,
+                                               ApproximateMonthUpdate)} |
                      Status18];
                 true ->
                     Status18
@@ -1963,8 +1963,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearUpdate > 0 ->
                     [{interrupt_week_updating,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsWeekUpdate,
-                                            ApproximateWeekUpdate)} |
+                      nanoseconds_to_string_gt(NanoSecondsWeekUpdate,
+                                               ApproximateWeekUpdate)} |
                      Status19];
                 true ->
                     Status19
@@ -1975,8 +1975,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsMonthUpdate > 0 ->
                     [{interrupt_day_updating,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsDayUpdate,
-                                            ApproximateDayUpdate)} |
+                      nanoseconds_to_string_gt(NanoSecondsDayUpdate,
+                                               ApproximateDayUpdate)} |
                      Status20];
                 true ->
                     Status20
@@ -1986,8 +1986,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearRestart > 0 ->
                     [{downtime_year_restarting,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsYearRestart,
-                                            ApproximateYearRestart)} |
+                      nanoseconds_to_string_gt(NanoSecondsYearRestart,
+                                               ApproximateYearRestart)} |
                      Status21];
                 true ->
                     Status21
@@ -1998,8 +1998,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearRestart > 0 ->
                     [{downtime_month_restarting,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsMonthRestart,
-                                            ApproximateMonthRestart)} |
+                      nanoseconds_to_string_gt(NanoSecondsMonthRestart,
+                                               ApproximateMonthRestart)} |
                      Status22];
                 true ->
                     Status22
@@ -2011,8 +2011,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsYearRestart > 0 ->
                     [{downtime_week_restarting,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsWeekRestart,
-                                            ApproximateWeekRestart)} |
+                      nanoseconds_to_string_gt(NanoSecondsWeekRestart,
+                                               ApproximateWeekRestart)} |
                      Status23];
                 true ->
                     Status23
@@ -2023,8 +2023,8 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsMonthRestart > 0 ->
                     [{downtime_day_restarting,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsDayRestart,
-                                            ApproximateDayRestart)} |
+                      nanoseconds_to_string_gt(NanoSecondsDayRestart,
+                                               ApproximateDayRestart)} |
                      Status24];
                 true ->
                     Status24
@@ -2036,8 +2036,8 @@ service_id_status(ServiceId, TimeNow,
                                     ApproximateYearUpdate orelse
                                     ApproximateYearSuspend,
             UptimeProcessing = cloudi_core_i_status:
-                               nanoseconds_to_string(NanoSecondsProcessing,
-                                                     ApproximateProcessing, $<),
+                               nanoseconds_to_string_lt(NanoSecondsProcessing,
+                                                        ApproximateProcessing),
             Status26 = [{suspended, ProcessingSuspended},
                         {uptime_total, UptimeTotal},
                         {uptime_running, UptimeRunning},

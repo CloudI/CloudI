@@ -81,7 +81,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -2389,7 +2389,7 @@ timeout_sync(Dispatcher) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout_max(Dispatcher :: dispatcher()) ->
-    TimeoutMax :: pos_integer().
+    ?TIMEOUT_MAX_ERLANG.
 
 timeout_max(Dispatcher)
     when is_pid(Dispatcher) ->

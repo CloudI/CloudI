@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018-2019 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2018-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_status).
@@ -52,8 +52,8 @@
          nanoseconds_to_availability_month/3,
          nanoseconds_to_availability_year/1,
          nanoseconds_to_availability_year/3,
-         nanoseconds_to_string/2,
-         nanoseconds_to_string/3]).
+         nanoseconds_to_string_gt/2,
+         nanoseconds_to_string_lt/2]).
 
 -type nanoseconds() :: non_neg_integer().
 -type duration() ::
@@ -124,7 +124,7 @@ durations_sum({DurationCount, DurationList}, T) ->
                   DurationCount == ?STATUS_DURATIONS_YEAR_MAX, T).
 
 -spec nanoseconds_to_availability_day(NanoSecondsUptime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability().
 
 nanoseconds_to_availability_day(NanoSecondsUptime) ->
     availability_to_string(NanoSecondsUptime / ?NANOSECONDS_IN_DAY).
@@ -132,7 +132,7 @@ nanoseconds_to_availability_day(NanoSecondsUptime) ->
 -spec nanoseconds_to_availability_day(NanoSecondsUptime :: nanoseconds(),
                                       Approximate :: boolean(),
                                       NanoSecondsDowntime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability_approx().
 
 nanoseconds_to_availability_day(NanoSecondsUptime,
                                 Approximate,
@@ -143,7 +143,7 @@ nanoseconds_to_availability_day(NanoSecondsUptime,
     availability_to_string(AvailabilityDay, Approximate).
 
 -spec nanoseconds_to_availability_week(NanoSecondsUptime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability().
 
 nanoseconds_to_availability_week(NanoSecondsUptime) ->
     availability_to_string(NanoSecondsUptime / ?NANOSECONDS_IN_WEEK).
@@ -151,7 +151,7 @@ nanoseconds_to_availability_week(NanoSecondsUptime) ->
 -spec nanoseconds_to_availability_week(NanoSecondsUptime :: nanoseconds(),
                                        Approximate :: boolean(),
                                        NanoSecondsDowntime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability_approx().
 
 nanoseconds_to_availability_week(NanoSecondsUptime,
                                  Approximate,
@@ -162,7 +162,7 @@ nanoseconds_to_availability_week(NanoSecondsUptime,
     availability_to_string(AvailabilityWeek, Approximate).
 
 -spec nanoseconds_to_availability_month(NanoSecondsUptime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability().
 
 nanoseconds_to_availability_month(NanoSecondsUptime) ->
     availability_to_string(NanoSecondsUptime / ?NANOSECONDS_IN_MONTH).
@@ -170,7 +170,7 @@ nanoseconds_to_availability_month(NanoSecondsUptime) ->
 -spec nanoseconds_to_availability_month(NanoSecondsUptime :: nanoseconds(),
                                         Approximate :: boolean(),
                                         NanoSecondsDowntime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability_approx().
 
 nanoseconds_to_availability_month(NanoSecondsUptime,
                                   Approximate,
@@ -181,7 +181,7 @@ nanoseconds_to_availability_month(NanoSecondsUptime,
     availability_to_string(AvailabilityMonth, Approximate).
 
 -spec nanoseconds_to_availability_year(NanoSecondsUptime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability().
 
 nanoseconds_to_availability_year(NanoSecondsUptime) ->
     availability_to_string(NanoSecondsUptime / ?NANOSECONDS_IN_YEAR).
@@ -189,7 +189,7 @@ nanoseconds_to_availability_year(NanoSecondsUptime) ->
 -spec nanoseconds_to_availability_year(NanoSecondsUptime :: nanoseconds(),
                                        Approximate :: boolean(),
                                        NanoSecondsDowntime :: nanoseconds()) ->
-    string().
+    cloudi_service_api:availability_approx().
 
 nanoseconds_to_availability_year(NanoSecondsUptime,
                                  Approximate,
@@ -199,22 +199,22 @@ nanoseconds_to_availability_year(NanoSecondsUptime,
         NanoSecondsDowntime) / NanoSecondsYear,
     availability_to_string(AvailabilityYear, Approximate).
 
--spec nanoseconds_to_string(NanoSeconds :: nanoseconds(),
-                            Approximate :: boolean()) ->
-    string().
+-spec nanoseconds_to_string_gt(NanoSeconds :: nanoseconds(),
+                               Approximate :: boolean()) ->
+    cloudi_service_api:nanoseconds_string_approx_gt().
 
-nanoseconds_to_string(NanoSeconds, Approximate) ->
-    nanoseconds_to_string(NanoSeconds, Approximate, $>).
+nanoseconds_to_string_gt(NanoSeconds, true) ->
+    [$>, $  | cloudi_timestamp:nanoseconds_to_string(NanoSeconds)];
+nanoseconds_to_string_gt(NanoSeconds, false) ->
+    cloudi_timestamp:nanoseconds_to_string(NanoSeconds).
 
--spec nanoseconds_to_string(NanoSeconds :: nanoseconds(),
-                            Approximate :: boolean(),
-                            ApproximateChar :: char()) ->
-    string().
+-spec nanoseconds_to_string_lt(NanoSeconds :: nanoseconds(),
+                               Approximate :: boolean()) ->
+    cloudi_service_api:nanoseconds_string_approx_lt().
 
-nanoseconds_to_string(NanoSeconds, true, ApproximateChar) ->
-    [ApproximateChar,
-     $  | cloudi_timestamp:nanoseconds_to_string(NanoSeconds)];
-nanoseconds_to_string(NanoSeconds, false, _) ->
+nanoseconds_to_string_lt(NanoSeconds, true) ->
+    [$<, $  | cloudi_timestamp:nanoseconds_to_string(NanoSeconds)];
+nanoseconds_to_string_lt(NanoSeconds, false) ->
     cloudi_timestamp:nanoseconds_to_string(NanoSeconds).
 
 %%%------------------------------------------------------------------------

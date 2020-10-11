@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_tcp).
@@ -384,9 +384,11 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
             end, [link]),
             case gen_tcp:controlling_process(Socket, SocketPid) of
                 ok = InitSuccess ->
-                    SocketPid ! {init, InitSuccess};
+                    SocketPid ! {init, InitSuccess},
+                    ok;
                 {error, _} = InitError ->
-                    SocketPid ! {init, InitError}
+                    SocketPid ! {init, InitError},
+                    ok
             end,
             ConnectionCount + 1;
         {error, Reason} ->
@@ -768,9 +770,10 @@ socket_loop_terminate(Reason,
                           debug_level = DebugLevel}) ->
     if
         is_list(DestinationDisconnect) ->
-            send_async_minimal(Dispatcher, DestinationDisconnect,
-                               RequestInfo, <<"DISCONNECT">>,
-                               TimeoutAsync, self());
+            _ = send_async_minimal(Dispatcher, DestinationDisconnect,
+                                   RequestInfo, <<"DISCONNECT">>,
+                                   TimeoutAsync, self()),
+            ok;
         true ->
             ok
     end,

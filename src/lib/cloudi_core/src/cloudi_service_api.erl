@@ -344,6 +344,7 @@
       error_logger => boolean()}.
 -export_type([max_heap_size_options/0]).
 
+-type file_path() :: nonempty_string().
 -type limit_external_key() ::
     as | core | cpu | data | fsize | memlock | msgqueue | nice | nofile |
     nproc | rss | rtprio | rttime | sigpending | stack | vmem.
@@ -366,10 +367,11 @@
          {parameters, list({nonempty_string(), string()})} |
          {update_or_create, boolean()}).
 -type chroot_external() ::
-    file:filename() | undefined.
+    file_path() | undefined.
 -type directory_external() ::
-    file:filename() | undefined.
--export_type([limit_external_key/0,
+    file_path() | undefined.
+-export_type([file_path/0,
+              limit_external_key/0,
               limit_external_value/0,
               limit_external/0,
               owner_external/0,
@@ -378,13 +380,40 @@
               chroot_external/0,
               directory_external/0]).
 
+-type service_options_rate_request_max_options() ::
+    list({period, period_seconds()} |
+         {value, number()}).
+-type service_options_count_process_dynamic_options() ::
+    list({period, period_seconds()} |
+         {rate_request_max, number()} |
+         {rate_request_min, number()} |
+         {count_max, number()} |
+         {count_min, number()}).
+-type service_options_restart_delay_options() ::
+    list({time_exponential_min, restart_delay_milliseconds()} |
+         {time_exponential_max, restart_delay_milliseconds()} |
+         {time_linear_min, restart_delay_milliseconds()} |
+         {time_linear_slope, restart_delay_milliseconds()} |
+         {time_linear_max, restart_delay_milliseconds()} |
+         {time_absolute, restart_delay_milliseconds()}).
+-type service_options_monkey_latency_options() ::
+    list({time_uniform_min, latency_min_time_milliseconds()} |
+         {time_uniform_max, latency_max_time_milliseconds()} |
+         {time_gaussian_mean, latency_mean_time_milliseconds()} |
+         {time_gaussian_stddev, float() | pos_integer()} |
+         {time_absolute, latency_time_milliseconds()}).
+-type service_options_monkey_chaos_options() ::
+    list({probability_request, float()} |
+         {probability_day, float()}).
+-type service_options_internal_hibernate_options() ::
+    list({period, period_seconds()} |
+         {rate_request_min, number()}).
 -type service_options_internal() ::
     list({priority_default, priority()} |
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
-          list({period, period_seconds()} |
-               {value, number()}) | number() | undefined} |
+          service_options_rate_request_max_options() | number() | undefined} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
@@ -395,31 +424,17 @@
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
          {count_process_dynamic,
-          list({period, period_seconds()} |
-               {rate_request_max, number()} |
-               {rate_request_min, number()} |
-               {count_max, number()} |
-               {count_min, number()}) | false} |
+          service_options_count_process_dynamic_options() | false} |
          {timeout_terminate,
           undefined | timeout_terminate_milliseconds()} |
          {restart_all, boolean()} |
          {restart_delay,
-          list({time_exponential_min, restart_delay_milliseconds()} |
-               {time_exponential_max, restart_delay_milliseconds()} |
-               {time_linear_min, restart_delay_milliseconds()} |
-               {time_linear_slope, restart_delay_milliseconds()} |
-               {time_linear_max, restart_delay_milliseconds()} |
-               {time_absolute, restart_delay_milliseconds()}) | false} |
+          service_options_restart_delay_options() | false} |
          {scope, atom()} |
          {monkey_latency,
-          list({time_uniform_min, latency_min_time_milliseconds()} |
-               {time_uniform_max, latency_max_time_milliseconds()} |
-               {time_gaussian_mean, latency_mean_time_milliseconds()} |
-               {time_gaussian_stddev, float() | pos_integer()} |
-               {time_absolute, latency_time_milliseconds()}) | system | false} |
+          service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,
-          list({probability_request, float()} |
-               {probability_day, float()}) | system | false} |
+          service_options_monkey_chaos_options() | system | false} |
          {automatic_loading, boolean()} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
@@ -464,16 +479,14 @@
                {message_queue_data, off_heap | on_heap | mixed})} |
          {duo_mode, boolean()} |
          {hibernate,
-          list({period, period_seconds()} |
-               {rate_request_min, number()}) | boolean()} |
+          service_options_internal_hibernate_options() | boolean()} |
          {reload, boolean()}).
 -type service_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
-          list({period, period_seconds()} |
-               {value, number()}) | number() | undefined} |
+          service_options_rate_request_max_options() | number() | undefined} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
@@ -484,31 +497,17 @@
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
          {count_process_dynamic,
-          list({period, period_seconds()} |
-               {rate_request_max, number()} |
-               {rate_request_min, number()} |
-               {count_max, number()} |
-               {count_min, number()}) | false} |
+          service_options_count_process_dynamic_options() | false} |
          {timeout_terminate,
           undefined | timeout_terminate_milliseconds()} |
          {restart_all, boolean()} |
          {restart_delay,
-          list({time_exponential_min, restart_delay_milliseconds()} |
-               {time_exponential_max, restart_delay_milliseconds()} |
-               {time_linear_min, restart_delay_milliseconds()} |
-               {time_linear_slope, restart_delay_milliseconds()} |
-               {time_linear_max, restart_delay_milliseconds()} |
-               {time_absolute, restart_delay_milliseconds()}) | false} |
+          service_options_restart_delay_options() | false} |
          {scope, atom()} |
          {monkey_latency,
-          list({time_uniform_min, latency_min_time_milliseconds()} |
-               {time_uniform_max, latency_max_time_milliseconds()} |
-               {time_gaussian_mean, latency_mean_time_milliseconds()} |
-               {time_gaussian_stddev, float() | pos_integer()} |
-               {time_absolute, latency_time_milliseconds()}) | system | false} |
+          service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,
-          list({probability_request, float()} |
-               {probability_day, float()}) | system | false} |
+          service_options_monkey_chaos_options() | system | false} |
          {automatic_loading, boolean()} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
@@ -528,7 +527,13 @@
          {cgroup, cgroup_external()} |
          {chroot, chroot_external()} |
          {directory, directory_external()}).
--export_type([service_options_internal/0,
+-export_type([service_options_rate_request_max_options/0,
+              service_options_count_process_dynamic_options/0,
+              service_options_restart_delay_options/0,
+              service_options_monkey_latency_options/0,
+              service_options_monkey_chaos_options/0,
+              service_options_internal_hibernate_options/0,
+              service_options_internal/0,
               service_options_external/0]).
 
 -type service_id() :: <<_:128>>. % version 1 UUID (service instance id)
@@ -537,8 +542,8 @@
 -type service_proplist() ::
     nonempty_list({type, internal | external} |
                   {prefix, cloudi:service_name_pattern()} |
-                  {module, atom() | file:filename()} |
-                  {file_path, file:filename()} |
+                  {module, atom() | file_path()} |
+                  {file_path, file_path()} |
                   {args, list()} |
                   {env, list({string(), string()})} |
                   {dest_refresh, dest_refresh()} |
@@ -556,91 +561,133 @@
                   {options, service_options_internal() |
                             service_options_external()}).
 -type service() :: #internal{} | #external{}.
+-export_type([service_id/0,
+              service_internal/0,
+              service_external/0,
+              service_proplist/0,
+              service/0]).
+
+% "99.9999998 %"
+-type availability() ::
+    nonempty_list($0..$9 | $. | $  | $%).
+% "< 99.9999998 %"
+-type availability_approx() ::
+    nonempty_list($0..$9 | $. | $  | $% | $<).
+% "126 days 19 hours 1563 seconds 557199569 nanoseconds"
+-type nanoseconds_string() ::
+    nonempty_list($a..$z | $0..$9 | $ ).
+% "+ 350 nanoseconds"
+-type nanoseconds_string_signed() ::
+    nonempty_list($a..$z | $0..$9 | $  | $+ | $-).
+% "> 126 days 19 hours 1563 seconds 557199569 nanoseconds"
+-type nanoseconds_string_approx_gt() ::
+    nonempty_list($a..$z | $0..$9 | $  | $>).
+% "< 1563 seconds 557199569 nanoseconds"
+-type nanoseconds_string_approx_lt() ::
+    nonempty_list($a..$z | $0..$9 | $  | $<).
+% "126 days 19 hours 1563 seconds"
+-type seconds_string() ::
+    nonempty_list($a..$z | $0..$9 | $ ).
+% "+ 10 seconds"
+-type seconds_string_signed() ::
+    nonempty_list($a..$z | $0..$9 | $  | $+ | $-).
+% "0"
+-type integer_string_ge_0() ::
+    nonempty_list($0..$9).
+% "0.0"
+-type float_string_ge_0() ::
+    nonempty_list($0..$9 | $.).
+-export_type([availability/0,
+              availability_approx/0,
+              nanoseconds_string/0,
+              nanoseconds_string_signed/0,
+              nanoseconds_string_approx_gt/0,
+              nanoseconds_string_approx_lt/0,
+              seconds_string/0,
+              seconds_string_signed/0,
+              integer_string_ge_0/0,
+              float_string_ge_0/0]).
+
 -type service_status_internal() ::
     nonempty_list({type, internal} |
                   {prefix, cloudi:service_name_pattern()} |
                   {module, atom()} |
                   {count_process, pos_integer()} |
                   {suspended, boolean()} |
-                  {uptime_total, nonempty_string()} |
-                  {uptime_running, nonempty_string()} |
-                  {uptime_processing, nonempty_string()} |
-                  {uptime_restarts, nonempty_string()} |
-                  {downtime_day_restarting, nonempty_string()} |
-                  {downtime_week_restarting, nonempty_string()} |
-                  {downtime_month_restarting, nonempty_string()} |
-                  {downtime_year_restarting, nonempty_string()} |
-                  {interrupt_day_updating, nonempty_string()} |
-                  {interrupt_week_updating, nonempty_string()} |
-                  {interrupt_month_updating, nonempty_string()} |
-                  {interrupt_year_updating, nonempty_string()} |
-                  {interrupt_day_suspended, nonempty_string()} |
-                  {interrupt_week_suspended, nonempty_string()} |
-                  {interrupt_month_suspended, nonempty_string()} |
-                  {interrupt_year_suspended, nonempty_string()} |
-                  {availability_day_total, nonempty_string()} |
-                  {availability_day_running, nonempty_string()} |
-                  {availability_day_updated, nonempty_string()} |
-                  {availability_day_processing, nonempty_string()} |
-                  {availability_week_total, nonempty_string()} |
-                  {availability_week_running, nonempty_string()} |
-                  {availability_week_updated, nonempty_string()} |
-                  {availability_week_processing, nonempty_string()} |
-                  {availability_month_total, nonempty_string()} |
-                  {availability_month_running, nonempty_string()} |
-                  {availability_month_updated, nonempty_string()} |
-                  {availability_month_processing, nonempty_string()} |
-                  {availability_year_total, nonempty_string()} |
-                  {availability_year_running, nonempty_string()} |
-                  {availability_year_updated, nonempty_string()} |
-                  {availability_year_processing, nonempty_string()}).
+                  {uptime_total, nanoseconds_string()} |
+                  {uptime_running, nanoseconds_string()} |
+                  {uptime_processing, nanoseconds_string_approx_lt()} |
+                  {uptime_restarts, integer_string_ge_0()} |
+                  {downtime_day_restarting, nanoseconds_string_approx_gt()} |
+                  {downtime_week_restarting, nanoseconds_string_approx_gt()} |
+                  {downtime_month_restarting, nanoseconds_string_approx_gt()} |
+                  {downtime_year_restarting, nanoseconds_string_approx_gt()} |
+                  {interrupt_day_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_week_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_month_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_year_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_day_suspended, nanoseconds_string_approx_gt()} |
+                  {interrupt_week_suspended, nanoseconds_string_approx_gt()} |
+                  {interrupt_month_suspended, nanoseconds_string_approx_gt()} |
+                  {interrupt_year_suspended, nanoseconds_string_approx_gt()} |
+                  {availability_day_total, availability_approx()} |
+                  {availability_day_running, availability()} |
+                  {availability_day_updated, availability_approx()} |
+                  {availability_day_processing, availability_approx()} |
+                  {availability_week_total, availability_approx()} |
+                  {availability_week_running, availability()} |
+                  {availability_week_updated, availability_approx()} |
+                  {availability_week_processing, availability_approx()} |
+                  {availability_month_total, availability_approx()} |
+                  {availability_month_running, availability()} |
+                  {availability_month_updated, availability_approx()} |
+                  {availability_month_processing, availability_approx()} |
+                  {availability_year_total, availability_approx()} |
+                  {availability_year_running, availability()} |
+                  {availability_year_updated, availability_approx()} |
+                  {availability_year_processing, availability_approx()}).
 -type service_status_external() ::
     nonempty_list({type, external} |
                   {prefix, cloudi:service_name_pattern()} |
-                  {file_path, file:filename()} |
+                  {file_path, file_path()} |
                   {count_process, pos_integer()} |
                   {count_thread, pos_integer()} |
                   {suspended, boolean()} |
-                  {uptime_total, nonempty_string()} |
-                  {uptime_running, nonempty_string()} |
-                  {uptime_processing, nonempty_string()} |
-                  {uptime_restarts, nonempty_string()} |
-                  {downtime_day_restarting, nonempty_string()} |
-                  {downtime_week_restarting, nonempty_string()} |
-                  {downtime_month_restarting, nonempty_string()} |
-                  {downtime_year_restarting, nonempty_string()} |
-                  {interrupt_day_updating, nonempty_string()} |
-                  {interrupt_week_updating, nonempty_string()} |
-                  {interrupt_month_updating, nonempty_string()} |
-                  {interrupt_year_updating, nonempty_string()} |
-                  {interrupt_day_suspended, nonempty_string()} |
-                  {interrupt_week_suspended, nonempty_string()} |
-                  {interrupt_month_suspended, nonempty_string()} |
-                  {interrupt_year_suspended, nonempty_string()} |
-                  {availability_day_total, nonempty_string()} |
-                  {availability_day_running, nonempty_string()} |
-                  {availability_day_updated, nonempty_string()} |
-                  {availability_day_processing, nonempty_string()} |
-                  {availability_week_total, nonempty_string()} |
-                  {availability_week_running, nonempty_string()} |
-                  {availability_week_updated, nonempty_string()} |
-                  {availability_week_processing, nonempty_string()} |
-                  {availability_month_total, nonempty_string()} |
-                  {availability_month_running, nonempty_string()} |
-                  {availability_month_updated, nonempty_string()} |
-                  {availability_month_processing, nonempty_string()} |
-                  {availability_year_total, nonempty_string()} |
-                  {availability_year_running, nonempty_string()} |
-                  {availability_year_updated, nonempty_string()} |
-                  {availability_year_processing, nonempty_string()}).
+                  {uptime_total, nanoseconds_string()} |
+                  {uptime_running, nanoseconds_string()} |
+                  {uptime_processing, nanoseconds_string_approx_lt()} |
+                  {uptime_restarts, integer_string_ge_0()} |
+                  {downtime_day_restarting, nanoseconds_string_approx_gt()} |
+                  {downtime_week_restarting, nanoseconds_string_approx_gt()} |
+                  {downtime_month_restarting, nanoseconds_string_approx_gt()} |
+                  {downtime_year_restarting, nanoseconds_string_approx_gt()} |
+                  {interrupt_day_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_week_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_month_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_year_updating, nanoseconds_string_approx_gt()} |
+                  {interrupt_day_suspended, nanoseconds_string_approx_gt()} |
+                  {interrupt_week_suspended, nanoseconds_string_approx_gt()} |
+                  {interrupt_month_suspended, nanoseconds_string_approx_gt()} |
+                  {interrupt_year_suspended, nanoseconds_string_approx_gt()} |
+                  {availability_day_total, availability_approx()} |
+                  {availability_day_running, availability()} |
+                  {availability_day_updated, availability_approx()} |
+                  {availability_day_processing, availability_approx()} |
+                  {availability_week_total, availability_approx()} |
+                  {availability_week_running, availability()} |
+                  {availability_week_updated, availability_approx()} |
+                  {availability_week_processing, availability_approx()} |
+                  {availability_month_total, availability_approx()} |
+                  {availability_month_running, availability()} |
+                  {availability_month_updated, availability_approx()} |
+                  {availability_month_processing, availability_approx()} |
+                  {availability_year_total, availability_approx()} |
+                  {availability_year_running, availability()} |
+                  {availability_year_updated, availability_approx()} |
+                  {availability_year_processing, availability_approx()}).
 -type service_status() ::
     service_status_internal() | service_status_external().
--export_type([service_id/0,
-              service_internal/0,
-              service_external/0,
-              service_proplist/0,
-              service/0,
-              service_status_internal/0,
+-export_type([service_status_internal/0,
               service_status_external/0,
               service_status/0]).
 
@@ -673,7 +720,7 @@
                   {options, service_update_plan_options_internal()}).
 -type service_update_plan_external() ::
     nonempty_list({type, external} |
-                  {file_path, file:filename()} |
+                  {file_path, file_path()} |
                   {args, string()} |
                   {env, list({string(), string()})} |
                   {sync, boolean()} |
@@ -693,8 +740,7 @@
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
-          list({period, period_seconds()} |
-               {value, number()}) | number() | undefined} |
+          service_options_rate_request_max_options() | number() | undefined} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
@@ -705,14 +751,9 @@
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
          {monkey_latency,
-          list({time_uniform_min, latency_min_time_milliseconds()} |
-               {time_uniform_max, latency_max_time_milliseconds()} |
-               {time_gaussian_mean, latency_mean_time_milliseconds()} |
-               {time_gaussian_stddev, float() | pos_integer()} |
-               {time_absolute, latency_time_milliseconds()}) | system | false} |
+          service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,
-          list({probability_request, float()} |
-               {probability_day, float()}) | system | false} |
+          service_options_monkey_chaos_options() | system | false} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
                {fullsweep_after, non_neg_integer()} |
@@ -762,8 +803,7 @@
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
-          list({period, period_seconds()} |
-               {value, number()}) | number() | undefined} |
+          service_options_rate_request_max_options() | number() | undefined} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
@@ -774,14 +814,9 @@
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
          {monkey_latency,
-          list({time_uniform_min, latency_min_time_milliseconds()} |
-               {time_uniform_max, latency_max_time_milliseconds()} |
-               {time_gaussian_mean, latency_mean_time_milliseconds()} |
-               {time_gaussian_stddev, float() | pos_integer()} |
-               {time_absolute, latency_time_milliseconds()}) | system | false} |
+          service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,
-          list({probability_request, float()} |
-               {probability_day, float()}) | system | false} |
+          service_options_monkey_chaos_options() | system | false} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
                {fullsweep_after, non_neg_integer()} |
@@ -832,36 +867,45 @@
 -type nodes_set_proplist() ::
     nonempty_list({set, all | local} |
                   nodes_properties()).
--type node_status() ::
-    nonempty_list(% local node
-                  {uptime, nonempty_string()} |
-                  {uptime_cost_total, nonempty_string()} |
-                  {uptime_cost_day, nonempty_string()} |
-                  {uptime_cost_week, nonempty_string()} |
-                  {uptime_cost_month, nonempty_string()} |
-                  {uptime_cost_year, nonempty_string()} |
-                  % remote node
-                  {tracked, nonempty_string()} |
-                  {tracked_cost_total, nonempty_string()} |
-                  {tracked_cost_day, nonempty_string()} |
-                  {tracked_cost_week, nonempty_string()} |
-                  {tracked_cost_month, nonempty_string()} |
-                  {tracked_cost_year, nonempty_string()} |
+-type node_status_local() ::
+    nonempty_list({uptime, nanoseconds_string()} |
+                  {uptime_cost_total, float_string_ge_0()} |
+                  {uptime_cost_day, float_string_ge_0()} |
+                  {uptime_cost_week, float_string_ge_0()} |
+                  {uptime_cost_month, float_string_ge_0()} |
+                  {uptime_cost_year, float_string_ge_0()} |
+                  {availability_day, availability()} |
+                  {availability_week, availability()} |
+                  {availability_month, availability()} |
+                  {availability_year, availability()}).
+-type node_status_remote() ::
+    nonempty_list({tracked, nanoseconds_string()} |
+                  {tracked_cost_total, float_string_ge_0()} |
+                  {tracked_cost_day, float_string_ge_0()} |
+                  {tracked_cost_week, float_string_ge_0()} |
+                  {tracked_cost_month, float_string_ge_0()} |
+                  {tracked_cost_year, float_string_ge_0()} |
                   {connection, visible | hidden} |
-                  {tracked_disconnects, nonempty_string()} |
+                  {tracked_disconnects, integer_string_ge_0()} |
                   {disconnected, boolean()} |
-                  {downtime_day_disconnected, nonempty_string()} |
-                  {downtime_week_disconnected, nonempty_string()} |
-                  {downtime_month_disconnected, nonempty_string()} |
-                  {downtime_year_disconnected, nonempty_string()} |
-                  % all nodes
-                  {availability_day, nonempty_string()} |
-                  {availability_week, nonempty_string()} |
-                  {availability_month, nonempty_string()} |
-                  {availability_year, nonempty_string()}).
+                  {downtime_day_disconnected, nanoseconds_string_approx_gt()} |
+                  {downtime_week_disconnected, nanoseconds_string_approx_gt()} |
+                  {downtime_month_disconnected, nanoseconds_string_approx_gt()} |
+                  {downtime_year_disconnected, nanoseconds_string_approx_gt()} |
+                  {availability_day, availability_approx()} |
+                  {availability_week, availability_approx()} |
+                  {availability_month, availability_approx()} |
+                  {availability_year, availability_approx()}).
+-type node_status() ::
+    node_status_local() | node_status_remote().
+-type nodes_status() ::
+    nonempty_list({node(), node_status()}).
 -export_type([nodes_proplist/0,
               nodes_set_proplist/0,
-              node_status/0]).
+              node_status_local/0,
+              node_status_remote/0,
+              node_status/0,
+              nodes_status/0]).
 
 -type aspect_log_f() ::
     fun((Level :: loglevel_on(),
@@ -960,6 +1004,15 @@
               logging_status/0,
               logging_proplist/0]).
 
+-type iso8601() ::
+    cloudi_timestamp:iso8601().
+-type iso8601_seconds() ::
+    cloudi_timestamp:iso8601_seconds().
+-type code_status_runtime_change() ::
+    nonempty_list({type, internal | external} |
+                  {file_age, seconds_string()} |
+                  {file_path, file_path()} |
+                  {service_ids, nonempty_list(service_id())}).
 -type code_status() ::
     nonempty_list({build_machine, nonempty_string()} |
                   {build_kernel_version, nonempty_string()} |
@@ -969,12 +1022,12 @@
                   {build_cloudi_cxx_compiler_version, nonempty_string()} |
                   {build_cloudi_cxx_dependencies_versions, nonempty_string()} |
                   {build_erts_c_compiler_version, nonempty_string()} |
-                  {install_erlang_erts_time, nonempty_string()} |
-                  {install_erlang_kernel_time, nonempty_string()} |
-                  {install_erlang_stdlib_time, nonempty_string()} |
-                  {install_erlang_sasl_time, nonempty_string()} |
-                  {install_erlang_compiler_time, nonempty_string()} |
-                  {install_cloudi_time, nonempty_string()} |
+                  {install_erlang_erts_time, iso8601_seconds()} |
+                  {install_erlang_kernel_time, iso8601_seconds()} |
+                  {install_erlang_stdlib_time, iso8601_seconds()} |
+                  {install_erlang_sasl_time, iso8601_seconds()} |
+                  {install_erlang_compiler_time, iso8601_seconds()} |
+                  {install_cloudi_time, iso8601_seconds()} |
                   {runtime_erlang_erts_version, nonempty_string()} |
                   {runtime_erlang_kernel_version, nonempty_string()} |
                   {runtime_erlang_stdlib_version, nonempty_string()} |
@@ -982,19 +1035,15 @@
                   {runtime_erlang_compiler_version, nonempty_string()} |
                   {runtime_cloudi_version, nonempty_string()} |
                   {runtime_machine_processors, pos_integer()} |
-                  {runtime_start, nonempty_string()} |
-                  {runtime_clock, nonempty_string()} |
-                  {runtime_clock_offset, nonempty_string()} |
-                  {runtime_total, nonempty_string()} |
-                  {runtime_cloudi_start, nonempty_string()} |
-                  {runtime_cloudi_total, nonempty_string()} |
-                  {runtime_cloudi_changes,
-                   list(nonempty_list({type, internal | external} |
-                                      {file_age, nonempty_string()} |
-                                      {file_path, nonempty_string()} |
-                                      {service_ids,
-                                       nonempty_list(service_id())}))}).
--export_type([code_status/0]).
+                  {runtime_start, iso8601()} |
+                  {runtime_clock, iso8601()} |
+                  {runtime_clock_offset, nanoseconds_string_signed()} |
+                  {runtime_total, nanoseconds_string()} |
+                  {runtime_cloudi_start, iso8601()} |
+                  {runtime_cloudi_total, nanoseconds_string()} |
+                  {runtime_cloudi_changes, list(code_status_runtime_change())}).
+-export_type([code_status_runtime_change/0,
+              code_status/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -1506,7 +1555,7 @@ nodes_dead(Timeout)
 
 -spec nodes_status(L :: list(node()),
                    Timeout :: api_timeout_milliseconds()) ->
-    {ok, nonempty_list({node(), node_status()})} |
+    {ok, nodes_status()} |
     {error,
      timeout | noproc |
      {node_not_found, any()}}.
@@ -1739,7 +1788,7 @@ logging(Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec code_path_add(Dir :: file:filename(),
+-spec code_path_add(Dir :: file_path(),
                     Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -1761,7 +1810,7 @@ code_path_add(Dir, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec code_path_remove(Dir :: file:filename(),
+-spec code_path_remove(Dir :: file_path(),
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -1783,7 +1832,7 @@ code_path_remove(Dir, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec code_path(Timeout :: api_timeout_milliseconds()) ->
-    {ok, nonempty_list(file:filename())} |
+    {ok, nonempty_list(file_path())} |
     {error, timeout | noproc}.
 
 code_path(Timeout)

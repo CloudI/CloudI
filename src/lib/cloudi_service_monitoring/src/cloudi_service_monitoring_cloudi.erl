@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2019 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -214,16 +214,16 @@ services_init(undefined, ProcessInfo0, _, _, _, _) ->
 services_init(Interval, ProcessInfo0,
               MetricPrefix, UseAspectsOnly, Driver, EnvironmentLookup) ->
     {ok, Services} = services_state(Interval * 1000),
-    ets:new(?ETS_CONFIG,
-            [set, public, named_table,
-             {read_concurrency, true}]),
+    ?ETS_CONFIG = ets:new(?ETS_CONFIG,
+                          [set, public, named_table,
+                           {read_concurrency, true}]),
     true = ets:insert(?ETS_CONFIG, [{init, MetricPrefix, Driver}]),
-    ets:new(?ETS_PID2METRIC,
-            [set, public, named_table,
-             {read_concurrency, true}]),
-    ets:new(?ETS_REF2METRIC,
-            [set, public, named_table,
-             {read_concurrency, true}]),
+    ?ETS_PID2METRIC = ets:new(?ETS_PID2METRIC,
+                              [set, public, named_table,
+                               {read_concurrency, true}]),
+    ?ETS_REF2METRIC = ets:new(?ETS_REF2METRIC,
+                              [set, public, named_table,
+                               {read_concurrency, true}]),
     {InsertsN,
      ProcessInfoN} = cloudi_x_key2value:fold1(fun(_ID, Pids,
                                                   #service{} = Service, A) ->
@@ -406,7 +406,8 @@ services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
             true = ets:insert(?ETS_PID2METRIC, InsertsN),
             _ = ets:select_delete(?ETS_PID2METRIC,
                                   [{{PidOld, '_', '_'},[],[true]}
-                                   || PidOld <- DeletesN])
+                                   || PidOld <- DeletesN]),
+            ok
     end,
     {services_metrics(CountInternal, CountExternal,
                       ConcurrencyInternal, ConcurrencyExternal,

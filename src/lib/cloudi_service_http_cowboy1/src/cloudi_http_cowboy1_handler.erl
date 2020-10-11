@@ -1472,12 +1472,12 @@ websocket_disconnect_check({async, WebSocketDisconnectName}, Reason,
                                output_type = OutputType,
                                websocket_state = #websocket_state{
                                    request_info = RequestInfo}}) ->
-    send_async_minimal(Dispatcher, WebSocketDisconnectName,
-                       websocket_disconnect_request_info(Reason,
-                                                         RequestInfo,
-                                                         OutputType),
-                       websocket_disconnect_request(OutputType),
-                       TimeoutAsync, self()),
+    _ = send_async_minimal(Dispatcher, WebSocketDisconnectName,
+                           websocket_disconnect_request_info(Reason,
+                                                             RequestInfo,
+                                                             OutputType),
+                           websocket_disconnect_request(OutputType),
+                           TimeoutAsync, self()),
     ok;
 websocket_disconnect_check({sync, WebSocketDisconnectName}, Reason,
                            #cowboy1_state{
@@ -1486,12 +1486,12 @@ websocket_disconnect_check({sync, WebSocketDisconnectName}, Reason,
                                output_type = OutputType,
                                websocket_state = #websocket_state{
                                    request_info = RequestInfo}}) ->
-    send_sync_minimal(Dispatcher, WebSocketDisconnectName,
-                      websocket_disconnect_request_info(Reason,
-                                                        RequestInfo,
-                                                        OutputType),
-                      websocket_disconnect_request(OutputType),
-                      TimeoutSync, self()),
+    _ = send_sync_minimal(Dispatcher, WebSocketDisconnectName,
+                          websocket_disconnect_request_info(Reason,
+                                                            RequestInfo,
+                                                            OutputType),
+                          websocket_disconnect_request(OutputType),
+                          TimeoutSync, self()),
     ok.
 
 websocket_subscriptions([], _, _) ->

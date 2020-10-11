@@ -49,6 +49,7 @@
     "@abs_top_srcdir@/external"]}]}.
 {erl_opts,
  [{d, 'ERLANG_OTP_VERSION_@ERLANG_OTP_VER_MAJOR@'},
+  {d, 'CLOUDI_LOGGER'},
   {d, 'CLOUDI_TEST_TIMEOUT', @CLOUDI_TEST_TIMEOUT@},
   {d, 'CLOUDI_LONG_TEST_TIMEOUT', @CLOUDI_LONG_TEST_TIMEOUT@},
   {i, "@abs_top_srcdir@/lib"},

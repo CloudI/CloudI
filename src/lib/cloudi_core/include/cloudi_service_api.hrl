@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -38,7 +38,7 @@
         prefix = "/"
             :: cloudi:service_name_pattern(),
         module
-            :: atom() | file:filename(),
+            :: atom() | cloudi_service_api:file_path(),
         args = []
             :: list(),
         dest_refresh = immediate_closest
@@ -69,7 +69,7 @@
         prefix = "/"
             :: cloudi:service_name_pattern(),
         file_path
-            :: file:filename(),
+            :: cloudi_service_api:file_path(),
         args = ""
             :: string(),
         env = []

@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2019-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_batch).
@@ -207,7 +207,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             false = StopWhenDone,
             ok;
         [_ | _] ->
-            Service ! {init, QueuesList}
+            Service ! {init, QueuesList},
+            ok
     end,
     if
         QueuesStatic =:= true ->
@@ -340,7 +341,7 @@ queue_remove(QueueName,
                     queues = Queues} = State) ->
     case cloudi_x_trie:find(QueueName, Queues) of
         {ok, #queue{service_id = ServiceId}} ->
-            cloudi_service_api:services_remove([ServiceId], infinity),
+            _ = cloudi_service_api:services_remove([ServiceId], infinity),
             {ok,
              State#state{queue_count = QueueCount - 1,
                          queues = cloudi_x_trie:erase(QueueName, Queues)}};
@@ -385,7 +386,8 @@ running_init(QueueName, TimeoutInit,
     #queue{terminate_timer = TerminateTimer} = Queue,
     if
         is_reference(TerminateTimer) ->
-            erlang:cancel_timer(TerminateTimer);
+            ok = erlang:cancel_timer(TerminateTimer,
+                                     [{async, true}, {info, false}]);
         TerminateTimer =:= undefined ->
             ok
     end,

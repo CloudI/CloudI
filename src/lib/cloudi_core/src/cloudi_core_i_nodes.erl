@@ -579,8 +579,8 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsYearDisconnect > 0 ->
                     [{downtime_year_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsYearDisconnect,
-                                            ApproximateYearDisconnect)} |
+                      nanoseconds_to_string_gt(NanoSecondsYearDisconnect,
+                                               ApproximateYearDisconnect)} |
                      Status4];
                 true ->
                     Status4
@@ -591,8 +591,8 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsYearDisconnect > 0 ->
                     [{downtime_month_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsMonthDisconnect,
-                                            ApproximateMonthDisconnect)} |
+                      nanoseconds_to_string_gt(NanoSecondsMonthDisconnect,
+                                               ApproximateMonthDisconnect)} |
                      Status5];
                 true ->
                     Status5
@@ -604,8 +604,8 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsYearDisconnect > 0 ->
                     [{downtime_week_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsWeekDisconnect,
-                                            ApproximateWeekDisconnect)} |
+                      nanoseconds_to_string_gt(NanoSecondsWeekDisconnect,
+                                               ApproximateWeekDisconnect)} |
                      Status6];
                 true ->
                     Status6
@@ -616,8 +616,8 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsMonthDisconnect > 0 ->
                     [{downtime_day_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsDayDisconnect,
-                                            ApproximateDayDisconnect)} |
+                      nanoseconds_to_string_gt(NanoSecondsDayDisconnect,
+                                               ApproximateDayDisconnect)} |
                      Status7];
                 true ->
                     Status7

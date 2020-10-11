@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -242,10 +242,12 @@ cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
     _ = erlang:spawn_link(fun() ->
         case init(InitBegin, Dispatcher) of
             {noreply, State} ->
-                Service ! #init_end{state = State};
+                Service ! #init_end{state = State},
+                ok;
             {stop, Reason, State} when Reason /= undefined ->
                 Service ! #init_end{state = State,
-                                    error = Reason}
+                                    error = Reason},
+                ok
         end,
         true = erlang:unlink(Service)
     end),

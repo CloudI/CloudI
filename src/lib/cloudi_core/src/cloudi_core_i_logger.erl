@@ -480,7 +480,7 @@ format(Msg, Config) ->
                      Message :: list()},
              Config :: list(),
              Colors :: any()) ->
-    iodata().
+    iolist().
 
 format(Msg, _Config, _) ->
     {lager_msg,
@@ -506,12 +506,12 @@ format(Msg, _Config, _) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create an ISO8601 timestamp from microseconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% (The UNIX epoch is 1970-01-01T00:00:00.000000Z)
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec microseconds_to_string(TotalMicroSeconds :: non_neg_integer()) ->
-    string().
+    cloudi_timestamp:iso8601().
 
 microseconds_to_string(TotalMicroSeconds) ->
     TotalSeconds = TotalMicroSeconds div 1000000,
@@ -523,12 +523,12 @@ microseconds_to_string(TotalMicroSeconds) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create an ISO8601 timestamp from milliseconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% (The UNIX epoch is 1970-01-01T00:00:00.000Z)
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec milliseconds_to_string(TotalMilliSeconds :: non_neg_integer()) ->
-    string().
+    cloudi_timestamp:iso8601().
 
 milliseconds_to_string(TotalMilliSeconds) ->
     TotalSeconds = TotalMilliSeconds div 1000,
@@ -553,7 +553,7 @@ milliseconds_to_string(TotalMilliSeconds) ->
 %%-------------------------------------------------------------------------
 
 -spec seconds_to_string(TotalSeconds :: non_neg_integer()) ->
-    string().
+    cloudi_timestamp:iso8601_seconds().
 
 seconds_to_string(TotalSeconds) ->
     MegaSeconds = TotalSeconds div 1000000,
@@ -568,7 +568,7 @@ seconds_to_string(TotalSeconds) ->
 %%-------------------------------------------------------------------------
 
 -spec datetime_to_string(DateTimeUTC :: calendar:datetime()) ->
-    string().
+    cloudi_timestamp:iso8601_seconds().
 
 datetime_to_string(DateTimeUTC) ->
     datetime_iso8601(DateTimeUTC, undefined).

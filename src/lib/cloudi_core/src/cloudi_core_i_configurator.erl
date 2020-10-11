@@ -129,7 +129,7 @@
 -type error_reason_nodes_set() ::
     {set_invalid, any()}.
 -type error_reason_code_status() ::
-    {file, {file:filename(), file:posix() | badarg}}.
+    {file, {cloudi_service_api:file_path(), file:posix() | badarg}}.
 -export_type([error_reason_service_start/0,
               error_reason_service_stop/0,
               error_reason_service_restart/0,

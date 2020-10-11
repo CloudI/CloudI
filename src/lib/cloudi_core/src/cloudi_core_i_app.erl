@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_app).
@@ -81,7 +81,6 @@ test() ->
 -spec start(StartType :: normal | {takeover, node()} | {failover, node()},
             StartArgs :: any()) ->
     {ok, Pid :: pid()} |
-    {ok, Pid :: pid(), State :: any()} |
     {error, Reason :: any()}.
 
 start(_, _) ->

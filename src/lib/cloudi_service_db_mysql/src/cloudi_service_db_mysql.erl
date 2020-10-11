@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -452,8 +452,10 @@ cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
                 Ping =:= undefined ->
                     ok;
                 is_integer(Ping) ->
-                    erlang:send_after(Ping, cloudi_service:self(Dispatcher),
-                                      {ping, Ping})
+                    _ = erlang:send_after(Ping,
+                                          cloudi_service:self(Dispatcher),
+                                          {ping, Ping}),
+                    ok
             end,
             {ok, #state{module = Module,
                         connection = Connection,

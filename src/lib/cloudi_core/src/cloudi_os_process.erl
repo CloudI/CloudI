@@ -50,7 +50,10 @@
     sigterm | sigstkflt | sigchld | sigcont | sigstop | sigtstp |
     sigttin | sigttou | sigurg | sigxcpu | sigxfsz | sigvtalrm | sigprof |
     sigwinch | sigio | sigpwr | sigsys | pos_integer().
--export_type([signal/0]).
+-type signal_string() ::
+    nonempty_list($A..$Z | $0..$9 | $#).
+-export_type([signal/0,
+              signal_string/0]).
 
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
@@ -192,7 +195,7 @@ signal_to_integer(Signal) when is_integer(Signal), Signal > 0 ->
 %%-------------------------------------------------------------------------
 
 -spec signal_to_string(Signal :: pos_integer()) ->
-    string().
+    signal_string().
 
 signal_to_string( 1) -> "SIGHUP";
 signal_to_string( 2) -> "SIGINT";

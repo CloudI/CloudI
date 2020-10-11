@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add more specific cloudi_service_api types for string status values
+    * Fix dialyzer unmatched_returns errors in internal services
+
 2020-10-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve CloudI Service API function logging_status by having

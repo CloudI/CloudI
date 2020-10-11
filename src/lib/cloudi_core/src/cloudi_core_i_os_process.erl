@@ -403,8 +403,7 @@ cgroup_set(OSPid, Values)
 
 -spec cgroup_unset(OSPid :: pos_integer(),
                    Values :: cloudi_service_api:cgroup_external()) ->
-    ok |
-    {error, any()}.
+    ok.
 
 cgroup_unset(_, undefined) ->
     ok;

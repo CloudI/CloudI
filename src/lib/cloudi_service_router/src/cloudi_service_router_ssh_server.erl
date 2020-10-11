@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2018-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router_ssh_server).
@@ -259,7 +259,7 @@ handle_ssh_msg({ssh_cm, Connection,
                                           SendTimeouts)}}
     catch
         error:badarg ->
-            ssh_connection:send_eof(Connection, ChannelId),
+            _ = ssh_connection:send_eof(Connection, ChannelId),
             {stop, ChannelId, State}
     end;
 handle_ssh_msg({ssh_cm, Connection,

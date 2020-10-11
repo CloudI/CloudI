@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_runtime_testing).
@@ -51,7 +51,6 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 
--define(DAY_MILLISECONDS, (24 * 60 * 60 * 1000)).
 -define(MONKEY_LATENCY_METHOD_DEFAULT, time_absolute).
 -define(MONKEY_LATENCY_MEAN_DEFAULT, 5000). % milliseconds
 -define(MONKEY_LATENCY_LOG, 5000). % milliseconds
@@ -79,7 +78,8 @@
 %%%------------------------------------------------------------------------
 
 -spec monkey_latency_format(#monkey_latency{} | system | false) ->
-    list({atom(), any()}) | system | false.
+    cloudi_service_api:service_options_monkey_latency_options() |
+    system | false.
 
 monkey_latency_format(false) ->
     false;
@@ -151,7 +151,8 @@ monkey_latency_check(#monkey_latency{method = time_absolute,
     MonkeyLatency.
 
 -spec monkey_chaos_format(#monkey_chaos{} | system | false) ->
-    list({atom(), any()}) | system | false.
+    cloudi_service_api:service_options_monkey_chaos_options() |
+    system | false.
 
 monkey_chaos_format(false) ->
     false;
@@ -405,9 +406,9 @@ monkey_chaos_pid_day(Percent)
     DieToday = random() =< Percent,
     Delay = if
         DieToday =:= true ->
-            erlang:round(?DAY_MILLISECONDS * random());
+            erlang:round(?MILLISECONDS_IN_DAY * random());
         DieToday =:= false ->
-            ?DAY_MILLISECONDS
+            ?MILLISECONDS_IN_DAY
     end,
     receive
         'monkey_chaos_destroy' ->

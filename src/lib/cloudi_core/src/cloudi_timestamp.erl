@@ -83,6 +83,13 @@
 -type microseconds_monotonic() :: integer().
 -type nanoseconds_monotonic() :: integer().
 -type native_monotonic() :: integer().
+% timestamps as 1970-01-01T00:00:00.000000Z
+%            or 1970-01-01T00:00:00.000Z
+-type iso8601() ::
+    nonempty_list($0..$9 | $T | $- | $: | $. | $Z).
+% timestamps as 1970-01-01T00:00:00Z
+-type iso8601_seconds() ::
+    nonempty_list($0..$9 | $T | $- | $: | $Z).
 -export_type([time_unit/0,
               seconds_epoch/0,
               milliseconds_epoch/0,
@@ -92,7 +99,9 @@
               milliseconds_monotonic/0,
               microseconds_monotonic/0,
               nanoseconds_monotonic/0,
-              native_monotonic/0]).
+              native_monotonic/0,
+              iso8601/0,
+              iso8601_seconds/0]).
 
 -include("cloudi_core_i_constants.hrl").
 
@@ -150,7 +159,7 @@ convert(Time, FromUnit, ToUnit) ->
 %%-------------------------------------------------------------------------
 
 -spec datetime_utc_to_string(DateTimeUTC :: calendar:datetime()) ->
-    string().
+    iso8601_seconds().
 
 datetime_utc_to_string(DateTimeUTC) ->
     cloudi_core_i_logger:datetime_to_string(DateTimeUTC).
@@ -229,7 +238,7 @@ seconds() ->
 %%-------------------------------------------------------------------------
 
 -spec seconds_epoch_to_string(Seconds :: seconds_epoch()) ->
-    string().
+    iso8601_seconds().
 
 seconds_epoch_to_string(Seconds) ->
     cloudi_core_i_logger:seconds_to_string(Seconds).
@@ -275,7 +284,7 @@ seconds_os() ->
 %%-------------------------------------------------------------------------
 
 -spec seconds_to_string(TotalSeconds :: non_neg_integer()) ->
-    nonempty_string().
+    cloudi_service_api:seconds_string().
 
 seconds_to_string(TotalSeconds)
     when is_integer(TotalSeconds), TotalSeconds >= 0 ->
@@ -303,7 +312,7 @@ seconds_to_string(TotalSeconds)
 
 -spec seconds_to_string(TotalSeconds :: integer(),
                         Options :: signed) ->
-    nonempty_string().
+    cloudi_service_api:seconds_string_signed().
 
 seconds_to_string(TotalSeconds, signed)
     when is_integer(TotalSeconds) ->
@@ -352,12 +361,12 @@ milliseconds() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create an ISO8601 timestamp from milliseconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% (The UNIX epoch is 1970-01-01T00:00:00.000Z)
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec milliseconds_epoch_to_string(MilliSeconds :: milliseconds_epoch()) ->
-    string().
+    iso8601().
 
 milliseconds_epoch_to_string(MilliSeconds) ->
     cloudi_core_i_logger:milliseconds_to_string(MilliSeconds).
@@ -416,12 +425,12 @@ microseconds() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create an ISO8601 timestamp from microseconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% (The UNIX epoch is 1970-01-01T00:00:00.000000Z)
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec microseconds_epoch_to_string(MicroSeconds :: microseconds_epoch()) ->
-    string().
+    iso8601().
 
 microseconds_epoch_to_string(MicroSeconds) ->
     cloudi_core_i_logger:microseconds_to_string(MicroSeconds).
@@ -518,7 +527,7 @@ nanoseconds_os() ->
 %%-------------------------------------------------------------------------
 
 -spec nanoseconds_to_string(TotalNanoSeconds :: non_neg_integer()) ->
-    nonempty_string().
+    cloudi_service_api:nanoseconds_string().
 
 nanoseconds_to_string(TotalNanoSeconds)
     when is_integer(TotalNanoSeconds), TotalNanoSeconds >= 0 ->
@@ -553,7 +562,7 @@ nanoseconds_to_string(TotalNanoSeconds)
 
 -spec nanoseconds_to_string(TotalNanoSeconds :: integer(),
                             Options :: signed) ->
-    nonempty_string().
+    cloudi_service_api:nanoseconds_string_signed().
 
 nanoseconds_to_string(TotalNanoSeconds, signed)
     when is_integer(TotalNanoSeconds) ->

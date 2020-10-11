@@ -1396,7 +1396,7 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout_max(Context :: agent()) ->
-    TimeoutMax :: pos_integer().
+    ?TIMEOUT_MAX_ERLANG.
 
 timeout_max(Dispatcher)
     when is_pid(Dispatcher) ->

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(varpool_sup).
@@ -104,10 +104,10 @@ stop_link(Supervisor)
 monitor_up(Parent, M, F, A, Group, I) ->
     case erlang:apply(M, F, A) of
         {ok, Child} = Success ->
-            monitor_up_message(Parent, Child, Group, I),
+            ok = monitor_up_message(Parent, Child, Group, I),
             Success;
         {ok, Child, _Info} = Success ->
-            monitor_up_message(Parent, Child, Group, I),
+            ok = monitor_up_message(Parent, Child, Group, I),
             Success;
         ignore = Ignore ->
             Ignore;
@@ -142,7 +142,8 @@ init([Parent, MaxR, MaxT, Pool]) ->
 %%%------------------------------------------------------------------------
 
 monitor_up_message(Parent, Child, Group, I) ->
-    Parent ! {'UP', self(), process, Child, {Group, I}}.
+    Parent ! {'UP', self(), process, Child, {Group, I}},
+    ok.
 
 child_specs([], ChildSpecs, _) ->
     ChildSpecs;

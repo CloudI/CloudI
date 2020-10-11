@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -134,8 +134,8 @@
 
 %% convert internal state to the configuration format
 
--spec hibernate_format(#hibernate{} | true | false) ->
-    list({atom(), any()}) | true | false.
+-spec hibernate_format(#hibernate{} | boolean()) ->
+    cloudi_service_api:service_options_internal_hibernate_options() | boolean().
 
 hibernate_format(true) ->
     true;
@@ -149,8 +149,8 @@ hibernate_format(#hibernate{method = rate_request,
 
 %% convert the configuration format to internal state
 
--spec hibernate_validate(list({atom(), any()}) | true | false) ->
-    {ok, #hibernate{} | true | false} |
+-spec hibernate_validate(list({atom(), any()}) | boolean()) ->
+    {ok, #hibernate{} | boolean()} |
     {error, {service_options_hibernate_invalid, any()}}.
 
 hibernate_validate(true) ->
@@ -231,7 +231,7 @@ hibernate_check(#hibernate{method = rate_request,
 %% convert internal state to the configuration format
 
 -spec restart_delay_format(#restart_delay{} | false) ->
-    list({atom(), any()}) | false.
+    cloudi_service_api:service_options_restart_delay_options() | false.
 
 restart_delay_format(false) ->
     false;
@@ -289,7 +289,7 @@ restart_delay_value(RestartTimes, MaxT,
 %% convert internal state to the configuration format
 
 -spec count_process_dynamic_format(#count_process_dynamic{} | false) ->
-    list({atom(), any()}) | false.
+    cloudi_service_api:service_options_count_process_dynamic_options() | false.
 
 count_process_dynamic_format(false) ->
     false;
@@ -432,7 +432,7 @@ count_process_dynamic_terminated(#count_process_dynamic{
 %% convert internal state to the configuration format
 
 -spec rate_request_format(#rate_request{} | undefined) ->
-    list({atom(), any()}) | undefined.
+    cloudi_service_api:service_options_rate_request_max_options() | undefined.
 
 rate_request_format(undefined) ->
     undefined;

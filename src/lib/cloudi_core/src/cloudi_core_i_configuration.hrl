@@ -445,9 +445,9 @@
         prefix
             :: string(),
         module
-            :: atom() | file:filename(),
+            :: atom() | cloudi_service_api:file_path(),
         file_path
-            :: undefined | file:filename(), % if module a path
+            :: undefined | cloudi_service_api:file_path(), % if module a path
         args
             :: list(),
         dest_refresh
@@ -482,7 +482,7 @@
         prefix
             :: string(),
         file_path
-            :: file:filename(),
+            :: cloudi_service_api:file_path(),
         args
             :: string(),
         env
@@ -547,7 +547,7 @@
 
         % external service executable to use after the update
         file_path = undefined
-            :: undefined | file:filename(),
+            :: undefined | cloudi_service_api:file_path(),
         % external service executable command-line arguments for the update
         args = undefined
             :: undefined | string(),

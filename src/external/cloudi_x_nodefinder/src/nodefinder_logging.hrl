@@ -3,6 +3,9 @@
 
 % include the proper logging macros
 
+-ifdef(CLOUDI_LOGGER).
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
+-else.
 -include("nodefinder_logging_default.hrl").
-%-include_lib("cloudi_core/include/cloudi_logger.hrl").
+-endif.
 

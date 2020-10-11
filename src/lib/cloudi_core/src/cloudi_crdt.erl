@@ -1415,7 +1415,7 @@ node_id(Service)
 
 -spec update_local_valid(Module :: module(),
                          Function :: atom(),
-                         Arity :: non_neg_integer()) ->
+                         Arity :: 1 | 2) ->
     ModuleVersion :: list().
 
 update_local_valid(Module, Function, Arity) ->
@@ -1433,7 +1433,7 @@ update_local_valid(Module, Function, Arity) ->
 -spec update_remote_valid(ModuleVersion :: list(),
                           Module :: module(),
                           Function :: atom(),
-                          Arity :: non_neg_integer()) ->
+                          Arity :: 1 | 2) ->
     ok.
 
 update_remote_valid([], Module, Function, Arity) ->
@@ -2269,7 +2269,7 @@ write({clear_all, Id},
 -spec event(EventType :: event_type(),
             EventId :: event_id(),
             Key :: key(),
-            EventData :: list(data() | value()),
+            EventData :: nonempty_list(data() | value()),
             Events :: events(),
             EventsAny :: list(event_type()),
             Service :: cloudi_service:source()) ->
@@ -2297,7 +2297,7 @@ event(EventType, EventId, Key, EventData, Events, EventsAny, Service) ->
 -spec events(EventType :: clear,
              EventId :: event_id(),
              Keys :: list(key()),
-             EventData :: list(data()),
+             EventData :: nonempty_list(data()),
              Events :: events(),
              EventsAny :: list(event_type()),
              Service :: cloudi_service:source()) ->
@@ -2324,7 +2324,7 @@ events(EventType, EventId, Keys, EventData, Events, EventsAny, Service) ->
 -spec event_send(event_type(),
                  EventId :: event_id(),
                  Key :: key(),
-                 EventData :: list(data() | value()),
+                 EventData :: nonempty_list(data() | value()),
                  Service :: cloudi_service:source()) ->
     ok.
 
