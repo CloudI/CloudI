@@ -19,8 +19,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit f29fe6eb34c5ed9623af2a4b2759fd5dec49b0cb`
-- `Sat Sep  5 03:27:25 UTC 2020`
+- `commit 69e53ee5373c1aa7d32d0455d2b02997a9db494d`
+- `Sun Oct 11 04:08:48 UTC 2020`
 - `MIT`
 
 `erlang_term`
@@ -82,8 +82,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pool as a Supervisor`
 
 - `https://github.com/okeuday/supool`
-- `commit 1516228f4c96647e9046a8538a9c82e235b0b377`
-- `Fri Jun 12 23:20:10 UTC 2020`
+- `commit ae3ee7926e37784e21032fbdad0139028a27daba`
+- `Sun Oct 11 04:08:48 UTC 2020`
 - `MIT`
 
 `syslog_socket`
@@ -118,7 +118,7 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pools as a Local Variable`
 
 - `https://github.com/okeuday/varpool`
-- `commit ed286d333c6bf3c01574376aa87f0e4512c6c543`
-- `Fri Jun 12 23:20:10 UTC 2020`
+- `commit 0db1818ee1d747eee20f7a60bd9770f0e53ffd58`
+- `Sun Oct 11 04:08:48 UTC 2020`
 - `MIT`
 
