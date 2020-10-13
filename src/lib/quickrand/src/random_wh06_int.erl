@@ -6,7 +6,7 @@
 %% which succeeds the old AS183 algorithm in 1982.
 
 %% Copyright (c) 2010 Kenji Rikitake All rights reserved.
-%% Copyright (c) 2012-2017 Michael Truog All rights reserved.
+%% Copyright (c) 2012-2020 Michael Truog All rights reserved.
 
 %%
 %% %CopyrightBegin%
@@ -90,7 +90,7 @@
 
 %%-----------------------------------------------------------------------
 
--spec seed0() -> seed().
+-spec seed0() -> {123456789, 345678901, 567890123, 789012345}.
 
 seed0() ->
     {123456789, 345678901, 567890123, 789012345}.
@@ -128,9 +128,6 @@ seed(A1, A2, A3, A4)
          (A2 rem (?PRIME2 - 1)) + 1,
          (A3 rem (?PRIME3 - 1)) + 1,
          (A4 rem (?PRIME4 - 1)) + 1}).
-
--spec reseed(seed()) ->
-    seed().
 
 reseed({A1, A2, A3, A4}) ->
     case seed(A1, A2, A3, A4) of

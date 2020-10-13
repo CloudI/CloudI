@@ -350,7 +350,7 @@ application_purged(Application, Timeout)
 
 -spec application_running(Application :: atom()) ->
     {ok, {atom(), string()}} |
-    {error, any()}.
+    {error, application_controller_timeout | {not_found, atom()}}.
 
 application_running(Application)
     when is_atom(Application) ->
@@ -365,7 +365,7 @@ application_running(Application)
 -spec application_running(Application :: atom(),
                           Timeout :: pos_integer() | infinity) ->
     {ok, {atom(), string()}} |
-    {error, any()}.
+    {error, application_controller_timeout | {not_found, atom()}}.
 
 application_running(Application, Timeout)
     when is_atom(Application) ->
@@ -389,7 +389,7 @@ application_running(Application, Timeout)
 
 -spec application_loaded(Application :: atom()) ->
     {ok, {atom(), string()}} |
-    {error, any()}.
+    {error, {not_found, atom()}}.
 
 application_loaded(Application)
     when is_atom(Application) ->
@@ -409,7 +409,7 @@ application_loaded(Application)
 
 -spec application_modules(Application :: atom()) ->
     {ok, list(atom())} |
-    {error, any()}.
+    {error, {modules_missing, atom()}}.
 
 application_modules(Application) ->
     application_modules(Application, []).
@@ -426,7 +426,7 @@ application_modules(Application) ->
 -spec application_modules(Application :: atom(),
                           Options :: list({atom(), any()})) ->
     {ok, list(atom())} |
-    {error, any()}.
+    {error, {modules_missing, atom()}}.
 
 application_modules(Application, Options)
     when is_atom(Application), is_list(Options) ->
@@ -443,7 +443,8 @@ application_modules(Application, Options)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec applications_start(Applications :: list(atom() | {atom(), list()})) ->
+-spec applications_start(Applications :: nonempty_list(atom() |
+                                                       {atom(), list()})) ->
     ok |
     {error, any()}.
 
@@ -456,7 +457,8 @@ applications_start([_ | _] = Applications) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec applications_start(Applications :: list(atom() | {atom(), list()}),
+-spec applications_start(Applications :: nonempty_list(atom() |
+                                                       {atom(), list()}),
                          Timeout :: pos_integer() | infinity) ->
     ok |
     {error, any()}.
@@ -647,14 +649,14 @@ is_deprecated(Module, Function, Arity) ->
 
 -spec is_module_loaded(Module :: atom()) ->
     ok |
-    {error, any()}.
+    {error, timeout}.
 
 is_module_loaded(Module)
     when is_atom(Module) ->
     case is_module_loaded(Module, 5000) of
         {ok, _} ->
             ok;
-        {error, _} = Error ->
+        {error, timeout} = Error ->
             Error
     end.
 
@@ -668,7 +670,7 @@ is_module_loaded(Module)
 -spec is_module_loaded(Module :: atom(),
                        Timeout :: non_neg_integer()) ->
     {ok, non_neg_integer()} |
-    {error, any()}.
+    {error, timeout}.
 
 is_module_loaded(Module, Timeout)
     when is_atom(Module), is_integer(Timeout), Timeout >= 0 ->
@@ -693,7 +695,7 @@ is_module_loaded(Module, Timeout)
 
 -spec module_load(Module :: atom()) ->
     ok |
-    {error, any()}.
+    {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}.
 
 module_load(Module)
     when is_atom(Module) ->
@@ -713,7 +715,7 @@ module_load(Module)
 
 -spec module_loaded(Module :: atom()) ->
     ok |
-    {error, any()}.
+    {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}.
 
 module_loaded(Module)
     when is_atom(Module) ->
@@ -732,7 +734,7 @@ module_loaded(Module)
 
 -spec module_unload(Module :: atom()) ->
     ok |
-    {error, any()}.
+    {error, not_loaded | not_unloaded}.
 
 module_unload(Module)
     when is_atom(Module) ->
@@ -762,7 +764,7 @@ module_unload(Module)
 
 -spec module_reload(Module :: atom()) ->
     ok |
-    {error, any()}.
+    {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}.
 
 module_reload(Module)
     when is_atom(Module) ->
@@ -784,7 +786,7 @@ module_reload(Module)
 
 -spec module_purged(Module :: atom()) ->
     ok |
-    {error, any()}.
+    {error, timeout}.
 
 module_purged(Module) ->
     module_purged(Module, 5000).
@@ -799,7 +801,7 @@ module_purged(Module) ->
 -spec module_purged(Module :: atom(),
                     Timeout :: non_neg_integer() | infinity) ->
     ok |
-    {error, any()}.
+    {error, timeout}.
 
 module_purged(Module, Timeout)
     when is_atom(Module) ->
@@ -901,7 +903,7 @@ modules_reload([Module | _] = Modules)
 -spec modules_purged(Modules :: list(atom()),
                      Timeout :: non_neg_integer() | infinity) ->
     ok |
-    {error, any()}.
+    {error, timeout}.
 
 modules_purged(Modules, infinity) ->
     modules_purged(Modules, 5000);

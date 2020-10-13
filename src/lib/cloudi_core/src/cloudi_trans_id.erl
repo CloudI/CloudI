@@ -12,7 +12,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -33,8 +33,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_trans_id).
@@ -61,7 +61,7 @@
 %%-------------------------------------------------------------------------
 
 -spec datetime(TransId :: cloudi_x_uuid:cloudi_x_uuid()) ->
-    string().
+    cloudi_timestamp:iso8601().
 
 datetime(TransId) ->
     cloudi_x_uuid:get_v1_datetime(TransId).
@@ -74,7 +74,7 @@ datetime(TransId) ->
 
 -spec datetime(TransId :: cloudi_x_uuid:cloudi_x_uuid(),
                MicroSecondsOffset :: integer()) ->
-    string().
+    cloudi_timestamp:iso8601().
 
 datetime(TransId, MicroSecondsOffset) ->
     cloudi_x_uuid:get_v1_datetime(TransId, MicroSecondsOffset).
@@ -85,7 +85,7 @@ datetime(TransId, MicroSecondsOffset) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec from_string(String :: string() | binary()) ->
+-spec from_string(String :: cloudi_x_uuid:uuid_string()) ->
     cloudi_x_uuid:cloudi_x_uuid().
 
 from_string(String) ->
@@ -146,7 +146,7 @@ microseconds(TransId) ->
 %%-------------------------------------------------------------------------
 
 -spec to_string(TransId :: cloudi_x_uuid:cloudi_x_uuid()) ->
-    string().
+    cloudi_x_uuid:uuid_string_list().
 
 to_string(TransId) ->
     to_string(TransId, standard).
@@ -161,7 +161,7 @@ to_string(TransId) ->
                 Format :: standard | nodash |
                           list_standard | list_nodash |
                           binary_standard | binary_nodash) ->
-    string() | binary().
+    cloudi_x_uuid:uuid_string().
 
 to_string(TransId, Format) ->
     cloudi_x_uuid:uuid_to_string(TransId, Format).

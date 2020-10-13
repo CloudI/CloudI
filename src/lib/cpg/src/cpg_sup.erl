@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2012-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_sup).
@@ -58,8 +58,8 @@
 %%-------------------------------------------------------------------------
 
 -spec start_link(ScopeList :: list(atom())) ->
-    {'ok', pid()} |
-    {'error', any()}.
+    {ok, pid()} |
+    {error, any()}.
 
 start_link(ScopeList)
     when is_list(ScopeList) ->
@@ -72,8 +72,8 @@ start_link(ScopeList)
 %%-------------------------------------------------------------------------
 
 -spec start_scope(Scope :: atom()) ->
-    'ok' |
-    {'error', any()}.
+    ok |
+    {error, {already_started, atom()} | {start_error, any()}}.
 
 start_scope(Scope)
     when is_atom(Scope) ->

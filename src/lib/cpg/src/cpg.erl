@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -268,7 +268,7 @@ start_link(Scope) when is_atom(Scope) ->
 
 -spec scope_exists(Scope :: atom()) ->
     ok |
-    {error, term()}.
+    {error, any()}.
 
 scope_exists(Scope) ->
     case cpg_sup:start_scope(Scope) of
@@ -276,8 +276,8 @@ scope_exists(Scope) ->
             ok;
         {error, {already_started, Scope}} ->
             ok;
-        {error, _} = Error ->
-            Error
+        {error, {start_error, Reason}} ->
+            {error, Reason}
     end.
 
 %%-------------------------------------------------------------------------

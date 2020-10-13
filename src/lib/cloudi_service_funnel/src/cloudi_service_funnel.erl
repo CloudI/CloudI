@@ -233,13 +233,6 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
             {noreply, State#state{crdt = CRDTN}}
     end.
 
-cloudi_service_handle_info({response_return,
-                            Name, Pattern, ResponseInfo, Response, Pending},
-                           State, Dispatcher) ->
-    ok = response_return(Pending,
-                         Name, Pattern, ResponseInfo, Response,
-                         cloudi_trans_id:microseconds(), Dispatcher),
-    {noreply, State};
 cloudi_service_handle_info({response_timeout, RequestKey},
                            #state{crdt = CRDT0} = State, Dispatcher) ->
     UpdateF = response_timeout_crdt,
@@ -311,7 +304,7 @@ cloudi_service_handle_info(#crdt_event{type = update,
                                        new = {value, RequestValueNew}},
                            #state{sender_id = SenderId,
                                   service = Service} = State,
-                           _Dispatcher) ->
+                           Dispatcher) ->
     #request{name = Name,
              pattern = Pattern,
              pending = Pending,
@@ -321,11 +314,10 @@ cloudi_service_handle_info(#crdt_event{type = update,
              pending = [],
              response = {ResponseInfo, Response}} = RequestValueNew,
     ok = sender_only(fun() ->
-        Service ! {response_return,
-                   Name, Pattern, ResponseInfo, Response, Pending},
-        ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
-        erlang:send_after(ResponseTimeout, Service,
-                          {response_timeout, RequestKey})
+        ok = response_return(Pending,
+                             Name, Pattern, ResponseInfo, Response,
+                             cloudi_trans_id:microseconds(), Dispatcher),
+        ok = response_timeout(TimeoutLast, TransIdLast, RequestKey, Service)
     end, SenderId, SenderIdRequest),
     {noreply, State};
 cloudi_service_handle_info(#crdt_event{type = update,
@@ -340,9 +332,7 @@ cloudi_service_handle_info(#crdt_event{type = update,
              sender_id = SenderIdRequest,
              response = {_, _}} = RequestValue,
     ok = sender_only(fun() ->
-        ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
-        erlang:send_after(ResponseTimeout, Service,
-                          {response_timeout, RequestKey})
+        ok = response_timeout(TimeoutLast, TransIdLast, RequestKey, Service)
     end, SenderId, SenderIdRequest),
     {noreply, State};
 cloudi_service_handle_info(#crdt_event{id = {senders_crdt_merge,
@@ -593,6 +583,12 @@ response_return([{RequestType, Timeout, TransId, Pid} | Pending],
     end,
     response_return(Pending, Name, Pattern, ResponseInfo, Response,
                     MicroSecondsNow, Dispatcher).
+
+response_timeout(TimeoutLast, TransIdLast, RequestKey, Service) ->
+    ResponseTimeout = timeout_current(TimeoutLast, TransIdLast),
+    erlang:send_after(ResponseTimeout, Service,
+                      {response_timeout, RequestKey}),
+    ok.
 
 response_timeout_crdt(#request{timeout_last = TimeoutLast,
                                trans_id_last = TransIdLast} = RequestValue) ->

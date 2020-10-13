@@ -187,9 +187,15 @@ destroy(#cgroups{path = Path,
 %% @end
 %%-------------------------------------------------------------------------
 
+-type new_error_reasons() ::
+    {'version_default', Version :: pos_integer()} |
+    {'path_mounts', Status :: pos_integer(), Output :: list(binary())} |
+    {'path_v1', Status :: pos_integer(), Output :: list(binary())} |
+    {'path_v2', Status :: pos_integer(), Output :: list(binary())}.
+
 -spec new() ->
     {ok, #cgroups{}} |
-    {error, any()}.
+    {error, new_error_reasons()}.
 
 new() ->
     new([]).
@@ -202,7 +208,7 @@ new() ->
 
 -spec new(Options0 :: options()) ->
     {ok, #cgroups{}} |
-    {error, any()}.
+    {error, new_error_reasons()}.
 
 new(Options0) ->
     {VersionDefault,

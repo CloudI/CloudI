@@ -614,6 +614,9 @@ subtract_32(X0, X1)
     when is_integer(X0), is_integer(X1) ->
     (X0 - X1) band ?BITMASK32.
 
+-spec iodata_to_list(IOData :: iodata()) ->
+    {list(byte()), non_neg_integer()}.
+
 iodata_to_list(IOData)
     when is_binary(IOData) ->
     {erlang:binary_to_list(IOData), byte_size(IOData)};
@@ -621,6 +624,12 @@ iodata_to_list(IOData)
     when is_list(IOData) ->
     iodata_to_list([], IOData, 0).
 
+iodata_to_list(ListOut, [], Size) ->
+    {lists:reverse(ListOut), Size};
+iodata_to_list(ListOut, Binary, Size)
+    when is_binary(Binary) ->
+    iodata_to_list(lists:reverse(erlang:binary_to_list(Binary), ListOut),
+                   [], Size + byte_size(Binary));
 iodata_to_list(ListOut, [Binary | IODataIn], Size)
     when is_binary(Binary) ->
     iodata_to_list(lists:reverse(erlang:binary_to_list(Binary), ListOut),
@@ -629,14 +638,9 @@ iodata_to_list(ListOut0, [List | IODataIn], Size0)
     when is_list(List) ->
     {ListOutN, SizeN} = iodata_to_list(ListOut0, List, Size0),
     iodata_to_list(lists:reverse(ListOutN), IODataIn, SizeN);
-iodata_to_list(ListOut, [], Size) ->
-    {lists:reverse(ListOut), Size};
 iodata_to_list(ListOut, [Byte | IOData], Size)
     when is_integer(Byte), Byte >= 0, Byte =< 255 ->
-    iodata_to_list([Byte | ListOut], IOData, Size + 1);
-iodata_to_list(ListOut, Byte, Size)
-    when is_integer(Byte), Byte >= 0, Byte =< 255 ->
-    {lists:reverse([Byte | ListOut]), Size + 1}.
+    iodata_to_list([Byte | ListOut], IOData, Size + 1).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

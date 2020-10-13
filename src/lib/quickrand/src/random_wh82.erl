@@ -3,7 +3,7 @@
 
 %% Modified version of random module (in Erlang/OTP before version 20.0)
 
-%% Copyright (c) 2016-2017 Michael Truog All rights reserved.
+%% Copyright (c) 2016-2020 Michael Truog All rights reserved.
 
 %%
 %% %CopyrightBegin%
@@ -49,7 +49,7 @@
 
 %%-----------------------------------------------------------------------
 
--spec seed0() -> seed().
+-spec seed0() -> {3172, 9814, 20125}.
 
 seed0() ->
     {3172, 9814, 20125}.
@@ -85,9 +85,6 @@ seed(A1, A2, A3)
         {(A1 rem (?PRIME1 - 1)) + 1,
          (A2 rem (?PRIME2 - 1)) + 1,
          (A3 rem (?PRIME3 - 1)) + 1}).
-
--spec reseed(seed()) ->
-    seed().
 
 reseed({A1, A2, A3}) ->
     case seed(A1, A2, A3) of

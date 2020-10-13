@@ -280,17 +280,8 @@ binary_to_term(B) ->
                        Correct :: nonempty_string()) ->
     boolean().
 
-compare_constant(Test, [_ | _] = Correct) ->
-    compare_constant(Test, Correct, 0) =:= 0.
-
-compare_constant([], [], Bits) ->
-    Bits;
-compare_constant([], [_ | _], _) ->
-    1;
-compare_constant([C | Test], [] = Correct, Bits) ->
-    compare_constant(Test, Correct, Bits bor (C bxor -1));
-compare_constant([C1 | Test], [C2 | Correct], Bits) ->
-    compare_constant(Test, Correct, Bits bor (C1 bxor C2)).
+compare_constant(Test, Correct) ->
+    compare_constant_list(Test, Correct).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -304,8 +295,19 @@ compare_constant([C1 | Test], [C2 | Correct], Bits) ->
                             Correct :: nonempty_string()) ->
     boolean().
 
-compare_constant_list(Test, Correct) ->
-    compare_constant(Test, Correct).
+compare_constant_list(_, []) ->
+    erlang:exit(badarg);
+compare_constant_list(Test, [_ | _] = Correct) ->
+    compare_constant_list(Test, Correct, 0, -1) =:= 0.
+
+compare_constant_list([], [], Bits, _) ->
+    Bits;
+compare_constant_list([], [_ | _], _, False) ->
+    False;
+compare_constant_list([C | Test], [] = Correct, Bits, False) ->
+    compare_constant_list(Test, Correct, Bits bor (C bxor False), False);
+compare_constant_list([C1 | Test], [C2 | Correct], Bits, False) ->
+    compare_constant_list(Test, Correct, Bits bor (C1 bxor C2), False).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -315,13 +317,24 @@ compare_constant_list(Test, Correct) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec compare_constant_binary(Test :: binary(),
-                              Correct :: binary()) ->
+-spec compare_constant_binary(Test :: <<_:_*8>>,
+                              Correct :: <<_:8, _:_*8>>) ->
     boolean().
 
+compare_constant_binary(_, <<>>) ->
+    erlang:exit(badarg);
 compare_constant_binary(Test, Correct) ->
-    compare_constant(erlang:binary_to_list(Test),
-                     erlang:binary_to_list(Correct)).
+    compare_constant_binary(Test, Correct, 0, -1) =:= 0.
+
+compare_constant_binary(<<>>, <<>>, Bits, _) ->
+    Bits;
+compare_constant_binary(<<>>, <<_:8, _/binary>>, _, False) ->
+    False;
+compare_constant_binary(<<C:8, Test/binary>>, <<>> = Correct, Bits, False) ->
+    compare_constant_binary(Test, Correct, Bits bor (C bxor False), False);
+compare_constant_binary(<<C1:8, Test/binary>>,
+                        <<C2:8, Correct/binary>>, Bits, False) ->
+    compare_constant_binary(Test, Correct, Bits bor (C1 bxor C2), False).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -904,6 +917,8 @@ module_test_() ->
         {"afterr tests", ?_assertOk(t_afterr())},
         {"beforel tests", ?_assertOk(t_beforel())},
         {"beforer tests", ?_assertOk(t_beforer())},
+        {"compare_constant_binary", ?_assertOk(t_compare_constant_binary())},
+        {"compare_constant_list", ?_assertOk(t_compare_constant_list())},
         {"findl tests", ?_assertOk(t_findl())},
         {"findr tests", ?_assertOk(t_findr())},
         {"join tests", ?_assertOk(t_join())},
@@ -949,6 +964,22 @@ t_beforer() ->
     "this-is-all" = beforer($-, "this-is-all-input", input),
     "this-is-all" = beforer($-, "this-is-all-input", empty),
     "this-is-all" = beforer($-, "this-is-all-input"),
+    ok.
+
+t_compare_constant_binary() ->
+    true = compare_constant_binary(<<"abc">>, <<"abc">>),
+    false = compare_constant_binary(<<"abc">>, <<"abd">>),
+    false = compare_constant_binary(<<"abc">>, <<"abcd">>),
+    false = compare_constant_binary(<<"abcde">>, <<"abcd">>),
+    true = compare_constant_binary(<<"abcd">>, <<"abcd">>),
+    ok.
+
+t_compare_constant_list() ->
+    true = compare_constant_list("abc", "abc"),
+    false = compare_constant_list("abc", "abd"),
+    false = compare_constant_list("abc", "abcd"),
+    false = compare_constant_list("abcde", "abcd"),
+    true = compare_constant_list("abcd", "abcd"),
     ok.
 
 t_findl() ->

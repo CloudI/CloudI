@@ -132,6 +132,18 @@
               timestamp_type/0,
               state/0]).
 
+-type iso8601() ::
+    nonempty_list($0..$9 | $T | $- | $: | $. | $Z).
+-type uuid_string_list() ::
+    nonempty_list($0..$9 | $a..$f | $-).
+-type uuid_string_binary() ::
+    <<_:256>> | <<_:288>>.
+-type uuid_string() :: uuid_string_list() | uuid_string_binary().
+-export_type([iso8601/0,
+              uuid_string_list/0,
+              uuid_string_binary/0,
+              uuid_string/0]).
+
 -include("uuid.hrl").
 
 % Erlang Binary Term Format constants
@@ -318,7 +330,8 @@ get_v1(#uuid_state{variant = ordered,
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the current time value in a manner consistent with the v1 UUID.===
-%% The result is an integer in microseconds.
+%% The result is an integer in microseconds since the UNIX epoch.
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -331,7 +344,8 @@ get_v1_time() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the current time value in a manner consistent with the v1 UUID.===
-%% The result is an integer in microseconds.
+%% The result is an integer in microseconds since the UNIX epoch.
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -369,7 +383,7 @@ get_v1_time(Value)
           _:48>> ->
             <<TimeHigh:48, TimeLow:12>>
     end,
-    (Time - ?GREGORIAN_EPOCH_OFFSET) div 10. % microseconds since UNIX epoch
+    (Time - ?GREGORIAN_EPOCH_OFFSET) div 10.
 -else.
 get_v1_time(erlang) ->
     timestamp(erlang_now);
@@ -401,7 +415,7 @@ get_v1_time(Value)
           _:48>> ->
             <<TimeHigh:48, TimeLow:12>>
     end,
-    (Time - ?GREGORIAN_EPOCH_OFFSET) div 10. % microseconds since UNIX epoch
+    (Time - ?GREGORIAN_EPOCH_OFFSET) div 10.
 -endif.
 
 %%-------------------------------------------------------------------------
@@ -413,7 +427,7 @@ get_v1_time(Value)
 
 -spec get_v1_datetime(Value :: timestamp_type() | state() | uuid() |
                                erlang:timestamp()) ->
-    string().
+    iso8601().
 
 get_v1_datetime({_, _, MicroSeconds} = Timestamp) ->
     {{DateYYYY, DateMM, DateDD},
@@ -447,7 +461,7 @@ get_v1_datetime(Value) ->
 -spec get_v1_datetime(Value :: timestamp_type() | state() | uuid() |
                                erlang:timestamp(),
                       MicroSecondsOffset :: integer()) ->
-    string().
+    iso8601().
 
 get_v1_datetime(Value, MicroSecondsOffset)
     when is_integer(MicroSecondsOffset) ->
@@ -510,7 +524,7 @@ get_v3(Data) when is_binary(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v3(Namespace :: dns | url | oid | x500 | binary(),
-             Data :: binary() | iolist()) ->
+             Data :: iodata()) ->
     uuid().
 
 get_v3(dns, Data) ->
@@ -522,13 +536,7 @@ get_v3(oid, Data) ->
 get_v3(x500, Data) ->
     get_v3(?UUID_NAMESPACE_X500, Data);
 get_v3(Namespace, Data) when is_binary(Namespace) ->
-    DataBin = if
-        is_binary(Data) ->
-            Data;
-        is_list(Data) ->
-            erlang:iolist_to_binary(Data)
-    end,
-    get_v3(<<Namespace/binary, DataBin/binary>>).
+    get_v3(erlang:iolist_to_binary([Namespace, Data])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -560,7 +568,7 @@ get_v3_compat(Data) when is_binary(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v3_compat(Namespace :: dns | url | oid | x500 | binary(),
-                    Data :: binary() | iolist()) ->
+                    Data :: iodata()) ->
     uuid().
 
 get_v3_compat(dns, Data) ->
@@ -572,13 +580,7 @@ get_v3_compat(oid, Data) ->
 get_v3_compat(x500, Data) ->
     get_v3_compat(?UUID_NAMESPACE_X500, Data);
 get_v3_compat(Namespace, Data) when is_binary(Namespace) ->
-    DataBin = if
-        is_binary(Data) ->
-            Data;
-        is_list(Data) ->
-            erlang:iolist_to_binary(Data)
-    end,
-    get_v3_compat(<<Namespace/binary, DataBin/binary>>).
+    get_v3_compat(erlang:iolist_to_binary([Namespace, Data])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -710,7 +712,7 @@ get_v5(Data) when is_binary(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v5(Namespace :: dns | url | oid | x500 | binary(),
-             Data :: binary() | iolist()) ->
+             Data :: iodata()) ->
     uuid().
 
 get_v5(dns, Data) ->
@@ -722,13 +724,7 @@ get_v5(oid, Data) ->
 get_v5(x500, Data) ->
     get_v5(?UUID_NAMESPACE_X500, Data);
 get_v5(Namespace, Data) when is_binary(Namespace) ->
-    DataBin = if
-        is_binary(Data) ->
-            Data;
-        is_list(Data) ->
-            erlang:iolist_to_binary(Data)
-    end,
-    get_v5(<<Namespace/binary, DataBin/binary>>).
+    get_v5(erlang:iolist_to_binary([Namespace, Data])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -760,7 +756,7 @@ get_v5_compat(Data) when is_binary(Data) ->
 %%-------------------------------------------------------------------------
 
 -spec get_v5_compat(Namespace :: dns | url | oid | x500 | binary(),
-                    Data :: binary() | iolist()) ->
+                    Data :: iodata()) ->
     uuid().
 
 get_v5_compat(dns, Data) ->
@@ -772,13 +768,7 @@ get_v5_compat(oid, Data) ->
 get_v5_compat(x500, Data) ->
     get_v5_compat(?UUID_NAMESPACE_X500, Data);
 get_v5_compat(Namespace, Data) when is_binary(Namespace) ->
-    DataBin = if
-        is_binary(Data) ->
-            Data;
-        is_list(Data) ->
-            erlang:iolist_to_binary(Data)
-    end,
-    get_v5_compat(<<Namespace/binary, DataBin/binary>>).
+    get_v5_compat(erlang:iolist_to_binary([Namespace, Data])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -805,7 +795,7 @@ is_v5(_) ->
 %%-------------------------------------------------------------------------
 
 -spec uuid_to_list(uuid()) ->
-    iolist().
+    nonempty_list(non_neg_integer()).
 
 uuid_to_list(<<B1:32/unsigned-integer,
                B2:16/unsigned-integer,
@@ -821,7 +811,7 @@ uuid_to_list(<<B1:32/unsigned-integer,
 %%-------------------------------------------------------------------------
 
 -spec uuid_to_string(Value :: uuid()) ->
-    string().
+    uuid_string_list().
 
 uuid_to_string(Value) ->
     uuid_to_string(Value, standard).
@@ -836,7 +826,7 @@ uuid_to_string(Value) ->
                      Option :: standard | nodash |
                                list_standard | list_nodash |
                                binary_standard | binary_nodash) ->
-    string() | binary().
+    uuid_string().
 
 uuid_to_string(<<Value:128/unsigned-integer>>, standard) ->
     [N01, N02, N03, N04, N05, N06, N07, N08,
@@ -892,7 +882,7 @@ uuid_to_string(<<Value:128/unsigned-integer>>, binary_nodash) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec string_to_uuid(string() | binary()) ->
+-spec string_to_uuid(uuid_string()) ->
     uuid().
 
 string_to_uuid([N01, N02, N03, N04, N05, N06, N07, N08, $-,
@@ -1100,7 +1090,7 @@ increment(#uuid_state{variant = Variant,
 %%-------------------------------------------------------------------------
 
 -spec mac_address() ->
-    list(non_neg_integer()).
+    nonempty_list(non_neg_integer()).
 
 mac_address() ->
     {ok, Ifs} = inet:getifaddrs(),

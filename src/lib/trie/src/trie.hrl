@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@
 %%%------------------------------------------------------------------------
 
 -ifdef(MODE_LIST).
--define(TYPE_NAME, string).
+-define(TYPE_NAME, nonempty_string()).
 -define(TYPE_EMPTY, []).
 -define(TYPE_CHECK(V), is_list(V)).
 -define(TYPE_H0T0, [H | T]).
@@ -52,7 +52,7 @@
 -define(TYPE_PREFIX(X, Y), lists:prefix(X, Y)).
 -else.
 -ifdef(MODE_BINARY).
--define(TYPE_NAME, binary).
+-define(TYPE_NAME, <<_:8, _:_*8>>).
 -define(TYPE_EMPTY, <<>>).
 -define(TYPE_CHECK(V), is_binary(V)).
 -define(TYPE_H0T0, <<H:8, T/binary>>).
@@ -90,7 +90,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec append(Key :: ?TYPE_NAME(),
+-spec append(Key :: ?TYPE_NAME,
              Value :: any(),
              Node :: trie()) -> nonempty_trie().
 
@@ -104,7 +104,7 @@ append(Key, Value, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec append_list(Key :: ?TYPE_NAME(),
+-spec append_list(Key :: ?TYPE_NAME,
                   ValueList :: list(),
                   Node :: trie()) -> nonempty_trie().
 
@@ -117,7 +117,7 @@ append_list(Key, ValueList, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec erase(Key :: ?TYPE_NAME(),
+-spec erase(Key :: ?TYPE_NAME,
             Node :: trie()) -> trie().
 
 erase(_, ?TYPE_EMPTY = Node) ->
@@ -164,8 +164,8 @@ erase_node(H, T, {I0, I1, Data} = OldNode)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec erase_similar(Similar :: ?TYPE_NAME(),
-                    Node :: trie()) -> list(?TYPE_NAME()).
+-spec erase_similar(Similar :: ?TYPE_NAME,
+                    Node :: trie()) -> list(?TYPE_NAME).
 
 erase_similar(Similar, Node) ->
     fold_similar(Similar, fun(Key, _, N) -> erase(Key, N) end, Node, Node).
@@ -176,7 +176,7 @@ erase_similar(Similar, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fetch(?TYPE_NAME(),
+-spec fetch(?TYPE_NAME,
             nonempty_trie()) -> any().
 
 fetch(?TYPE_H0T0, {_, _, _} = Node) ->
@@ -209,7 +209,7 @@ fetch_node(H, T, {I0, I1, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fetch_keys(Node :: trie()) -> list(?TYPE_NAME()).
+-spec fetch_keys(Node :: trie()) -> list(?TYPE_NAME).
 
 fetch_keys(Node) ->
     foldr(fun(Key, _, L) -> [Key | L] end, [], Node).
@@ -220,8 +220,8 @@ fetch_keys(Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fetch_keys_similar(Similar :: ?TYPE_NAME(),
-                         Node :: trie()) -> list(?TYPE_NAME()).
+-spec fetch_keys_similar(Similar :: ?TYPE_NAME,
+                         Node :: trie()) -> list(?TYPE_NAME).
 
 fetch_keys_similar(Similar, Node) ->
     foldr_similar(Similar, fun(Key, _, L) -> [Key | L] end, [], Node).
@@ -232,7 +232,7 @@ fetch_keys_similar(Similar, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec filter(F :: fun((?TYPE_NAME(), any()) -> boolean()),
+-spec filter(F :: fun((?TYPE_NAME, any()) -> boolean()),
              Node :: trie()) -> trie().
 
 filter(F, ?TYPE_EMPTY = Node) when is_function(F, 2) ->
@@ -302,7 +302,7 @@ filter_element(F, I, Offset, Key, Data) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec find(?TYPE_NAME(), trie()) -> {ok, any()} | 'error'.
+-spec find(?TYPE_NAME, trie()) -> {ok, any()} | 'error'.
 
 find(_, ?TYPE_EMPTY) ->
     error;
@@ -357,7 +357,7 @@ find_node(H, T, {I0, _, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
--spec find_prefix(?TYPE_NAME(), trie()) -> {ok, any()} | 'prefix' | 'error'.
+-spec find_prefix(?TYPE_NAME, trie()) -> {ok, any()} | 'prefix' | 'error'.
 
 find_prefix(?TYPE_H0_, {I0, I1, _})
     when H < I0; H > I1 ->
@@ -405,9 +405,9 @@ find_prefix(_, ?TYPE_EMPTY) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec find_prefix_longest(Match :: ?TYPE_NAME(),
+-spec find_prefix_longest(Match :: ?TYPE_NAME,
                           Node :: trie()) ->
-    {ok, ?TYPE_NAME(), any()} | 'error'.
+    {ok, ?TYPE_NAME, any()} | 'error'.
 
 find_prefix_longest(Match, Node) when is_tuple(Node) ->
     find_prefix_longest(Match, ?TYPE_EMPTY, error, Node);
@@ -461,9 +461,9 @@ find_prefix_longest(_Match, _Key, error, _Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec find_prefixes(Match :: ?TYPE_NAME(),
+-spec find_prefixes(Match :: ?TYPE_NAME,
                       Node :: trie()) ->
-    list({?TYPE_NAME(), any()}).
+    list({?TYPE_NAME, any()}).
 
 find_prefixes(Match, Node) when is_tuple(Node) ->
     find_prefixes(Match, ?TYPE_EMPTY, [], Node);
@@ -511,7 +511,7 @@ find_prefixes(_Match, _Key, Acc, _Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fold(F :: fun((?TYPE_NAME(), any(), any()) -> any()),
+-spec fold(F :: fun((?TYPE_NAME, any(), any()) -> any()),
            A :: any(),
            Node :: trie()) -> any().
 
@@ -525,7 +525,7 @@ fold(F, A, Node) when is_function(F, 3) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec foldl(F :: fun((?TYPE_NAME(), any(), any()) -> any()),
+-spec foldl(F :: fun((?TYPE_NAME, any(), any()) -> any()),
             A :: any(),
             Node :: trie()) -> any().
 
@@ -574,7 +574,7 @@ foldl_element(F, A, I, N, Offset, Key, Data) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec foldr(F :: fun((?TYPE_NAME(), any(), any()) -> any()),
+-spec foldr(F :: fun((?TYPE_NAME, any(), any()) -> any()),
             A :: any(),
             Node :: trie()) -> any().
 
@@ -623,8 +623,8 @@ foldr_element(F, A, I, Offset, Key, Data) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fold_similar(Similar :: ?TYPE_NAME(),
-                   F :: fun((?TYPE_NAME(), any(), any()) -> any()),
+-spec fold_similar(Similar :: ?TYPE_NAME,
+                   F :: fun((?TYPE_NAME, any(), any()) -> any()),
                    A :: any(),
                    Node :: trie()) -> any().
 
@@ -638,8 +638,8 @@ fold_similar(Similar, F, A, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec foldl_similar(Similar :: ?TYPE_NAME(),
-                    F :: fun((?TYPE_NAME(), any(), any()) -> any()),
+-spec foldl_similar(Similar :: ?TYPE_NAME,
+                    F :: fun((?TYPE_NAME, any(), any()) -> any()),
                     A :: any(),
                     Node :: trie()) -> any().
 
@@ -661,8 +661,8 @@ foldl_similar(?TYPE_H0T0, F, A, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec foldr_similar(Similar :: ?TYPE_NAME(),
-                    F :: fun((?TYPE_NAME(), any(), any()) -> any()),
+-spec foldr_similar(Similar :: ?TYPE_NAME,
+                    F :: fun((?TYPE_NAME, any(), any()) -> any()),
                     A :: any(),
                     Node :: trie()) -> any().
 
@@ -738,7 +738,7 @@ fold_similar_element(foldr, F, A, Key, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec foreach(F :: fun((?TYPE_NAME(), any()) -> any()),
+-spec foreach(F :: fun((?TYPE_NAME, any()) -> any()),
               Node :: trie()) -> any().
 
 foreach(F, ?TYPE_EMPTY) when is_function(F, 2) ->
@@ -784,7 +784,7 @@ foreach_element(F, I, N, Offset, Key, Data) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec from_list(list()) -> trie().
+-spec from_list(list(?TYPE_NAME | tuple())) -> trie().
 
 from_list(L) ->
     new(L).
@@ -795,7 +795,7 @@ from_list(L) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec is_key(?TYPE_NAME(), trie()) -> boolean().
+-spec is_key(?TYPE_NAME, trie()) -> boolean().
 
 is_key(_, ?TYPE_EMPTY) ->
     false;
@@ -838,7 +838,7 @@ is_key_node(H, T, {I0, _, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
--spec map(F :: fun((?TYPE_NAME(), any()) -> any()),
+-spec map(F :: fun((?TYPE_NAME, any()) -> any()),
           Node :: trie()) -> trie().
 
 map(F, ?TYPE_EMPTY = Node) when is_function(F, 2) ->
@@ -889,7 +889,7 @@ map_element(F, I, Offset, Key, Data) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec merge(F :: fun((?TYPE_NAME(), any(), any()) -> any()),
+-spec merge(F :: fun((?TYPE_NAME, any(), any()) -> any()),
             Node1 :: trie(),
             Node2 :: trie()) -> trie().
 
@@ -926,7 +926,7 @@ new() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new(L :: list()) -> trie().
+-spec new(L :: list(?TYPE_NAME | tuple())) -> trie().
 
 new(L) ->
     new_instance(L, new()).
@@ -962,7 +962,7 @@ new_instance_state(?TYPE_H0T0, V1, V0)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec prefix(Key :: ?TYPE_NAME(),
+-spec prefix(Key :: ?TYPE_NAME,
              Value :: any(),
              Node :: trie()) -> nonempty_trie().
 
@@ -986,7 +986,7 @@ size(Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec store(Key :: ?TYPE_NAME(),
+-spec store(Key :: ?TYPE_NAME,
             Node :: trie()) -> nonempty_trie().
 
 store(Key, Node) ->
@@ -998,7 +998,7 @@ store(Key, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec store(Key :: ?TYPE_NAME(),
+-spec store(Key :: ?TYPE_NAME,
             NewValue :: any(),
             Node :: trie()) -> nonempty_trie().
 
@@ -1066,7 +1066,7 @@ store_node(H, ?TYPE_H1T1 = T, NewValue, {I0, I1, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
--spec take(Key :: ?TYPE_NAME(),
+-spec take(Key :: ?TYPE_NAME,
            Node :: trie()) ->
     {any(), trie()} | 'error'.
 
@@ -1123,7 +1123,7 @@ take_node(H, T, {I0, I1, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
--spec to_list(Node :: trie()) -> list({?TYPE_NAME(), any()}).
+-spec to_list(Node :: trie()) -> list({?TYPE_NAME, any()}).
 
 to_list(Node) ->
     foldr(fun (Key, Value, L) -> [{Key, Value} | L] end, [], Node).
@@ -1134,8 +1134,8 @@ to_list(Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec to_list_similar(Similar :: ?TYPE_NAME(),
-                      Node :: trie()) -> list({?TYPE_NAME(), any()}).
+-spec to_list_similar(Similar :: ?TYPE_NAME,
+                      Node :: trie()) -> list({?TYPE_NAME, any()}).
 
 to_list_similar(Similar, Node) ->
     foldr_similar(Similar,
@@ -1147,7 +1147,7 @@ to_list_similar(Similar, Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update(?TYPE_NAME(),
+-spec update(?TYPE_NAME,
              F :: fun((any()) -> any()),
              nonempty_trie()) -> nonempty_trie().
 
@@ -1184,7 +1184,7 @@ update_node(H, T, F, {I0, I1, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update(Key :: ?TYPE_NAME(),
+-spec update(Key :: ?TYPE_NAME,
              F :: fun((any()) -> any()),
              Initial :: any(),
              Node :: trie()) -> nonempty_trie().
@@ -1261,7 +1261,7 @@ update_node(H, T, F, Initial, {I0, I1, Data})
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update_counter(Key :: ?TYPE_NAME(),
+-spec update_counter(Key :: ?TYPE_NAME,
                      Increment :: number(),
                      Node :: trie()) -> nonempty_trie().
 

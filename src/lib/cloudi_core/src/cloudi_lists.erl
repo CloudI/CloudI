@@ -114,7 +114,7 @@ index(Item, [_ | T], I) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec iodata_to_list(iodata()) ->
+-spec iodata_to_list(IOData :: iodata()) ->
     {Size :: non_neg_integer(), Bytes :: list(byte())}.
 
 iodata_to_list(IOData)
@@ -124,6 +124,12 @@ iodata_to_list(IOData)
     when is_list(IOData) ->
     iodata_to_list([], IOData, 0).
 
+iodata_to_list(ListOut, [], Size) ->
+    {Size, lists:reverse(ListOut)};
+iodata_to_list(ListOut, Binary, Size)
+    when is_binary(Binary) ->
+    iodata_to_list(lists:reverse(erlang:binary_to_list(Binary), ListOut),
+                   [], Size + byte_size(Binary));
 iodata_to_list(ListOut, [Binary | IODataIn], Size)
     when is_binary(Binary) ->
     iodata_to_list(lists:reverse(erlang:binary_to_list(Binary), ListOut),
@@ -132,14 +138,9 @@ iodata_to_list(ListOut0, [List | IODataIn], Size0)
     when is_list(List) ->
     {SizeN, ListOutN} = iodata_to_list(ListOut0, List, Size0),
     iodata_to_list(lists:reverse(ListOutN), IODataIn, SizeN);
-iodata_to_list(ListOut, [], Size) ->
-    {Size, lists:reverse(ListOut)};
 iodata_to_list(ListOut, [Byte | IOData], Size)
     when is_integer(Byte), Byte >= 0, Byte =< 255 ->
-    iodata_to_list([Byte | ListOut], IOData, Size + 1);
-iodata_to_list(ListOut, Byte, Size)
-    when is_integer(Byte), Byte >= 0, Byte =< 255 ->
-    {Size + 1, lists:reverse([Byte | ListOut])}.
+    iodata_to_list([Byte | ListOut], IOData, Size + 1).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -306,6 +307,8 @@ t_index() ->
 t_iodata_to_list() ->
     {10, "abcdefghij"} = iodata_to_list([<<"abc">>, $d, "ef",
                                          [[$g]], ["hi", $j]]),
+    {10, "abcdefghij"} = iodata_to_list([[$a, $b, $c, $d] |
+                                         <<"efghij">>]),
     {10, "abcdefghij"} = iodata_to_list(<<"abcdefghij">>),
     ok.
 
