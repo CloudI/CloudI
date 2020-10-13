@@ -93,6 +93,7 @@
 -define(ERLANG_OTP_VERSION_18_FEATURES, true).
 -ifdef(ERLANG_OTP_VERSION_18).
 -else.
+-define(ERLANG_OTP_VERSION_19_FEATURES, true).
 -ifdef(ERLANG_OTP_VERSION_19).
 -else.
 -define(ERLANG_OTP_VERSION_20_FEATURES, true).
@@ -132,10 +133,17 @@
               timestamp_type/0,
               state/0]).
 
+-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
 -type iso8601() ::
     nonempty_list($0..$9 | $T | $- | $: | $. | $Z).
 -type uuid_string_list() ::
     nonempty_list($0..$9 | $a..$f | $-).
+-else.
+-type iso8601() ::
+    nonempty_string().
+-type uuid_string_list() ::
+    nonempty_string().
+-endif.
 -type uuid_string_binary() ::
     <<_:256>> | <<_:288>>.
 -type uuid_string() :: uuid_string_list() | uuid_string_binary().

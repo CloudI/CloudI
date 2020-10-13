@@ -5,6 +5,14 @@
 
     * Fix dialyzer underspecs errors
     * Improve cloudi_string:compare_constant functions
+    * Update cgroups
+    * Update cpg
+    * Update keys1value
+    * Update pqueue
+    * Update quickrand
+    * Update reltool_util
+    * Update trie
+    * Update uuid
 
 2020-10-10 Michael Truog   <mjtruog at protonmail dot com>
 

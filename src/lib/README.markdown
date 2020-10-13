@@ -10,8 +10,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang native cgroups interface`
 
 - `https://github.com/okeuday/cgroups`
-- `commit e9cab4b1de2d9fc4fefb2e38bf3e44e105373e65`
-- `Fri Jul 10 08:10:15 UTC 2020`
+- `commit 321061e56558792ba021d21f996275295e3c1651`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `cpg`
@@ -19,8 +19,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit 69e53ee5373c1aa7d32d0455d2b02997a9db494d`
-- `Sun Oct 11 04:08:48 UTC 2020`
+- `commit 778083b9376fa80a6e55f9fe73740602c0ed501e`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `erlang_term`
@@ -46,8 +46,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang set associative map for key lists`
 
 - `https://github.com/okeuday/keys1value`
-- `commit ee49a1ca46117694c9b704b29ce56be114d374e2 (v2.0.0)`
-- `Thu Jun  4 18:14:16 UTC 2020`
+- `commit b562c8d6ea949797bc0e6b7ee329302f6acbe391`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `pqueue`
@@ -55,8 +55,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Priority Queues`
 
 - `https://github.com/okeuday/pqueue`
-- `commit 6990b3dc80cf0538ff24fb8ca7474cbc02c1ffd9`
-- `Fri Jun 12 23:20:10 UTC 2020`
+- `commit ebfe8e76e87f05caae84827334662726629f5f54`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `quickrand`
@@ -64,8 +64,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit 0b2e8a208db5cbdcf2e3bf1ac8f7cbdcc577d565`
-- `Fri Jun 12 23:20:10 UTC 2020`
+- `commit 6fc9c094e11d7d7430da9039d1dea648f12d42f0`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `reltool_util`
@@ -73,8 +73,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit 91e35eb7a8ca20ddd86f853d92d04b37867fc88e`
-- `Sun Jul  5 00:18:32 UTC 2020`
+- `commit 4b428e8a9e1931617abe7592e9b55fab0f334b76`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `supool`
@@ -100,8 +100,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
-- `commit 259ff77bc20917ecf1432b8b1a7cb21b51d89978`
-- `Fri Jun 12 23:20:10 UTC 2020`
+- `commit 3099d39ee2a248c633c43ae9722c1b7908e74cfa`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `uuid`
@@ -109,8 +109,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
-- `commit dc39dce18d6fa29580c976fb96b96f6bd2f78f2d`
-- `Fri Jun 12 23:20:10 UTC 2020`
+- `commit 7a0824a4158b5a5122ae660f59e7eac5e9138505`
+- `Tue Oct 13 03:19:15 UTC 2020`
 - `MIT`
 
 `varpool`
