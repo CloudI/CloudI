@@ -298,16 +298,21 @@ compare_constant(Test, Correct) ->
 compare_constant_list(_, []) ->
     erlang:exit(badarg);
 compare_constant_list(Test, [_ | _] = Correct) ->
-    compare_constant_list(Test, Correct, 0, -1) =:= 0.
+    compare_constant_list(Test, Correct,
+                          [-1 || _ <- Test], [], 0) =:= 0.
 
-compare_constant_list([], [], Bits, _) ->
+compare_constant_list([], [], _, _, Bits) ->
     Bits;
-compare_constant_list([], [_ | _], _, False) ->
-    False;
-compare_constant_list([C | Test], [] = Correct, Bits, False) ->
-    compare_constant_list(Test, Correct, Bits bor (C bxor False), False);
-compare_constant_list([C1 | Test], [C2 | Correct], Bits, False) ->
-    compare_constant_list(Test, Correct, Bits bor (C1 bxor C2), False).
+compare_constant_list([], [_ | _], _, _, _) ->
+    -1;
+compare_constant_list([C1 | Test], [] = Correct,
+                      [C2 | Busy], BusyEmpty, Bits) ->
+    compare_constant_list(Test, Correct,
+                          Busy, BusyEmpty, Bits bor (C1 bxor C2));
+compare_constant_list([C1 | Test], [C2 | Correct],
+                      Busy, [] = BusyEmpty, Bits) ->
+    compare_constant_list(Test, Correct,
+                          Busy, BusyEmpty, Bits bor (C1 bxor C2)).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -324,17 +329,21 @@ compare_constant_list([C1 | Test], [C2 | Correct], Bits, False) ->
 compare_constant_binary(_, <<>>) ->
     erlang:exit(badarg);
 compare_constant_binary(Test, Correct) ->
-    compare_constant_binary(Test, Correct, 0, -1) =:= 0.
+    compare_constant_binary(Test, Correct,
+                            <<<<255>> || <<_>> <= Test>>, <<>>, 0) =:= 0.
 
-compare_constant_binary(<<>>, <<>>, Bits, _) ->
+compare_constant_binary(<<>>, <<>>, _, _, Bits) ->
     Bits;
-compare_constant_binary(<<>>, <<_:8, _/binary>>, _, False) ->
-    False;
-compare_constant_binary(<<C:8, Test/binary>>, <<>> = Correct, Bits, False) ->
-    compare_constant_binary(Test, Correct, Bits bor (C bxor False), False);
-compare_constant_binary(<<C1:8, Test/binary>>,
-                        <<C2:8, Correct/binary>>, Bits, False) ->
-    compare_constant_binary(Test, Correct, Bits bor (C1 bxor C2), False).
+compare_constant_binary(<<>>, <<_:8, _/binary>>, _, _, _) ->
+    -1;
+compare_constant_binary(<<C1:8, Test/binary>>, <<>> = Correct,
+                        <<C2:8/signed, Busy/binary>>, BusyEmpty, Bits) ->
+    compare_constant_binary(Test, Correct,
+                            Busy, BusyEmpty, Bits bor (C1 bxor C2));
+compare_constant_binary(<<C1:8, Test/binary>>, <<C2:8, Correct/binary>>,
+                        Busy, <<>> = BusyEmpty, Bits) ->
+    compare_constant_binary(Test, Correct,
+                            Busy, BusyEmpty, Bits bor (C1 bxor C2)).
 
 %%-------------------------------------------------------------------------
 %% @doc

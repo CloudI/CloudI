@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -47,30 +47,10 @@
            {recv_asyncs_minimal, 2},
            {recv_asyncs_minimal, 4}]}).
 
--spec send_async_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                         Name :: cloudi_service:service_name(),
-                         RequestInfo :: any(),
-                         Request :: any(),
-                         Timeout :: cloudi_service:timeout_value_milliseconds(),
-                         Self :: pid()) ->
-    {ok, TransId :: cloudi_service:trans_id()} |
-    {error, timeout}.
-
 send_async_minimal(Dispatcher, Name, RequestInfo, Request,
                    Timeout, Self) ->
     send_async_minimal(Dispatcher, Name, RequestInfo, Request,
                        Timeout, undefined, Self).
-
--spec send_async_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                         Name :: cloudi_service:service_name(),
-                         RequestInfo :: any(),
-                         Request :: any(),
-                         Timeout :: cloudi_service:timeout_value_milliseconds(),
-                         Destination :: cloudi_service:pattern_pid() |
-                                        undefined,
-                         Self :: pid()) ->
-    {ok, TransId :: cloudi_service:trans_id()} |
-    {error, timeout}.
 
 send_async_minimal(Dispatcher, Name, RequestInfo, Request,
                    Timeout, Destination, Self) ->
@@ -87,30 +67,10 @@ send_async_minimal(Dispatcher, Name, RequestInfo, Request,
             {error, timeout}
     end.
 
--spec send_sync_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                        Name :: cloudi_service:service_name(),
-                        RequestInfo :: any(),
-                        Request :: any(),
-                        Timeout :: cloudi_service:timeout_value_milliseconds(),
-                        Self :: pid()) ->
-    {ok, ResponseInfo :: any(), Response :: any()} |
-    {error, timeout}.
-
 send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
                   Timeout, Self) ->
     send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
                       Timeout, undefined, Self).
-
--spec send_sync_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                        Name :: cloudi_service:service_name(),
-                        RequestInfo :: any(),
-                        Request :: any(),
-                        Timeout :: cloudi_service:timeout_value_milliseconds(),
-                        Destination :: cloudi_service:pattern_pid() |
-                                       undefined,
-                        Self :: pid()) ->
-    {ok, ResponseInfo :: any(), Response :: any()} |
-    {error, timeout}.
 
 send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
                   Timeout, Destination, Self) ->
@@ -139,11 +99,6 @@ send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
             {error, timeout}
     end.
 
--spec recv_async_minimal(Timeout :: cloudi_service:timeout_value_milliseconds(),
-                         TransId :: cloudi_service:trans_id()) ->
-    {ok, ResponseInfo :: any(), Response :: any()} |
-    {error, timeout}.
-
 recv_async_minimal(Timeout, TransId) ->
     receive
         {'cloudi_service_return_async',
@@ -158,12 +113,6 @@ recv_async_minimal(Timeout, TransId) ->
         Timeout ->
             {error, timeout}
     end.
-
--spec recv_asyncs_minimal(Timeout :: cloudi:timeout_value_milliseconds(),
-                          TransIdList :: list(cloudi:trans_id())) ->
-    {ok, list({ResponseInfo :: any(),
-               Response :: any(), TransId :: cloudi:trans_id()})} |
-    {error, timeout}.
 
 recv_asyncs_minimal(Timeout, TransIdList) ->
     recv_asyncs_minimal([], erlang:length(TransIdList), TransIdList, Timeout).

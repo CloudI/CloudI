@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_name).
@@ -94,7 +94,7 @@ new(Pattern, Parameters, ParametersSelected, ParametersStrictMatching) ->
 
 -spec parse(Name :: string(),
             Pattern :: string()) ->
-    list(string()) | error.
+    list(nonempty_string()) | error.
 
 parse(Name, Pattern) ->
     cloudi_x_trie:pattern2_parse(Pattern, Name).
@@ -107,7 +107,7 @@ parse(Name, Pattern) ->
 
 -spec parse_with_suffix(Name :: string(),
                         Pattern :: string()) ->
-    {list(string()), string()} | error.
+    {list(nonempty_string()), string()} | error.
 
 parse_with_suffix(Name, Pattern) ->
     cloudi_x_trie:pattern2_parse(Pattern, Name, with_suffix).
@@ -132,8 +132,8 @@ pattern(Pattern) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec suffix(Prefix :: string(),
-             NameOrPattern :: string()) ->
+-spec suffix(Prefix :: nonempty_string(),
+             NameOrPattern :: nonempty_string()) ->
     string().
 
 suffix([PrefixC | _] = Prefix, [NameOrPatternC | _] = NameOrPattern)

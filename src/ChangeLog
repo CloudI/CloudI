@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix dialyzer underspecs errors
+    * Improve cloudi_string:compare_constant functions
+
 2020-10-12 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix dialyzer underspecs errors

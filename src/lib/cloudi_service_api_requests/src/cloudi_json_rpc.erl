@@ -137,17 +137,12 @@ error_internal_error(Id) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec request_to_term(Data :: binary() | string()) ->
+-spec request_to_term(Data :: binary()) ->
     {method(), params(), id()}.
 
-request_to_term(Data) ->
-    DataBin = if
-        is_list(Data) ->
-            erlang:list_to_binary(Data);
-        is_binary(Data) ->
-            Data
-    end,
-    RPC0 = cloudi_x_jsx:decode(DataBin, [{return_maps, false}]),
+request_to_term(Data)
+    when is_binary(Data) ->
+    RPC0 = cloudi_x_jsx:decode(Data, [{return_maps, false}]),
     {value, {_, Method}, RPCN} = lists:keytake(<<"method">>, 1, RPC0),
     true = is_binary(Method),
     Id = case lists:keyfind(<<"id">>, 1, RPCN) of
@@ -194,10 +189,11 @@ request_to_json(Method, Params, Id)
         is_atom(Method) ->
             erlang:atom_to_binary(Method, utf8);
         is_list(Method) ->
-            erlang:list_to_binary(Method);
+            unicode:characters_to_binary(Method);
         is_binary(Method) ->
             Method
     end,
+    true = MethodBin /= <<>>,
     if
         Params == [] ->
             cloudi_x_jsx:encode([{<<"jsonrpc">>, ?JSONRPC_VERSION},
@@ -216,17 +212,12 @@ request_to_json(Method, Params, Id)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec response_to_term(Data :: binary() | string()) ->
+-spec response_to_term(Data :: binary()) ->
     {result(), error_code() | null, error_message() | null, id()}.
 
-response_to_term(Data) ->
-    DataBin = if
-        is_list(Data) ->
-            erlang:list_to_binary(Data);
-        is_binary(Data) ->
-            Data
-    end,
-    RPC0 = cloudi_x_jsx:decode(DataBin, [{return_maps, false}]),
+response_to_term(Data)
+    when is_binary(Data) ->
+    RPC0 = cloudi_x_jsx:decode(Data, [{return_maps, false}]),
     Id = case lists:keyfind(<<"id">>, 1, RPC0) of
         {_, IdValue} ->
             IdValue;

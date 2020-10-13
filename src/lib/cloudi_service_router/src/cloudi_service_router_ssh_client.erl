@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2018-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router_ssh_client).
@@ -124,7 +124,7 @@ forward(RequestType, Name, Pattern, NewName, RequestInfo, Request,
 -spec new(Options :: options(),
           Environment :: cloudi_environment:lookup(),
           SSH :: cloudi_service_router_ssh_server:state() | undefined) ->
-    state() | undefined.
+    state().
 
 new(Options, Environment, SSH)
     when is_list(Options) ->

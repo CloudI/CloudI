@@ -55,7 +55,7 @@ range(Binary) ->
 %%% From cowboy1, in cowboy1_bstr.erl
 %%%------------------------------------------------------------------------
 
--spec char_to_lower(char()) -> char().
+-spec char_to_lower(byte()) -> byte().
 char_to_lower($A) -> $a;
 char_to_lower($B) -> $b;
 char_to_lower($C) -> $c;
@@ -87,6 +87,9 @@ char_to_lower(Ch) -> Ch.
 %%%------------------------------------------------------------------------
 %%% From cowboy1, in cowboy1_http.erl
 %%%------------------------------------------------------------------------
+
+-type datetime_fun() ::
+    fun((_, _) -> calendar:datetime() | {error, badarg}).
 
 %% @doc Parse an HTTP date (RFC1123, RFC850 or asctime date).
 %% @end
@@ -214,7 +217,7 @@ wkday(_Any, _Fun) ->
     {error, badarg}.
 
 %% We never use it, pretty much just checks the weekday is right.
--spec weekday(binary(), fun()) -> any().
+-spec weekday(binary(), datetime_fun()) -> any().
 weekday(<< "Monday", Rest/binary >>, Fun) ->
     Fun(Rest, <<"Monday">>);
 weekday(<< "Tuesday", Rest/binary >>, Fun) ->
@@ -232,7 +235,7 @@ weekday(<< "Sunday", Rest/binary >>, Fun) ->
 weekday(_Any, _Fun) ->
     {error, badarg}.
 
--spec date1(binary(), fun()) -> any().
+-spec date1(binary(), datetime_fun()) -> calendar:datetime() | {error, badarg}.
 date1(<< D1, D2, " ", M:3/binary, " ", Y1, Y2, Y3, Y4, Rest/binary >>, Fun)
         when D1 >= $0, D1 =< $9, D2 >= $0, D2 =< $9,
              Y1 >= $0, Y1 =< $9, Y2 >= $0, Y2 =< $9,
@@ -250,7 +253,7 @@ date1(<< D1, D2, " ", M:3/binary, " ", Y1, Y2, Y3, Y4, Rest/binary >>, Fun)
 date1(_Data, _Fun) ->
     {error, badarg}.
 
--spec date2(binary(), fun()) -> any().
+-spec date2(binary(), datetime_fun()) -> calendar:datetime() | {error, badarg}.
 date2(<< D1, D2, "-", M:3/binary, "-", Y1, Y2, Rest/binary >>, Fun)
         when D1 >= $0, D1 =< $9, D2 >= $0, D2 =< $9,
              Y1 >= $0, Y1 =< $9, Y2 >= $0, Y2 =< $9 ->
@@ -272,7 +275,7 @@ date2(<< D1, D2, "-", M:3/binary, "-", Y1, Y2, Rest/binary >>, Fun)
 date2(_Data, _Fun) ->
     {error, badarg}.
 
--spec date3(binary(), fun()) -> any().
+-spec date3(binary(), datetime_fun()) -> any().
 date3(<< M:3/binary, " ", D1, D2, Rest/binary >>, Fun)
         when (D1 >= $0 andalso D1 =< $3) orelse D1 =:= $\s,
              D2 >= $0, D2 =< $9 ->
@@ -304,7 +307,7 @@ month(<<"Nov">>) -> 11;
 month(<<"Dec">>) -> 12;
 month(_Any) -> {error, badarg}.
 
--spec time(binary(), fun()) -> any().
+-spec time(binary(), datetime_fun()) -> calendar:datetime() | {error, badarg}.
 time(<< H1, H2, ":", M1, M2, ":", S1, S2, Rest/binary >>, Fun)
         when H1 >= $0, H1 =< $2, H2 >= $0, H2 =< $9,
              M1 >= $0, M1 =< $5, M2 >= $0, M2 =< $9,
@@ -360,14 +363,14 @@ range_ending(Data, Fun, RangeBeginning) ->
             {error, badarg}
         end).
 
--spec range_digits(binary(), fun()) -> any().
+-spec range_digits(binary(), fun((_, _) -> any())) -> any().
 range_digits(Data, Fun) ->
     whitespace(Data,
         fun(D) ->
             digits(D, Fun)
         end).
 
--spec range_digits(binary(), any(), fun()) -> any().
+-spec range_digits(binary(), infinity | suffix, fun((_, _) -> any())) -> any().
 range_digits(Data, Default, Fun) ->
     whitespace(Data,
         fun(<< C, Rest/binary >>) when C >= $0, C =< $9 ->
@@ -376,7 +379,7 @@ range_digits(Data, Default, Fun) ->
             Fun(Data, Default)
         end).
 
--spec list(binary(), fun()) -> list() | {error, badarg}.
+-spec list(binary(), fun((_, _) -> any())) -> list() | {error, badarg}.
 list(Data, Fun) ->
     case list(Data, Fun, []) of
         {error, badarg} -> {error, badarg};
@@ -418,7 +421,7 @@ digits(Data, Fun, Acc) ->
     Fun(Data, Acc).
 
 %% Changes all characters to lowercase.
--spec token_ci(binary(), fun()) -> any().
+-spec token_ci(binary(), fun((_, _) -> any())) -> any().
 token_ci(Data, Fun) ->
     token(Data, Fun, ci, <<>>).
 

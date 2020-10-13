@@ -73,7 +73,7 @@ authorization_tokens_param(Data, Fun) ->
         end).
 
 %% @doc Parse either a token or a quoted string.
--spec word(binary(), fun()) -> any().
+-spec word(binary(), fun((_, _) -> any())) -> any().
 word(Data = << $", _/binary >>, Fun) ->
     quoted_string(Data, Fun);
 word(Data, Fun) ->
@@ -83,7 +83,7 @@ word(Data, Fun) ->
         end).
 
 %% @doc Parse a quoted string.
--spec quoted_string(binary(), fun()) -> any().
+-spec quoted_string(<<_:8, _:_*8>>, fun((_, _) -> any())) -> any().
 quoted_string(<< $", Rest/binary >>, Fun) ->
     quoted_string(Rest, Fun, <<>>).
 
@@ -98,7 +98,7 @@ quoted_string(<< C, Rest/binary >>, Fun, Acc) ->
     quoted_string(Rest, Fun, << Acc/binary, C >>).
 
 %% @doc Parse a token.
--spec token(binary(), fun()) -> any().
+-spec token(binary(), fun((_, _) -> any())) -> any().
 token(Data, Fun) ->
     token(Data, Fun, cs, <<>>).
 
@@ -119,7 +119,8 @@ token(<< C, Rest/binary >>, Fun, Case, Acc) ->
     token(Rest, Fun, Case, << Acc/binary, C >>).
 
 %% @doc Parse a non-empty list of the given type.
--spec nonempty_list(binary(), fun()) -> [any(), ...] | {error, badarg}.
+-spec nonempty_list(binary(), fun((_, _) -> any())) ->
+    [any(), ...] | {error, badarg}.
 nonempty_list(Data, Fun) ->
     case list(Data, Fun, []) of
         {error, badarg} -> {error, badarg};
