@@ -125,9 +125,7 @@ monitor_up(Parent, M, F, A, Group, I) ->
     {ok, pid()}.
 
 stop_link_process() ->
-    Child = erlang:spawn_link(fun() ->
-        erlang:exit(shutdown)
-    end),
+    Child = erlang:spawn_link(fun stop_link_process_kill/0),
     {ok, Child}.
 
 %%%------------------------------------------------------------------------
@@ -185,3 +183,8 @@ special_behaviour([_ | L]) ->
 
 module_behaviour(M) ->
     special_behaviour(reltool_util:module_behaviours(M)).
+
+-spec stop_link_process_kill() -> no_return().
+
+stop_link_process_kill() ->
+    erlang:exit(shutdown).

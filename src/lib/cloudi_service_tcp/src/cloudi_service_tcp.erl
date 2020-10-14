@@ -759,6 +759,10 @@ socket_loop(#state_socket{
             socket_loop_terminate(normal, State)
     end.
 
+-spec socket_loop_terminate(Reason :: atom(),
+                            #state_socket{}) ->
+    no_return().
+
 socket_loop_terminate(Reason,
                       #state_socket{
                           socket = Socket,

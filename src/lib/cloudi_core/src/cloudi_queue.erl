@@ -1636,6 +1636,8 @@ failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod) ->
     failure_store([SecondsNow | FailureListNew], FailureCountNew + 1,
                   MaxCount).
 
+-spec failure_kill() -> no_return().
+
 failure_kill() ->
     erlang:exit(cloudi_queue).
 

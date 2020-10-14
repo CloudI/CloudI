@@ -265,12 +265,13 @@ dialyze: all \
               external/cloudi_x_setup/ebin
 	@echo "No Errors or Warnings Found!"
 
-# -Wunknown and -Werror_handling haven't been helpful
+# -Wunknown isn't helpful due to the external dependencies not being present
 dialyze-internal: all \
                   $(top_srcdir)/dialyzer.plt
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
               -Wunmatched_returns \
               -Wunderspecs \
+              -Werror_handling \
               -I lib/cloudi_core/include/ \
               lib/cloudi_core/ebin/ \
               lib/cloudi_service_api_batch/ebin/ \
