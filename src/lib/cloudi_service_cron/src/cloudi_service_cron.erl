@@ -65,6 +65,18 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
+-define(DEFAULT_SEND_ARGS_INFO,             false).
+        % Set the default send_args_info value for all expressions.
+-define(DEFAULT_SEND_MCAST,                 false).
+        % Set the default send_mcast value for all expressions.
+-define(DEFAULT_REQUEST_INFO_DEFAULT,
+        [{"cron_description", "\"$DESCRIPTION\""},
+         {"cron_datetime", "${DATETIME}"},
+         {"cron_datetime_next", "${DATETIME_NEXT}"}]).
+        % If a cron expression's send_args doesn't provide a
+        % RequestInfo argument or the RequestInfo argument is set to default,
+        % use the provided data when send_args_info (for the expression)
+        % is set to true.
 -define(DEFAULT_EXPRESSIONS,                   []).
         % cron expression arguments:
         %     description
@@ -83,22 +95,16 @@
         %     send_args_info
         %         Should the RequestInfo value in send_args be modified
         %         with event data related to the cron expression.
-        %         (defaults to false)
+        %         (override the default send_args_info value)
         %     send_mcast
         %         Should the send occur as a call to the function
         %         cloudi_service:mcast_async_active instead of
         %         cloudi_service:send_async_active.
-        %         (defaults to false)
+        %         (override the default send_mcast value)
         %
         % e.g. [{"0 9 * * mon-fri",
         %        [{description, "hello"},
         %         {send_args, ["/shell", "echo \"hello world\""]}]}]
--define(DEFAULT_REQUEST_INFO_DEFAULT,
-        [{"cron_description", "\"$DESCRIPTION\""},
-         {"cron_datetime", "${DATETIME}"},
-         {"cron_datetime_next", "${DATETIME_NEXT}"}]).
-        % If a cron expression's send_args RequestInfo is set to default,
-        % use the provided data (normally for send_args_info set to true).
 -define(DEFAULT_USE_UTC,                    false).
 -define(DEFAULT_DEBUG,                       true).
 -define(DEFAULT_DEBUG_LEVEL,                trace).
@@ -155,13 +161,17 @@
 
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
-        {expressions,                  ?DEFAULT_EXPRESSIONS},
+        {send_args_info,               ?DEFAULT_SEND_ARGS_INFO},
+        {send_mcast,                   ?DEFAULT_SEND_MCAST},
         {request_info_default,         ?DEFAULT_REQUEST_INFO_DEFAULT},
+        {expressions,                  ?DEFAULT_EXPRESSIONS},
         {use_utc,                      ?DEFAULT_USE_UTC},
         {debug,                        ?DEFAULT_DEBUG},
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
-    [Expressions, RequestInfoDefault, UseUTC,
+    [SendArgsInfo, SendMcast, RequestInfoDefault, Expressions, UseUTC,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
+    true = is_boolean(SendArgsInfo),
+    true = is_boolean(SendMcast),
     true = lists:all(fun({Key, Value}) ->
         is_integer(hd(Key)) andalso is_integer(hd(Value))
     end, RequestInfoDefault),
@@ -184,6 +194,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     {IdNext,
      ExpressionsLoaded} = expressions_load(Expressions,
                                            ProcessIndex, ProcessCount,
+                                           SendArgsInfo, SendMcast,
                                            RequestInfoDefault),
     Service = cloudi_service:self(Dispatcher),
     TimeOffsetMilliseconds = time_offset_milliseconds(),
@@ -257,16 +268,16 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-expressions_load([], Id, Expressions, _, _, _, _) ->
+expressions_load([], Id, Expressions, _, _, _, _, _, _) ->
     {Id, Expressions};
 expressions_load([{ExpressionStr, Args} | L], Id, Expressions,
                  ProcessIndex, ProcessIndex, ProcessCount,
-                 RequestInfoDefault) ->
+                 SendArgsInfoDefault, SendMcastDefault, RequestInfoDefault) ->
     Defaults = [
         {description,                  undefined},
         {send_args,                    undefined},
-        {send_args_info,               false},
-        {send_mcast,                   false}],
+        {send_args_info,               SendArgsInfoDefault},
+        {send_mcast,                   SendMcastDefault}],
     [Description, SendArgs, SendArgsInfo,
      SendMcast] = cloudi_proplists:take_values(Defaults, Args),
     [_ | _] = ExpressionStr,
@@ -288,18 +299,19 @@ expressions_load([{ExpressionStr, Args} | L], Id, Expressions,
     expressions_load(L, Id + 1, maps:put(Id, Expression, Expressions),
                      (ProcessIndex + 1) rem ProcessCount,
                      ProcessIndex, ProcessCount,
-                     RequestInfoDefault);
+                     SendArgsInfoDefault, SendMcastDefault, RequestInfoDefault);
 expressions_load([{_, _} | L], Id, Expressions,
                  Index, ProcessIndex, ProcessCount,
-                 RequestInfoDefault) ->
+                 SendArgsInfoDefault, SendMcastDefault, RequestInfoDefault) ->
     expressions_load(L, Id, Expressions,
                      (Index + 1) rem ProcessCount,
                      ProcessIndex, ProcessCount,
-                     RequestInfoDefault).
+                     SendArgsInfoDefault, SendMcastDefault, RequestInfoDefault).
 
-expressions_load(L, ProcessIndex, ProcessCount, RequestInfoDefault) ->
+expressions_load(L, ProcessIndex, ProcessCount,
+                 SendArgsInfoDefault, SendMcastDefault, RequestInfoDefault) ->
     expressions_load(L, 1, #{}, 0, ProcessIndex, ProcessCount,
-                     RequestInfoDefault).
+                     SendArgsInfoDefault, SendMcastDefault, RequestInfoDefault).
 
 expression_next(#expression{definition = Cron,
                             datetime_utc = DateTimeOldEventUTC} = Expression,
