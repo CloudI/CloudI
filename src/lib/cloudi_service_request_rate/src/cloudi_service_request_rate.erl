@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2014-2020 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_request_rate).
@@ -536,6 +536,7 @@ crdt_output(#dynamic{count_stable_max = CountStableMax,
     ElapsedKey = {elapsed, ProcessIndex},
     RequestRateKey = {request_rate, ProcessIndex},
     RequestRateCompleteKey = {request_rate_complete, ProcessIndex},
+    Stable = CountStable >= CountStableMax,
     CRDT1 = if
         CountStable == 0 ->
             cloudi_crdt:put(Dispatcher, ElapsedKey, Elapsed, CRDT0);
@@ -546,11 +547,17 @@ crdt_output(#dynamic{count_stable_max = CountStableMax,
                             CountStable, CRDT1),
     CRDT3 = cloudi_crdt:put(Dispatcher, RequestRateKey,
                             RequestRateStable, CRDT2),
+    CRDT4 = if
+        Stable =:= true ->
+            cloudi_crdt:flush_next_write(Dispatcher, CRDT3);
+        Stable =:= false ->
+            CRDT3
+    end,
     CRDTN = cloudi_crdt:put(Dispatcher, RequestRateCompleteKey,
-                            RequestRateComplete, CRDT3),
+                            RequestRateComplete, CRDT4),
     if
         ProcessIndex == 0,
-        CountStable >= CountStableMax ->
+        Stable =:= true ->
             ElapsedTotal = crdt_get_dynamic_elapsed(ProcessCount,
                                                     CountStableMax,
                                                     CRDTN, Dispatcher),
@@ -570,8 +577,9 @@ crdt_output(RequestRate, RequestRateComplete,
     RequestRateCompleteKey = {request_rate_complete, ProcessIndex},
     CRDT1 = cloudi_crdt:put(Dispatcher, RequestRateKey,
                             RequestRate, CRDT0),
+    CRDT2 = cloudi_crdt:flush_next_write(Dispatcher, CRDT1),
     CRDTN = cloudi_crdt:put(Dispatcher, RequestRateCompleteKey,
-                            RequestRateComplete, CRDT1),
+                            RequestRateComplete, CRDT2),
     if
         ProcessIndex == 0 ->
             crdt_output_log(RequestRateCompleteCount, RequestRateCompleteAvg,

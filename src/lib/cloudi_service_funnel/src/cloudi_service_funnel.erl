@@ -551,6 +551,7 @@ request_send_retry_crdt(#request{retry_count = RetryCount} = RequestValue) ->
 response_store(RequestKey, ResponseInfo, Response,
                #state{crdt = CRDT0} = State, Dispatcher) ->
     ResponseData = {ResponseInfo, Response},
+    CRDT1 = cloudi_crdt:flush_next_write(Dispatcher, CRDT0),
     UpdateF = response_store_crdt,
     CRDTN = cloudi_crdt:update_id(Dispatcher,
                                   RequestKey,
@@ -558,7 +559,7 @@ response_store(RequestKey, ResponseInfo, Response,
                                   UpdateF,
                                   ResponseData,
                                   UpdateF,
-                                  CRDT0),
+                                  CRDT1),
     State#state{crdt = CRDTN}.
 
 response_store_crdt(ResponseData, RequestValue) ->

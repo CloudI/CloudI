@@ -116,6 +116,7 @@
          events_clear/3,
          find/3,
          fold/4,
+         flush_next_write/2,
          get/3,
          handle_info/3,
          handle_request/11,
@@ -253,6 +254,7 @@
         bootstrap_states = [] :: list(bootstrap_state()),
         bootstrap_requests = 0 :: non_neg_integer(),
         polog = [] :: polog(),
+        flush = false :: boolean(),
         data = #{} :: data(),
         events = #{} :: events(),
         events_any = [] :: list(event_type())
@@ -643,6 +645,30 @@ fold(Dispatcher, F, AccInit,
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Flush the next write operation in the CloudI CRDT.===
+%% Use flush_next_write to ensure the next write operation occurs
+%% as immediately as possible in all processes.  When write operations
+%% occur without flush_next_write, process communication is minimized and
+%% write operation completion may depend on the next write operation
+%% function call.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec flush_next_write(Dispatcher :: cloudi_service:dispatcher(),
+                       State :: state()) ->
+    state().
+
+flush_next_write(Dispatcher,
+                 #cloudi_crdt{polog_mode = bootstrap} = State)
+    when is_pid(Dispatcher) ->
+    State;
+flush_next_write(Dispatcher,
+                 #cloudi_crdt{polog_mode = normal} = State)
+    when is_pid(Dispatcher) ->
+    State#cloudi_crdt{flush = true}.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Get a value from the CloudI CRDT.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -684,9 +710,9 @@ handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
     StateNew = State#cloudi_crdt{queue = QueueNew},
     case Request of
         #return_async_active{response = {vclock,
-                                         NodeIdRemote, VClockRemote}}
+                                         NodeIdRemote, VClockRemote, Flush}}
         when Result == ok ->
-            {ok, event_local_vclock(NodeIdRemote, VClockRemote,
+            {ok, event_local_vclock(NodeIdRemote, VClockRemote, Flush,
                                     StateNew, Dispatcher)};
         #return_async_active{response = {vclock_updated,
                                          NodeIdRemote, VClockRemote}}
@@ -743,11 +769,11 @@ handle_request(RequestType, ServiceNameFull, ServiceNameFull,
                             data = Data} = State,
                Dispatcher) ->
     {Response, StateNew} = case Request of
-        {operation, NodeIdRemote, VClockRemote, Operation} ->
-            event_remote(NodeIdRemote, VClockRemote, Operation,
+        {operation, NodeIdRemote, VClockRemote, FlushRemote, Operation} ->
+            event_remote(NodeIdRemote, VClockRemote, FlushRemote, Operation,
                          State, Dispatcher);
-        {vclock, NodeIdRemote, VClockRemote} ->
-            event_remote_vclock(NodeIdRemote, VClockRemote,
+        {vclock, NodeIdRemote, VClockRemote, FlushRemote} ->
+            event_remote_vclock(NodeIdRemote, VClockRemote, FlushRemote,
                                 State, Dispatcher);
         {vclock_updated, NodeIdRemote, VClockRemote} ->
             event_remote_vclock_updated(NodeIdRemote, VClockRemote, State);
@@ -1468,7 +1494,8 @@ event_local(Operation,
                          queue = Queue,
                          node_id = NodeId,
                          vclock = VClock0,
-                         polog = POLog} = State,
+                         polog = POLog,
+                         flush = Flush} = State,
             Dispatcher) ->
     % A write operation occurs locally by getting added to the POLog
     % and getting broadcasted to all other CloudI service processes.
@@ -1478,19 +1505,22 @@ event_local(Operation,
     VClockN = vclock_increment(NodeId, VClock1), % send
     {ok, QueueNew} = cloudi_queue:
                      mcast(Dispatcher, ServiceNameFull,
-                           {operation, NodeId, VClockN, Operation}, Queue),
+                           {operation, NodeId, VClockN, Flush,
+                            Operation}, Queue),
     State#cloudi_crdt{queue = QueueNew,
                       vclock = VClockN,
-                      polog = POLogNew}.
+                      polog = POLogNew,
+                      flush = false}.
 
 -spec event_remote(NodeIdRemote :: node_id(),
                    VClockRemote :: vclock(),
+                   FlushRemote :: boolean(),
                    Operation :: operation_write(),
                    State :: state(),
                    Dispatcher :: cloudi_service:dispatcher()) ->
-    {{vclock, node_id(), vclock()} | vclock_updated, state()}.
+    {{vclock, node_id(), vclock(), boolean()} | vclock_updated, state()}.
 
-event_remote(NodeIdRemote, VClockRemote, Operation,
+event_remote(NodeIdRemote, VClockRemote, FlushRemote, Operation,
              #cloudi_crdt{service_name_full = ServiceNameFull,
                           node_id = NodeId,
                           polog_mode = bootstrap} = State, Dispatcher) ->
@@ -1500,9 +1530,9 @@ event_remote(NodeIdRemote, VClockRemote, Operation,
                             vclock = VClock0} = StateNew} ->
             {ok, QueueNew} = cloudi_queue:
                              mcast(Dispatcher, ServiceNameFull,
-                                   {vclock, NodeId, VClock0}, Queue),
+                                   {vclock, NodeId, VClock0, false}, Queue),
             VClockN = vclock_increment(NodeId, VClock0), % send
-            {{vclock, NodeId, VClockN},
+            {{vclock, NodeId, VClockN, FlushRemote},
              StateNew#cloudi_crdt{queue = QueueNew,
                                   vclock = VClockN}};
         {false, StateNew} ->
@@ -1510,7 +1540,7 @@ event_remote(NodeIdRemote, VClockRemote, Operation,
             % after the bootstrap POLogMode is checked
             {vclock_updated, StateNew}
     end;
-event_remote(NodeIdRemote, VClockRemote0, Operation,
+event_remote(NodeIdRemote, VClockRemote0, FlushRemote, Operation,
              #cloudi_crdt{node_id = NodeId,
                           node_ids = NodeIds,
                           vclock = VClock0,
@@ -1536,7 +1566,7 @@ event_remote(NodeIdRemote, VClockRemote0, Operation,
     VClockMin = vclocks_minimum(VClocksNew),
     {POLogNew, DataNew} = polog_stable(POLogNext, Data,
                                        VClockMin, Events, EventsAny, NodeId),
-    {{vclock, NodeId, VClockN},
+    {{vclock, NodeId, VClockN, FlushRemote},
      State#cloudi_crdt{vclock = VClockN,
                        vclocks = VClocksNew,
                        polog = POLogNew,
@@ -1544,11 +1574,12 @@ event_remote(NodeIdRemote, VClockRemote0, Operation,
 
 -spec event_local_vclock(NodeIdRemote :: node_id(),
                          VClockRemote :: vclock(),
+                         Flush :: boolean(),
                          State :: state(),
                          Dispatcher :: cloudi_service:dispatcher()) ->
     state().
 
-event_local_vclock(NodeIdRemote, VClockRemote,
+event_local_vclock(NodeIdRemote, VClockRemote, Flush,
                    #cloudi_crdt{service_name_full = ServiceNameFull,
                                 polog_mode = bootstrap} = State,
                    Dispatcher) ->
@@ -1558,11 +1589,11 @@ event_local_vclock(NodeIdRemote, VClockRemote,
                  vclock = VClock0} = StateNew,
     {ok, QueueNew} = cloudi_queue:
                      mcast(Dispatcher, ServiceNameFull,
-                           {vclock, NodeId, VClock0}, Queue),
+                           {vclock, NodeId, VClock0, Flush}, Queue),
     VClockN = vclock_increment(NodeId, VClock0), % send
     StateNew#cloudi_crdt{queue = QueueNew,
                          vclock = VClockN};
-event_local_vclock(NodeIdRemote, VClockRemote0,
+event_local_vclock(NodeIdRemote, VClockRemote0, Flush,
                    #cloudi_crdt{service_name_full = ServiceNameFull,
                                 queue = Queue,
                                 node_id = NodeId,
@@ -1576,22 +1607,24 @@ event_local_vclock(NodeIdRemote, VClockRemote0,
                                 events_any = EventsAny} = State,
                    Dispatcher) ->
     % Update the vclock() from the local operation broadcast response
-    % that was provided by event_remote/4.
+    % that was provided by event_remote/6.
 
     VClockRemoteN = vclock_current(NodeIds, VClockRemote0),
     VClock1 = vclock_merge(VClockRemoteN,
                            vclock_increment(NodeId, VClock0)), % receive
-    {QueueNew, VClockN} = case cloudi_queue:size(Dispatcher, Queue) of
-        0 ->
-            % If nothing else is currently being sent,
+    VClockSend = Flush orelse
+                 (cloudi_queue:size(Dispatcher, Queue) =:= 0),
+    {QueueNew, VClockN} = if
+        VClockSend =:= true ->
+            % If flushing or nothing else is currently being sent,
             % send the current vclock to all the processes.
             % This is executed after an operation has completed its
-            % broadcast and no other operations are ready to broadcast.
+            % broadcast.
             {ok, QueueNext} = cloudi_queue:
                               mcast(Dispatcher, ServiceNameFull,
-                                    {vclock, NodeId, VClock1}, Queue),
+                                    {vclock, NodeId, VClock1, Flush}, Queue),
             {QueueNext, vclock_increment(NodeId, VClock1)}; % send
-        _ ->
+        VClockSend =:= false ->
             {Queue, VClock1}
     end,
     VClocksNew = vclocks_update(NodeId, VClockN,
@@ -1608,17 +1641,18 @@ event_local_vclock(NodeIdRemote, VClockRemote0,
 
 -spec event_remote_vclock(NodeIdRemote :: node_id(),
                           VClockRemote :: vclock(),
+                          FlushRemote :: boolean(),
                           State :: state(),
                           Dispatcher :: cloudi_service:dispatcher()) ->
     {{vclock_updated, node_id(), vclock()}, state()}.
 
-event_remote_vclock(NodeIdRemote, VClockRemote,
+event_remote_vclock(NodeIdRemote, VClockRemote, _,
                     #cloudi_crdt{polog_mode = bootstrap} = State, _) ->
     StateNew = bootstrap_local(NodeIdRemote, VClockRemote, State),
     #cloudi_crdt{node_id = NodeId,
                  vclock = VClock} = StateNew,
     {{vclock_updated, NodeId, VClock}, StateNew};
-event_remote_vclock(NodeIdRemote, VClockRemote0,
+event_remote_vclock(NodeIdRemote, VClockRemote0, FlushRemote,
                     #cloudi_crdt{service_name_full = ServiceNameFull,
                                  queue = Queue,
                                  node_id = NodeId,
@@ -1631,24 +1665,25 @@ event_remote_vclock(NodeIdRemote, VClockRemote0,
                                  events = Events,
                                  events_any = EventsAny} = State,
                     Dispatcher) ->
-    % The vclock() broadcasted from event_local_vclock/4 updates the
+    % The vclock() broadcasted from event_local_vclock/5 updates the
     % the remote CloudI service process here.  The updated vclock() is
-    % broadcasted if no other operations are being sent, to ensure the
-    % the operation takes effect on all CloudI service processes as
-    % quick as possible.
+    % broadcasted if necessary, to ensure the last pending operation
+    % takes effect on all CloudI service processes as quick as possible.
 
     VClockRemoteN = vclock_current(NodeIds, VClockRemote0),
     VClock1 = vclock_merge(VClockRemoteN,
                            vclock_increment(NodeId, VClock0)), % receive
-    {QueueNew, VClockN} = case cloudi_queue:size(Dispatcher, Queue) of
-        0 ->
-            % If nothing else is currently being sent,
+    VClockSend = FlushRemote orelse
+                 (cloudi_queue:size(Dispatcher, Queue) =:= 0),
+    {QueueNew, VClockN} = if
+        VClockSend =:= true ->
+            % If flushing remotely or nothing else is currently being sent,
             % send the current vclock to all the processes.
             {ok, QueueNext} = cloudi_queue:
                               mcast(Dispatcher, ServiceNameFull,
                                     {vclock_updated, NodeId, VClock1}, Queue),
             {QueueNext, vclock_increment(NodeId, VClock1)}; % send
-        _ ->
+        VClockSend =:= false ->
             {Queue, VClock1}
     end,
     VClocksNew = vclocks_update(NodeId, VClockN,
@@ -1683,7 +1718,7 @@ event_local_vclock_updated(NodeIdRemote, VClockRemote0,
                                         events = Events,
                                         events_any = EventsAny} = State) ->
     % Update the vclock() from the local vclock() broadcast response
-    % that was provided by event_remote_vclock/4.
+    % that was provided by event_remote_vclock/5.
 
     VClockRemoteN = vclock_current(NodeIds, VClockRemote0),
     VClockN = vclock_merge(VClockRemoteN,
@@ -1710,7 +1745,7 @@ event_remote_vclock_updated(NodeIdRemote, VClockRemote,
      bootstrap_local(NodeIdRemote, VClockRemote, State)};
 event_remote_vclock_updated(NodeIdRemote, VClockRemote,
                             #cloudi_crdt{polog_mode = normal} = State) ->
-    % The vclock() broadcasted from event_remote_vclock/4 updates the
+    % The vclock() broadcasted from event_remote_vclock/5 updates the
     % the remote CloudI service process here.
 
     {vclock_updated,

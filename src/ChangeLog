@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-17 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix an infrequent request timeout bug in cloudi_service_funnel
+    * Improve cloudi_service_request_rate crdt mode
+    * Add cloudi_crdt:flush_next_write/2 to force the next CRDT
+      operation to occur as immediately as possible in all processes
+
 2020-10-15 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_cron arguments send_args_info and send_mcast
