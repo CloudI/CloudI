@@ -115,8 +115,8 @@
          events_clear/2,
          events_clear/3,
          find/3,
-         fold/4,
          flush_next_write/2,
+         fold/4,
          get/3,
          handle_info/3,
          handle_request/11,
@@ -627,24 +627,6 @@ find(Dispatcher, Key,
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Fold a function over the CloudI CRDT.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec fold(Dispatcher :: cloudi_service:dispatcher(),
-           F :: fun((Key :: key(), Value :: value(),
-                     AccIn :: any()) -> AccOut :: any()),
-           AccInit :: any(),
-           State :: state()) ->
-    AccFinal :: any().
-
-fold(Dispatcher, F, AccInit,
-     #cloudi_crdt{data = Data})
-    when is_pid(Dispatcher) ->
-    read({fold, F, AccInit}, Data).
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Flush the next write operation in the CloudI CRDT.===
 %% Use flush_next_write to ensure the next write operation occurs
 %% as immediately as possible in all processes.  When write operations
@@ -666,6 +648,24 @@ flush_next_write(Dispatcher,
                  #cloudi_crdt{polog_mode = normal} = State)
     when is_pid(Dispatcher) ->
     State#cloudi_crdt{flush = true}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold a function over the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec fold(Dispatcher :: cloudi_service:dispatcher(),
+           F :: fun((Key :: key(), Value :: value(),
+                     AccIn :: any()) -> AccOut :: any()),
+           AccInit :: any(),
+           State :: state()) ->
+    AccFinal :: any().
+
+fold(Dispatcher, F, AccInit,
+     #cloudi_crdt{data = Data})
+    when is_pid(Dispatcher) ->
+    read({fold, F, AccInit}, Data).
 
 %%-------------------------------------------------------------------------
 %% @doc
