@@ -11,7 +11,7 @@ AC_SUBST(BUILD_KERNEL_VERSION, [`uname -srv`])
 AC_SUBST(BUILD_TIME, [`date`])
 BUILD_OPERATING_SYSTEM=`uname -o`
 if test $? -ne 0; then
-    BUILD_OPERATING_SYSTEM=""
+    BUILD_OPERATING_SYSTEM=`uname -s`
 fi
 AC_SUBST(BUILD_OPERATING_SYSTEM)
 
@@ -473,14 +473,15 @@ AC_ARG_WITH([cxx-backtrace],
         [the C++ CloudI API will provide the backtrace from
          CloudI::API::backtrace() (ARG=yes),
          or will not include backtrace support (ARG=no)
-         @<:@ARG=no@:>@ ])],
+         @<:@ARG=yes@:>@ ])],
     [
     if test "x$withval" = "xyes"; then
         AX_BACKTRACE()
     elif test "x$withval" != "xno"; then
         AC_MSG_ERROR([--with-cxx-backtrace needs yes or no, not $withval])
     fi
-    ])
+    ],
+    [AX_BACKTRACE()])
 AM_CONDITIONAL([C_SUPPORT], [true])
 else
 AM_CONDITIONAL([C_SUPPORT], [false])
