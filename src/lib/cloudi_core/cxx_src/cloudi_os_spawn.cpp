@@ -592,7 +592,7 @@ namespace
 
     } // namespace spawn_status
 
-    uint32_t strings_count(char const * const p, uint32_t len)
+    uint32_t strings_count(char const * const p, uint32_t const len)
     {
         uint32_t count = 1;
         assert(p[len - 1] == '\0');
@@ -609,7 +609,7 @@ namespace
     }
 
     void strings_set(char ** const strings, uint32_t const count,
-                     char * const p, uint32_t len)
+                     char * const p, uint32_t const len)
     {
         uint32_t index = 0;
         if (count > 1)

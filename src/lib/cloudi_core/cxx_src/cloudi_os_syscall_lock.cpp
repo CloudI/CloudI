@@ -80,13 +80,13 @@ int syscall_lock_set(char const * const * const syscall_names)
     }
     if (status == 0)
     {
-        if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0))
+        if (::prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0))
             status = -1;
     }
     if (status == 0)
-        seccomp_load(ctx);
+        ::seccomp_load(ctx);
     else
-        seccomp_release(ctx);
+        ::seccomp_release(ctx);
     return status;
 }
 #else
