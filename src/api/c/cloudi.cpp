@@ -1902,10 +1902,10 @@ static char const ** text_pairs_parse(void const * const text,
 {
     char const * text_p = reinterpret_cast<char const *>(text);
     realloc_ptr<char const *> pairs(16, 268435456);
-    size_t i = 1;
-    pairs[0] = text_p;
     if (text_size > 1)
     {
+        size_t i = 1;
+        pairs[0] = text_p;
         for (size_t text_i = 1; text_i < text_size - 1; ++text_i)
         {
             if (text_p[text_i] == '\0')
@@ -1915,8 +1915,13 @@ static char const ** text_pairs_parse(void const * const text,
                     break;
             }
         }
+        pairs[i] = 0;
     }
-    pairs[i] = 0;
+    else
+    {
+        pairs[0] = 0;
+        pairs[1] = 0;
+    }
     return pairs.release(true);
 }
 

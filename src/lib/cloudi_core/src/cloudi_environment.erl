@@ -98,7 +98,7 @@ status() ->
     {value, {cloudi_core, _, RuntimeCloudIVersion},
      _} = lists:keytake(cloudi_core, 1, ApplicationVersions4),
     RuntimeMachineProcessors = erlang:system_info(schedulers),
-    status_static() ++
+    ?CODE_STATUS_STATIC ++
     [{build_erlang_erts_c_compiler_version, erts_c_compiler_version()},
      {install_erlang_erts_time, status_file_time(FileErts)},
      {install_erlang_kernel_time, status_file_time(FileKernel)},

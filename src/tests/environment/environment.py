@@ -70,7 +70,7 @@ class _Task(threading.Thread):
         assert os.environ['À_UNICODE'] == 'true'
         assert os.environ['UNICODE_À'] == 'true'
         assert os.environ['UNICODE_CHARACTER'] == 'À'
-        assert sys.argv[1:] == ['À','À','À','À']
+        assert sys.argv[1:] == ['', 'À','À','À','À']
 
 def _main():
     thread_count = API.thread_count()

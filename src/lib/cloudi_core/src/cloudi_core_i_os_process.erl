@@ -48,9 +48,11 @@
          cgroup_set/2,
          cgroup_unset/2,
          chroot_format/2,
+         syscall_lock_validate/1,
+         syscall_lock_format/1,
          directory_format/2]).
 
--include("cloudi_core_i_constants.hrl").
+-include("cloudi_environment.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
 -define(OS_RLIMIT_DEFAULTS, [{invalid, undefined}]).
 -else.
@@ -443,6 +445,58 @@ chroot_format(Chroot, EnvironmentLookup) ->
             {error, {service_options_chroot_invalid, NewChroot}}
     end.
 
+-spec syscall_lock_validate(cloudi_service_api:syscall_lock_external()) ->
+    {ok, cloudi_service_api:syscall_lock_external()} |
+    {error, {service_options_syscall_lock_invalid, any()}}.
+
+syscall_lock_validate(undefined) ->
+    {ok, undefined};
+syscall_lock_validate(Values)
+    when is_list(Values) ->
+    Defaults = [
+        {type, ?SYSCALL_LOCK_TYPE},
+        {names, []}],
+    case cloudi_proplists:take_values(Defaults, Values) of
+        [Type, _]
+            when not (Type =:= ?SYSCALL_LOCK_TYPE) ->
+            Invalid = if
+                Type =:= undefined ->
+                    does_not_exist;
+                true ->
+                    [{type, Type}]
+            end,
+            {error, {service_options_syscall_lock_invalid,
+                     Invalid}};
+        [_, Names]
+            when not (is_list(Names) andalso
+                      is_integer(hd(hd(Names))))->
+            {error, {service_options_syscall_lock_invalid,
+                     [{names, Names}]}};
+        [_, Names] ->
+            NamesValid = syscall_names_valid(Names),
+            if
+                NamesValid =:= true ->
+                    {ok, Values};
+                NamesValid =:= false ->
+                    {error, {service_options_syscall_lock_invalid,
+                             [{names, Names}]}}
+            end;
+        [_, _ | Extra] ->
+            {error, {service_options_syscall_lock_invalid, Extra}}
+    end;
+syscall_lock_validate(Invalid) ->
+    {error, {service_options_syscall_lock_invalid, Invalid}}.
+
+-spec syscall_lock_format(cloudi_service_api:syscall_lock_external()) ->
+    binary().
+
+syscall_lock_format(undefined) ->
+    <<0>>;
+syscall_lock_format(Values)
+    when is_list(Values) ->
+    {names, Names} = lists:keyfind(names, 1, Values),
+    erlang:iolist_to_binary(syscall_names_format(Names)).
+
 -spec directory_format(Directory :: cloudi_service_api:directory_external(),
                        EnvironmentLookup :: cloudi_environment:lookup()) ->
     {ok, NewDirectory :: string()} |
@@ -471,3 +525,28 @@ absolute_path([_ | _] = Path) ->
     (AbsolutePath == Path) orelse
     (AbsolutePath ++ [H] == Path).
 
+syscall_name_valid([]) ->
+    true;
+syscall_name_valid([H | T])
+    when (H >= $a) andalso (H =< $z);
+         (H == $_);
+         (H >= $0) andalso (H =< $9) ->
+    syscall_name_valid(T);
+syscall_name_valid(_) ->
+    false.
+
+syscall_names_valid([]) ->
+    true;
+syscall_names_valid([H | T]) ->
+    Valid = syscall_name_valid(H),
+    if
+        Valid =:= true ->
+            syscall_names_valid(T);
+        Valid =:= false ->
+            false
+    end.
+
+syscall_names_format([] = L) ->
+    L;
+syscall_names_format([H | T]) ->
+    [[H, 0] | syscall_names_format(T)].

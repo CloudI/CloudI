@@ -20,5 +20,5 @@ libcloudi_la_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/ \
                        -no-undefined \
                        $(BOOST_LDFLAGS) \
                        $(BACKTRACE_LDFLAGS)
-libcloudi_la_LIBADD = -lei $(RT_LIB) $(BACKTRACE_LIB)
+libcloudi_la_LIBADD = -lei $(RT_LIB) $(BACKTRACE_LIB) $(LIBM)
 

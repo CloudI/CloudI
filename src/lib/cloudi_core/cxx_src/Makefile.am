@@ -37,6 +37,7 @@ $(RLIMIT_HEADER): Makefile \
 cloudi_os_spawn_SOURCES = cloudi_os_spawn.cpp \
                           cloudi_os_rlimit.cpp \
                           cloudi_os_owner.cpp \
+                          cloudi_os_syscall_lock.cpp \
                           assert.cpp \
                           port.cpp
 cloudi_os_spawn_CPPFLAGS = \
@@ -44,8 +45,9 @@ cloudi_os_spawn_CPPFLAGS = \
     -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
     $(BOOST_CPPFLAGS) \
     -include $(srcdir)/cloudi_os_spawn_api.h $(CXXFLAGS)
-cloudi_os_spawn_LDADD = -lei
-cloudi_os_spawn_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
+cloudi_os_spawn_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/ \
+                          $(SYSCALL_LOCK_LDFLAGS)
+cloudi_os_spawn_LDADD = -lei $(SYSCALL_LOCK_LIB)
 
 cloudi_os_command_SOURCES = cloudi_os_command.cpp \
                             assert.cpp \
@@ -55,6 +57,6 @@ cloudi_os_command_CPPFLAGS = \
     -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
     $(BOOST_CPPFLAGS) \
     -include $(srcdir)/cloudi_os_command_api.h $(CXXFLAGS)
-cloudi_os_command_LDADD = -lei
 cloudi_os_command_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
+cloudi_os_command_LDADD = -lei
 

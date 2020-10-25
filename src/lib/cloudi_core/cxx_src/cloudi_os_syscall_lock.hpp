@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -23,27 +23,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-#ifndef CLOUDI_OS_SPAWN_HPP
-#define CLOUDI_OS_SPAWN_HPP
+#ifndef CLOUDI_OS_SYSCALL_LOCK_HPP
+#define CLOUDI_OS_SYSCALL_LOCK_HPP
 
-#include <stdint.h>
+int syscall_lock_set(char const * const * const syscall_names);
 
-bool terminate_now();
+#endif // CLOUDI_OS_SYSCALL_LOCK_HPP
 
-int32_t spawn(char protocol,
-              char * socket_path, uint32_t socket_path_len,
-              uint32_t * ports, uint32_t ports_len,
-              char * rlimits, uint32_t rlimits_len,
-              uint64_t user_i,
-              char * user_str, uint32_t user_str_len,
-              uint64_t group_i,
-              char * group_str, uint32_t group_str_len,
-              int32_t nice,
-              char * chroot_directory, uint32_t chroot_directory_len,
-              char * syscall_lock, uint32_t syscall_lock_len,
-              char * directory, uint32_t directory_len,
-              char * filename, uint32_t filename_len,
-              char * argv, uint32_t argv_len,
-              char * env, uint32_t env_len);
-
-#endif // CLOUDI_OS_SPAWN_HPP

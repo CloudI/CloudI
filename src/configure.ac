@@ -35,6 +35,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.10 no-define no-dependencies foreign])
 LT_PREREQ([2.4.2])
 LT_INIT()
+LT_LIB_M
 AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_CXX
@@ -444,6 +445,7 @@ AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_VMEM)
 AC_CHECK_FUNC([chroot],
     [AC_DEFINE([HAVE_CHROOT], [1],
         [Define if chroot is available])])
+AX_SYSCALL_LOCK()
 
 # C++ requirements
 AX_LIB_SOCKET_NSL

@@ -1,12 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-24 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the syscall_lock service configuration option
+      for external services (supported on OpenBSD and Linux)
+    * Fix C CloudI API cloudi_info_key_value_parse
+      handling of info_size <= 1
+
 2020-10-21 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix CloudI Service API code_status build_operating_system value
       for operating systems that have a uname that doesn't support -o
       (uses -s instead, e.g. on OpenBSD)
-    * The --with-cxx-backtrace argument defaults to yes now
+    * The --with-cxx-backtrace configure argument defaults to yes now
 
 2020-10-17 Michael Truog   <mjtruog at protonmail dot com>
 

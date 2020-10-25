@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,19 +32,27 @@
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 
-status_static() ->
-    [].
+-define(SYSCALL_LOCK_TYPE, undefined).
+-define(CODE_STATUS_STATIC, []).
 
 -else.
 
-status_static() ->
-    [{build_machine, "@BUILD_MACHINE@"},
-     {build_kernel_version, "@BUILD_KERNEL_VERSION@"},
-     {build_operating_system, "@BUILD_OPERATING_SYSTEM@"},
-     {build_erlang_otp_release, "@ERLANG_OTP_VER@"},
-     {build_cloudi_time, "@BUILD_TIME@"},
-     {build_cloudi_cxx_compiler_version, "@CXX_COMPILER_VENDOR_VERSION@"},
-     {build_cloudi_cxx_dependencies_versions, "@CXX_DEPENDENCIES_VERSIONS@"}].
+-define(SYSCALL_LOCK_TYPE, @SYSCALL_LOCK_TYPE@).
+-define(CODE_STATUS_STATIC,
+        [{build_machine,
+          "@BUILD_MACHINE@"},
+         {build_kernel_version,
+          "@BUILD_KERNEL_VERSION@"},
+         {build_operating_system,
+          "@BUILD_OPERATING_SYSTEM@"},
+         {build_erlang_otp_release,
+          "@ERLANG_OTP_VER@"},
+         {build_cloudi_time,
+          "@BUILD_TIME@"},
+         {build_cloudi_cxx_compiler_version,
+          "@CXX_COMPILER_VENDOR_VERSION@"},
+         {build_cloudi_cxx_dependencies_versions,
+          "@CXX_DEPENDENCIES_VERSIONS@"}]).
 
 -endif.
 

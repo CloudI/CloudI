@@ -368,6 +368,12 @@
          {update_or_create, boolean()}).
 -type chroot_external() ::
     file_path() | undefined.
+-type syscall_lock_external_type() ::
+    pledge | function.
+-type syscall_lock_external() ::
+    undefined |
+    list({type, syscall_lock_external_type()} |
+         {names, nonempty_list(nonempty_string())}).
 -type directory_external() ::
     file_path() | undefined.
 -export_type([file_path/0,
@@ -378,6 +384,8 @@
               nice_external/0,
               cgroup_external/0,
               chroot_external/0,
+              syscall_lock_external_type/0,
+              syscall_lock_external/0,
               directory_external/0]).
 
 -type service_options_rate_request_max_options() ::

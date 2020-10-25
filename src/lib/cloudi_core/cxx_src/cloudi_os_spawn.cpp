@@ -44,6 +44,7 @@
 #include "cloudi_os_spawn.hpp"
 #include "cloudi_os_rlimit.hpp"
 #include "cloudi_os_owner.hpp"
+#include "cloudi_os_syscall_lock.hpp"
 #include "assert.hpp"
 
 namespace
@@ -588,6 +589,40 @@ namespace
                     return GEPD::ExitStatus::write_unknown;
             }
         }
+
+    } // namespace spawn_status
+
+    uint32_t strings_count(char const * const p, uint32_t len)
+    {
+        uint32_t count = 1;
+        assert(p[len - 1] == '\0');
+        if (len > 1)
+        {
+            ++count;
+            for (uint32_t i = 0; i < len - 1; ++i)
+            {
+                if (p[i] == '\0')
+                    ++count;
+            }
+        }
+        return count;
+    }
+
+    void strings_set(char ** const strings, uint32_t const count,
+                     char * const p, uint32_t len)
+    {
+        uint32_t index = 0;
+        if (count > 1)
+        {
+            strings[index++] = p;
+            for (uint32_t i = 0; i < len - 1; ++i)
+            {
+                if (p[i] == '\0')
+                    strings[index++] = &(p[i + 1]);
+            }
+        }
+        strings[index++] = 0;
+        assert(index == count);
     }
 
     class process_data
@@ -733,7 +768,8 @@ namespace
     };
 
     std::vector< copy_ptr<process_data> > processes;
-}
+
+} // anonymous namespace
 
 bool terminate_now()
 {
@@ -750,6 +786,7 @@ int32_t spawn(char protocol,
               char * group_str, uint32_t group_str_len,
               int32_t nice,
               char * chroot_directory, uint32_t chroot_directory_len,
+              char * syscall_lock, uint32_t syscall_lock_len,
               char * directory, uint32_t directory_len,
               char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
@@ -895,64 +932,14 @@ int32_t spawn(char protocol,
             }
         }
 
-        int argv_count = 2;
-        {
-            assert(argv[argv_len - 1] == '\0');
-            for (size_t i = 1; i < argv_len; ++i)
-            {
-                if (argv[i] == '\0')
-                    ++argv_count;
-            }
-        }
+        uint32_t const argv_count = 1 + strings_count(argv, argv_len);
         char * execve_argv[argv_count];
-        {
-            int index = 0;
-            execve_argv[index++] = filename;
-            if (argv_count == 2)
-            {
-                execve_argv[index++] = 0;
-            }
-            else
-            {
-                execve_argv[index++] = argv;
-                for (size_t i = 0; i < argv_len - 1; ++i)
-                {
-                    if (argv[i] == '\0')
-                        execve_argv[index++] = &(argv[i + 1]);
-                }
-                execve_argv[index++] = 0;
-                assert(index == argv_count);
-            }
-        }
+        execve_argv[0] = filename;
+        strings_set(&execve_argv[1], argv_count - 1, argv, argv_len);
 
-        int env_count = 1;
-        {
-            assert(env[env_len - 1] == '\0');
-            for (size_t i = 1; i < env_len; ++i)
-            {
-                if (env[i] == '\0')
-                    ++env_count;
-            }
-        }
+        uint32_t const env_count = strings_count(env, env_len);
         char * execve_env[env_count];
-        {
-            if (env_count == 1)
-            {
-                execve_env[0] = 0;
-            }
-            else
-            {
-                int index = 0;
-                execve_env[index++] = env;
-                for (size_t i = 0; i < env_len - 1; ++i)
-                {
-                    if (env[i] == '\0')
-                        execve_env[index++] = &(env[i + 1]);
-                }
-                execve_env[index++] = 0;
-                assert(index == env_count);
-            }
-        }
+        strings_set(execve_env, env_count, env, env_len);
 
         if (owner_get(user_i, user_str, user_str_len,
                       group_i, group_str, group_str_len))
@@ -986,6 +973,16 @@ int32_t spawn(char protocol,
         if (directory_len > 1)
         {
             if (::chdir(directory))
+                ::_exit(spawn_status::invalid_input);
+        }
+        if (syscall_lock_len > 1)
+        {
+            uint32_t const syscall_lock_count = strings_count(syscall_lock,
+                                                              syscall_lock_len);
+            char * syscall_names[syscall_lock_count];
+            strings_set(syscall_names, syscall_lock_count,
+                        syscall_lock, syscall_lock_len);
+            if (syscall_lock_set(syscall_names))
                 ::_exit(spawn_status::invalid_input);
         }
 

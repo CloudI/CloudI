@@ -442,6 +442,24 @@
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
         [{request_timeout_adjustment, true},
+         % OpenBSD
+         %{syscall_lock,
+         % [{type, pledge},
+         %  {names, ["stdio"]}]},
+         % Linux/libseccomp
+         %{syscall_lock,
+         % [{type, function},
+         %  {names,
+         %   [% C/C++ CloudI API use
+         %    "execve","clock_gettime","poll","read","write","close","exit",
+         %    "brk","mmap","munmap", % (malloc/free)
+         %    % Linux-specific
+         %    "exit_group",
+         %    % Ubuntu 20.04 dynamically linked library loading
+         %    %"arch_prctl","mprotect",
+         %    %"access","openat","stat","fstat","pread64",
+         %    % Ubuntu 20.04 static linking requires
+         %    "arch_prctl","mprotect","uname","readlink"]}]},
          {nice, 10}]},
     {external,
         "/tests/http_req/",
@@ -824,7 +842,7 @@
         "/tests/environment/",
         "@PYTHON@",
         "@cloudi_prefix@/tests/environment/environment.py "
-        "À 'À' \"À\" `À`",
+        "'' À 'À' \"À\" `À`",
         [{"PYTHONPATH", "@cloudi_prefix@/api/python/"},
          {"LANG", "en_US.UTF-8"},
          {"USER", "${USER}"},

@@ -148,7 +148,7 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                      DestRefresh, ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
-         Rlimits, Owner, Nice, CGroup, Chroot, Directory,
+         Rlimits, Owner, Nice, CGroup, Chroot, SyscallLock, Directory,
          CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup} ->
             {ok, DestDeny, DestAllow} =
                 start_external_threads_params(DestListDeny, DestListAllow),
@@ -176,7 +176,8 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                          SocketPath,
                                          Pids, Ports,
                                          Rlimits, Owner,
-                                         Nice, CGroup, Chroot, Directory,
+                                         Nice, CGroup, Chroot, SyscallLock,
+                                         Directory,
                                          ThreadsPerProcess,
                                          CommandLine,
                                          FilenameNew,
@@ -231,13 +232,13 @@ update_external(Pids, Ports,
                                      DestRefresh, ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
-         Rlimits, Owner, Nice, CGroup, Chroot, Directory,
+         Rlimits, Owner, Nice, CGroup, Chroot, SyscallLock, Directory,
          CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup} ->
             case start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       Pids, Ports,
                                       Rlimits, Owner,
-                                      Nice, CGroup, Chroot, Directory,
-                                      ThreadsPerProcess,
+                                      Nice, CGroup, Chroot, SyscallLock,
+                                      Directory, ThreadsPerProcess,
                                       CommandLine, FilenameNew, ArgumentsNew,
                                       Environment, EnvironmentLookup,
                                       Protocol, BufferSize) of
@@ -399,6 +400,9 @@ cgroup(#config_service_options{cgroup = L}, EnvironmentLookup) ->
 chroot(#config_service_options{chroot = Chroot}, EnvironmentLookup) ->
     cloudi_core_i_os_process:chroot_format(Chroot, EnvironmentLookup).
 
+syscall_lock(#config_service_options{syscall_lock = SyscallLock}) ->
+    cloudi_core_i_os_process:syscall_lock_format(SyscallLock).
+
 directory(#config_service_options{directory = Directory}, EnvironmentLookup) ->
     cloudi_core_i_os_process:directory_format(Directory, EnvironmentLookup).
 
@@ -466,9 +470,11 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
                     Owner = owner(ConfigOptions, EnvironmentLookup),
                     Nice = nice(ConfigOptions),
                     CGroup = cgroup(ConfigOptions, EnvironmentLookup),
+                    SyscallLock = syscall_lock(ConfigOptions),
                     {ok,
                      SpawnProcess, SpawnProtocol, SocketPath,
-                     Rlimits, Owner, Nice, CGroup, Chroot, Directory,
+                     Rlimits, Owner, Nice, CGroup, Chroot, SyscallLock,
+                     Directory,
                      CommandLine, FilenameNew, ArgumentsNew,
                      EnvironmentLookup};
                 undefined ->
@@ -578,7 +584,7 @@ start_external_threads(ThreadsPerProcess,
 
 start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                      Pids, Ports, Rlimits, Owner,
-                     Nice, CGroup, Chroot, Directory,
+                     Nice, CGroup, Chroot, SyscallLock, Directory,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
@@ -597,6 +603,7 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                               string_terminate(GroupStr),
                                               Nice,
                                               string_terminate(Chroot),
+                                              SyscallLock,
                                               string_terminate(Directory),
                                               string_terminate(Filename),
                                               string_terminate(Arguments),

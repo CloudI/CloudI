@@ -18,9 +18,9 @@
 //  || FUNCTION     || ARITY/TYPES                         || RETURN TYPE ||
 #define PORT_FUNCTIONS                                                       \
     ((terminate_now,   0, (),                                 bool        )) \
-    ((spawn,           14, (char, pchar_len, puint32_len, pchar_len,         \
+    ((spawn,           15, (char, pchar_len, puint32_len, pchar_len,         \
                             uint64_t, pchar_len, uint64_t, pchar_len,        \
-                            int32_t, pchar_len, pchar_len,                   \
+                            int32_t, pchar_len, pchar_len, pchar_len,        \
                             pchar_len, pchar_len, pchar_len), int32_t     ))
 
 //////////////////////////////////////////////////////////////////////////////

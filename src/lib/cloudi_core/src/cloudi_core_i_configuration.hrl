@@ -355,6 +355,9 @@
         % set the root directory for spawning the OS process
         chroot = undefined
             :: cloudi_service_api:chroot_external(),
+        % set the permitted syscall names in each OS process spawned
+        syscall_lock = undefined
+            :: cloudi_service_api:syscall_lock_external(),
         % set the current directory for spawning the OS process
         directory = undefined
             :: cloudi_service_api:directory_external(),

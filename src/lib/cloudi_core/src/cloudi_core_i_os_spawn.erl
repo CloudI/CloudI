@@ -49,12 +49,12 @@
 
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
--export([spawn/15]).
+-export([spawn/16]).
 -define(ERL_PORT_NAME, undefined).
 -define(ERL_PORT_MODULE, cloudi_core_i_os_port).
 spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports, _SpawnRlimits,
       _SpawnUserI, _SpawnUserStr, _SpawnGroupI, _SpawnGroupStr,
-      _SpawnNice, _SpawnChroot, _SpawnDirectory,
+      _SpawnNice, _SpawnChroot, _SpawnSyscallLock, _SpawnDirectory,
       _SpawnFilename, _SpawnArguments, _SpawnEnvironment) ->
     {error, badarg}.
 -else.
