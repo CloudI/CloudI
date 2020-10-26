@@ -456,10 +456,11 @@
          %    % Linux-specific
          %    "exit_group",
          %    % Ubuntu 20.04 dynamically linked library loading
-         %    %"arch_prctl","mprotect",
-         %    %"access","openat","stat","fstat","pread64",
+         %    "arch_prctl","mprotect",
+         %    "access","openat","stat","fstat","pread64"
          %    % Ubuntu 20.04 static linking requires
-         %    "arch_prctl","mprotect","uname","readlink"]}]},
+         %    %"arch_prctl","mprotect","uname","readlink"
+         %    ]}]},
          {nice, 10}]},
     {external,
         "/tests/http_req/",

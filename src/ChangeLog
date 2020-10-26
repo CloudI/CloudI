@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-10-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Allow a disappearing log file directory to be a transient error
+      (added to logging_status as error_read)
+
 2020-10-24 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the syscall_lock service configuration option

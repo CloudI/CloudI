@@ -127,6 +127,10 @@
             :: pid(),
         file_counts = #{}
             :: #{cloudi_service_api:loglevel() := pos_integer()},
+        error_read_count = 0
+            :: non_neg_integer(),
+        error_read_types = []
+            :: list(file:posix() | badarg | terminated),
         error_write_count = 0
             :: non_neg_integer(),
         error_write_types = []
@@ -673,70 +677,81 @@ handle_call({Level, Timestamp, Node, Pid,
     end;
 handle_call(status, _,
             #state{file_counts = FileCounts,
+                   error_read_count = ErrorReadCount,
+                   error_read_types = ErrorReadTypes,
                    error_write_count = ErrorWriteCount,
                    error_write_types = ErrorWriteTypes,
                    error_sync_count = ErrorSyncCount,
                    error_sync_types = ErrorSyncTypes} = State) ->
     Status0 = if
-        ErrorWriteCount > 0 ->
-            [{file_write_fail_count, erlang:integer_to_list(ErrorWriteCount)},
-             {file_write_fail_types, ErrorWriteTypes}];
-        ErrorWriteCount == 0 ->
+        ErrorReadCount > 0 ->
+            [{file_read_fail_count, erlang:integer_to_list(ErrorReadCount)},
+             {file_read_fail_types, ErrorReadTypes}];
+        ErrorReadCount == 0 ->
             []
     end,
     Status1 = if
-        ErrorSyncCount > 0 ->
-            [{file_sync_fail_count, erlang:integer_to_list(ErrorSyncCount)},
-             {file_sync_fail_types, ErrorSyncTypes} | Status0];
-        ErrorSyncCount == 0 ->
+        ErrorWriteCount > 0 ->
+            [{file_write_fail_count, erlang:integer_to_list(ErrorWriteCount)},
+             {file_write_fail_types, ErrorWriteTypes} | Status0];
+        ErrorWriteCount == 0 ->
             Status0
     end,
-    Status2 = case maps:find(trace, FileCounts) of
-        {ok, FileCountTrace} ->
-            [{file_messages_trace,
-              erlang:integer_to_list(FileCountTrace)} | Status1];
-        error ->
+    Status2 = if
+        ErrorSyncCount > 0 ->
+            [{file_sync_fail_count, erlang:integer_to_list(ErrorSyncCount)},
+             {file_sync_fail_types, ErrorSyncTypes} | Status1];
+        ErrorSyncCount == 0 ->
             Status1
     end,
-    Status3 = case maps:find(debug, FileCounts) of
-        {ok, FileCountDebug} ->
-            [{file_messages_debug,
-              erlang:integer_to_list(FileCountDebug)} | Status2];
+    Status3 = case maps:find(trace, FileCounts) of
+        {ok, FileCountTrace} ->
+            [{file_messages_trace,
+              erlang:integer_to_list(FileCountTrace)} | Status2];
         error ->
             Status2
     end,
-    Status4 = case maps:find(info, FileCounts) of
-        {ok, FileCountInfo} ->
-            [{file_messages_info,
-              erlang:integer_to_list(FileCountInfo)} | Status3];
+    Status4 = case maps:find(debug, FileCounts) of
+        {ok, FileCountDebug} ->
+            [{file_messages_debug,
+              erlang:integer_to_list(FileCountDebug)} | Status3];
         error ->
             Status3
     end,
-    Status5 = case maps:find(warn, FileCounts) of
-        {ok, FileCountWarn} ->
-            [{file_messages_warn,
-              erlang:integer_to_list(FileCountWarn)} | Status4];
+    Status5 = case maps:find(info, FileCounts) of
+        {ok, FileCountInfo} ->
+            [{file_messages_info,
+              erlang:integer_to_list(FileCountInfo)} | Status4];
         error ->
             Status4
     end,
-    Status6 = case maps:find(error, FileCounts) of
-        {ok, FileCountError} ->
-            [{file_messages_error,
-              erlang:integer_to_list(FileCountError)} | Status5];
+    Status6 = case maps:find(warn, FileCounts) of
+        {ok, FileCountWarn} ->
+            [{file_messages_warn,
+              erlang:integer_to_list(FileCountWarn)} | Status5];
         error ->
             Status5
+    end,
+    Status7 = case maps:find(error, FileCounts) of
+        {ok, FileCountError} ->
+            [{file_messages_error,
+              erlang:integer_to_list(FileCountError)} | Status6];
+        error ->
+            Status6
     end,
     StatusN = case maps:find(fatal, FileCounts) of
         {ok, FileCountFatal} ->
             [{file_messages_fatal,
-              erlang:integer_to_list(FileCountFatal)} | Status6];
+              erlang:integer_to_list(FileCountFatal)} | Status7];
         error ->
-            Status6
+            Status7
     end,
     {reply, {ok, StatusN}, State};
 handle_call(status_reset, _, State) ->
     {reply, ok,
      State#state{file_counts = #{},
+                 error_read_count = 0,
+                 error_read_types = [],
                  error_write_count = 0,
                  error_write_types = [],
                  error_sync_count = 0,
@@ -1511,7 +1526,9 @@ log_file(_, _, #state{file_path = undefined} = State) ->
 log_file(Level, Message,
          #state{file_path = FilePath,
                 fd = FdOld,
-                inode = InodeOld} = State) ->
+                inode = InodeOld,
+                error_read_count = ErrorReadCount,
+                error_read_types = ErrorReadTypes} = State) ->
     case file:read_file_info(FilePath, [raw]) of
         {ok, #file_info{inode = CurrentInode}} ->
             if
@@ -1532,12 +1549,23 @@ log_file(Level, Message,
             case log_file_open(FilePath, State) of
                 {ok, StateNew} ->
                     log_file_write(Level, Message, StateNew);
-                {error, _} = Error ->
-                    {Error, State#state{fd = undefined,
-                                        inode = undefined}}
+                {error, _} ->
+                    ErrorReadTypesNew = log_error_type(ErrorReadTypes, enoent),
+                    {ok,
+                     State#state{fd = undefined,
+                                 inode = undefined,
+                                 error_read_count = ErrorReadCount + 1,
+                                 error_read_types = ErrorReadTypesNew}}
             end;
-        {error, _} = Error ->
-            {Error, State}
+        {error, Reason} ->
+            _ = file:close(FdOld),
+            true = is_atom(Reason),
+            ErrorReadTypesNew = log_error_type(ErrorReadTypes, Reason),
+            {ok,
+             State#state{fd = undefined,
+                         inode = undefined,
+                         error_read_count = ErrorReadCount + 1,
+                         error_read_types = ErrorReadTypesNew}}
     end.
 
 log_file_open(undefined, State) ->
