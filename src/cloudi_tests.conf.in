@@ -442,11 +442,16 @@
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
         [{request_timeout_adjustment, true},
-         % OpenBSD
+         %% OpenBSD 6.8
          %{syscall_lock,
          % [{type, pledge},
-         %  {names, ["stdio"]}]},
-         % Linux/libseccomp
+         %  {names,
+         %   [% C/C++ CloudI API use
+         %    "stdio",
+         %    % dynamically linked library loading
+         %    "rpath"
+         %    ]}]},
+         %% Ubuntu 20.04 Linux (5.4.0 kernel, glibc 2.31)
          %{syscall_lock,
          % [{type, function},
          %  {names,
@@ -455,10 +460,10 @@
          %    "brk","mmap","munmap", % (malloc/free)
          %    % Linux-specific
          %    "exit_group",
-         %    % Ubuntu 20.04 dynamically linked library loading
+         %    % dynamically linked library loading
          %    "arch_prctl","mprotect",
          %    "access","openat","stat","fstat","pread64"
-         %    % Ubuntu 20.04 static linking requires
+         %    % static linking requires
          %    %"arch_prctl","mprotect","uname","readlink"
          %    ]}]},
          {nice, 10}]},

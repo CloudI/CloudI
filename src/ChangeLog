@@ -4,7 +4,7 @@
 2020-10-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Allow a disappearing log file directory to be a transient error
-      (added to logging_status as error_read)
+      (added to logging_status as file_read_fail)
 
 2020-10-24 Michael Truog   <mjtruog at protonmail dot com>
 
