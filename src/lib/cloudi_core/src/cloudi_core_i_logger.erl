@@ -1428,6 +1428,7 @@ log_message_internal_t0(off, _, _, _, _, _, State) ->
     {ok, State};
 log_message_internal_t0(LevelCheck, Line, Function, Arity, Format, Args,
                         #state{level = Level,
+                               destination = Destination,
                                logger_node = Node,
                                logger_self = Self} = State)
     when LevelCheck =:= fatal; LevelCheck =:= error; LevelCheck =:= warn;
@@ -1435,9 +1436,19 @@ log_message_internal_t0(LevelCheck, Line, Function, Arity, Format, Args,
     case log_level_allowed(Level, LevelCheck) of
         true ->
             LogMessage = log_message(Format, Args),
-            log_message_internal(LevelCheck, cloudi_timestamp:timestamp(),
-                                 Node, Self, ?MODULE, Line, Function, Arity,
-                                 [], LogMessage, State);
+            Timestamp = cloudi_timestamp:timestamp(),
+            if
+                Destination =:= ?MODULE ->
+                    log_message_internal(LevelCheck, Timestamp, Node, Self,
+                                         ?MODULE, Line, Function, Arity,
+                                         [], LogMessage, State);
+                true ->
+                    ok = gen_server:cast(Destination,
+                                         {LevelCheck, Timestamp, Node, Self,
+                                          ?MODULE, Line, Function, Arity,
+                                          [], LogMessage}),
+                    {ok, State}
+            end;
         false ->
             {ok, State}
     end.
@@ -1452,9 +1463,10 @@ log_message_internal_t1(LevelCheck, Line, Function, Arity, Format, Args,
     case log_level_allowed(Level, LevelCheck) of
         true ->
             LogMessage = log_message(Format, Args),
+            Timestamp = cloudi_timestamp:timestamp(),
             gen_server:cast(Destination,
-                            {LevelCheck, cloudi_timestamp:timestamp(),
-                             Node, Self, ?MODULE, Line, Function, Arity,
+                            {LevelCheck, Timestamp, Node, Self,
+                             ?MODULE, Line, Function, Arity,
                              [], LogMessage});
         false ->
             ok

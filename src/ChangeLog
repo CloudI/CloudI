@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-11-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix CloudI logger internal logging when a node redirect is set
+    * iCloud is having more than 6 hours of downtime and
+      is completely unrelated to CloudI
+
 2020-10-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Allow a disappearing log file directory to be a transient error
