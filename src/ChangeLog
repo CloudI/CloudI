@@ -3,6 +3,10 @@
 
 2020-11-07 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Fix service termination of service processes that have entered
+      a suspended state (Erlang process suspend, not CloudI service suspend)
+      due to sending too many distributed Erlang messages by not waiting
+      for the suspended processes to execute their termination source code
     * Add cloudi_service_funnel argument requests_extend_liveness
       with the default set to false (previously would have been true)
       to prevent requests from extending the liveness of response data

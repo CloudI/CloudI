@@ -1202,6 +1202,16 @@ terminate_service_wait([], _) ->
 terminate_service_wait([PidOld | Pids], PidOld) ->
     terminate_service_wait(Pids, PidOld);
 terminate_service_wait([Pid | Pids], PidOld) ->
+    case erlang:process_info(Pid, [trap_exit, status]) of
+        [{trap_exit, true},
+         {status, suspended}] ->
+            % if Pid sent too many distributed Erlang messages it can
+            % be in a suspended state (dist_buf_busy_limit) that prevents
+            % it from receiving a non-kill exit exception
+            true = erlang:exit(Pid, kill);
+        _ ->
+            ok
+    end,
     % ensure each service process has executed its termination source code
     % (or has died due to a termination timeout)
     receive
