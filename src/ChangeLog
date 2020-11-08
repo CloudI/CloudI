@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-11-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_funnel argument requests_extend_liveness
+      with the default set to false (previously would have been true)
+      to prevent requests from extending the liveness of response data
+
 2020-11-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix CloudI logger internal logging when a node redirect is set

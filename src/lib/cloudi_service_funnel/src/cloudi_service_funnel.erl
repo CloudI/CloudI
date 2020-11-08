@@ -104,6 +104,10 @@
 -define(DEFAULT_RECEIVE_ONLY,                     false).
         % Do not send from this service instance
         % (the node may be expected to be unreliable).
+-define(DEFAULT_REQUESTS_EXTEND_LIVENESS,         false).
+        % Should later requests extend the liveness of the
+        % response data, delaying its expiration past the timeout
+        % of the first request?
 -define(DEFAULT_RETRY,                                0).
 -define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
 
@@ -158,6 +162,7 @@
         name :: nonempty_string(),
         init_done :: boolean(),
         receive_only :: boolean(),
+        requests_extend_liveness :: boolean(),
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
         crdt :: cloudi_crdt:state(),
@@ -177,9 +182,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {name,                          ?DEFAULT_NAME},
         {node_count,                    ?DEFAULT_NODE_COUNT},
         {receive_only,                  ?DEFAULT_RECEIVE_ONLY},
+        {requests_extend_liveness,      ?DEFAULT_REQUESTS_EXTEND_LIVENESS},
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY}],
-    [Name, NodeCount, ReceiveOnly,
+    [Name, NodeCount, ReceiveOnly, RequestsExtendLiveness,
      Retry, RetryDelay] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = cloudi_service:destination_refresh_immediate(Dispatcher),
@@ -188,6 +194,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     false = cloudi_service_name:pattern(Name),
     true = is_integer(NodeCount) andalso (NodeCount >= 1),
     true = is_boolean(ReceiveOnly),
+    true = is_boolean(RequestsExtendLiveness),
     true = is_integer(Retry) andalso (Retry >= 0),
     true = is_integer(RetryDelay) andalso
            (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
@@ -212,6 +219,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 name = Name,
                 init_done = false,
                 receive_only = ReceiveOnly,
+                requests_extend_liveness = RequestsExtendLiveness,
                 retry = Retry,
                 retry_delay = RetryDelay,
                 crdt = CRDTN}}.
@@ -420,7 +428,8 @@ crdt_data_restart(Data, State, Dispatcher) ->
 request(FunnelName,
         RequestType, Name, Pattern, RequestInfo, Request,
         Timeout, Priority, TransId, Pid,
-        #state{crdt = CRDT0} = State, Dispatcher) ->
+        #state{requests_extend_liveness = RequestsExtendLiveness,
+               crdt = CRDT0} = State, Dispatcher) ->
     RequestKey = {FunnelName, RequestInfo, Request},
     case cloudi_crdt:find(Dispatcher, RequestKey, CRDT0) of
         {ok, #request{response = {ResponseInfo, Response}}} ->
@@ -442,7 +451,8 @@ request(FunnelName,
                                                  RequestValue,
                                                  ?MODULE,
                                                  UpdateF,
-                                                 RequestValue,
+                                                 [RequestValue,
+                                                  RequestsExtendLiveness],
                                                  UpdateF,
                                                  CRDT0),
             {noreply, State#state{crdt = CRDTN}}
@@ -458,13 +468,14 @@ request_sender_id(RequestKey, CRDT, Dispatcher) ->
              length = Length} = SendersValue,
     lists:nth(erlang:phash2(RequestKey, Length) + 1, SenderIds).
 
-request_crdt_merge(#request{name = Name,
-                            pattern = Pattern,
-                            timeout_last = Timeout,
-                            priority_min = Priority,
-                            trans_id_first = TransId,
-                            trans_id_last = TransId,
-                            pending = [PendingValue]},
+request_crdt_merge([#request{name = Name,
+                             pattern = Pattern,
+                             timeout_last = Timeout,
+                             priority_min = Priority,
+                             trans_id_first = TransId,
+                             trans_id_last = TransId,
+                             pending = [PendingValue]},
+                    RequestsExtendLiveness],
                    #request{name = Name,
                             pattern = Pattern,
                             timeout_last = TimeoutLastOld,
@@ -483,6 +494,7 @@ request_crdt_merge(#request{name = Name,
     end,
     {TimeoutLast,
      TransIdLast} = if
+        RequestsExtendLiveness =:= true,
         MicroSecondsLastOld < MicroSeconds ->
             {Timeout,
              TransId};
