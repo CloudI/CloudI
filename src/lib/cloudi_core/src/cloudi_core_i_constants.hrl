@@ -122,6 +122,12 @@
                                     erlang:integer_to_list(Instance))
         end).
 
+% When distributed Erlang messages sent to remote nodes hit the
+% distribution buffer busy limit (dist_buf_busy_limit) the
+% sending Erlang process is suspended (process status becomes suspended).
+% This behavior may change in the future (in the Erlang VM).
+-define(SEND_REMOTE_MAY_SUSPEND, true).
+
 % locally registered name for the supool cloudi_core_i_os_spawn processes
 % OS_SPAWN_POOL is used for creating service OS processes and
 %               collecting stdout/stderr stream data
