@@ -933,12 +933,12 @@ int32_t spawn(char protocol,
         }
 
         uint32_t const argv_count = 1 + strings_count(argv, argv_len);
-        char * execve_argv[argv_count];
+        char ** const execve_argv = new char*[argv_count];
         execve_argv[0] = filename;
         strings_set(&execve_argv[1], argv_count - 1, argv, argv_len);
 
         uint32_t const env_count = strings_count(env, env_len);
-        char * execve_env[env_count];
+        char ** const execve_env = new char*[env_count];
         strings_set(execve_env, env_count, env, env_len);
 
         if (owner_get(user_i, user_str, user_str_len,
@@ -979,11 +979,12 @@ int32_t spawn(char protocol,
         {
             uint32_t const syscall_lock_count = strings_count(syscall_lock,
                                                               syscall_lock_len);
-            char * syscall_names[syscall_lock_count];
+            char ** const syscall_names = new char*[syscall_lock_count];
             strings_set(syscall_names, syscall_lock_count,
                         syscall_lock, syscall_lock_len);
             if (syscall_lock_set(syscall_names))
                 ::_exit(spawn_status::invalid_input);
+            delete [] syscall_names;
         }
 
         ::execve(filename, execve_argv, execve_env);

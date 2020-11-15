@@ -16,23 +16,23 @@ BUILT_SOURCES = \
 CLEANFILES = $(BUILT_SOURCES)
 
 $(INTERFACE_HEADER_SPAWN): Makefile \
-                           cloudi_os_port_hrl.h \
-                           cloudi_os_spawn_api.h
-	$(CXXCPP) -include $(srcdir)/cloudi_os_spawn_api.h \
-         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_port_hrl.h > $@
+                           cloudi_os_port_hrl.hpp \
+                           cloudi_os_spawn_api.hpp
+	$(CXXCPP) -include $(srcdir)/cloudi_os_spawn_api.hpp \
+         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_port_hrl.hpp > $@
 
 $(INTERFACE_HEADER_COMMAND): Makefile \
-                             cloudi_os_port_hrl.h \
-                             cloudi_os_command_api.h
-	$(CXXCPP) -include $(srcdir)/cloudi_os_command_api.h \
-         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_port_hrl.h > $@
+                             cloudi_os_port_hrl.hpp \
+                             cloudi_os_command_api.hpp
+	$(CXXCPP) -include $(srcdir)/cloudi_os_command_api.hpp \
+         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_port_hrl.hpp > $@
 
 $(RLIMIT_HEADER): Makefile \
-                  cloudi_os_rlimit_hrl.h \
+                  cloudi_os_rlimit_hrl.hpp \
                   $(abs_top_builddir)/config.h
 	$(CXXCPP) \
          -include $(abs_top_builddir)/config.h \
-         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_rlimit_hrl.h > $@
+         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_rlimit_hrl.hpp > $@
 
 cloudi_os_spawn_SOURCES = cloudi_os_spawn.cpp \
                           cloudi_os_rlimit.cpp \
@@ -44,7 +44,7 @@ cloudi_os_spawn_CPPFLAGS = \
     -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
     -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
     $(BOOST_CPPFLAGS) \
-    -include $(srcdir)/cloudi_os_spawn_api.h $(CXXFLAGS)
+    -include $(srcdir)/cloudi_os_spawn_api.hpp $(CXXFLAGS)
 cloudi_os_spawn_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/ \
                           $(SYSCALL_LOCK_LDFLAGS)
 cloudi_os_spawn_LDADD = -lei $(SYSCALL_LOCK_LIB)
@@ -56,7 +56,7 @@ cloudi_os_command_CPPFLAGS = \
     -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
     -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
     $(BOOST_CPPFLAGS) \
-    -include $(srcdir)/cloudi_os_command_api.h $(CXXFLAGS)
+    -include $(srcdir)/cloudi_os_command_api.hpp $(CXXFLAGS)
 cloudi_os_command_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
 cloudi_os_command_LDADD = -lei
 

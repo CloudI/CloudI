@@ -12,7 +12,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -132,18 +132,18 @@ dladdr(0, 0);
     if test "x$backtrace" = "xbackward"; then
         BACKTRACE_CPPFLAGS="-I\$(top_srcdir)/external/backward-cpp/"
         if test "x$has_unwind" = "xyes"; then
-            has_unwind=1
-            has_execinfo=0
+            AC_DEFINE([BACKWARD_HAS_UNWIND], [1],
+                      [Define if libgcc has _Unwind_GetIP().])
+            AC_DEFINE([BACKWARD_HAS_BACKTRACE], [0],
+                      [Define if execinfo.h is usable.])
             unwind_status="unwind"
         elif test "x$has_unwind" = "xno"; then
-            has_unwind=0
-            has_execinfo=1
+            AC_DEFINE([BACKWARD_HAS_UNWIND], [0],
+                      [Define if libgcc has _Unwind_GetIP().])
+            AC_DEFINE([BACKWARD_HAS_BACKTRACE], [1],
+                      [Define if execinfo.h is usable.])
             unwind_status="execinfo"
         fi
-        AC_DEFINE([BACKWARD_HAS_UNWIND], [$has_unwind],
-                  [Define if libgcc has _Unwind_GetIP().])
-        AC_DEFINE([BACKWARD_HAS_BACKTRACE], [$has_execinfo],
-                  [Define if execinfo.h is usable.])
         if test "x$want_dw" = "xyes"; then
             BACKTRACE_LDFLAGS=$DW_LDFLAGS
             BACKTRACE_LIB=$DW_LIB

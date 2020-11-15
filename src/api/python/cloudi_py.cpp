@@ -70,7 +70,7 @@
 #endif
 
 typedef struct {
-    PyObject_HEAD;
+    PyObject_HEAD
     CloudI::API * api;
     PyThreadState * thread_state;
     PyObject * invalid_input_exception;

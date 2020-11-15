@@ -1,5 +1,12 @@
 #!/bin/sh
 
 # flags common for development
-make CXXFLAGS="-Wall -Wextra -Werror -O0 -g" $*
+
+# required for clang++ to ignore Python C API __attribute__((deprecated)) use
+#DISABLE="-Wno-error=deprecated-declarations"
+DISABLE=""
+
+# Both AM_CXXFLAGS and CXXFLAGS appear in the command-line that the makefiles
+# create and that is normal (the options below get replicated).
+make CXXFLAGS="-Wall -Wextra -Werror -O0 -g -pedantic-errors $DISABLE" $*
 exit $?

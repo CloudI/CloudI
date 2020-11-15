@@ -67,17 +67,17 @@ typedef struct cloudi_instance_t
     uint32_t subscribe_count;
     int fd;
     int8_t priority_default;
-    int use_header:1;
-    int initialization_complete:1;
-    int terminate:1;
-    int cxx_terminate_exception:1;
-    int free_with_delete:1;
-    int free_name:1;
-    int free_pattern:1;
-    int free_request_info:1;
-    int free_request:1;
-    int free_response_info:1;
-    int free_response:1;
+    unsigned int use_header:1;
+    unsigned int initialization_complete:1;
+    unsigned int terminate:1;
+    unsigned int cxx_terminate_exception:1;
+    unsigned int free_with_delete:1;
+    unsigned int free_name:1;
+    unsigned int free_pattern:1;
+    unsigned int free_request_info:1;
+    unsigned int free_request:1;
+    unsigned int free_response_info:1;
+    unsigned int free_response:1;
 
 } cloudi_instance_t;
 

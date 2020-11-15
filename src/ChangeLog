@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-11-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix pedantic C/C++ compilation errors
+
 2020-11-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_core constant for Erlang process suspended unblock
