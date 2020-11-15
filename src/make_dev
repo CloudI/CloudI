@@ -2,11 +2,16 @@
 
 # flags common for development
 
-# required for clang++ to ignore Python C API __attribute__((deprecated)) use
-#DISABLE="-Wno-error=deprecated-declarations"
-DISABLE=""
+# clang++ is angered by Python C API __attribute__((deprecated)) use
+#PEDANTIC_DISABLE="-Wno-error=deprecated-declarations"
+# g++
+PEDANTIC_DISABLE=""
+
+# gcc >= 9.3.0 or clang >= 10.0.0 are best when checking pedantic errors
+#PEDANTIC="-pedantic-errors $PEDANTIC_DISABLE"
+PEDANTIC=""
 
 # Both AM_CXXFLAGS and CXXFLAGS appear in the command-line that the makefiles
 # create and that is normal (the options below get replicated).
-make CXXFLAGS="-Wall -Wextra -Werror -O0 -g -pedantic-errors $DISABLE" $*
+make CXXFLAGS="-Wall -Wextra -Werror -O0 -g $PEDANTIC" $*
 exit $?
