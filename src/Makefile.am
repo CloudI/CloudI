@@ -265,6 +265,12 @@ dialyze: all \
               external/cloudi_x_setup/ebin
 	@echo "No Errors or Warnings Found!"
 
+# https://bugs.erlang.org/browse/ERL-1379
+#   quickrand_hash iodata_to_list/1 with -Wunderspecs exposes that
+#   the Erlang iodata() recursive type is not infinitely recursive and
+#   currently the -dialyzer attribute is unable to suppress -Wunderspecs
+#   in a module.
+#
 # -Wunknown isn't helpful due to the external dependencies not being present
 dialyze-internal: all \
                   $(top_srcdir)/dialyzer.plt
