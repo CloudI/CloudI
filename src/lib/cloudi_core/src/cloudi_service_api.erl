@@ -575,34 +575,34 @@
               service_proplist/0,
               service/0]).
 
-% "99.9999998 %"
+% `"99.9999998 %"'
 -type availability() ::
     nonempty_list($0..$9 | $. | $  | $%).
-% "< 99.9999998 %"
+% `"< 99.9999998 %"'
 -type availability_approx() ::
     nonempty_list($0..$9 | $. | $  | $% | $<).
-% "126 days 19 hours 1563 seconds 557199569 nanoseconds"
+% `"126 days 19 hours 1563 seconds 557199569 nanoseconds"'
 -type nanoseconds_string() ::
     nonempty_list($a..$z | $0..$9 | $ ).
-% "+ 350 nanoseconds"
+% `"+ 350 nanoseconds"'
 -type nanoseconds_string_signed() ::
     nonempty_list($a..$z | $0..$9 | $  | $+ | $-).
-% "> 126 days 19 hours 1563 seconds 557199569 nanoseconds"
+% `"> 126 days 19 hours 1563 seconds 557199569 nanoseconds"'
 -type nanoseconds_string_approx_gt() ::
     nonempty_list($a..$z | $0..$9 | $  | $>).
-% "< 1563 seconds 557199569 nanoseconds"
+% `"< 1563 seconds 557199569 nanoseconds"'
 -type nanoseconds_string_approx_lt() ::
     nonempty_list($a..$z | $0..$9 | $  | $<).
-% "126 days 19 hours 1563 seconds"
+% `"126 days 19 hours 1563 seconds"'
 -type seconds_string() ::
     nonempty_list($a..$z | $0..$9 | $ ).
-% "+ 10 seconds"
+% `"+ 10 seconds"'
 -type seconds_string_signed() ::
     nonempty_list($a..$z | $0..$9 | $  | $+ | $-).
-% "0"
+% `"0"'
 -type integer_string_ge_0() ::
     nonempty_list($0..$9).
-% "0.0"
+% `"0.0"'
 -type float_string_ge_0() ::
     nonempty_list($0..$9 | $.).
 -export_type([availability/0,
