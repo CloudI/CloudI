@@ -3,7 +3,7 @@
 
 {application, hello_world_erlang,
   [{description, "Hello World Erlang Example Application"},
-   {vsn, "2.0.0"},
+   {vsn, "2.0.1"},
    {modules, [
         hello_world_erlang]},
    {registered, []},

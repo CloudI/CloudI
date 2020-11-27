@@ -15,9 +15,9 @@
    This priority queue implementation depends on layered tuples, so that tuple
    access times can be exploited for quick in/out priority queue operations
    when using 64 or more total priorities.
-<p>Copyright © 2011-2017 Michael Truog</p>
+<p>Copyright © 2011-2020 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.1 Sep 15 2018 17:05:33
+<p><b>Version:</b> 2.0.1 Nov 26 2020 14:55:32
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -33,6 +33,10 @@
 
 <h3 class="typedecl"><a name="type-pqueue3">pqueue3()</a></h3>
 <p><tt>pqueue3() = {integer(), integer(), empty | integer(), tuple()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-pqueue3_empty">pqueue3_empty()</a></h3>
+<p><tt>pqueue3_empty() = {integer(), integer(), empty, tuple()}</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -110,7 +114,7 @@
 
 <h3 class="function"><a name="new-0">new/0</a></h3>
 <div class="spec">
-<p><tt>new() -&gt; <a href="#type-pqueue3">pqueue3()</a></tt><br></p>
+<p><tt>new() -&gt; <a href="#type-pqueue3_empty">pqueue3_empty()</a></tt><br></p>
 </div><p>
   <h4><a name="Create_a_new_priority_queue.">Create a new priority queue.</a></h4>
   O(1)</p>

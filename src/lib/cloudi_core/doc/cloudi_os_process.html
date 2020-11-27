@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_os_process</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_os_process</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_OS_Process_Functionality">CloudI OS Process Functionality</a></h3>.
+<p>Copyright © 2020 Michael Truog</p>
+
+<p><b>Version:</b> 2.0.1 Nov 26 2020 15:50:57
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_OS_Process_Functionality">CloudI OS Process Functionality</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-signal">signal()</a></h3>
+<p><tt>signal() = sighup | sigint | sigquit | sigill | sigtrap | sigabrt | sigbus | sigfpe | sigkill | sigusr1 | sigsegv | sigusr2 | sigpipe | sigalrm | sigterm | sigstkflt | sigchld | sigcont | sigstop | sigtstp | sigttin | sigttou | sigurg | sigxcpu | sigxfsz | sigvtalrm | sigprof | sigwinch | sigio | sigpwr | sigsys | pos_integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-signal_string">signal_string()</a></h3>
+<p><tt>signal_string() = [65..90 | 48..57 | 35, ...]</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#kill-2">kill/2</a></td><td>
+  <h4><a name="Kill_OS_processes.">Kill OS processes.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#kill_group-2">kill_group/2</a></td><td>
+  <h4><a name="Kill_OS_process_groups.">Kill OS process groups.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#shell-1">shell/1</a></td><td>
+  <h4><a name="Execute_a_shell_command.">Execute a shell command.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#shell-2">shell/2</a></td><td>
+  <h4><a name="Execute_a_shell_command_with_a_string_format.">Execute a shell command with a string format.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#signal_to_integer-1">signal_to_integer/1</a></td><td>
+  <h4><a name="Convert_a_signal_to_an_integer.">Convert a signal to an integer.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#signal_to_string-1">signal_to_string/1</a></td><td>
+  <h4><a name="Convert_a_signal_integer_to_a_string.">Convert a signal integer to a string.</a></h4>
+  Only signal integers that are consistent among all platforms use a
+  specific string.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="kill-2">kill/2</a></h3>
+<div class="spec">
+<p><tt>kill(Signal::<a href="#type-signal">signal()</a>, OSPids::pos_integer() | [pos_integer()]) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Kill_OS_processes.">Kill OS processes.</a></h4>
+</p>
+
+<h3 class="function"><a name="kill_group-2">kill_group/2</a></h3>
+<div class="spec">
+<p><tt>kill_group(Signal::<a href="#type-signal">signal()</a>, OSPids::pos_integer() | [pos_integer()]) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Kill_OS_process_groups.">Kill OS process groups.</a></h4>
+</p>
+
+<h3 class="function"><a name="shell-1">shell/1</a></h3>
+<div class="spec">
+<p><tt>shell(Exec::iodata()) -&gt; {non_neg_integer(), [binary()]}</tt><br></p>
+</div><p>
+  <h4><a name="Execute_a_shell_command.">Execute a shell command.</a></h4>
+</p>
+
+<h3 class="function"><a name="shell-2">shell/2</a></h3>
+<div class="spec">
+<p><tt>shell(Command::string(), Arguments::list()) -&gt; {non_neg_integer(), [binary()]}</tt><br></p>
+</div><p>
+  <h4><a name="Execute_a_shell_command_with_a_string_format.">Execute a shell command with a string format.</a></h4>
+</p>
+
+<h3 class="function"><a name="signal_to_integer-1">signal_to_integer/1</a></h3>
+<div class="spec">
+<p><tt>signal_to_integer(Signal::<a href="#type-signal">signal()</a>) -&gt; pos_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Convert_a_signal_to_an_integer.">Convert a signal to an integer.</a></h4>
+</p>
+
+<h3 class="function"><a name="signal_to_string-1">signal_to_string/1</a></h3>
+<div class="spec">
+<p><tt>signal_to_string(Signal::pos_integer()) -&gt; <a href="#type-signal_string">signal_string()</a></tt><br></p>
+</div><p>
+  <h4><a name="Convert_a_signal_integer_to_a_string.">Convert a signal integer to a string.</a></h4>
+  Only signal integers that are consistent among all platforms use a
+  specific string.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

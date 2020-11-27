@@ -1,5 +1,24 @@
 ------------------------------------------------------------------------        
 
+November 27, 2020
+  Version 2.0.1 released.
+  * backwards incompatible changes:
+    * CloudI API external service request exception handling will now
+      cause a service restart for unrecoverable exceptions and
+      assertions (e.g., Error in Java)
+    * CloudI Service API code_path_add, code_path_remove and
+      code_path uses separate storage of paths (separate from Erlang)
+  * FatalError exception added to external service CloudI APIs
+    to cause a service restart for unrecoverable service errors
+  * Added the CloudI Service API functions logging_status and
+    logging_status_reset for tracking file output details
+  * 'code' configuration file section was added to simplify the
+    loading of Erlang source code
+  * cloudi_service_funnel was added for providing coordination
+    among duplicate service requests that receive a single response
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 June 4, 2020
   Version 2.0.0 released.
   * backwards incompatible changes:

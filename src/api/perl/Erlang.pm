@@ -30,7 +30,7 @@ use strict;
 use warnings;
 use 5.010;
 
-$Erlang::VERSION = '2.00';
+$Erlang::VERSION = '2.01';
 
 require Compress::Zlib;
 # bigint/bignum caused slowness without enough features to be useful

@@ -11,31 +11,56 @@
 
 <h1>Module uuid</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
-   <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3>
-   <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.
-<p>Copyright © 2011-2019 Michael Truog</p>
+   <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3><p>
+   <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.   
+This implementation provides a version 1 UUID that includes both the   
+Erlang pid identifier (ID, Serial, Creation) and the distributed Erlang   
+node name within the 48 bit node ID.  To make room for the Erlang pid   
+identifier, the 48 bits from the MAC address   
+(i.e., 3 OCI (Organizationally Unique Identifier) bytes and   
+3 NIC (Network Interface Controller) specific bytes) and   
+the distributed Erlang node name are bitwise-XORed down to 16 bits.   
+The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.   
+The version 3 (MD5), version 4 (random), and version 5 (SHA)   
+methods are provided as specified within the RFC.</p>
+  
+   The ordered version 1 variant is not present in the RFC,
+   though it is the most standards-compliant way of providing
+   timestamp UUID ordering.
+<p>Copyright © 2011-2020 Michael Truog</p>
 
-<p><b>Version:</b> 1.8.0 Nov 28 2019 12:07:30
+<p><b>Version:</b> 2.0.1 Nov 26 2020 14:44:38
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
-   <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3>
-   <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.
-   This implementation provides a version 1 UUID that includes both the
-   Erlang pid identifier (ID, Serial, Creation) and the distributed Erlang
-   node name within the 48 bit node ID.  To make room for the Erlang pid
-   identifier, the 48 bits from the MAC address
-   (i.e., 3 OCI (Organizationally Unique Identifier) bytes and
-   3 NIC (Network Interface Controller) specific bytes) and
-   the distributed Erlang node name are bitwise-XORed down to 16 bits.
-   The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.
-   The version 3 (MD5), version 4 (random), and version 5 (SHA)
-   methods are provided as specified within the RFC.
+   <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3><p>
+   <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.   
+This implementation provides a version 1 UUID that includes both the   
+Erlang pid identifier (ID, Serial, Creation) and the distributed Erlang   
+node name within the 48 bit node ID.  To make room for the Erlang pid   
+identifier, the 48 bits from the MAC address   
+(i.e., 3 OCI (Organizationally Unique Identifier) bytes and   
+3 NIC (Network Interface Controller) specific bytes) and   
+the distributed Erlang node name are bitwise-XORed down to 16 bits.   
+The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.   
+The version 3 (MD5), version 4 (random), and version 5 (SHA)   
+methods are provided as specified within the RFC.</p>
+  
+   The ordered version 1 variant is not present in the RFC,
+   though it is the most standards-compliant way of providing
+   timestamp UUID ordering.  Timestamp ordering has been used in many
+   non-standard UUID formats based on version 1 and typically limited to
+   the same data present in the version 1 UUID
+   (e.g., "Version 6" at http://gh.peabody.io/uuidv6/).
 <h2><a name="types">Data Types</a></h2>
 
+<h3 class="typedecl"><a name="type-iso8601">iso8601()</a></h3>
+<p><tt>iso8601() = [48..57 | 84 | 45 | 58 | 46 | 90, ...]</tt></p>
+
+
 <h3 class="typedecl"><a name="type-state">state()</a></h3>
-<p><tt>state() = #uuid_state{node_id = &lt;&lt;_:48&gt;&gt;, clock_seq = 0..16383, timestamp_type = <a href="#type-timestamp_type_internal">timestamp_type_internal()</a>, timestamp_last = integer()}</tt></p>
+<p><tt>state() = #uuid_state{variant = <a href="#type-v1_variant">v1_variant()</a>, node_id = &lt;&lt;_:48&gt;&gt;, clock_seq = 0..16383, timestamp_type = <a href="#type-timestamp_type_internal">timestamp_type_internal()</a>, timestamp_last = integer()}</tt></p>
 
 
 <h3 class="typedecl"><a name="type-timestamp_type">timestamp_type()</a></h3>
@@ -50,6 +75,22 @@
 <p><tt>uuid() = &lt;&lt;_:128&gt;&gt;</tt></p>
 
 
+<h3 class="typedecl"><a name="type-uuid_string">uuid_string()</a></h3>
+<p><tt>uuid_string() = <a href="#type-uuid_string_list">uuid_string_list()</a> | <a href="#type-uuid_string_binary">uuid_string_binary()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-uuid_string_binary">uuid_string_binary()</a></h3>
+<p><tt>uuid_string_binary() = &lt;&lt;_:256&gt;&gt; | &lt;&lt;_:288&gt;&gt;</tt></p>
+
+
+<h3 class="typedecl"><a name="type-uuid_string_list">uuid_string_list()</a></h3>
+<p><tt>uuid_string_list() = [48..57 | 97..102 | 45, ...]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-v1_variant">v1_variant()</a></h3>
+<p><tt>v1_variant() = rfc4122 | ordered</tt></p>
+
+
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_v1-1">get_v1/1</a></td><td>
   <h4><a name="Get_a_v1_UUID.">Get a v1 UUID.</a></h4>.</td></tr>
@@ -61,10 +102,10 @@
   http://www.w3.org/TR/NOTE-datetime.</td></tr>
 <tr><td valign="top"><a href="#get_v1_time-0">get_v1_time/0</a></td><td>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
-  The result is an integer in microseconds.</td></tr>
+  The result is an integer in microseconds since the UNIX epoch.</td></tr>
 <tr><td valign="top"><a href="#get_v1_time-1">get_v1_time/1</a></td><td>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
-  The result is an integer in microseconds.</td></tr>
+  The result is an integer in microseconds since the UNIX epoch.</td></tr>
 <tr><td valign="top"><a href="#get_v3-1">get_v3/1</a></td><td>
   <h4><a name="Get_a_v3_UUID.">Get a v3 UUID.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_v3-2">get_v3/2</a></td><td>
@@ -137,21 +178,21 @@
 
 <h3 class="function"><a name="get_v1-1">get_v1/1</a></h3>
 <div class="spec">
-<p><tt>get_v1(State::<a href="#type-state">state()</a>) -&gt; {<a href="#type-uuid">uuid()</a>, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+<p><tt>get_v1(State::<a href="#type-state">state()</a>) -&gt; {<a href="#type-uuid">uuid()</a>, StateNew::<a href="#type-state">state()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_v1_UUID.">Get a v1 UUID.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_v1_datetime-1">get_v1_datetime/1</a></h3>
 <div class="spec">
-<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>) -&gt; string()</tt><br></p>
+<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>) -&gt; <a href="#type-iso8601">iso8601()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_an_ISO8601_datetime_in_UTC_from_a_v1_UUID's_time_value.">Get an ISO8601 datetime in UTC from a v1 UUID's time value.</a></h4>
   http://www.w3.org/TR/NOTE-datetime</p>
 
 <h3 class="function"><a name="get_v1_datetime-2">get_v1_datetime/2</a></h3>
 <div class="spec">
-<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>, MicroSecondsOffset::integer()) -&gt; string()</tt><br></p>
+<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>, MicroSecondsOffset::integer()) -&gt; <a href="#type-iso8601">iso8601()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_an_ISO8601_datetime_in_UTC_from_a_v1_UUID's_time_value_with_an_offset_in_microseconds.">Get an ISO8601 datetime in UTC from a v1 UUID's time value with an offset in microseconds.</a></h4>
   http://www.w3.org/TR/NOTE-datetime</p>
@@ -161,14 +202,16 @@
 <p><tt>get_v1_time() -&gt; non_neg_integer()</tt><br></p>
 </div><p>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
-  The result is an integer in microseconds.</p>
+  The result is an integer in microseconds since the UNIX epoch.
+  (The UNIX epoch is 1970-01-01T00:00:00Z)</p>
 
 <h3 class="function"><a name="get_v1_time-1">get_v1_time/1</a></h3>
 <div class="spec">
 <p><tt>get_v1_time(Uuid_state::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a>) -&gt; non_neg_integer()</tt><br></p>
 </div><p>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
-  The result is an integer in microseconds.</p>
+  The result is an integer in microseconds since the UNIX epoch.
+  (The UNIX epoch is 1970-01-01T00:00:00Z)</p>
 
 <h3 class="function"><a name="get_v3-1">get_v3/1</a></h3>
 <div class="spec">
@@ -179,7 +222,7 @@
 
 <h3 class="function"><a name="get_v3-2">get_v3/2</a></h3>
 <div class="spec">
-<p><tt>get_v3(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p><tt>get_v3(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_a_v3_UUID_in_a_particular_namespace.">Get a v3 UUID in a particular namespace.</a></h4>
 </p>
@@ -194,7 +237,7 @@
 
 <h3 class="function"><a name="get_v3_compat-2">get_v3_compat/2</a></h3>
 <div class="spec">
-<p><tt>get_v3_compat(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p><tt>get_v3_compat(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_a_compatible_v3_UUID_in_a_particular_namespace.">Get a compatible v3 UUID in a particular namespace.</a></h4>
   Do not use all bits from the checksum so that the UUID matches external
@@ -234,7 +277,7 @@
 
 <h3 class="function"><a name="get_v5-2">get_v5/2</a></h3>
 <div class="spec">
-<p><tt>get_v5(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p><tt>get_v5(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_a_v5_UUID_in_a_particular_namespace.">Get a v5 UUID in a particular namespace.</a></h4>
 </p>
@@ -249,7 +292,7 @@
 
 <h3 class="function"><a name="get_v5_compat-2">get_v5_compat/2</a></h3>
 <div class="spec">
-<p><tt>get_v5_compat(Namespace::dns | url | oid | x500 | binary(), Data::binary() | iolist()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p><tt>get_v5_compat(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_a_compatible_v5_UUID_in_a_particular_namespace.">Get a compatible v5 UUID in a particular namespace.</a></h4>
   Do not use all bits from the checksum so that the UUID matches external
@@ -302,7 +345,7 @@
 
 <h3 class="function"><a name="mac_address-0">mac_address/0</a></h3>
 <div class="spec">
-<p><tt>mac_address() -&gt; [non_neg_integer()]</tt><br></p>
+<p><tt>mac_address() -&gt; [non_neg_integer(), ...]</tt><br></p>
 </div><p>
   <h4><a name="Provide_a_usable_network_interface_MAC_address.">Provide a usable network interface MAC address.</a></h4>
 </p>
@@ -316,7 +359,7 @@
 
 <h3 class="function"><a name="new-2">new/2</a></h3>
 <div class="spec">
-<p><tt>new(Pid::pid(), Options::<a href="#type-timestamp_type">timestamp_type()</a> | [{timestamp_type, <a href="#type-timestamp_type">timestamp_type()</a>} | {mac_address, [non_neg_integer()]}]) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p><tt>new(Pid::pid(), Options::<a href="#type-timestamp_type">timestamp_type()</a> | [{timestamp_type, <a href="#type-timestamp_type">timestamp_type()</a>} | {mac_address, [non_neg_integer()]} | {variant, <a href="#type-v1_variant">v1_variant()</a>}]) -&gt; <a href="#type-state">state()</a></tt><br></p>
 </div><p>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation_using_a_specific_type_of_timestamp.">Create new UUID state for v1 UUID generation using a specific type of timestamp.</a></h4>
   The timestamp can either be based on erlang's adjustment of time
@@ -328,7 +371,7 @@
 
 <h3 class="function"><a name="string_to_uuid-1">string_to_uuid/1</a></h3>
 <div class="spec">
-<p><tt>string_to_uuid(X1::string() | binary()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p><tt>string_to_uuid(X1::<a href="#type-uuid_string">uuid_string()</a>) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
 </div><p>
   <h4><a name="Convert_a_string_representation_to_a_UUID.">Convert a string representation to a UUID.</a></h4>
 </p>
@@ -342,21 +385,21 @@
 
 <h3 class="function"><a name="uuid_to_list-1">uuid_to_list/1</a></h3>
 <div class="spec">
-<p><tt>uuid_to_list(X1::<a href="#type-uuid">uuid()</a>) -&gt; iolist()</tt><br></p>
+<p><tt>uuid_to_list(X1::<a href="#type-uuid">uuid()</a>) -&gt; [non_neg_integer(), ...]</tt><br></p>
 </div><p>
   <h4><a name="Convert_a_UUID_to_a_list.">Convert a UUID to a list.</a></h4>
 </p>
 
 <h3 class="function"><a name="uuid_to_string-1">uuid_to_string/1</a></h3>
 <div class="spec">
-<p><tt>uuid_to_string(Value::<a href="#type-uuid">uuid()</a>) -&gt; string()</tt><br></p>
+<p><tt>uuid_to_string(Value::<a href="#type-uuid">uuid()</a>) -&gt; <a href="#type-uuid_string_list">uuid_string_list()</a></tt><br></p>
 </div><p>
   <h4><a name="Convert_a_UUID_to_a_string_representation.">Convert a UUID to a string representation.</a></h4>
 </p>
 
 <h3 class="function"><a name="uuid_to_string-2">uuid_to_string/2</a></h3>
 <div class="spec">
-<p><tt>uuid_to_string(Value::<a href="#type-uuid">uuid()</a>, Option::standard | nodash | list_standard | list_nodash | binary_standard | binary_nodash) -&gt; string() | binary()</tt><br></p>
+<p><tt>uuid_to_string(Value::<a href="#type-uuid">uuid()</a>, Option::standard | nodash | list_standard | list_nodash | binary_standard | binary_nodash) -&gt; <a href="#type-uuid_string">uuid_string()</a></tt><br></p>
 </div><p>
   <h4><a name="Convert_a_UUID_to_a_string_representation_based_on_an_option.">Convert a UUID to a string representation based on an option.</a></h4>
 </p>

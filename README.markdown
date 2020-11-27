@@ -1,4 +1,4 @@
-# [CloudI 2.0.0](https://cloudi.org)
+# [CloudI 2.0.1](https://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI) [![CloudI IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.freenode.net?randomnick=1&channels=cloudi) [![Project Stats](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI)
 
@@ -154,7 +154,7 @@ Routing:
 * Fault-Tolerant Map-Reduce with [`cloudi_service_map_reduce`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.erl) (See the [`hexpi` integration test controller](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/erlang/src/cloudi_service_test_hexpi.erl))
 * Durable Service Requests with [`cloudi_service_queue`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl)
 * Service Redundancy with [`cloudi_service_quorum`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl)
-* Service Request Redundancy with [`cloudi_service_funnel`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_funnel/src/cloudi_service_funnel.erl)
+* Service Request Redundancy with [`cloudi_service_funnel`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_funnel/src/cloudi_service_funnel.erl)
 * Schedule Service Requests with [`cloudi_service_cron`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_cron/src/cloudi_service_cron.erl)
 * Local/Remote(SSH) Request Routing with [`cloudi_service_router`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_router/src/cloudi_service_router.erl)
 * Validation with [`cloudi_service_validate`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_validate/src/cloudi_service_validate.erl)

@@ -21,7 +21,7 @@ The bare essentials for efficient fault-tolerant processing on a cloud!" />
 
 <div id="header">
 <a href="https://cloudi.org/">
-Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="images/cloud.png" />
+Cloud<font style="font-family: serif">I</font><img width="156" height="106" src="images/cloud.png" />
 </a>
 </div>
 <br />
@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.0.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.1.tar.gz" rel="noopener" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -40,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 2.0.0<br />
-              last updated on June 4<sup>th</sup> 2020</h3></center>
+  <center><h3>version 2.0.1<br />
+              last updated on November 27<sup>th</sup> 2020</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -104,11 +104,13 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#2_logging_syslog_set"    >2.26 - logging_syslog_set</a></li>
     <li><a href="#2_logging_formatters_set">2.27 - logging_formatters_set</a></li>
     <li><a href="#2_logging_redirect_set"  >2.28 - logging_redirect_set</a></li>
-    <li><a href="#2_logging"               >2.29 - logging</a></li>
-    <li><a href="#2_code_path_add"         >2.30 - code_path_add</a></li>
-    <li><a href="#2_code_path_remove"      >2.31 - code_path_remove</a></li>
-    <li><a href="#2_code_path"             >2.32 - code_path</a></li>
-    <li><a href="#2_code_status"           >2.33 - code_status</a></li>
+    <li><a href="#2_logging_status"        >2.29 - logging_status</a></li>
+    <li><a href="#2_logging_status_reset"  >2.30 - logging_status_reset</a></li>
+    <li><a href="#2_logging"               >2.31 - logging</a></li>
+    <li><a href="#2_code_path_add"         >2.32 - code_path_add</a></li>
+    <li><a href="#2_code_path_remove"      >2.33 - code_path_remove</a></li>
+    <li><a href="#2_code_path"             >2.34 - code_path</a></li>
+    <li><a href="#2_code_status"           >2.35 - code_status</a></li>
   </ul>
 
   <hr \>
@@ -265,7 +267,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 int cloudi_initialize_thread_count(unsigned int * const thread_count);
-int cloudi_initialize(cloudi_instance_t * p,
+int cloudi_initialize(cloudi_instance_t * api,
                       unsigned int const thread_index,
                       void * state);
 </pre>
@@ -276,7 +278,8 @@ int cloudi_initialize(cloudi_instance_t * p,
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 unsigned int CloudI::API::thread_count();
-CloudI::API(unsigned int const thread_index);
+CloudI::API(unsigned int const thread_index,
+            bool const terminate_return_value = true);
 </pre>
   </div>
   </div> <!-- C++ -->
@@ -396,7 +399,7 @@ CloudI::API.new(thread_index)
     occurred and a restart will occur (if possible) based on the configured
     MaxR (maximum restarts) and MaxT (maximum time period in seconds) service
     configuration values.  If the service was configured in the
-    CloudI configuration file (i.e., <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>,
+    CloudI configuration file (i.e., <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in" rel="noopener" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>,
     used when CloudI is first started) and one of
     the configured services fails initialization MaxR times, CloudI will
     shutdown to prevent erroneous operation.  To avoid the fail-fast
@@ -437,13 +440,13 @@ CloudI::API.new(thread_index)
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-2.0.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-2.0.1/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-2.0.0/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-2.0.1/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -492,7 +495,21 @@ CloudI::API.new(thread_index)
   <a href="#1_subscribe_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_subscribe(cloudi_instance_t * p,
+typedef void (*cloudi_callback_t)(int const request_type,
+                                  char const * const name,
+                                  char const * const pattern,
+                                  void const * const request_info,
+                                  uint32_t const request_info_size,
+                                  void const * const request,
+                                  uint32_t const request_size,
+                                  uint32_t timeout,
+                                  int8_t priority,
+                                  char const * const trans_id,
+                                  char const * const pid,
+                                  uint32_t const pid_size,
+                                  void * state,
+                                  cloudi_instance_t * api);
+int cloudi_subscribe(cloudi_instance_t * api,
                      char const * const pattern,
                      cloudi_callback_t f);
 </pre>
@@ -641,7 +658,7 @@ CloudI::API.subscribe(pattern, function)
     Both the service names and the service name patterns should represent
     an appropriate scope, which the service manages
     (i.e., the same concept as a
-    <a href="http://en.wikipedia.org/wiki/Uniform_resource_identifier" target="_blank">Uniform Resource Identifier (URI)</a>).
+    <a href="http://en.wikipedia.org/wiki/Uniform_resource_identifier" rel="noreferrer" target="_blank">Uniform Resource Identifier (URI)</a>).
   </p>
   <p class="paragraph">
     When a service subscribes to a service name pattern, the supplied pattern
@@ -662,7 +679,7 @@ CloudI::API.subscribe(pattern, function)
   <a href="#1_subscribe_count_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_subscribe_count(cloudi_instance_t * p,
+int cloudi_subscribe_count(cloudi_instance_t * api,
                            char const * const pattern);
 // cloudi_get_subscribe_count(p) to get the result
 </pre>
@@ -789,7 +806,7 @@ CloudI::API.subscribe_count(pattern)
   <a href="#1_unsubscribe_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_unsubscribe(cloudi_instance_t * p,
+int cloudi_unsubscribe(cloudi_instance_t * api,
                        char const * const pattern);
 </pre>
   </div>
@@ -1011,7 +1028,7 @@ cloudi_service:get_pids(Dispatcher :: pid(),
   <a href="#1_send_sync_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_send_sync_(cloudi_instance_t * p,
+int cloudi_send_sync_(cloudi_instance_t * api,
                       char const * const name,
                       void const * const request_info,
                       uint32_t const request_info_size,
@@ -1324,7 +1341,7 @@ array($response_info, $response, $trans_id)
   <a href="#1_send_async_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_send_async_(cloudi_instance_t * p,
+int cloudi_send_async_(cloudi_instance_t * api,
                        char const * const name,
                        void const * const request_info,
                        uint32_t const request_info_size,
@@ -1713,7 +1730,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-2.0.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-2.0.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -1728,7 +1745,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
   <a href="#1_mcast_async_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_mcast_async_(cloudi_instance_t * p,
+int cloudi_mcast_async_(cloudi_instance_t * api,
                         char const * const name,
                         void const * const request_info,
                         uint32_t const request_info_size,
@@ -2095,7 +2112,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-2.0.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-2.0.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -2110,7 +2127,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
   <a href="#1_recv_async_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_recv_async(cloudi_instance_t * p,
+int cloudi_recv_async(cloudi_instance_t * api,
                       uint32_t timeout,
                       char const * const trans_id,
                       int consume);
@@ -2428,7 +2445,7 @@ cloudi_service:recv_asyncs(Dispatcher :: pid(),
   <a href="#1_return_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_return(cloudi_instance_t * p,
+int cloudi_return(cloudi_instance_t * api,
                   int const request_type,
                   char const * const name,
                   char const * const pattern,
@@ -2573,7 +2590,7 @@ CloudI::API.return_(request_type, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-2.0.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-2.0.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -2596,7 +2613,7 @@ CloudI::API.return_(request_type, name, pattern, response_info, response,
   <a href="#1_forward_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_forward(cloudi_instance_t * p,
+int cloudi_forward(cloudi_instance_t * api,
                    int const request_type,
                    char const * const name,
                    void const * const request_info,
@@ -2742,7 +2759,7 @@ CloudI::API.forward_(request_type, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-2.0.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-2.0.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -2762,7 +2779,7 @@ CloudI::API.forward_(request_type, name, request_info, request,
   <a href="#1_poll_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_poll(cloudi_instance_t * p,
+int cloudi_poll(cloudi_instance_t * api,
                 int timeout);
 </pre>
   </div>
@@ -2863,7 +2880,7 @@ CloudI::API.poll(timeout=nil)
   <a href="#1_shutdown_C">C</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int cloudi_shutdown(cloudi_instance_t * p,
+int cloudi_shutdown(cloudi_instance_t * api,
                     char const * const reason);
 </pre>
   </div>
@@ -2981,7 +2998,7 @@ CloudI::API.shutdown(reason=nil)
   <h3>2.0 - Introduction</h3>
   <p class="paragraph">
     When CloudI is first started, the configuration file at
-    <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>
+    <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in" rel="noopener" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>
     is used to determine what
     Access Control Lists (ACLs) should be used for services,
     what services should be started, what nodes should be connected,
@@ -2992,7 +3009,7 @@ CloudI::API.shutdown(reason=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-2.0.0/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-2.0.1/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -3070,7 +3087,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   <p class="paragraph">
     Start services and return their Service UUIDs.  Provide service
     configuration using the same syntax
-    found in the configuration file (i.e., <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>).
+    found in the configuration file (i.e., <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in" rel="noopener" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>).
     Internal services will need to be located in a code path that the
     running Erlang VM is aware of (see
     <a href="#2_code_path_add">code_path_add</a>).  The syntax of the
@@ -3087,7 +3104,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
  {env, list({string(), string()})},         % default is []
  {dest_refresh, <a href="#1_Intro_dest">dest_refresh()</a>},            % default is immediate_closest
  {protocol, default | local | tcp | udp},   % default is local
- {buffer_size, default | pos_integer()},    % default is 16384 bytes
+ {buffer_size, default | pos_integer()},    % default is 65536 bytes
  {timeout_init, 101..4294967195},           % default is 5000 milliseconds
  {timeout_async, 499..4294967195},          % default is 5000 milliseconds
  {timeout_sync, 499..4294967195},           % default is 5000 milliseconds
@@ -3330,11 +3347,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     []
   </td><td>
     (external services only) A list of <a href="#2_services_add_config_opts_limit">resource limits to set</a>
-    for the OS processes created for an external service.  If set to 'system',
-    use the settings within the cloudi_core Erlang application configuration.
-    The resource limits are based on what the OS supports
-    (the supported resource limits can be found in the <a href="http://manpages.ubuntu.com/manpages/natty/man2/setrlimit.2.html" target="_blank">setrlimit</a>
-    manpage).
+    for the OS processes an external service creates.
   </td></tr><tr><td>
     <a href="#2_services_add_config_opts_owner">
     owner</a>
@@ -3364,6 +3377,14 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     undefined
   </td><td>
     (external services only) Set the root directory of any
+    OS processes an external service creates.
+  </td></tr><tr><td>
+    <a href="#2_services_add_config_opts_syscall_lock">
+    syscall_lock</a>
+  </td><td>
+    undefined
+  </td><td>
+    (external services only) Set the permitted syscalls of any
     OS processes an external service creates.
   </td></tr><tr><td>
     directory
@@ -3499,7 +3520,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     []
   </td><td>
-    <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
+    <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" rel="noreferrer" target="_blank">erlang:spawn_opt/2</a>
     options to control memory usage of the service dispatcher
     process (priority, fullsweep_after, min_heap_size, min_bin_vheap_size,
     max_heap_size, sensitive, message_queue_data).  The dispatcher process
@@ -3511,7 +3532,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     []
   </td><td>
-    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
+    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" rel="noreferrer" target="_blank">erlang:spawn_opt/2</a>
     options to control memory usage of the service dispatcher
     process used during service initialization
     (priority, fullsweep_after, min_heap_size, min_bin_vheap_size,
@@ -3528,7 +3549,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     []
   </td><td>
-    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
+    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" rel="noreferrer" target="_blank">erlang:spawn_opt/2</a>
     options to control memory usage of the service request handling Erlang
     process (priority, fullsweep_after, min_heap_size, min_bin_vheap_size,
     max_heap_size, sensitive, message_queue_data).
@@ -3546,7 +3567,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     []
   </td><td>
-    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
+    (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" rel="noreferrer" target="_blank">erlang:spawn_opt/2</a>
     options to control memory usage of the info message handling Erlang
     process (priority, fullsweep_after, min_heap_size, min_bin_vheap_size,
     max_heap_size, sensitive, message_queue_data).
@@ -3743,7 +3764,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     point during the day.
   </td></tr></table>
   <a name="2_services_add_config_opts_limit"></a>
-  <h4>limit: (see your OS manpage for setrlimit to check availability)</h4>
+  <h4>limit:</h4>
   <p class="paragraph">
     The value for any option can be an integer or 'infinity' to set the
     current limit or a list to set both the current and the maximum
@@ -3829,6 +3850,9 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     The maximum size of an OS process' mapped address space in bytes.
   </td></tr></table>
+  <p class="paragraph">
+    (see your OS manpage for setrlimit to check availability)
+  </p>
   <a name="2_services_add_config_opts_owner"></a>
   <h4>owner:</h4>
   <p class="paragraph">
@@ -3872,7 +3896,9 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     []
   </td><td>
     Set any parameters that should be set on the cgroup before OS processes
-    are added (e.g., [{"memory.limit_in_bytes", "64m"}]).
+    are added.  The parameter names are cgroups mount version-specific
+    (e.g., v2 could use [{"memory.high", "64m"}]
+     and v1 could use [{"memory.limit_in_bytes", "64m"}]).
   </td></tr><tr><td>
     update_or_create
   </td><td>
@@ -3880,6 +3906,88 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     Specify whether a cgroup should be created if it doesn't already exist.
   </td></tr></table>
+  <a name="2_services_add_config_opts_syscall_lock"></a>
+  <h4>syscall_lock:</h4>
+  <p class="paragraph">
+    Set the syscall names that are permitted in any OS processes an external
+    service creates.  All other syscalls will cause the OS process to
+    exit with an uncatchable signal.
+  </p>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    type
+  </td><td>
+    pledge | function
+  </td><td>
+    Set the type of syscall names for configuration.
+    The default is set based on the OS<br />
+    (OpenBSD&nbsp;==&nbsp;pledge and Linux&nbsp;==&nbsp;function).
+  </td></tr><tr><td>
+    names
+  </td><td>
+    []
+  </td><td>
+    The syscall names are provided as a list of strings.
+  </td></tr></table>
+  <p class="paragraph">
+    The syscalls used by a service executable can change due to:
+    <ul>
+      <li>using dynamic linking</li>
+      <li>using static linking</li>
+      <li>an OS version change</li>
+      <li>a kernel version change</li>
+      <li>a libc version change</li>
+    </ul>
+    Examples of syscall_lock names used for only C/C++ CloudI API use
+    (http_req test) with comments is below:
+  </p>
+<pre>
+% Example 1: OpenBSD 6.8
+{syscall_lock,
+ [{type, pledge},
+  {names,
+   [
+    % C/C++ CloudI API use
+    "stdio",
+    % dynamically linked library loading
+    "rpath"
+   ]}]}
+% Example 2: Ubuntu 20.04 Linux (5.4.0 kernel, glibc 2.31)
+{syscall_lock,
+ [{type, function},
+  {names,
+   [
+    % C/C++ CloudI API use
+    "execve","clock_gettime","poll","read","write","close","exit",
+    "brk","mmap","munmap", % (malloc/free)
+    % Linux-specific
+    "exit_group",
+    % dynamically linked library loading
+    "arch_prctl","mprotect","access","openat","stat","fstat","pread64"
+    % static linking requires
+    %"arch_prctl","mprotect","uname","readlink"
+   ]}]}
+</pre>
+  <p class="paragraph">
+    Adding the syscall_lock configuration requires knowing all the
+    syscalls a service may call.  To log syscall information from a
+    running service, it is possible to run the service with ktrace or strace:
+  </p>
+<pre>
+OpenBSD: /usr/bin/ktrace -t c -f /tmp/ktrace.out SERVICE
+Linux:   /usr/bin/strace -o /tmp/strace.log SERVICE
+</pre>
+  <p class="paragraph">
+    On Linux, the CloudI service configuration would have the
+    file_path as "/usr/bin/strace" and the
+    args as "-o /tmp/strace.log SERVICE" with SERVICE as the path
+    to the external service executable.
+  </p>
   <a name="2_services_add_config_opts_aspects_init_after"></a>
   <h4>aspects_init_after:</h4>
   <p class="paragraph">
@@ -4124,7 +4232,7 @@ fun((Reason :: any(),
     is lower than this limit the service will hibernate.
   </td></tr></table>
   <p class="paragraph">
-    Please see the configuration file <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>
+    Please see the configuration file <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in" rel="noopener" target="_blank">/usr/local/etc/cloudi/cloudi.conf</a>
     for more specific examples.
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
@@ -4324,7 +4432,7 @@ curl -X POST -d '["65762d3262a511e882359563d34a433e"]' http://localhost:6464/clo
     occurred is used to determine the running availability values
     (e.g.,&nbsp;availability_day_running, availability_week_running,
      availability_month_running and availability_year_running).
-    All the availability values are percentages to describe the <a href="https://en.wikipedia.org/wiki/High_availability#Percentage_calculation" target="_blank">fraction of estimated uptime during each time period</a>.
+    All the availability values are percentages to describe the <a href="https://en.wikipedia.org/wiki/High_availability#Percentage_calculation" rel="noreferrer" target="_blank">fraction of estimated uptime during each time period</a>.
     All status data is determined using the same point in time, so the values
     may be compared among separate services.
   </p>
@@ -4393,8 +4501,7 @@ fun((OldModuleVersion :: list(any()),
     any service state, though the module and code_path modifications
     take effect after the update has been processed
     (i.e., modules_load, modules_unload, code_paths_add, code_paths_remove,
-     all occur even when an update fails, which may cause the service
-     instance to fail if an update fails).
+     all occur even when an update fails).
   </p>
   <p class="paragraph">
     External service updates require either the type be set to external or
@@ -4779,7 +4886,7 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6464/cloudi/api/rpc/
     1
   </td><td>
     The multicast TTL
-    (<a href="http://tools.ietf.org/rfc/rfc2730.txt" target="_blank">RFC</a>, <a href="http://www.tldp.org/HOWTO/Multicast-HOWTO-2.html#ss2.3" target="_blank">Linux</a>).
+    (<a href="http://tools.ietf.org/rfc/rfc2730.txt" rel="noreferrer" target="_blank">RFC</a>, <a href="http://www.tldp.org/HOWTO/Multicast-HOWTO-2.html#ss2.3" rel="noreferrer" target="_blank">Linux</a>).
   </td></tr></table>
   <p class="paragraph">
     LAN multicast auto-discovery requires that ntpd is running to keep
@@ -4812,7 +4919,7 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6464/cloudi/api/rpc/
   </td><td>
     "ec2.amazonaws.com"
   </td><td>
-    AWS EC2 API <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ec2_region" target="_blank">endpoint</a>
+    AWS EC2 API <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ec2_region" rel="noreferrer" target="_blank">endpoint</a>
     (the default DNS string picks the closest endpoint for USA AWS regions).
   </td></tr><tr><td>
     groups
@@ -4865,8 +4972,8 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6464/cloudi/api/rpc/
     The EC2 auto-discovery requires that the security group(s) used
     by the instances expose distributed Erlang ports (with TCP rules):
     <ul>
-      <li>port 4369 (epmd) <a href="http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html" target="_blank">10.0.0.0/8</a></li>
-      <li>ports 4374-4474 (inet_dist_listen) <a href="http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html" target="_blank">10.0.0.0/8</a></li>
+      <li>port 4369 (epmd) <a href="http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html" rel="noreferrer" target="_blank">10.0.0.0/8</a></li>
+      <li>ports 4374-4474 (inet_dist_listen) <a href="http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html" rel="noreferrer" target="_blank">10.0.0.0/8</a></li>
     </ul>
     The EC2 auto-discovery needs distributed Erlang longnames usage
     so -name should be used instead of -sname within the vm.args
@@ -5029,7 +5136,7 @@ curl -X POST -d '[{file, undefined}, {syslog, []}]' http://localhost:6464/cloudi
   <h4>log_time_offset:</h4>
   <p class="paragraph">
     Log when the Erlang VM adjusts its
-    <a href="http://erlang.org/doc/apps/erts/time_correction.html#Erlang_System_Time" target="_blank">internal view of the system time</a>
+    <a href="http://erlang.org/doc/apps/erts/time_correction.html#Erlang_System_Time" rel="noreferrer" target="_blank">internal view of the system time</a>
     with the size of the change in nanoseconds using the provided loglevel.
   </p>
   <a name="2_logging_set_config_opts_aspects_log_before"></a>
@@ -5139,7 +5246,7 @@ curl -X POST -d '[{identity, "CloudI"}, {facility, local0}, {level, trace}]' htt
     "CloudI"
   </td><td>
     String syslog identity (referred to as the APP-NAME in
-    <a href="https://tools.ietf.org/html/rfc5424#section-6.2.5" target="_blank">RFC5424</a>).
+    <a href="https://tools.ietf.org/html/rfc5424#section-6.2.5" rel="noreferrer" target="_blank">RFC5424</a>).
   </td></tr><tr><td>
     facility
   </td><td>
@@ -5300,13 +5407,13 @@ curl -X POST -d '[{any, [{output, lager_file_backend}, {output_args, [{file, "la
   </td><td>
     The lager-compatible formatter module which provides formatting for either
     the other logging methods (CloudI file and/or syslog) or the output module.
-    A formatter module must export a <a href="https://github.com/basho/lager/#custom-formatting" target="_blank">format/2 function</a>.
+    A formatter module must export a <a href="https://github.com/basho/lager/#custom-formatting" rel="noopener" target="_blank">format/2 function</a>.
   </td></tr><tr><td>
     formatter_config
   </td><td>
     []
   </td><td>
-    Configuration provided to the formatter module's <a href="https://github.com/basho/lager/#custom-formatting" target="_blank">format/2 function</a>'s second parameter.
+    Configuration provided to the formatter module's <a href="https://github.com/basho/lager/#custom-formatting" rel="noopener" target="_blank">format/2 function</a>'s second parameter.
   </td></tr></table>
   <div class="top"><a href="#CloudI">Top</a></div>
 
@@ -5321,8 +5428,44 @@ curl -X POST -d 'cloudi@host' http://localhost:6464/cloudi/api/rpc/logging_redir
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
+  <a name="2_logging_status"></a>
+  <h3>2.29 - logging_status</h3>
+<p class="code" onclick="element_select(this);">
+curl http://localhost:6464/cloudi/api/rpc/logging_status.erl
+</p>
+  <p class="paragraph">
+    Provide the current logging status.  If any errors occur when writing
+    to the log file, the error information is provided in the logging status
+    output.
+  </p>
+<pre>
+[{file_messages_fatal, nonempty_string()},
+ {file_messages_error, nonempty_string()},
+ {file_messages_warn, nonempty_string()},
+ {file_messages_info, nonempty_string()},
+ {file_messages_debug, nonempty_string()},
+ {file_messages_trace, nonempty_string()},
+ {file_sync_fail_count, nonempty_string()},
+ {file_sync_fail_types, nonempty_list(atom())},
+ {file_write_fail_count, nonempty_string()},
+ {file_write_fail_types, nonempty_list(atom())},
+ {file_read_fail_count, nonempty_string()},
+ {file_read_fail_types, nonempty_list(atom())}]
+</pre>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
+  <a name="2_logging_status_reset"></a>
+  <h3>2.30 - logging_status_reset</h3>
+<p class="code" onclick="element_select(this);">
+curl http://localhost:6464/cloudi/api/rpc/logging_status_reset.erl
+</p>
+  <p class="paragraph">
+    Reset the logging status.
+  </p>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
   <a name="2_logging"></a>
-  <h3>2.29 - logging</h3>
+  <h3>2.31 - logging</h3>
 <p class="code" onclick="element_select(this);">
 curl http://localhost:6464/cloudi/api/rpc/logging.erl
 </p>
@@ -5334,7 +5477,7 @@ curl http://localhost:6464/cloudi/api/rpc/logging.erl
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_add"></a>
-  <h3>2.30 - code_path_add</h3>
+  <h3>2.32 - code_path_add</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rpc/code_path_add.erl
 </p>
@@ -5346,7 +5489,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rp
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_remove"></a>
-  <h3>2.31 - code_path_remove</h3>
+  <h3>2.33 - code_path_remove</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rpc/code_path_remove.erl
 </p>
@@ -5358,7 +5501,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rp
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path"></a>
-  <h3>2.32 - code_path</h3>
+  <h3>2.34 - code_path</h3>
 <p class="code" onclick="element_select(this);">
 curl http://localhost:6464/cloudi/api/rpc/code_path.erl
 </p>
@@ -5369,7 +5512,7 @@ curl http://localhost:6464/cloudi/api/rpc/code_path.erl
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_status"></a>
-  <h3>2.33 - code_status</h3>
+  <h3>2.35 - code_status</h3>
 <p class="code" onclick="element_select(this);">
 curl http://localhost:6464/cloudi/api/rpc/code_status.erl
 </p>

@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_service_funnel</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_service_funnel</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Funnel_Service">CloudI Funnel Service</a></h3><p>   
+The funnel service is a way of using duplicate service request sends   
+(possibly from separate service processes processing the same data)   
+with the goal of making the sending service fault-tolerant.</p>.
+<p>Copyright © 2020 Michael Truog</p>
+
+<p><b>Version:</b> 2.0.1 Nov 26 2020 18:17:34
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="deps/cloudi_core/doc/cloudi_service.html"><tt>cloudi_service</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Funnel_Service">CloudI Funnel Service</a></h3><p>   
+The funnel service is a way of using duplicate service request sends   
+(possibly from separate service processes processing the same data)   
+with the goal of making the sending service fault-tolerant.</p>
+  
+   <p>The funnel service is the opposite of cloudi_service_quorum due to   
+receiving many service requests that may be duplicates and only sending   
+unique service requests with distributed fault-tolerance.   
+A duplicate service request has the same service name, request info and   
+request.  Each duplicate still contains a unique trans_id and is only   
+a duplicate while the timeout time periods elapse.</p>
+  
+   <p>The funnel service creates its own service request for the first   
+unique service request it receives and any response it receives will be   
+used for replies to duplicate service requests.  The last recent   
+timeout time period before the response is received is used for   
+retaining the response data for future duplicate service requests.</p>
+  
+   <p>With the funnel service's sensitivity to a service request's   
+timeout value, other more robust approaches to fault-tolerance   
+should be preferred   
+(e.g., cloudi_service_queue and/or cloudi_service_quorum).   
+The funnel service provides a way to make a CloudI service   
+fault-tolerant without modifying the service   
+(assuming the send destinations are easy to point at the funnel service)   
+but it does add latency to the service request sends and may require   
+larger timeout values.  If timeout values are too small,   
+duplicate service requests may not be recognized by the funnel service   
+and it could send more than a single service request for a group   
+of duplicate service requests it receives.</p>
+  
+   The funnel service could receive separate service request sends from
+   separate instances of cloudi_service_cron that are using the
+   same initialization arguments
+   (the cron expression arguments could also include {send_mcast, true}
+    to ensure all cloudi_service_funnel processes get the cron expression
+    service request data, {send_args_info, true} is necessary to make each
+    cron event's service request unique).  That would provide
+   cloudi_service_cron execution with distributed fault-tolerance that
+   relies on cloudi_service_funnel execution.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_init-4">cloudi_service_init/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#cloudi_service_terminate-3">cloudi_service_terminate/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#request_crdt_merge-2">request_crdt_merge/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#request_send_retry_crdt-1">request_send_retry_crdt/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#response_store_crdt-2">response_store_crdt/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#response_timeout_crdt-1">response_timeout_crdt/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#senders_crdt_merge-2">senders_crdt_merge/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="cloudi_service_handle_info-3">cloudi_service_handle_info/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_info(Crdt_event, State, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_handle_request-11">cloudi_service_handle_request/11</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request, Timeout, Priority, TransId, Pid, State, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_init-4">cloudi_service_init/4</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_init(Args, Prefix, Timeout, Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="cloudi_service_terminate-3">cloudi_service_terminate/3</a></h3>
+<div class="spec">
+<p><tt>cloudi_service_terminate(Reason, Timeout, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="request_crdt_merge-2">request_crdt_merge/2</a></h3>
+<div class="spec">
+<p><tt>request_crdt_merge(X1, Request) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="request_send_retry_crdt-1">request_send_retry_crdt/1</a></h3>
+<div class="spec">
+<p><tt>request_send_retry_crdt(Request) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="response_store_crdt-2">response_store_crdt/2</a></h3>
+<div class="spec">
+<p><tt>response_store_crdt(ResponseData, RequestValue) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="response_timeout_crdt-1">response_timeout_crdt/1</a></h3>
+<div class="spec">
+<p><tt>response_timeout_crdt(Request) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="senders_crdt_merge-2">senders_crdt_merge/2</a></h3>
+<div class="spec">
+<p><tt>senders_crdt_merge(Senders, SendersOld) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

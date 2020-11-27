@@ -3,7 +3,7 @@
 
 {application, uuid,
   [{description, "Native UUID Generation"},
-   {vsn, "2.0.0"},
+   {vsn, "2.0.1"},
    {modules, [uuid]},
    {registered, []},
    {applications, [quickrand, stdlib, kernel]}]}.

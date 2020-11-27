@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-11-27 Michael Truog   <mjtruog at protonmail dot com>
+
+    * CloudI version 2.0.1 released
+
 2020-11-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix pedantic C/C++ compilation errors

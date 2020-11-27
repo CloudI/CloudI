@@ -1,0 +1,3 @@
+%% encoding: UTF-8
+{application,cloudi_service_funnel}.
+{modules,[cloudi_service_funnel]}.
