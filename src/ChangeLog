@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-12-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_service_http_cowboy1 and cloudi_service_http_elli
+      arguments set_x_content_type_options and set_x_xss_protection
+      by capitalizing the header names for better compatibility
+
 2020-11-27 Michael Truog   <mjtruog at protonmail dot com>
 
     * CloudI version 2.0.1 released

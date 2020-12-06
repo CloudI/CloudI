@@ -517,7 +517,7 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
         ContentTypeSet =:= true ->
             if
                 SetXContentTypeOptions =:= true ->
-                    header_set_if_not(<<"x-content-type-options">>,
+                    header_set_if_not(<<"X-Content-Type-Options">>,
                                       <<"nosniff">>,
                                       HeadersOutgoing3);
                 SetXContentTypeOptions =:= false ->
@@ -530,7 +530,7 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
         ContentTypeHTML =:= true ->
             HeadersOutgoing5 = if
                 SetXXSSProtection =:= true ->
-                    header_set_if_not(<<"x-xss-protection">>,
+                    header_set_if_not(<<"X-XSS-Protection">>,
                                       <<"0">>,
                                       HeadersOutgoing4);
                 SetXXSSProtection =:= false ->
