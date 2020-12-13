@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -65,6 +65,7 @@
 
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
+-include("cloudi_core_i_logger.hrl").
 -include_lib("kernel/include/file.hrl").
 
 %% logging macros used only within this module
@@ -83,6 +84,9 @@
 
 -define(TERMINATE_DELAY, 1000). % milliseconds
 
+-type mode_process() :: async | sync | overload.
+-type mode_interface() :: async | sync.
+
 -record(state,
     {
         file_path = undefined
@@ -99,8 +103,16 @@
             :: undefined | cloudi_service_api:loglevel(),
         level = undefined
             :: undefined | cloudi_service_api:loglevel(),
+        queue_pending = 0
+            :: non_neg_integer(),
+        queue_mode_async
+            :: pos_integer(),
+        queue_mode_sync
+            :: pos_integer(),
+        queue_mode_overload
+            :: pos_integer(),
         mode = async
-            :: async | sync,
+            :: mode_process(),
         destination = undefined
             :: undefined | ?MODULE | {?MODULE, node()},
         syslog = undefined
@@ -288,7 +300,7 @@ redirect_update(Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fatal(Mode :: async | sync,
+-spec fatal(Mode :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -310,7 +322,7 @@ fatal(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec error(Mode :: async | sync,
+-spec error(Mode :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -332,7 +344,7 @@ error(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec warn(Mode :: async | sync,
+-spec warn(Mode :: mode_interface(),
            Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: non_neg_integer(),
@@ -354,7 +366,7 @@ warn(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec info(Mode :: async | sync,
+-spec info(Mode :: mode_interface(),
            Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: non_neg_integer(),
@@ -376,7 +388,7 @@ info(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec debug(Mode :: async | sync,
+-spec debug(Mode :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -398,7 +410,7 @@ debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trace(Mode :: async | sync,
+-spec trace(Mode :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -584,6 +596,9 @@ datetime_to_string(DateTimeUTC) ->
 init([#config_logging{file = FilePath,
                       stdout = Stdout,
                       level = MainLevel,
+                      queue_mode_async = QueueModeAsync,
+                      queue_mode_sync = QueueModeSync,
+                      queue_mode_overload = QueueModeOverload,
                       redirect = NodeLogger,
                       syslog = SyslogConfig,
                       formatters = FormattersConfig,
@@ -600,6 +615,9 @@ init([#config_logging{file = FilePath,
     #state{mode = Mode} = State =
         #state{stdout = StdoutPort,
                main_level = MainLevel,
+               queue_mode_async = QueueModeAsync,
+               queue_mode_sync = QueueModeSync,
+               queue_mode_overload = QueueModeOverload,
                formatters = FormattersConfig,
                formatters_level = FormattersLevel,
                log_time_offset = LogTimeOffset,
@@ -970,6 +988,9 @@ log_init({error, Reason}, State) ->
 log_config_set(#config_logging{file = FilePath,
                                stdout = Stdout,
                                level = MainLevel,
+                               queue_mode_async = QueueModeAsync,
+                               queue_mode_sync = QueueModeSync,
+                               queue_mode_overload = QueueModeOverload,
                                redirect = NodeLogger,
                                syslog = SyslogConfig,
                                formatters = FormattersConfig,
@@ -982,7 +1003,11 @@ log_config_set(#config_logging{file = FilePath,
                 {Stdout, fun log_config_stdout_set/2},
                 {SyslogConfig, fun log_config_syslog_set/2},
                 {FormattersConfig, fun log_config_formatters_set/2}],
-               State#state{log_time_offset = LogTimeOffset,
+               State#state{queue_pending = 0,
+                           queue_mode_async = QueueModeAsync,
+                           queue_mode_sync = QueueModeSync,
+                           queue_mode_overload = QueueModeOverload,
+                           log_time_offset = LogTimeOffset,
                            aspects_log_before = AspectsLogBefore,
                            aspects_log_after = AspectsLogAfter}) of
         {ok, _} = Success ->
@@ -1392,7 +1417,7 @@ flooding_logger_warning(SecondsRemaining) ->
         "... (~w logged/second async stopped process logging for ~.2f seconds)",
         [1000000 div ?LOGGER_FLOODING_DELTA, SecondsRemaining]).
 
-%% determine if a single process has sent too many logging messages
+% determine if a single process has sent too many logging messages
 flooding_logger(Timestamp1) ->
     case erlang:get(?LOGGER_FLOODING_PDICT_KEY) of
         undefined ->
@@ -1686,33 +1711,66 @@ log_redirect(Node, DestinationNew,
     end.
 
 log_mode_check(#state{level = Level,
+                      queue_pending = 0,
+                      queue_mode_async = QueueModeAsync,
+                      queue_mode_sync = QueueModeSync,
+                      queue_mode_overload = QueueModeOverload,
                       mode = ModeOld,
                       destination = Destination,
                       logger_self = Self} = State) ->
     {message_queue_len,
-     MessageQueueLength} = erlang:process_info(Self, message_queue_len),
+     QueueLength} = erlang:process_info(Self, message_queue_len),
+    QueueModeOverloadMin = QueueModeOverload - ?LOGGER_MODE_OVERLOAD_OFFSET,
     ModeNew = if
         ModeOld =:= async,
-        MessageQueueLength >= ?LOGGER_MSG_QUEUE_SYNC ->
+        QueueLength >= QueueModeSync ->
             sync;
-        ModeOld =:= sync,
-        MessageQueueLength =< ?LOGGER_MSG_QUEUE_ASYNC ->
-            async;
+        ModeOld =:= sync ->
+            if
+                QueueLength =< QueueModeAsync ->
+                    async;
+                QueueLength >= QueueModeOverload ->
+                    overload;
+                true ->
+                    sync
+            end;
+        ModeOld =:= overload,
+        QueueLength =< QueueModeOverloadMin ->
+            sync;
         true ->
             ModeOld
+    end,
+    QueuePending = if
+        ModeNew =:= overload ->
+            QueueLength - QueueModeOverloadMin;
+        ModeNew =:= sync ->
+            if
+                QueueLength =< QueueModeOverloadMin div 2 ->
+                    QueueLength - QueueModeAsync;
+                QueueLength < QueueModeOverloadMin ->
+                    QueueModeOverloadMin div 10;
+                QueueLength >= QueueModeOverloadMin ->
+                    ?LOGGER_MODE_OVERLOAD_OFFSET div 10
+            end;
+        true ->
+            0
     end,
     if
         ModeNew /= ModeOld ->
             case load_interface_module(Level, ModeNew, Destination) of
                 {ok, Binary} ->
                     {ok, State#state{interface_module = Binary,
+                                     queue_pending = QueuePending,
                                      mode = ModeNew}};
                 {error, _} = Error ->
                     Error
             end;
         true ->
-            {ok, State}
-    end.
+            {ok, State#state{queue_pending = QueuePending}}
+    end;
+log_mode_check(#state{queue_pending = QueuePending} = State) ->
+    true = QueuePending > 0,
+    {ok, State#state{queue_pending = QueuePending - 1}}.
 
 log_level_to_string(fatal) ->
     "FATAL";
@@ -1792,542 +1850,13 @@ timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
      SecsNew rem 1000000,
      MicroSecsNew rem 1000000}.
 
--define(INTERFACE_MODULE_HEADER,
-    "
-    -module(cloudi_core_i_logger_interface).
-    -author('mjtruog at protonmail dot com').
-    -export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6, log/7,
-             fatal_sync/6, error_sync/6, warn_sync/6,
-             info_sync/6, debug_sync/6, trace_sync/6, log_sync/7,
-             fatal_apply/2, error_apply/2, warn_apply/2,
-             info_apply/2, debug_apply/2, trace_apply/2, log_apply/3,
-             fatal_apply/3, error_apply/3, warn_apply/3,
-             info_apply/3, debug_apply/3, trace_apply/3, log_apply/4]).").
-interface(off, _, _) ->
-    ?INTERFACE_MODULE_HEADER
-    "
-    fatal(_, _, _, _, _, _) -> ok.
-    error(_, _, _, _, _, _) -> ok.
-    warn(_, _, _, _, _, _) -> ok.
-    info(_, _, _, _, _, _) -> ok.
-    debug(_, _, _, _, _, _) -> ok.
-    trace(_, _, _, _, _, _) -> ok.
-    log(_, _, _, _, Level, _, _)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_sync(_, _, _, _, _, _) -> ok.
-    error_sync(_, _, _, _, _, _) -> ok.
-    warn_sync(_, _, _, _, _, _) -> ok.
-    info_sync(_, _, _, _, _, _) -> ok.
-    debug_sync(_, _, _, _, _, _) -> ok.
-    trace_sync(_, _, _, _, _, _) -> ok.
-    log_sync(_, _, _, _, Level, _, _)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_apply(_, _) -> undefined.
-    error_apply(_, _) -> undefined.
-    warn_apply(_, _) -> undefined.
-    info_apply(_, _) -> undefined.
-    debug_apply(_, _) -> undefined.
-    trace_apply(_, _) -> undefined.
-    log_apply(Level, _, _)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    fatal_apply(_, _, _) -> undefined.
-    error_apply(_, _, _) -> undefined.
-    warn_apply(_, _, _) -> undefined.
-    info_apply(_, _, _) -> undefined.
-    debug_apply(_, _, _) -> undefined.
-    trace_apply(_, _, _) -> undefined.
-    log_apply(Level, _, _, _)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    ";
-interface(fatal, Mode, Process) ->
-    cloudi_string:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    fatal(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error(_, _, _, _, _, _) -> ok.
-    warn(_, _, _, _, _, _) -> ok.
-    info(_, _, _, _, _, _) -> ok.
-    debug(_, _, _, _, _, _) -> ok.
-    trace(_, _, _, _, _, _) -> ok.
-    log(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal ->
-        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log(_, _, _, _, Level, _, _)
-        when Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error_sync(_, _, _, _, _, _) -> ok.
-    warn_sync(_, _, _, _, _, _) -> ok.
-    info_sync(_, _, _, _, _, _) -> ok.
-    debug_sync(_, _, _, _, _, _) -> ok.
-    trace_sync(_, _, _, _, _, _) -> ok.
-    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal ->
-        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log_sync(_, _, _, _, Level, _, _)
-        when Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_apply(F, A) ->
-        erlang:apply(F, A).
-    error_apply(_, _) -> undefined.
-    warn_apply(_, _) -> undefined.
-    info_apply(_, _) -> undefined.
-    debug_apply(_, _) -> undefined.
-    trace_apply(_, _) -> undefined.
-    log_apply(Level, F, A)
-        when Level =:= fatal ->
-        erlang:apply(F, A);
-    log_apply(Level, _, _)
-        when Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    fatal_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    error_apply(_, _, _) -> undefined.
-    warn_apply(_, _, _) -> undefined.
-    info_apply(_, _, _) -> undefined.
-    debug_apply(_, _, _) -> undefined.
-    trace_apply(_, _, _) -> undefined.
-    log_apply(Level, M, F, A)
-        when Level =:= fatal ->
-        erlang:apply(M, F, A);
-    log_apply(Level, _, _, _)
-        when Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    ", [Mode, Process, Mode, Process,
-        Process, Process]);
-interface(error, Mode, Process) ->
-    cloudi_string:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    fatal(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn(_, _, _, _, _, _) -> ok.
-    info(_, _, _, _, _, _) -> ok.
-    debug(_, _, _, _, _, _) -> ok.
-    trace(_, _, _, _, _, _) -> ok.
-    log(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error ->
-        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log(_, _, _, _, Level, _, _)
-        when Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn_sync(_, _, _, _, _, _) -> ok.
-    info_sync(_, _, _, _, _, _) -> ok.
-    debug_sync(_, _, _, _, _, _) -> ok.
-    trace_sync(_, _, _, _, _, _) -> ok.
-    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error ->
-        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log_sync(_, _, _, _, Level, _, _)
-        when Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_apply(F, A) ->
-        erlang:apply(F, A).
-    error_apply(F, A) ->
-        erlang:apply(F, A).
-    warn_apply(_, _) -> undefined.
-    info_apply(_, _) -> undefined.
-    debug_apply(_, _) -> undefined.
-    trace_apply(_, _) -> undefined.
-    log_apply(Level, F, A)
-        when Level =:= fatal; Level =:= error ->
-        erlang:apply(F, A);
-    log_apply(Level, _, _)
-        when Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    fatal_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    error_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    warn_apply(_, _, _) -> undefined.
-    info_apply(_, _, _) -> undefined.
-    debug_apply(_, _, _) -> undefined.
-    trace_apply(_, _, _) -> undefined.
-    log_apply(Level, M, F, A)
-        when Level =:= fatal; Level =:= error ->
-        erlang:apply(M, F, A);
-    log_apply(Level, _, _, _)
-        when Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    ", [Mode, Process, Mode, Process, Mode, Process,
-        Process, Process, Process]);
-interface(warn, Mode, Process) ->
-    cloudi_string:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    fatal(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info(_, _, _, _, _, _) -> ok.
-    debug(_, _, _, _, _, _) -> ok.
-    trace(_, _, _, _, _, _) -> ok.
-    log(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn ->
-        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log(_, _, _, _, Level, _, _)
-        when Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info_sync(_, _, _, _, _, _) -> ok.
-    debug_sync(_, _, _, _, _, _) -> ok.
-    trace_sync(_, _, _, _, _, _) -> ok.
-    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn ->
-        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log_sync(_, _, _, _, Level, _, _)
-        when Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_apply(F, A) ->
-        erlang:apply(F, A).
-    error_apply(F, A) ->
-        erlang:apply(F, A).
-    warn_apply(F, A) ->
-        erlang:apply(F, A).
-    info_apply(_, _) -> undefined.
-    debug_apply(_, _) -> undefined.
-    trace_apply(_, _) -> undefined.
-    log_apply(Level, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn ->
-        erlang:apply(F, A);
-    log_apply(Level, _, _)
-        when Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    fatal_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    error_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    warn_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    info_apply(_, _, _) -> undefined.
-    debug_apply(_, _, _) -> undefined.
-    trace_apply(_, _, _) -> undefined.
-    log_apply(Level, M, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn ->
-        erlang:apply(M, F, A);
-    log_apply(Level, _, _, _)
-        when Level =:= info; Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    ", [Mode, Process, Mode, Process, Mode, Process, Mode, Process,
-        Process, Process, Process, Process]);
-interface(info, Mode, Process) ->
-    cloudi_string:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    fatal(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:info(~w, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    debug(_, _, _, _, _, _) -> ok.
-    trace(_, _, _, _, _, _) -> ok.
-    log(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info ->
-        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log(_, _, _, _, Level, _, _)
-        when Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:info(sync, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    debug_sync(_, _, _, _, _, _) -> ok.
-    trace_sync(_, _, _, _, _, _) -> ok.
-    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info ->
-        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log_sync(_, _, _, _, Level, _, _)
-        when Level =:= debug; Level =:= trace;
-             Level =:= off -> ok.
-    fatal_apply(F, A) ->
-        erlang:apply(F, A).
-    error_apply(F, A) ->
-        erlang:apply(F, A).
-    warn_apply(F, A) ->
-        erlang:apply(F, A).
-    info_apply(F, A) ->
-        erlang:apply(F, A).
-    debug_apply(_, _) -> undefined.
-    trace_apply(_, _) -> undefined.
-    log_apply(Level, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info ->
-        erlang:apply(F, A);
-    log_apply(Level, _, _)
-        when Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    fatal_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    error_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    warn_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    info_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    debug_apply(_, _, _) -> undefined.
-    trace_apply(_, _, _) -> undefined.
-    log_apply(Level, M, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info ->
-        erlang:apply(M, F, A);
-    log_apply(Level, _, _, _)
-        when Level =:= debug; Level =:= trace;
-             Level =:= off -> undefined.
-    ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process, Mode, Process,
-        Process, Process, Process, Process, Process]);
-interface(debug, Mode, Process) ->
-    cloudi_string:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    fatal(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:info(~w, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    debug(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:debug(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    trace(_, _, _, _, _, _) -> ok.
-    log(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug ->
-        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log(_, _, _, _, Level, _, _)
-        when Level =:= trace;
-             Level =:= off -> ok.
-    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:info(sync, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    debug_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:debug(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    trace_sync(_, _, _, _, _, _) -> ok.
-    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug ->
-        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log_sync(_, _, _, _, Level, _, _)
-        when Level =:= trace;
-             Level =:= off -> ok.
-    fatal_apply(F, A) ->
-        erlang:apply(F, A).
-    error_apply(F, A) ->
-        erlang:apply(F, A).
-    warn_apply(F, A) ->
-        erlang:apply(F, A).
-    info_apply(F, A) ->
-        erlang:apply(F, A).
-    debug_apply(F, A) ->
-        erlang:apply(F, A).
-    trace_apply(_, _) -> undefined.
-    log_apply(Level, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug ->
-        erlang:apply(F, A);
-    log_apply(Level, _, _)
-        when Level =:= trace;
-             Level =:= off -> undefined.
-    fatal_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    error_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    warn_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    info_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    debug_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    trace_apply(_, _, _) -> undefined.
-    log_apply(Level, M, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug ->
-        erlang:apply(M, F, A);
-    log_apply(Level, _, _, _)
-        when Level =:= trace;
-             Level =:= off -> undefined.
-    ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process, Mode, Process, Mode, Process,
-        Process, Process, Process, Process, Process, Process]);
-interface(trace, Mode, Process) ->
-    cloudi_string:format(
-    ?INTERFACE_MODULE_HEADER
-    "
-    fatal(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:info(~w, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    debug(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:debug(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    trace(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:trace(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    log(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace ->
-        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log(_, _, _, _, Level, _, _)
-        when Level =:= off -> ok.
-    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    info_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:info(sync, ~w, Module, Line, Function, Arity,
-                                  Format, Arguments).
-    debug_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:debug(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    trace_sync(Module, Line, Function, Arity, Format, Arguments) ->
-        cloudi_core_i_logger:trace(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments).
-    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace ->
-        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
-                                   Format, Arguments);
-    log_sync(_, _, _, _, Level, _, _)
-        when Level =:= off -> ok.
-    fatal_apply(F, A) ->
-        erlang:apply(F, A).
-    error_apply(F, A) ->
-        erlang:apply(F, A).
-    warn_apply(F, A) ->
-        erlang:apply(F, A).
-    info_apply(F, A) ->
-        erlang:apply(F, A).
-    debug_apply(F, A) ->
-        erlang:apply(F, A).
-    trace_apply(F, A) ->
-        erlang:apply(F, A).
-    log_apply(Level, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace ->
-        erlang:apply(F, A);
-    log_apply(Level, _, _)
-        when Level =:= off -> undefined.
-    fatal_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    error_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    warn_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    info_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    debug_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    trace_apply(M, F, A) ->
-        erlang:apply(M, F, A).
-    log_apply(Level, M, F, A)
-        when Level =:= fatal; Level =:= error; Level =:= warn;
-             Level =:= info; Level =:= debug; Level =:= trace ->
-        erlang:apply(M, F, A);
-    log_apply(Level, _, _, _)
-        when Level =:= off -> undefined.
-    ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process, Mode, Process, Mode, Process, Mode, Process,
-        Process, Process, Process, Process, Process, Process, Process]).
+interface(Level, overload, Process) ->
+    cloudi_string:format(?INTERFACE_MODULE_OVERLOAD_CODE(Level),
+                         ?INTERFACE_MODULE_OVERLOAD_ARGS(Level, Process));
+interface(Level, Mode, Process)
+    when Mode =:= async; Mode =:= sync ->
+    cloudi_string:format(?INTERFACE_MODULE_NORMAL_CODE(Level),
+                         ?INTERFACE_MODULE_NORMAL_ARGS(Level, Mode, Process)).
 
 load_interface_module(undefined, _, _) ->
     {error, logging_level_undefined};
@@ -2336,14 +1865,14 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
      Binary} = merl:compile(merl:quote(interface(Level, Mode, Process))),
     cloudi_core_i_logger_interface = Module,
     % make sure no old code exists
-    code:purge(Module),
+    _ = code:purge(Module),
     % load the new current code
     case code:load_binary(Module,
                           erlang:atom_to_list(Module) ++ ".erl",
                           Binary) of
         {module, Module} ->
             % remove the old code
-            code:soft_purge(Module),
+            _ = code:soft_purge(Module),
             {ok, Binary};
         {error, _} = Error ->
             Error

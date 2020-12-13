@@ -126,6 +126,19 @@
         % controls both file and stdout
         level = trace
             :: undefined | cloudi_service_api:loglevel(),
+        % use async mode when the message queue length is less than
+        queue_mode_async = 750
+            :: pos_integer(),
+        % use sync mode when the message queue length is greater than
+        % (avoids excessive memory consumption)
+        queue_mode_sync = 1000
+            :: pos_integer(),
+        % use overload mode when the message queue length is greater than
+        % (avoids accepting more log messages than can be processed
+        %  in a reasonable amount of time by ignoring more log messages
+        %  until sync mode is possible)
+        queue_mode_overload = 10000
+            :: pos_integer(),
         % redirect log output to a different CloudI node
         redirect = undefined
             :: undefined | node(),

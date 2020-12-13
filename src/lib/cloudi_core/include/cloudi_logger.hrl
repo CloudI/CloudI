@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -36,8 +36,8 @@
 %   DEBUG: reports subsystem data that should be useful for debugging
 %   TRACE: reports subsystem data that is only for tracing execution
 
-% Typical logging output which will log asynchronously until the logger's
-% message queue becomes too large, switching to synchronous logging
+% Logging output will log asynchronously until the logger's
+% message queue becomes too large, then use synchronous logging
 % while the message queue remains large
 
 -define(LOG_FATAL(Format, Args),
@@ -75,14 +75,9 @@
                                        ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                        Level, Format, Args)).
 
-% Force the logging to be done synchronously to the local log only
-% (if you are concerned about losing a logging message when the logging
-%  is done asynchronously while the logger's message queue is somewhat large,
-%  or if you want to make sure the logger's message queue is flushed,
-%  during a rapid shutdown or crash, use these macros where necessary...
-%  they are already used for service restart/stop events with the info
-%  logging level, so it is unlikely it would be necessary to use the macros in
-%  custom source code, if the info logging level is enabled)
+% Force the logging to be done synchronously
+% (use if you need to be sure the data is written to the log,
+%  assuming no filesystem errors occur when writing to the log file)
 
 -define(LOG_FATAL_SYNC(Format, Args),
     cloudi_core_i_logger_interface:fatal_sync(?MODULE, ?LINE,

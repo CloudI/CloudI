@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2017-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_cache).
@@ -301,7 +301,7 @@ uniform(1) ->
 uniform(N) when is_integer(N), N > 1 ->
     Bytes = bytes(N),
     Bits = Bytes * 8,
-    <<I:Bits/integer>> = rand_bytes(Bytes),
+    <<I:Bits/unsigned-integer>> = rand_bytes(Bytes),
     (I rem N) + 1.
 
 %%-------------------------------------------------------------------------
@@ -323,7 +323,7 @@ uniform(1, State) ->
 uniform(N, State) when is_integer(N), N > 1 ->
     Bytes = bytes(N),
     Bits = Bytes * 8,
-    {<<I:Bits/integer>>, NewState} = rand_bytes(Bytes, State),
+    {<<I:Bits/unsigned-integer>>, NewState} = rand_bytes(Bytes, State),
     {(I rem N) + 1, NewState}.
 
 %%-------------------------------------------------------------------------

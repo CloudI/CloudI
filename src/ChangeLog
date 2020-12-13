@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-12-12 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add CloudI logger process overload mode with configurable limits
+      for changing the logger process mode from async->sync->overload
+      (new logging configuration values are:
+       queue_mode_async, queue_mode_sync, queue_mode_overload)
+    * Change the CloudI logger to use a cached message queue length
+      value when the value is large enough for the current
+      logger process mode
+    * Update quickrand
+
 2020-12-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi_service_http_cowboy1 and cloudi_service_http_elli

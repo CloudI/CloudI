@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -257,6 +257,11 @@
      logging_file_invalid |
      logging_stdout_invalid |
      logging_level_invalid |
+     logging_queue_mode_async_invalid |
+     logging_queue_mode_async_value |
+     logging_queue_mode_sync_invalid |
+     logging_queue_mode_sync_value |
+     logging_queue_mode_overload_invalid |
      logging_log_time_offset_invalid, any()} |
     error_reason_logging_syslog_set_configuration() |
     error_reason_logging_formatters_set_configuration().
@@ -1511,6 +1516,9 @@ logging(#config{logging = #config_logging{
                               file = File,
                               stdout = Stdout,
                               level = Level,
+                              queue_mode_async = QueueModeAsync,
+                              queue_mode_sync = QueueModeSync,
+                              queue_mode_overload = QueueModeOverload,
                               redirect = Redirect,
                               syslog = Syslog,
                               formatters = Formatters,
@@ -1538,15 +1546,33 @@ logging(#config{logging = #config_logging{
             [{level, Level} | LoggingList2]
     end,
     LoggingList4 = if
-        Redirect =:= Defaults#config_logging.redirect ->
+        QueueModeAsync =:= Defaults#config_logging.queue_mode_async ->
             LoggingList3;
         true ->
-            [{redirect, Redirect} | LoggingList3]
+            [{queue_mode_async, QueueModeAsync} | LoggingList3]
+    end,
+    LoggingList5 = if
+        QueueModeSync =:= Defaults#config_logging.queue_mode_sync ->
+            LoggingList4;
+        true ->
+            [{queue_mode_sync, QueueModeSync} | LoggingList4]
+    end,
+    LoggingList6 = if
+        QueueModeOverload =:= Defaults#config_logging.queue_mode_overload ->
+            LoggingList5;
+        true ->
+            [{queue_mode_overload, QueueModeOverload} | LoggingList5]
+    end,
+    LoggingList7 = if
+        Redirect =:= Defaults#config_logging.redirect ->
+            LoggingList6;
+        true ->
+            [{redirect, Redirect} | LoggingList6]
     end,
     undefined = Defaults#config_logging.syslog,
-    LoggingList5 = case Syslog of
+    LoggingList8 = case Syslog of
         undefined ->
-            LoggingList4;
+            LoggingList7;
         #config_logging_syslog{identity = SyslogIdentity,
                                facility = SyslogFacility,
                                level = SyslogLevel,
@@ -1621,12 +1647,12 @@ logging(#config{logging = #config_logging{
                 true ->
                     [{port, SyslogPort} | SyslogList8]
             end,
-            [{syslog, lists:reverse(SyslogList9)} | LoggingList4]
+            [{syslog, lists:reverse(SyslogList9)} | LoggingList7]
     end,
     undefined = Defaults#config_logging.formatters,
-    LoggingList6 = case Formatters of
+    LoggingList9 = case Formatters of
         undefined ->
-            LoggingList5;
+            LoggingList8;
         #config_logging_formatters{default = FormattersDefault,
                                    lookup = FormattersLookup} ->
             FormattersList0 = if
@@ -1704,28 +1730,28 @@ logging(#config{logging = #config_logging{
                 end,
                 {FormatterKeys, lists:reverse(FormatterValue7)}
             end, FormattersList0),
-            [{formatters, FormattersList1} | LoggingList5]
+            [{formatters, FormattersList1} | LoggingList8]
            
     end,
-    LoggingList7 = if
+    LoggingList10 = if
         LogTimeOffset =:= Defaults#config_logging.log_time_offset ->
-            LoggingList6;
+            LoggingList9;
         true ->
-            [{log_time_offset, LogTimeOffset} | LoggingList6]
+            [{log_time_offset, LogTimeOffset} | LoggingList9]
     end,
-    LoggingList8 = if
+    LoggingList11 = if
         AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
-            LoggingList7;
+            LoggingList10;
         true ->
-            [{aspects_log_before, AspectsLogBefore} | LoggingList7]
+            [{aspects_log_before, AspectsLogBefore} | LoggingList10]
     end,
-    LoggingList9 = if
+    LoggingList12 = if
         AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
-            LoggingList8;
+            LoggingList11;
         true ->
-            [{aspects_log_after, AspectsLogAfter} | LoggingList8]
+            [{aspects_log_after, AspectsLogAfter} | LoggingList11]
     end,
-    lists:reverse(LoggingList9).
+    lists:reverse(LoggingList12).
 
 -spec code_path_add(Path :: string(),
                     Config :: #config{}) ->
@@ -5106,6 +5132,9 @@ logging_proplist(Value) ->
     Logging = #config_logging{},
     Defaults = [
         {level, Logging#config_logging.level},
+        {queue_mode_async, Logging#config_logging.queue_mode_async},
+        {queue_mode_sync, Logging#config_logging.queue_mode_sync},
+        {queue_mode_overload, Logging#config_logging.queue_mode_overload},
         {file, Logging#config_logging.file},
         {stdout, Logging#config_logging.stdout},
         {redirect, Logging#config_logging.redirect},
@@ -5115,33 +5144,67 @@ logging_proplist(Value) ->
         {aspects_log_before, Logging#config_logging.aspects_log_before},
         {aspects_log_after, Logging#config_logging.aspects_log_after}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Level, _, _, _, _, _, _, _, _]
+        [Level, _, _, _, _, _, _, _, _,
+         _, _, _]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
                       (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_level_invalid,
                      Level}};
-        [_, File, _, _, _, _, _, _, _]
+        [_, QueueModeAsync, _, _, _, _, _, _, _,
+         _, _, _]
+            when not (is_integer(QueueModeAsync) andalso
+                      (QueueModeAsync > 0)) ->
+            {error, {logging_queue_mode_async_invalid,
+                     QueueModeAsync}};
+        [_, _, QueueModeSync, _, _, _, _, _, _,
+         _, _, _]
+            when not (is_integer(QueueModeSync) andalso
+                      (QueueModeSync > 0)) ->
+            {error, {logging_queue_mode_sync_invalid,
+                     QueueModeSync}};
+        [_, _, _, QueueModeOverload, _, _, _, _, _,
+         _, _, _]
+            when not (is_integer(QueueModeOverload) andalso
+                      (QueueModeOverload > ?LOGGER_MODE_OVERLOAD_OFFSET)) ->
+            {error, {logging_queue_mode_overload_invalid,
+                     QueueModeOverload}};
+        [_, QueueModeAsync, QueueModeSync, _, _, _, _, _, _,
+         _, _, _]
+            when not (QueueModeAsync < QueueModeSync) ->
+            {error, {logging_queue_mode_async_value,
+                     QueueModeAsync}};
+        [_, _, QueueModeSync, QueueModeOverload, _, _, _, _, _,
+         _, _, _]
+            when not (QueueModeSync < QueueModeOverload) ->
+            {error, {logging_queue_mode_sync_value,
+                     QueueModeSync}};
+        [_, _, _, _, File, _, _, _, _,
+         _, _, _]
             when not ((is_list(File) andalso
                        is_integer(hd(File))) orelse
                       (File =:= undefined))->
             {error, {logging_file_invalid,
                      File}};
-        [_, _, Stdout, _, _, _, _, _, _]
+        [_, _, _, _, _, Stdout, _, _, _,
+         _, _, _]
             when not is_boolean(Stdout) ->
             {error, {logging_stdout_invalid,
                      Stdout}};
-        [_, _, _, Redirect, _, _, _, _, _]
+        [_, _, _, _, _, _, Redirect, _, _,
+         _, _, _]
             when not is_atom(Redirect) ->
             {error, {logging_redirect_invalid,
                      Redirect}};
-        [_, _, _, _, Syslog, _, _, _, _]
+        [_, _, _, _, _, _, _, Syslog, _,
+         _, _, _]
             when not ((Syslog =:= undefined) orelse
                       is_list(Syslog)) ->
             {error, {logging_syslog_invalid,
                      Syslog}};
-        [_, _, _, _, _, _, LogTimeOffset, _, _]
+        [_, _, _, _, _, _, _, _, _,
+         LogTimeOffset, _, _]
             when not ((LogTimeOffset =:= fatal) orelse
                       (LogTimeOffset =:= error) orelse
                       (LogTimeOffset =:= warn) orelse
@@ -5151,7 +5214,8 @@ logging_proplist(Value) ->
                       (LogTimeOffset =:= off)) ->
             {error, {logging_log_time_offset_invalid,
                      LogTimeOffset}};
-        [Level, File, Stdout, Redirect, Syslog, Formatters,
+        [Level, QueueModeAsync, QueueModeSync, QueueModeOverload,
+         File, Stdout, Redirect, Syslog, Formatters,
          LogTimeOffset, AspectsLogBefore, AspectsLogAfter] ->
             FileNew = if
                 Level =:= undefined ->
@@ -5171,6 +5235,9 @@ logging_proplist(Value) ->
                      AspectsLogBeforeNew, AspectsLogAfterNew} ->
                     LoggingNew = Logging#config_logging{
                                      level = LevelNew,
+                                     queue_mode_async = QueueModeAsync,
+                                     queue_mode_sync = QueueModeSync,
+                                     queue_mode_overload = QueueModeOverload,
                                      file = FileNew,
                                      stdout = Stdout,
                                      redirect = Redirect,
@@ -5183,7 +5250,8 @@ logging_proplist(Value) ->
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _, _, _, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _, _, _,
+         _, _, _ | Extra] ->
             {error, {logging_invalid, Extra}}
     end.
 

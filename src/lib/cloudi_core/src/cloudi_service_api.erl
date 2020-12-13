@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -991,6 +991,9 @@
     nonempty_list({file, string() | undefined} |
                   {stdout, boolean()} |
                   {level, loglevel()} |
+                  {queue_mode_async, pos_integer()} |
+                  {queue_mode_sync, pos_integer()} |
+                  {queue_mode_overload, pos_integer()} |
                   {redirect, node() | undefined} |
                   {syslog, logging_syslog_set_proplist() | undefined} |
                   {formatters, logging_formatters_set_proplist() | undefined} |
