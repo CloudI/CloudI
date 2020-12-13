@@ -300,7 +300,7 @@ redirect_update(Node) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fatal(Mode :: mode_interface(),
+-spec fatal(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -310,8 +310,8 @@ redirect_update(Node) ->
             Args :: list() | undefined) ->
     'ok'.
 
-fatal(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(Mode, Process, fatal, Module, Line,
+fatal(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, fatal, Module, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -322,7 +322,7 @@ fatal(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec error(Mode :: mode_interface(),
+-spec error(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -332,8 +332,8 @@ fatal(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
             Args :: list() | undefined) ->
     'ok'.
 
-error(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(Mode, Process, error, Module, Line,
+error(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, error, Module, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -344,7 +344,7 @@ error(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec warn(Mode :: mode_interface(),
+-spec warn(ModeInterface :: mode_interface(),
            Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: non_neg_integer(),
@@ -354,8 +354,8 @@ error(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
            Args :: list() | undefined) ->
     'ok'.
 
-warn(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(Mode, Process, warn, Module, Line,
+warn(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, warn, Module, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -366,7 +366,7 @@ warn(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec info(Mode :: mode_interface(),
+-spec info(ModeInterface :: mode_interface(),
            Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: non_neg_integer(),
@@ -376,8 +376,8 @@ warn(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
            Args :: list() | undefined) ->
     'ok'.
 
-info(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(Mode, Process, info, Module, Line,
+info(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, info, Module, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -388,7 +388,7 @@ info(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec debug(Mode :: mode_interface(),
+-spec debug(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -398,8 +398,8 @@ info(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
             Args :: list() | undefined) ->
     'ok'.
 
-debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(Mode, Process, debug, Module, Line,
+debug(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, debug, Module, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -410,7 +410,7 @@ debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trace(Mode :: mode_interface(),
+-spec trace(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: non_neg_integer(),
@@ -420,8 +420,8 @@ debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
             Args :: list() | undefined) ->
     'ok'.
 
-trace(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(Mode, Process, trace, Module, Line,
+trace(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, trace, Module, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -680,7 +680,7 @@ init([#config_logging{file = FilePath,
 handle_call({Level, Timestamp, Node, Pid,
              Module, Line, Function, Arity,
              MetaData, LogMessage}, _, State) ->
-    case log_message_internal(Level, Timestamp, Node, Pid,
+    case log_message_internal(sync, Level, Timestamp, Node, Pid,
                               Module, Line, Function, Arity,
                               MetaData, LogMessage, State) of
         {ok, StateNext} ->
@@ -852,7 +852,7 @@ handle_cast({redirect_update, Node}, State) ->
 handle_cast({Level, Timestamp, Node, Pid,
              Module, Line, Function, Arity,
              MetaData, LogMessage}, State) ->
-    case log_message_internal(Level, Timestamp, Node, Pid,
+    case log_message_internal(async, Level, Timestamp, Node, Pid,
                               Module, Line, Function, Arity,
                               MetaData, LogMessage, State) of
         {ok, StateNext} ->
@@ -1373,15 +1373,15 @@ log_message_formatters(Level, Timestamp, Node, Pid,
             end
     end.
 
-log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
-                     Format, Args)
+log_message_external(ModeInterface, Process,
+                     Level, Module, Line, Function, Arity, Format, Args)
     when is_atom(Level), is_atom(Module), is_integer(Line), Line >= 0,
          is_atom(Function),
          (Arity =:= undefined) orelse
          (is_integer(Arity) andalso (Arity >= 0)) ->
     Timestamp = cloudi_timestamp:timestamp(),
     case flooding_logger(Timestamp) of
-        {true, _} when Mode =:= async ->
+        {true, _} when ModeInterface =:= async ->
             ok;
         {_, FloodingWarning} ->
             MetaData = metadata_get(),
@@ -1392,18 +1392,18 @@ log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
                     log_message_safe(Format, Args)
             end,
             LogMessageN = if
-                FloodingWarning =:= undefined; Mode =:= sync ->
+                FloodingWarning =:= undefined; ModeInterface =:= sync ->
                     LogMessage0;
                 is_binary(FloodingWarning) ->
                     [LogMessage0, FloodingWarning]
             end,
             if
-                Mode =:= async ->
+                ModeInterface =:= async ->
                     gen_server:cast(Process,
                                     {Level, Timestamp, node(), self(),
                                      Module, Line, Function, Arity,
                                      MetaData, LogMessageN});
-                Mode =:= sync ->
+                ModeInterface =:= sync ->
                     gen_server:call(Process,
                                     {Level, Timestamp, node(), self(),
                                      Module, Line, Function, Arity,
@@ -1464,7 +1464,8 @@ log_message_internal_t0(LevelCheck, Line, Function, Arity, Format, Args,
             Timestamp = cloudi_timestamp:timestamp(),
             if
                 Destination =:= ?MODULE ->
-                    log_message_internal(LevelCheck, Timestamp, Node, Self,
+                    log_message_internal(sync,
+                                         LevelCheck, Timestamp, Node, Self,
                                          ?MODULE, Line, Function, Arity,
                                          [], LogMessage, State);
                 true ->
@@ -1497,7 +1498,10 @@ log_message_internal_t1(LevelCheck, Line, Function, Arity, Format, Args,
             ok
     end.
 
-log_message_internal(Level, Timestamp, Node, Pid,
+log_message_internal(async, _, _, _, _, _, _, _, _, _, _,
+                     #state{mode = overload} = State) ->
+    {ok, State};
+log_message_internal(_, Level, Timestamp, Node, Pid,
                      Module, Line, Function, Arity,
                      MetaData, LogMessage,
                      #state{main_level = MainLevel,
@@ -1505,9 +1509,10 @@ log_message_internal(Level, Timestamp, Node, Pid,
                             syslog_level = SyslogLevel,
                             formatters = FormattersConfig,
                             aspects_log_before = AspectsLogBefore,
-                            aspects_log_after = AspectsLogAfter} = State)
-    when Level =:= fatal; Level =:= error; Level =:= warn;
-         Level =:= info; Level =:= debug; Level =:= trace ->
+                            aspects_log_after = AspectsLogAfter} = State) ->
+    true = (Level =:= fatal) orelse (Level =:= error) orelse
+           (Level =:= warn) orelse (Level =:= info) orelse
+           (Level =:= debug) orelse (Level =:= trace),
     Message = log_message_formatters(Level, Timestamp, Node, Pid,
                                      Module, Line, Function, Arity,
                                      MetaData, LogMessage,
@@ -1850,19 +1855,22 @@ timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
      SecsNew rem 1000000,
      MicroSecsNew rem 1000000}.
 
-interface(Level, overload, Process) ->
+interface(Level, overload, Destination) ->
     cloudi_string:format(?INTERFACE_MODULE_OVERLOAD_CODE(Level),
-                         ?INTERFACE_MODULE_OVERLOAD_ARGS(Level, Process));
-interface(Level, Mode, Process)
-    when Mode =:= async; Mode =:= sync ->
+                         ?INTERFACE_MODULE_OVERLOAD_ARGS(Level,
+                                                         Destination));
+interface(Level, ModeInterface, Destination)
+    when ModeInterface =:= async; ModeInterface =:= sync ->
     cloudi_string:format(?INTERFACE_MODULE_NORMAL_CODE(Level),
-                         ?INTERFACE_MODULE_NORMAL_ARGS(Level, Mode, Process)).
+                         ?INTERFACE_MODULE_NORMAL_ARGS(Level,
+                                                       ModeInterface,
+                                                       Destination)).
 
 load_interface_module(undefined, _, _) ->
     {error, logging_level_undefined};
-load_interface_module(Level, Mode, Process) when is_atom(Level) ->
-    {ok, Module,
-     Binary} = merl:compile(merl:quote(interface(Level, Mode, Process))),
+load_interface_module(Level, Mode, Destination) when is_atom(Level) ->
+    ModuleText = interface(Level, Mode, Destination),
+    {ok, Module, Binary} = merl:compile(merl:quote(ModuleText)),
     cloudi_core_i_logger_interface = Module,
     % make sure no old code exists
     _ = code:purge(Module),
