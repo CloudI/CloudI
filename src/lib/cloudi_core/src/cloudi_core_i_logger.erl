@@ -1446,6 +1446,7 @@ flooding_logger(Timestamp1, Process) ->
                     erlang:put(?LOGGER_FLOODING_PDICT_KEY,
                                {Timestamp1, 1, false}),
                     {false, undefined};
+                (Flooding =:= false) andalso
                 (MicroSecondsElapsed > ?LOGGER_FLOODING_INTERVAL_MIN) andalso
                 (MicroSecondsElapsed div Count1 < Delta) ->
                     erlang:put(?LOGGER_FLOODING_PDICT_KEY,
