@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -58,6 +58,7 @@
          update/2,
          search/2,
          status/2,
+         node_status/1,
          pids/2]).
 
 %% gen_server callbacks
@@ -128,6 +129,8 @@
             :: cloudi_x_key2value:
                cloudi_x_key2value(cloudi_service_api:service_id(),
                                   pid(), #service{}),
+        failed = 0 % number of services that had MaxR restarts
+            :: non_neg_integer(),
         durations_update = cloudi_core_i_status:durations_new()
             :: cloudi_core_i_status:durations(cloudi_service_api:service_id()),
         durations_suspend = cloudi_core_i_status:durations_new()
@@ -328,6 +331,11 @@ status([_ | _] = ServiceIdList, Timeout) ->
                                 {status, ServiceIdList},
                                 Timeout)).
 
+node_status(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                node_status,
+                                Timeout)).
+
 pids(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
@@ -498,6 +506,14 @@ handle_call({status, ServiceIdList}, _,
                                DurationsUpdate, DurationsSuspend, Suspended,
                                DurationsRestart, Services),
     {reply, Reply, State};
+
+handle_call(node_status, _,
+            #state{services = Services,
+                   failed = Failed} = State) ->
+    Running = cloudi_x_key2value:size1(Services),
+    LocalStatusList = [{services_running, erlang:integer_to_list(Running)},
+                       {services_failed, erlang:integer_to_list(Failed)}],
+    {reply, {ok, LocalStatusList}, State};
 
 handle_call({pids, ServiceId}, _,
             #state{services = Services} = State) ->
@@ -997,7 +1013,8 @@ restart_success_all(ProcessIndex,
                         State#state{services = ServicesNew}).
 
 restart_failed(Service, ServiceId,
-               #state{services = Services} = State) ->
+               #state{services = Services,
+                      failed = Failed} = State) ->
     StateNew = case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
             % if other processes were started by this service instance
@@ -1007,7 +1024,8 @@ restart_failed(Service, ServiceId,
         error ->
             State
     end,
-    terminated_service(true, ServiceId, StateNew).
+    terminated_service(true, ServiceId,
+                       StateNew#state{failed = Failed + 1}).
 
 restart_log_success_one(PidOld, RestartCount, T,
                         Pid, ServiceIdStr)

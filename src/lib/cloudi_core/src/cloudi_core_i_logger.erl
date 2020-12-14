@@ -1380,7 +1380,7 @@ log_message_external(ModeInterface, Process,
          (Arity =:= undefined) orelse
          (is_integer(Arity) andalso (Arity >= 0)) ->
     Timestamp = cloudi_timestamp:timestamp(),
-    case flooding_logger(Timestamp) of
+    case flooding_logger(Timestamp, Process) of
         {true, _} when ModeInterface =:= async ->
             ok;
         {_, FloodingWarning} ->
@@ -1412,13 +1412,20 @@ log_message_external(ModeInterface, Process,
             end
     end.
 
-flooding_logger_warning(SecondsRemaining) ->
+flooding_logger_warning(SecondsRemaining, Delta, Remote) ->
+    Location = if
+        Remote =:= true ->
+            "remotely";
+        Remote =:= false ->
+            "locally"
+    end,
     cloudi_string:format_to_binary("~n"
-        "... (~w logged/second async stopped process logging for ~.2f seconds)",
-        [1000000 div ?LOGGER_FLOODING_DELTA, SecondsRemaining]).
+        "... (~w logged/second async stopped process from "
+        "logging ~s for ~.2f seconds)",
+        [1000000 div Delta, Location, SecondsRemaining]).
 
 % determine if a single process has sent too many logging messages
-flooding_logger(Timestamp1) ->
+flooding_logger(Timestamp1, Process) ->
     case erlang:get(?LOGGER_FLOODING_PDICT_KEY) of
         undefined ->
             erlang:put(?LOGGER_FLOODING_PDICT_KEY,
@@ -1427,21 +1434,26 @@ flooding_logger(Timestamp1) ->
         {Timestamp0, Count0, Flooding} ->
             Count1 = Count0 + 1,
             MicroSecondsElapsed = timer:now_diff(Timestamp1, Timestamp0),
+            {Delta, Remote} = if
+                is_tuple(Process) ->
+                    {?LOGGER_FLOODING_DELTA_REMOTE, true};
+                true ->
+                    {?LOGGER_FLOODING_DELTA_LOCAL, false}
+            end,
             if
-                (MicroSecondsElapsed >
-                 ?LOGGER_FLOODING_INTERVAL_MAX * 1000) orelse
+                (MicroSecondsElapsed > ?LOGGER_FLOODING_INTERVAL_MAX) orelse
                 (MicroSecondsElapsed < 0) ->
                     erlang:put(?LOGGER_FLOODING_PDICT_KEY,
                                {Timestamp1, 1, false}),
                     {false, undefined};
-                (MicroSecondsElapsed >
-                 ?LOGGER_FLOODING_INTERVAL_MIN * 1000) andalso
-                (MicroSecondsElapsed div Count1 < ?LOGGER_FLOODING_DELTA) ->
+                (MicroSecondsElapsed > ?LOGGER_FLOODING_INTERVAL_MIN) andalso
+                (MicroSecondsElapsed div Count1 < Delta) ->
                     erlang:put(?LOGGER_FLOODING_PDICT_KEY,
                                {Timestamp0, Count1, true}),
-                    SecondsRemaining = ?LOGGER_FLOODING_INTERVAL_MAX * 1000.0 -
-                                       MicroSecondsElapsed / 1000000,
-                    {false, flooding_logger_warning(SecondsRemaining)};
+                    SecondsRemaining = (?LOGGER_FLOODING_INTERVAL_MAX -
+                                        MicroSecondsElapsed) / 1000000,
+                    {false,
+                     flooding_logger_warning(SecondsRemaining, Delta, Remote)};
                 true ->
                     erlang:put(?LOGGER_FLOODING_PDICT_KEY,
                                {Timestamp0, Count1, Flooding}),

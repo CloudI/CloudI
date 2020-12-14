@@ -37,8 +37,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang 2-way map`
 
 - `https://github.com/okeuday/key2value`
-- `commit bee9b334223ac11d573de17bf7be029d83c09739 (v2.0.1)`
-- `Fri Nov 27 19:52:40 UTC 2020`
+- `commit 9f04e0c7698a8d4be663bce4889f3f44ac468dba`
+- `Mon Dec 14 22:29:26 UTC 2020`
 - `MIT`
 
 `keys1value`

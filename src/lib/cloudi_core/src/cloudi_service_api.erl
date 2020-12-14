@@ -876,7 +876,9 @@
     nonempty_list({set, all | local} |
                   nodes_properties()).
 -type node_status_local() ::
-    nonempty_list({uptime, nanoseconds_string()} |
+    nonempty_list({services_running, integer_string_ge_0()} |
+                  {services_failed, integer_string_ge_0()} |
+                  {uptime, nanoseconds_string()} |
                   {uptime_cost_total, float_string_ge_0()} |
                   {uptime_cost_day, float_string_ge_0()} |
                   {uptime_cost_week, float_string_ge_0()} |
@@ -1577,7 +1579,12 @@ nodes_status(L, Timeout)
            (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
            (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
           (Timeout =:= infinity)) ->
-    cloudi_core_i_nodes:status(L, Timeout).
+    case cloudi_core_i_nodes:status(L, Timeout) of
+        {ok, NodesStatus} ->
+            nodes_status_local_services(NodesStatus, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1927,6 +1934,23 @@ code_status(Timeout)
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+nodes_status_local_services(NodesStatus, Timeout) ->
+    nodes_status_local_services(NodesStatus, [], Timeout).
+
+nodes_status_local_services([], L, _) ->
+    {ok, lists:reverse(L)};
+nodes_status_local_services([{Node, StatusList} | NodesStatus], L, Timeout)
+    when Node =:= node() ->
+    case cloudi_core_i_services_monitor:node_status(Timeout) of
+        {ok, LocalStatusList} ->
+            {ok, lists:reverse(L, [{Node, LocalStatusList ++ StatusList} |
+                                   NodesStatus])};
+        {error, _} = Error ->
+            Error
+    end;
+nodes_status_local_services([NodeStatus | NodesStatus], L, Timeout) ->
+    nodes_status_local_services(NodesStatus, [NodeStatus | L], Timeout).
 
 service_ids_convert_update(L) ->
     service_ids_convert_update(L, []).

@@ -346,11 +346,12 @@
 % to trigger logger flooding prevention, so that logging messages are discarded
 % since they are coming from source code that is misbehaving that has already
 % logged enough (only affects the single Erlang process)
--define(LOGGER_FLOODING_DELTA, 10). % microseconds
+-define(LOGGER_FLOODING_DELTA_LOCAL,        10). % microseconds
+-define(LOGGER_FLOODING_DELTA_REMOTE,       10). % microseconds
 
-% time interval to check logger flooding within
--define(LOGGER_FLOODING_INTERVAL_MAX, 10000). % milliseconds
--define(LOGGER_FLOODING_INTERVAL_MIN,     5). % milliseconds
+% time interval to check logger flooding within (millisecond granularity)
+-define(LOGGER_FLOODING_INTERVAL_MAX, 10000000). % microseconds
+-define(LOGGER_FLOODING_INTERVAL_MIN,     5000). % microseconds
 
 % log messages to process before switching back to sync mode
 -define(LOGGER_MODE_OVERLOAD_OFFSET, 250).

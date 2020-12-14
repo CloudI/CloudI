@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-12-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add services_running and services_failed counts to the
+      CloudI Service API nodes_status output for the local node
+    * Change CloudI logger flooding protection to use separate
+      constants for local and remote log messages
+      (currently the same value is used)
+    * Update key2value
+
 2020-12-13 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change CloudI logger overload mode to ignore

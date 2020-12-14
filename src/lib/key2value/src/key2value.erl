@@ -13,7 +13,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -34,8 +34,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2020 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(key2value).
@@ -55,6 +55,8 @@
          is_key2/2,
          new/0,
          new/1,
+         size1/1,
+         size2/1,
          store/4,
          update1/3,
          update2/3]).
@@ -266,6 +268,20 @@ new(Module)
                lookup1 = module_new(Module),
                lookup2 = module_new(Module)}.
 
+-spec size1(key2value(key1(), key2(), value())) ->
+    non_neg_integer().
+
+size1(#key2value{module = Module,
+                 lookup1 = Lookup1}) ->
+    module_size(Module, Lookup1).
+
+-spec size2(key2value(key1(), key2(), value())) ->
+    non_neg_integer().
+
+size2(#key2value{module = Module,
+                 lookup2 = Lookup2}) ->
+    module_size(Module, Lookup2).
+
 -spec store(K1 :: key1(),
             K2 :: key2(),
             V :: value(),
@@ -338,6 +354,7 @@ update2(K2, F,
            module_fold/4,
            module_is_key/3,
            module_new/1,
+           module_size/2,
            module_store/4,
            module_update/4,
            module_update/5]}).
@@ -363,6 +380,9 @@ module_is_key(Module, Key, Lookup) ->
 
 module_new(Module) ->
     Module:new().
+
+module_size(Module, Lookup) ->
+    Module:size(Lookup).
 
 module_store(maps, Key, Value, Lookup) ->
     maps:put(Key, Value, Lookup);
