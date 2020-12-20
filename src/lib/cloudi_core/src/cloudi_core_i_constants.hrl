@@ -348,7 +348,9 @@
 % since they are coming from source code that is misbehaving that has already
 % logged enough (only affects the single Erlang process)
 -define(LOGGER_FLOODING_DELTA_LOCAL,        10). % microseconds
--define(LOGGER_FLOODING_DELTA_REMOTE,       10). % microseconds
+% harsher constraint for logging remotely to avoid negatively impacting
+% the remote logging process and prevent it from changing its process mode
+-define(LOGGER_FLOODING_DELTA_REMOTE,      100). % microseconds
 
 % time interval to check logger flooding within (millisecond granularity)
 -define(LOGGER_FLOODING_INTERVAL_MAX, 10000000). % microseconds

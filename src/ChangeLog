@@ -3,6 +3,8 @@
 
 2020-12-19 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Set the LOGGER_FLOODING_DELTA_REMOTE constant based on testing
+      to ensure the remote logging process load is more limited
     * Add CloudI log output when overload mode is exited with
       the duration of the overload state in a microseconds string
     * Remove limit from the allowed CloudI Service API services_update

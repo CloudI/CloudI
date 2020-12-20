@@ -1422,8 +1422,8 @@ flooding_logger_warning(SecondsRemaining, Delta, Remote) ->
             "locally"
     end,
     cloudi_string:format_to_binary("~n"
-        "... (~w logged/second async stopped process from "
-        "logging ~s for ~.2f seconds)",
+        "... (~w logged/second async stopped process from~n"
+        "     logging ~s for ~.2f seconds)",
         [1000000 div Delta, Location, SecondsRemaining]).
 
 % determine if a single process has sent too many logging messages
