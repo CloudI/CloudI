@@ -4393,8 +4393,7 @@ services_update_plan_options_external(OptionsList) ->
                  dispatcher_pid_options,
                  aspects_init_after,
                  aspects_request_before, aspects_request_after,
-                 aspects_terminate_before,
-                 limit],
+                 aspects_terminate_before],
     case cloudi_proplists:delete_all(ValidKeys, OptionsList) of
         [] ->
             case services_validate_options_external(OptionsList,

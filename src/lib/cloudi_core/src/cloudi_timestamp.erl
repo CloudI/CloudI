@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -57,6 +57,8 @@
          microseconds_epoch_to_string/1,
          microseconds_monotonic/0,
          microseconds_os/0,
+         microseconds_to_string/1,
+         microseconds_to_string/2,
          nanoseconds/0,
          nanoseconds_monotonic/0,
          nanoseconds_os/0,
@@ -83,6 +85,12 @@
 -type microseconds_monotonic() :: integer().
 -type nanoseconds_monotonic() :: integer().
 -type native_monotonic() :: integer().
+% `"1 days 5 hours 1563 seconds 557199 microseconds"'
+-type microseconds_string() ::
+    nonempty_list($a..$z | $0..$9 | $ ).
+% `"+ 110 microseconds"'
+-type microseconds_string_signed() ::
+    nonempty_list($a..$z | $0..$9 | $  | $+ | $-).
 % timestamps as 1970-01-01T00:00:00.000000Z
 %            or 1970-01-01T00:00:00.000Z
 -type iso8601() ::
@@ -100,6 +108,8 @@
               microseconds_monotonic/0,
               nanoseconds_monotonic/0,
               native_monotonic/0,
+              microseconds_string/0,
+              microseconds_string_signed/0,
               iso8601/0,
               iso8601_seconds/0]).
 
@@ -468,6 +478,87 @@ microseconds_os() ->
 microseconds_os() ->
     os:system_time(micro_seconds).
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Format a microseconds duration as a minimal string with lower-precision integers.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec microseconds_to_string(TotalMicroSeconds :: non_neg_integer()) ->
+    microseconds_string().
+
+microseconds_to_string(TotalMicroSeconds)
+    when is_integer(TotalMicroSeconds), TotalMicroSeconds >= 0 ->
+    MicroSeconds = TotalMicroSeconds rem ?MICROSECONDS_IN_SECOND,
+    TotalSeconds = TotalMicroSeconds div ?MICROSECONDS_IN_SECOND,
+    Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
+    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    Hours = TotalHours rem ?HOURS_IN_DAY,
+    TotalDays = TotalHours div ?HOURS_IN_DAY,
+    if
+        TotalDays > 0 ->
+            lists:flatten([time_value_to_list(TotalDays, "day"), $ ,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(MicroSeconds, "microsecond")]);
+        Hours > 0 ->
+            lists:flatten([time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(MicroSeconds, "microsecond")]);
+        Seconds > 0 ->
+            lists:flatten([time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(MicroSeconds, "microsecond")]);
+        true ->
+            lists:flatten(time_value_to_list(MicroSeconds, "microsecond"))
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Format a microseconds duration with options as a minimal string with lower-precision integers.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec microseconds_to_string(TotalMicroSeconds :: integer(),
+                             Options :: signed) ->
+    microseconds_string_signed().
+
+microseconds_to_string(TotalMicroSeconds, signed)
+    when is_integer(TotalMicroSeconds) ->
+    {Sign, TotalMicroSecondsPositive} = if
+        TotalMicroSeconds >= 0 ->
+            {"+ ", TotalMicroSeconds};
+        true ->
+            {"- ", -1 * TotalMicroSeconds}
+    end,
+    MicroSeconds = TotalMicroSecondsPositive rem ?MICROSECONDS_IN_SECOND,
+    TotalSeconds = TotalMicroSecondsPositive div ?MICROSECONDS_IN_SECOND,
+    Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
+    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    Hours = TotalHours rem ?HOURS_IN_DAY,
+    TotalDays = TotalHours div ?HOURS_IN_DAY,
+    if
+        TotalDays > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(TotalDays, "day"), $ ,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(MicroSeconds, "microsecond")]);
+        Hours > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(MicroSeconds, "microsecond")]);
+        Seconds > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(MicroSeconds, "microsecond")]);
+        true ->
+            lists:flatten([Sign,
+                           time_value_to_list(MicroSeconds, "microsecond")])
+    end;
+microseconds_to_string(_, _) ->
+    erlang:exit(badarg).
 
 %%-------------------------------------------------------------------------
 %% @doc

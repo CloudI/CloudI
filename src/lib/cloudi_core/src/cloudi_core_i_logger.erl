@@ -113,6 +113,8 @@
             :: pos_integer(),
         mode = async
             :: mode_process(),
+        overload_start = undefined
+            :: undefined | cloudi_timestamp:microseconds_monotonic(),
         destination = undefined
             :: undefined | ?MODULE | {?MODULE, node()},
         syslog = undefined
@@ -1734,6 +1736,7 @@ log_mode_check(#state{level = Level,
                       queue_mode_sync = QueueModeSync,
                       queue_mode_overload = QueueModeOverload,
                       mode = ModeOld,
+                      overload_start = OverloadStart,
                       destination = Destination,
                       logger_self = Self} = State) ->
     {message_queue_len,
@@ -1777,9 +1780,30 @@ log_mode_check(#state{level = Level,
         ModeNew /= ModeOld ->
             case load_interface_module(Level, ModeNew, Destination) of
                 {ok, Binary} ->
-                    {ok, State#state{interface_module = Binary,
-                                     queue_pending = QueuePending,
-                                     mode = ModeNew}};
+                    {LogOverload, OverloadStartNew} = if
+                        ModeNew =:= sync, ModeOld =:= overload ->
+                            {true, undefined};
+                        ModeNew =:= overload, ModeOld =:= sync ->
+                            {false, cloudi_timestamp:microseconds_monotonic()};
+                        true ->
+                            {false, OverloadStart}
+                    end,
+                    StateNew = State#state{interface_module = Binary,
+                                           queue_pending = QueuePending,
+                                           mode = ModeNew,
+                                           overload_start = OverloadStartNew},
+                    if
+                        LogOverload =:= true ->
+                            OverloadEnd = cloudi_timestamp:
+                                          microseconds_monotonic(),
+                            ?LOG_T0_ERROR("logging overload occurred for ~s",
+                                          [cloudi_timestamp:
+                                           microseconds_to_string(
+                                               OverloadEnd - OverloadStart)],
+                                          StateNew);
+                        LogOverload =:= false ->
+                            {ok, StateNew}
+                    end;
                 {error, _} = Error ->
                     Error
             end;

@@ -1,6 +1,24 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-12-19 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add CloudI log output when overload mode is exited with
+      the duration of the overload state in a microseconds string
+    * Remove limit from the allowed CloudI Service API services_update
+      options that are allowed to change for an external service
+      to avoid allowing data changes that don't modify the OS process
+      when a new OS process is not created
+        * Now all the external service configuration options related to
+          the execution environment are kept static during the service's
+          lifetime, these options are:
+          limit, owner, nice, cgroup, chroot, syscall_lock, directory
+        * Both internal and external services are unable to update
+          common service configuration options related to the
+          execution environment which are:
+          count_process_dynamic, timeout_terminate, restart_all,
+          restart_delay, scope
+
 2020-12-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add services_running and services_failed counts to the
