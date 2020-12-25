@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2018-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_status).
@@ -40,6 +40,7 @@
 -export([durations_copy/2,
          durations_erase/2,
          durations_new/0,
+         durations_size/1,
          durations_state/2,
          durations_store/3,
          durations_store_difference/4,
@@ -87,6 +88,12 @@ durations_erase(Key, DurationsLookup) ->
 
 durations_new() ->
     #{}.
+
+-spec durations_size(DurationsLookup :: durations(any())) ->
+    non_neg_integer().
+
+durations_size(DurationsLookup) ->
+    maps:size(DurationsLookup).
 
 -spec durations_state(Key :: any(),
                       DurationsLookup :: durations(any())) ->

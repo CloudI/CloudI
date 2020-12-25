@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2020-12-24 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add services_restarted to the
+      CloudI Service API nodes_status output for the local node
+
 2020-12-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Set the LOGGER_FLOODING_DELTA_REMOTE constant based on testing

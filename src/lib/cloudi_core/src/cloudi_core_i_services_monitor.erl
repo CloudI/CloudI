@@ -509,9 +509,12 @@ handle_call({status, ServiceIdList}, _,
 
 handle_call(node_status, _,
             #state{services = Services,
-                   failed = Failed} = State) ->
+                   failed = Failed,
+                   durations_restart = DurationsRestart} = State) ->
     Running = cloudi_x_key2value:size1(Services),
+    Restarted = cloudi_core_i_status:durations_size(DurationsRestart),
     LocalStatusList = [{services_running, erlang:integer_to_list(Running)},
+                       {services_restarted, erlang:integer_to_list(Restarted)},
                        {services_failed, erlang:integer_to_list(Failed)}],
     {reply, {ok, LocalStatusList}, State};
 
