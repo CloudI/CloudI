@@ -26,7 +26,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -47,8 +47,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2017-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_hash).
@@ -613,6 +613,11 @@ add_64(X0, X1, X2, X3, X4, X5)
 subtract_32(X0, X1)
     when is_integer(X0), is_integer(X1) ->
     (X0 - X1) band ?BITMASK32.
+
+% iodata() recursive type is not infinitely recursive
+% (https://bugs.erlang.org/browse/ERL-1379)
+%-dialyzer({no_underspecs,
+%           [iodata_to_list/1]}).
 
 -spec iodata_to_list(IOData :: iodata()) ->
     {list(byte()), non_neg_integer()}.

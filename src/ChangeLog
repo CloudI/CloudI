@@ -4,6 +4,7 @@
 2021-01-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the queue_mode value to the CloudI Service API logging_status output
+    * Update quickrand
 
 2020-12-24 Michael Truog   <mjtruog at protonmail dot com>
 
