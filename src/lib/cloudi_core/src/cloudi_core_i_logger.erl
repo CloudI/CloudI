@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2020 Michael Truog
+%%% @copyright 2009-2021 Michael Truog
 %%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -696,7 +696,8 @@ handle_call({Level, Timestamp, Node, Pid,
             {stop, Reason, ok, StateNext}
     end;
 handle_call(status, _,
-            #state{file_counts = FileCounts,
+            #state{mode = Mode,
+                   file_counts = FileCounts,
                    error_read_count = ErrorReadCount,
                    error_read_types = ErrorReadTypes,
                    error_write_count = ErrorWriteCount,
@@ -759,13 +760,14 @@ handle_call(status, _,
         error ->
             Status6
     end,
-    StatusN = case maps:find(fatal, FileCounts) of
+    Status8 = case maps:find(fatal, FileCounts) of
         {ok, FileCountFatal} ->
             [{file_messages_fatal,
               erlang:integer_to_list(FileCountFatal)} | Status7];
         error ->
             Status7
     end,
+    StatusN = [{queue_mode, Mode} | Status8],
     {reply, {ok, StatusN}, State};
 handle_call(status_reset, _, State) ->
     {reply, ok,
