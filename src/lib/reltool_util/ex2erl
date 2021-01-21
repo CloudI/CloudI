@@ -51,7 +51,9 @@
             name :: atom()
         }).
 
-% utf8 requires https://github.com/elixir-lang/elixir/issues/10663
+% Elixir modules contain binary literal strings that can be invalid utf8.
+% To ensure the generated Erlang source code is valid the file encoding
+% must be latin1 instead of utf8.
 -define(FILE_ENCODING, latin1).
 -define(HEADER_COMMENT_LINE1, "-*-Mode:erlang;coding:latin-1;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-").
 -define(HEADER_COMMENT_LINE2, " ex: set ft=erlang fenc=latin-1 sts=4 ts=4 sw=4 et nomod:").
