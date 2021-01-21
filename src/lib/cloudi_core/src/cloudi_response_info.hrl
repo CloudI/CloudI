@@ -555,6 +555,7 @@
  {".opf",{attachment,<<"application/oebps-package+xml">>}},
  {".opml",{attachment,<<"text/x-opml">>}},
  {".oprc",{attachment,<<"application/vnd.palm">>}},
+ {".opus",{attachment,<<"audio/ogg">>}},
  {".org",{attachment,<<"application/vnd.lotus-organizer">>}},
  {".osf",{attachment,<<"application/vnd.yamaha.openscoreformat">>}},
  {".osfpvg",

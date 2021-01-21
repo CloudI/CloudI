@@ -6,7 +6,7 @@
 %%%------------------------------------------------------------------------
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,7 @@
 %%%------------------------------------------------------------------------
 
 -author('mjtruog at protonmail dot com').
--vsn("1.7.3").
+-vsn("2.0.2").
 
 -mode(compile).
 
@@ -71,19 +71,17 @@
 
 -include_lib("kernel/include/file.hrl").
 
-%-define(USE_IGOR, undefined).
-
 main(Arguments) ->
-    handle_operation(parse_command_line(Arguments)).
+    handle_operation(main_arguments(Arguments)).
 
 handle_operation(#config{version = true,
                          help = Help}) ->
     io:format("~s~n",[version_info()]),
     if
-        Help ->
+        Help =:= true ->
             help(),
             exit_code(1);
-        true ->
+        Help =:= false ->
             exit_code(0)
     end;
 handle_operation(#config{help = true}) ->
@@ -717,22 +715,6 @@ reduce([], V) ->
 reduce([H | T], V) ->
     reduce(T, H(V)).
 
--ifdef(USE_IGOR).
-rename(FilesSource, FilesInclude, IncludeDirectories,
-       NameConversions, NameLookup, DirectorySuffixOld) ->
-    rename_igor(FilesSource, FilesInclude, IncludeDirectories,
-                NameConversions, NameLookup, DirectorySuffixOld).
-
-rename_igor(FilesSource, _FilesInclude, IncludeDirectories,
-            NameConversions, _NameLookup, DirectorySuffixOld) ->
-    _Output = igor:rename(FilesSource, NameConversions,
-                          [{stubs, false},
-                           {backups, false},
-                           {preprocess, true},
-                           {includes, IncludeDirectories}]),
-    ok = files_move_old(FilesSource, DirectorySuffixOld),
-    ok.
--else.
 rename(FilesSource, FilesInclude, IncludeDirectories,
        NameConversions, NameLookup, DirectorySuffixOld) ->
     rename_regex(FilesSource, FilesInclude, IncludeDirectories,
@@ -794,10 +776,9 @@ pforeach_run(OldPids, [], L, F) ->
 pforeach_run(OldPids, [Pid | NewPids], [Arg1 | L], F) ->
     Pid ! {execute, F, Arg1},
     pforeach_run([Pid | OldPids], NewPids, L, F).
--endif.
 
-parse_command_line(Arguments) ->
-    Config0 = parse_command_line(Arguments, #config{}),
+main_arguments(Arguments) ->
+    Config0 = main_arguments(main_arguments_split(Arguments), #config{}),
     Config1 = if
         Config0#config.prefix_ignore =:= undefined ->
             Config0#config{prefix_ignore = Config0#config.prefix_scope};
@@ -814,44 +795,53 @@ parse_command_line(Arguments) ->
              (if ConfigN#config.replace_usage -> 1; true -> 0 end)) =< 1),
     ConfigN.
 
-parse_command_line([], Config) ->
+main_arguments([], Config) ->
     Config;
-parse_command_line(["-d", Directory | Arguments],
-                   #config{directories_in = Directories} = Config) ->
+main_arguments(["-d", Directory | Arguments],
+               #config{directories_in = Directories} = Config) ->
     false = lists:member(Directory, Directories),
     NewConfig = Config#config{directories_in = [Directory | Directories]},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-p", PrefixIgnore | Arguments],
-                   #config{prefix_ignore = undefined} = Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-p", PrefixIgnore | Arguments],
+               #config{prefix_ignore = undefined} = Config) ->
     NewConfig = Config#config{prefix_ignore = PrefixIgnore},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-s", PrefixScope | Arguments],
-                   #config{prefix_scope = undefined} = Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-s", PrefixScope | Arguments],
+               #config{prefix_scope = undefined} = Config) ->
     NewConfig = Config#config{prefix_scope = PrefixScope},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-b", DirectorySuffixOld | Arguments],
-                   Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-b", DirectorySuffixOld | Arguments],
+               Config) ->
     NewConfig = Config#config{directory_suffix_old = DirectorySuffixOld},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-c", Directory | Arguments],
-                   #config{include_directories = Directories} = Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-c", Directory | Arguments],
+               #config{include_directories = Directories} = Config) ->
     false = lists:member(Directory, Directories),
     NewConfig = Config#config{include_directories = [Directory | Directories]},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-r" | Arguments], Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-r" | Arguments], Config) ->
     NewConfig = Config#config{replace_usage = true},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-u" | Arguments], Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-u" | Arguments], Config) ->
     NewConfig = Config#config{undo = true},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-h" | Arguments], Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-h" | Arguments], Config) ->
     NewConfig = Config#config{help = true},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line(["-V" | Arguments], Config) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments(["-V" | Arguments], Config) ->
     NewConfig = Config#config{version = true},
-    parse_command_line(Arguments, NewConfig);
-parse_command_line([Unknown | _], _) ->
+    main_arguments(Arguments, NewConfig);
+main_arguments([Unknown | _], _) ->
     erlang:exit({badarg, {command_line, Unknown}}).
+
+main_arguments_split([] = Arguments) ->
+    Arguments;
+main_arguments_split([[$-, _] = Argument | Arguments]) ->
+    [Argument | main_arguments_split(Arguments)];
+main_arguments_split([[$-, C | L] | Arguments]) ->
+    [[$-, C] | main_arguments_split([[$- | L] | Arguments])];
+main_arguments_split([Argument | Arguments]) ->
+    [Argument | main_arguments_split(Arguments)].
 
 version_info() ->
     {ok, Data} = file:read_file(?FILE),
