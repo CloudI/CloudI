@@ -263,7 +263,12 @@
            {service_name,
             "**tification/websocket"}]}
          ]},
-       {content_security_policy, "default-src 'self'"},
+       {content_security_policy,
+        "default-src 'self'; "
+        "script-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+        "style-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+        "object-src 'none'; "
+        "worker-src 'none'"},
        {set_x_content_type_options, true},
        {set_x_xss_protection, true}]},
      {timeout_sync, 30000}],
@@ -273,7 +278,12 @@
         cloudi_service_http_cowboy1,
         [{port, 6466}, {output, external},
          {query_get_format, text_pairs},
-         {content_security_policy, "default-src 'self'"},
+         {content_security_policy,
+          "default-src 'self'; "
+          "script-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+          "style-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+          "object-src 'none'; "
+          "worker-src 'none'"},
          {set_x_content_type_options, true},
          {set_x_xss_protection, true}],
         immediate_closest,
@@ -284,7 +294,12 @@
         cloudi_service_http_cowboy1,
         [{port, 6467}, {output, internal},
          {query_get_format, text_pairs},
-         {content_security_policy, "default-src 'self'"},
+         {content_security_policy,
+          "default-src 'self'; "
+          "script-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+          "style-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+          "object-src 'none'; "
+          "worker-src 'none'"},
          {set_x_content_type_options, true},
          {set_x_xss_protection, true}],
         immediate_closest, % quickstart testing, to avoid false negatives
@@ -295,7 +310,12 @@
         cloudi_service_http_elli,
         [{port, 6468}, {output, external},
          {query_get_format, text_pairs},
-         {content_security_policy, "default-src 'self'"},
+         {content_security_policy,
+          "default-src 'self'; "
+          "script-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+          "style-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+          "object-src 'none'; "
+          "worker-src 'none'"},
          {set_x_content_type_options, true},
          {set_x_xss_protection, true}],
         immediate_closest,

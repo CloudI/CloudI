@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -52,10 +52,12 @@ class task_output_data : public thread_pool_output_data
 
         virtual ~task_output_data() throw() {}
 
-        void output_error() const
+        int error() const
         {
+            int error_value = 0;
             if (m_error && m_error != CloudI::API::return_value::terminate)
-                std::cerr << "C/C++ CloudI API error " << m_error << std::endl;
+                error_value = m_error;
+            return error_value;
         }
 
     private:
@@ -65,25 +67,20 @@ class task_output_data : public thread_pool_output_data
 class task : public thread_pool_input<thread_data, task_output_data>
 {
     public:
-        task(unsigned int const thread_index,
-             uint32_t & timeout_terminate) :
+        task(unsigned int const thread_index) :
             m_stop_default(false),
             m_stop(m_stop_default),
             m_api(thread_index, true)
         {
-            int result = 0;
-            timeout_terminate = m_api.timeout_terminate();
-            result = m_api.subscribe_count("hexpi");
-            assert(result == CloudI::API::return_value::success);
-            assert(m_api.get_subscribe_count() == 0);
-            result = m_api.subscribe("hexpi", *this, &task::hexpi);
-            assert(result == CloudI::API::return_value::success);
-            result = m_api.subscribe_count("hexpi");
-            assert(result == CloudI::API::return_value::success);
-            assert(m_api.get_subscribe_count() == 1);
+            task::m_timeout_terminate = m_api.timeout_terminate();
         }
 
         virtual ~task() throw() {}
+
+        static uint32_t timeout_terminate()
+        {
+            return task::m_timeout_terminate;
+        }
 
         void hexpi(CloudI::API const & api,
                    int const request_type,
@@ -153,18 +150,36 @@ class task : public thread_pool_input<thread_data, task_output_data>
             // thread pool to use the exit() function
             // (m_stop is set to true in all threads,
             //  so all threads are asked to abort their processing)
-            int result;
             m_stop = stop;
-            while (CloudI::API::return_value::timeout ==
-                   (result = m_api.poll(1000)))
+            // it is best to do CloudI API subscribe calls here due to
+            // ownership of *this in the thread_pool
+            // when the process function is executed
+            // (makes it easier to use the thread_data variable,
+            //  if necessary,  because *this isn't getting copied)
+            int error = m_api.subscribe_count("hexpi");
+            if (! error)
             {
-                if (stop)
+                assert(m_api.get_subscribe_count() == 0);
+                error = m_api.subscribe("hexpi", *this, &task::hexpi);
+            }
+            if (! error)
+            {
+                error = m_api.subscribe_count("hexpi");
+            }
+            if (! error)
+            {
+                assert(m_api.get_subscribe_count() == 1);
+                while (CloudI::API::return_value::timeout ==
+                       (error = m_api.poll(1000)))
                 {
-                    result = CloudI::API::return_value::success;
-                    break;
+                    if (stop)
+                    {
+                        error = CloudI::API::return_value::success;
+                        break;
+                    }
                 }
             }
-            return task_output_data(result);
+            return task_output_data(error);
         }
 
     private:
@@ -172,13 +187,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
         bool & m_stop;
 
         CloudI::API m_api;
-
+        static uint32_t m_timeout_terminate;
 };
+uint32_t task::m_timeout_terminate = 0;
 
 class task_output : public thread_pool_output<task_output_data>
 {
     public:
         task_output() :
+            m_status(0),
             m_terminate(false)
         {
         }
@@ -190,7 +207,13 @@ class task_output : public thread_pool_output<task_output_data>
             bool terminated;
             {
                 boost::lock_guard<boost::mutex> lock(m_terminate_mutex);
-                data.output_error();
+                int error = data.error();
+                if (error)
+                {
+                    std::cerr << "C/C++ CloudI API error " <<
+                        error << std::endl;
+                    m_status = error;
+                }
                 terminated = m_terminate;
                 m_terminate = true;
             }
@@ -198,16 +221,18 @@ class task_output : public thread_pool_output<task_output_data>
                 m_terminate_conditional.notify_all();
         }
 
-        void wait_on_terminate()
+        int wait_on_terminate()
         {   
             if (m_terminate == false)
             {
                 boost::unique_lock<boost::mutex> lock(m_terminate_mutex);
                 m_terminate_conditional.wait(lock);
             }
+            return m_status;
         }
 
     private:
+        int m_status;
         bool m_terminate;
         boost::mutex m_terminate_mutex;
         boost::condition_variable m_terminate_conditional;
@@ -215,6 +240,8 @@ class task_output : public thread_pool_output<task_output_data>
 
 int main(int, char **)
 {
+    int status = 0;
+
     try
     {
         unsigned int const thread_count = CloudI::API::thread_count();
@@ -223,17 +250,16 @@ int main(int, char **)
         thread_pool<task, thread_data, task_output, task_output_data>
             thread_pool(thread_count, thread_count, output_object);
 
-        uint32_t timeout_terminate = 0;
         for (unsigned int i = 0; i < thread_count; ++i)
         {
-            task task_input(i, timeout_terminate);
-            bool const result = thread_pool.input(task_input);
-            assert(result);
+            task task_input(i);
+            bool const added = thread_pool.input(task_input);
+            assert(added);
         }
 
-        assert(timeout_terminate >= 1000);
-        output_object.wait_on_terminate();
-        thread_pool.exit(timeout_terminate - 100);
+        assert(task::timeout_terminate() >= 1000);
+        status = output_object.wait_on_terminate();
+        thread_pool.exit(task::timeout_terminate() - 100);
     }
     catch (CloudI::API::invalid_input_exception const & e)
     {
@@ -245,6 +271,6 @@ int main(int, char **)
 
     std::cout << "terminate hexpi c++" << std::endl;
 
-    return 0;
+    return status;
 }
 

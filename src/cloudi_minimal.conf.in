@@ -31,7 +31,12 @@
    {args,
     [{port, 6464}, {output, external}, {use_websockets, true},
      {query_get_format, text_pairs},
-     {content_security_policy, "default-src 'self'"},
+     {content_security_policy,
+      "default-src 'self'; "
+      "script-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+      "style-src 'unsafe-inline' 'unsafe-eval' 'self'; "
+      "object-src 'none'; "
+      "worker-src 'none'"},
      {set_x_content_type_options, true},
      {set_x_xss_protection, true}]},
    {timeout_sync, 30000}]
