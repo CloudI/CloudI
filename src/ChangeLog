@@ -6,6 +6,7 @@
     * Fix default configuration HTTP server content security policy
       for access to the dashboard interface
     * hexpi integration test improvements
+    * Update varpool
 
 2021-01-20 Michael Truog   <mjtruog at protonmail dot com>
 

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2015-2021 Michael Truog
+%%% @version 2.0.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(varpool).
@@ -59,34 +59,18 @@
         supervisor :: pid(),
         max_r :: non_neg_integer(),
         max_t :: pos_integer(),
-        groups :: dict:dict(any(), #group{}),
-        processes = dict:new() :: dict:dict(pid(), {any(), non_neg_integer()}),
+        groups :: #{any() := #group{}},
+        processes = #{} :: #{pid() := {any(), non_neg_integer()}},
         monitors = [] :: list(reference())
     }).
-
--ifdef(ERLANG_OTP_VERSION_16).
--else.
--ifdef(ERLANG_OTP_VERSION_17).
--else.
--define(ERLANG_OTP_VERSION_18_FEATURES, true).
--endif.
--endif.
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
--define(PSEUDO_RANDOM(N),
-        % assuming exsplus/exsp for 58 bits, period 8.31e34
-        rand:uniform(N)).
--else.
--define(PSEUDO_RANDOM(N),
-        % period 2.78e13
-        random:uniform(N)).
--endif.
 
 -define(DEFAULT_MAX_R,                              5). % max restart count
 -define(DEFAULT_MAX_T,                            300). % max time in seconds
 -define(DEFAULT_HASH,             fun erlang:phash2/2).
 -define(DEFAULT_RANDOM,
         fun(Count) ->
-            ?PSEUDO_RANDOM(Count) - 1
+            % assuming exsplus/exsp for 58 bits, period 8.31e34
+            rand:uniform(Count) - 1
         end).
 
 -type group() ::
@@ -161,12 +145,12 @@ update({'UP', Supervisor, process, Child, {Group, I} = Info},
                 processes = Processes,
                 monitors = Monitors} = VarPool) ->
     true = Owner =:= self(),
-    NewProcesses = dict:store(Child, Info, Processes),
-    GroupState = dict:fetch(Group, Groups),
+    NewProcesses = maps:put(Child, Info, Processes),
+    GroupState = maps:get(Group, Groups),
     #group{processes = GroupProcesses} = GroupState,
     NewGroupProcesses = array:set(I, Child, GroupProcesses),
     NewGroupState = GroupState#group{processes = NewGroupProcesses},
-    NewGroups = dict:store(Group, NewGroupState, Groups),
+    NewGroups = maps:put(Group, NewGroupState, Groups),
     NewMonitors = [erlang:monitor(process, Child) | Monitors],
     {updated, VarPool#varpool{groups = NewGroups,
                               processes = NewProcesses,
@@ -177,16 +161,16 @@ update({'DOWN', MonitorRef, process, Child, _Info},
                 processes = Processes,
                 monitors = Monitors} = VarPool) ->
     true = Owner =:= self(),
-    case dict:find(Child, Processes) of
+    case maps:find(Child, Processes) of
         error ->
             {ignored, VarPool};
         {ok, {Group, I}} ->
-            NewProcesses = dict:erase(Child, Processes),
-            GroupState = dict:fetch(Group, Groups),
+            NewProcesses = maps:remove(Child, Processes),
+            GroupState = maps:get(Group, Groups),
             #group{processes = GroupProcesses} = GroupState,
             NewGroupProcesses = array:set(I, undefined, GroupProcesses),
             NewGroupState = GroupState#group{processes = NewGroupProcesses},
-            NewGroups = dict:store(Group, NewGroupState, Groups),
+            NewGroups = maps:put(Group, NewGroupState, Groups),
             NewMonitors = lists:delete(MonitorRef, Monitors),
             {updated, VarPool#varpool{groups = NewGroups,
                                       processes = NewProcesses,
@@ -204,7 +188,7 @@ get(Group, #varpool{groups = Groups}) ->
     #group{count_hash = 1,
            count_random = CountRandom,
            random = Random,
-           processes = GroupProcesses} = dict:fetch(Group, Groups),
+           processes = GroupProcesses} = maps:get(Group, Groups),
     IndexHash = 0,
     IndexRandom = if
         CountRandom > 1 ->
@@ -231,7 +215,7 @@ get(Group, Key, #varpool{groups = Groups}) ->
            count_random = CountRandom,
            hash = Hash,
            random = Random,
-           processes = GroupProcesses} = dict:fetch(Group, Groups),
+           processes = GroupProcesses} = maps:get(Group, Groups),
     IndexHash = if
         CountHash > 1 ->
             Hash(Key, CountHash);
@@ -298,20 +282,20 @@ groups([{Group, {M, F, A}, Options} | Groups],
     end,
     CountTotal = CountHash * CountRandom,
     GroupProcesses = array:new([{size, CountTotal}]),
-    NewGroupsData = dict:store(Group,
-                               #group{count_hash = CountHash,
-                                      count_random = CountRandom,
-                                      count_total = CountTotal,
-                                      hash = Hash1,
-                                      random = Random1,
-                                      processes = GroupProcesses},
-                               GroupsData),
+    NewGroupsData = maps:put(Group,
+                             #group{count_hash = CountHash,
+                                    count_random = CountRandom,
+                                    count_total = CountTotal,
+                                    hash = Hash1,
+                                    random = Random1,
+                                    processes = GroupProcesses},
+                             GroupsData),
     NewGroupsSupervisor = [{Group, CountTotal, M, F, A, Shutdown} |
                            GroupsSupervisor],
     groups(Groups, NewGroupsData, NewGroupsSupervisor, ShutdownDefault).
 
 groups(Groups, ShutdownDefault) ->
-    groups(Groups, dict:new(), [], ShutdownDefault).
+    groups(Groups, #{}, [], ShutdownDefault).
 
 get_process(Istop, Istop, _, _, _) ->
     undefined;

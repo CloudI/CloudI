@@ -118,7 +118,7 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pools as a Local Variable`
 
 - `https://github.com/okeuday/varpool`
-- `commit 311497c67e8a27bb32a612943cfc7acd6288cb17 (v2.0.1)`
-- `Fri Nov 27 19:52:40 UTC 2020`
+- `commit 82b3831a9f676a8e6d9ed75420d4066a7719dd11`
+- `Sat Jan 30 23:27:39 UTC 2021`
 - `MIT`
 
