@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-01-31 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change cloudi_service_api_batch services_remove HTTP method
+      from "get" to "delete" (due to modifying a queue)
+    * Add the queue_dependencies argument to
+      cloudi_service_api_batch for representing dependencies
+      between queues for automatically managing service runtime
+    * Add the queue_clear function to cloudi_service_api_batch
+
 2021-01-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix default configuration HTTP server content security policy
