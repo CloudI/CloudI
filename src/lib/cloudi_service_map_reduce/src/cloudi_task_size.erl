@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2009-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_task_size).
@@ -64,6 +64,7 @@
     }).
 
 -type state() :: #cloudi_task_size{}.
+-export_type([state/0]).
 
 -define(TARGET_TIME_ADJUST, 4). % number of consecutive incr/decr to
                                 % cause a target time adjustment

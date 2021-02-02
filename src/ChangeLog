@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-02-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add retry and retry_delay arguments to cloudi_service_map_reduce
+
 2021-01-31 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change cloudi_service_api_batch services_remove HTTP method

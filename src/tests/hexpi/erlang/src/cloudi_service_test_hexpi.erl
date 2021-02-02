@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2012-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_hexpi).
@@ -68,21 +68,35 @@
 
 -record(state,
     {
-        destination = "/tests/hexpi" :: cloudi_service:service_name(),
-        timeout_max :: cloudi_service:timeout_value_milliseconds(),
-        index,
-        index_start,
-        index_end,
-        map_done = false,
+        index
+            :: pos_integer(),
+        index_start
+            :: pos_integer(),
+        index_end
+            :: pos_integer(),
+        task_size
+            :: cloudi_task_size:state(),
+        use_pgsql = false
+            :: boolean(),
+        use_mysql = false
+            :: boolean(),
+        use_memcached = false
+            :: boolean(),
+        use_tokyotyrant = false
+            :: boolean(),
+        use_couchdb = false
+            :: boolean(),
+        use_filesystem = false
+            :: boolean(),
+        map_done = false
+            :: boolean(),
+        timeout_max
+            :: cloudi_service:timeout_value_milliseconds(),
+        destination = "/tests/hexpi"
+            :: cloudi_service:service_name(),
         step = ?PI_DIGIT_STEP_SIZE,
-        task_size,
-        queue,
-        use_pgsql,
-        use_mysql,
-        use_memcached,
-        use_tokyotyrant,
-        use_couchdb,
-        use_filesystem
+        queue = cloudi_queue:new([{retry, 3},
+                                  {failures_source_die, true}])
     }).
 
 %%%------------------------------------------------------------------------
@@ -97,7 +111,6 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                               _Prefix, _Timeout, Dispatcher)
     when is_integer(IndexStart), is_integer(IndexEnd),
          is_pid(Dispatcher) ->
-    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
     IterationsMin = 1,
     IterationsMax = 1000000000,
     TargetTimeMin = 1.0 / 3600.0, % 1 second, in hours
@@ -107,23 +120,20 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                                     IterationsMin, IterationsMax,
                                     TargetTimeMin,
                                     TargetTimeMin, TargetTimeMax),
-    Queue = cloudi_queue:new([{retry, 3},
-                              {failures_source_die, true}]),
-    {ok, setup(#state{timeout_max = TimeoutMax,
-                      index = IndexStart,
+    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
+    {ok, setup(#state{index = IndexStart,
                       index_start = IndexStart,
                       index_end = IndexEnd,
                       task_size = TaskSize,
-                      queue = Queue}, Dispatcher)}.
+                      timeout_max = TimeoutMax}, Dispatcher)}.
 
 cloudi_service_map_reduce_send(#state{map_done = true} = State, _) ->
     {done, State};
-cloudi_service_map_reduce_send(#state{destination = Name,
-                                      index = Index,
+cloudi_service_map_reduce_send(#state{index = Index,
                                       index_end = IndexEnd,
-                                      step = Step,
-                                      task_size = TaskSize} =
-                               State,
+                                      task_size = TaskSize,
+                                      destination = Name,
+                                      step = Step} = State,
                                Dispatcher)
     when is_pid(Dispatcher) ->
     case cloudi_service:get_pid(Dispatcher, Name) of
@@ -137,20 +147,19 @@ cloudi_service_map_reduce_send(#state{destination = Name,
             SendArgs = [Dispatcher, Name, Request, Timeout, PatternPid],
             ?LOG_INFO("~p iterations starting at digit ~p",
                       [Iterations, Index]),
-            NewIndex = Index + Step * Iterations,
+            IndexNew = Index + Step * Iterations,
             {ok, SendArgs,
-             State#state{index = NewIndex,
-                         map_done = (NewIndex > IndexEnd)}};
+             State#state{index = IndexNew,
+                         map_done = (IndexNew > IndexEnd)}};
         {error, _} = Error ->
             Error
     end.
 
 cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
-                                  Timeout, {_, OldPid}],
-                                 #state{destination = Name,
+                                  Timeout, {_, PidOld}],
+                                 #state{task_size = TaskSize,
                                         timeout_max = TimeoutMax,
-                                        task_size = TaskSize} =
-                                 State) ->
+                                        destination = Name} = State) ->
 
     case cloudi_service:get_pid(Dispatcher, Name) of
         {ok, PatternPid} ->
@@ -160,10 +169,10 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
             IndexStr = erlang:binary_to_list(IndexBin),
             ?LOG_INFO("index ~s result timeout (after ~p ms)",
                       [IndexStr, Timeout]),
-            NewTaskSize = cloudi_task_size:reduce(OldPid, 0.9, TaskSize),
-            NewTimeout = erlang:min(Timeout * 2, TimeoutMax),
-            {ok, [Dispatcher, Name, Request, NewTimeout, PatternPid],
-             State#state{task_size = NewTaskSize}};
+            TaskSizeNew = cloudi_task_size:reduce(PidOld, 0.9, TaskSize),
+            TimeoutNew = erlang:min(Timeout * 2, TimeoutMax),
+            {ok, [Dispatcher, Name, Request, TimeoutNew, PatternPid],
+             State#state{task_size = TaskSizeNew}};
         {error, _} = Error ->
             Error
     end.
@@ -179,11 +188,11 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
       IndexBin/binary>> = Request,
     ?LOG_INFO("index ~s result received", [IndexBin]),
     <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
-    NewTaskSize = cloudi_task_size:put(Pid, Iterations, ElapsedTime, TaskSize),
-    NewState = reduce_send(IndexBin, PiResult, ElapsedTime, Pid,
-                           State#state{task_size = NewTaskSize},
+    TaskSizeNew = cloudi_task_size:put(Pid, Iterations, ElapsedTime, TaskSize),
+    StateNew = reduce_send(IndexBin, PiResult, ElapsedTime, Pid,
+                           State#state{task_size = TaskSizeNew},
                            Dispatcher),
-    reduce_done_check(NewState, Dispatcher).
+    reduce_done_check(StateNew, Dispatcher).
 
 cloudi_service_map_reduce_info(#return_async_active{} = Request,
                                #state{queue = Queue0} = State, Dispatcher) ->
@@ -232,22 +241,22 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
         true ->
             Queue2
     end,
-    State#state{queue = QueueN,
-                use_pgsql = is_tuple(Pgsql),
+    State#state{use_pgsql = is_tuple(Pgsql),
                 use_mysql = is_tuple(Mysql),
                 use_memcached = is_tuple(Memcached),
                 use_tokyotyrant = is_tuple(Tokyotyrant),
                 use_couchdb = is_tuple(Couchdb),
-                use_filesystem = is_tuple(Filesystem)}.
+                use_filesystem = is_tuple(Filesystem),
+                queue = QueueN}.
 
 reduce_send(DigitIndex, PiResult, ElapsedTime, Pid,
-            #state{queue = Queue0,
-                   use_pgsql = UsePgsql,
+            #state{use_pgsql = UsePgsql,
                    use_mysql = UseMysql,
                    use_memcached = UseMemcached,
                    use_tokyotyrant = UseTokyotyrant,
                    use_couchdb = UseCouchdb,
-                   use_filesystem = UseFilesystem} = State, Dispatcher)
+                   use_filesystem = UseFilesystem,
+                   queue = Queue0} = State, Dispatcher)
     when is_binary(DigitIndex), is_binary(PiResult), is_float(ElapsedTime),
          is_pid(Pid) ->
     Queue2 = if

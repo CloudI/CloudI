@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2012-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -55,48 +55,103 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
--define(DEFAULT_MAP_REDUCE_MODULE,     undefined).
--define(DEFAULT_MAP_REDUCE_ARGUMENTS,         []).
--define(DEFAULT_NAME,               "controller").
--define(DEFAULT_CONCURRENCY,                 1.0). % schedulers multiplier
--define(DEFAULT_LOG_EXECUTION_TIME,         true).
+-define(DEFAULT_MAP_REDUCE_MODULE,            undefined).
+-define(DEFAULT_MAP_REDUCE_ARGUMENTS,                []).
+-define(DEFAULT_NAME,                      "controller").
+-define(DEFAULT_CONCURRENCY,                        1.0).
+        % logical cpu count multiplier
+        % (calculated the same way as count_process and count_thread in
+        %  service configuration).
+-define(DEFAULT_LOG_EXECUTION_TIME,                true).
+-define(DEFAULT_RETRY,                                3).
+        % Max retries with a Timeout value of timeout_max
+        % before cloudi_service_map_reduce_resend is called.
+        % The Timeout value needs to be provided in the map_send_args()
+        % and is typically increasing due to service request failures.
+-define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
 
 -type map_send_args() :: nonempty_list().
 -export_type([map_send_args/0]).
 
+-record(map_send,
+    {
+        send_args
+            :: map_send_args(),
+        retry_count
+            :: non_neg_integer()
+    }).
+
 -record(state,
     {
-        map_reduce_module :: module(),
-        map_reduce_state :: any(),
-        map_reduce_name :: string(),
-        map_count :: pos_integer(),
-        log_execution_time :: boolean(),
-        map_requests :: #{cloudi_service:trans_id() := map_send_args()},
-        time_running :: cloudi_timestamp:seconds_monotonic(),
-        suspended = false :: boolean(),
-        elapsed_seconds = 0 :: non_neg_integer()
+        map_reduce_module
+            :: module(),
+        map_reduce_state
+            :: any(),
+        map_reduce_name
+            :: string(),
+        map_count
+            :: pos_integer(),
+        log_execution_time
+            :: boolean(),
+        retry
+            :: non_neg_integer(),
+        retry_delay
+            :: non_neg_integer(),
+        timeout_max
+            :: cloudi_service:timeout_value_milliseconds(),
+        map_requests
+            :: #{cloudi_service:trans_id() := #map_send{}},
+        time_running
+            :: cloudi_timestamp:seconds_monotonic(),
+        suspended = false
+            :: boolean(),
+        elapsed_seconds = 0
+            :: non_neg_integer()
+    }).
+
+-record(init_state,
+    {
+        service
+            :: pid(),
+        info_queued = []
+            :: list()
     }).
 
 -record(init_begin,
     {
-        service :: pid(),
-        prefix :: string(),
-        timeout :: cloudi_service_api:timeout_initialize_value_milliseconds(),
-        map_reduce_module :: module(),
-        map_reduce_args :: list(),
-        map_reduce_name :: string(),
-        concurrency :: number(),
-        log_execution_time :: boolean(),
-        time_start :: cloudi_timestamp:seconds_monotonic()
+        service
+            :: pid(),
+        prefix
+            :: string(),
+        timeout
+            :: cloudi_service_api:timeout_initialize_value_milliseconds(),
+        map_reduce_module
+            :: module(),
+        map_reduce_args
+            :: list(),
+        map_reduce_name
+            :: string(),
+        concurrency
+            :: number(),
+        log_execution_time
+            :: boolean(),
+        retry
+            :: non_neg_integer(),
+        retry_delay
+            :: non_neg_integer(),
+        timeout_max
+            :: cloudi_service:timeout_value_milliseconds(),
+        time_start
+            :: cloudi_timestamp:seconds_monotonic()
     }).
 
 -record(init_end,
     {
-        state :: undefined | #state{},
-        error = undefined :: any()
+        state
+            :: undefined | #state{},
+        error = undefined
+            :: any()
     }).
-
--define(INFO_RETRY_INTERVAL, 500). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from behavior
@@ -192,14 +247,20 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         {map_reduce_args,        ?DEFAULT_MAP_REDUCE_ARGUMENTS},
         {name,                   ?DEFAULT_NAME},
         {concurrency,            ?DEFAULT_CONCURRENCY},
-        {log_execution_time,     ?DEFAULT_LOG_EXECUTION_TIME}],
-    [MapReduceModule, MapReduceArgs, Name, Concurrency, LogExecutionTime] =
+        {log_execution_time,     ?DEFAULT_LOG_EXECUTION_TIME},
+        {retry,                  ?DEFAULT_RETRY},
+        {retry_delay,            ?DEFAULT_RETRY_DELAY}],
+    [MapReduceModule, MapReduceArgs, Name, Concurrency, LogExecutionTime,
+     Retry, RetryDelay] =
         cloudi_proplists:take_values(Defaults, Args),
     TimeStart = cloudi_timestamp:seconds_monotonic(),
     true = is_atom(MapReduceModule) andalso (MapReduceModule /= undefined),
     true = is_list(MapReduceArgs),
     true = is_number(Concurrency) andalso (Concurrency > 0),
     true = is_boolean(LogExecutionTime),
+    true = is_integer(Retry) andalso (Retry >= 0),
+    true = is_integer(RetryDelay) andalso
+           (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
     case application:load(MapReduceModule) of
         ok ->
             ok = cloudi_x_reltool_util:application_start(MapReduceModule,
@@ -210,19 +271,23 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         {error, _} ->
             ok = cloudi_x_reltool_util:module_loaded(MapReduceModule)
     end,
+    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
     % cloudi_service_init/4 is always executed by the service process
     Service = self(),
-    Service !  #init_begin{service = Service,
-                           prefix = Prefix,
-                           timeout = Timeout,
-                           map_reduce_module = MapReduceModule,
-                           map_reduce_args = MapReduceArgs,
-                           map_reduce_name = Name,
-                           concurrency = Concurrency,
-                           log_execution_time = LogExecutionTime,
-                           time_start = TimeStart},
-    cloudi_service:subscribe(Dispatcher, Name),
-    {ok, undefined}.
+    Service ! #init_begin{service = Service,
+                          prefix = Prefix,
+                          timeout = Timeout,
+                          map_reduce_module = MapReduceModule,
+                          map_reduce_args = MapReduceArgs,
+                          map_reduce_name = Name,
+                          concurrency = Concurrency,
+                          log_execution_time = LogExecutionTime,
+                          retry = Retry,
+                          retry_delay = RetryDelay,
+                          timeout_max = TimeoutMax,
+                          time_start = TimeStart},
+    ok = cloudi_service:subscribe(Dispatcher, Name),
+    {ok, #init_state{service = Service}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, Request,
@@ -231,66 +296,49 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
     request(Request, State, Dispatcher).
 
 cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
-                           undefined, Dispatcher) ->
+                           #init_state{} = InitState,
+                           Dispatcher) ->
     % cloudi_service_map_reduce_new/5 execution occurs outside of
     % cloudi_service_init/4 to allow send_sync and recv_async function calls
-    % because no Erlang process linking/spawning/etc. should be occurring,
-    % only algorithmic initialization.  Initialization is done in a temporary
-    % process so there is no blocking problem (with send_sync or recv_async)
+    % (only algorithmic initialization should be occurring).
+    % Initialization is done in a temporary process so there is
+    % no blocking problem (with send_sync or recv_async)
     % if duo_mode == true.  No timeout is enforced on
     % cloudi_service_map_reduce_new/5 execution.
-    _ = erlang:spawn_link(fun() ->
+    _ = erlang:spawn(fun() ->
+        true = erlang:link(Service),
         case init(InitBegin, Dispatcher) of
             {noreply, State} ->
                 Service ! #init_end{state = State},
                 ok;
-            {stop, Reason, State} when Reason /= undefined ->
+            {stop, Reason, State} ->
+                true = Reason /= undefined,
                 Service ! #init_end{state = State,
                                     error = Reason},
                 ok
         end,
         true = erlang:unlink(Service)
     end),
-    {noreply, undefined};
-cloudi_service_handle_info(#init_end{state = State,
-                                     error = Error},
-                           undefined, _Dispatcher) ->
-    if
-        Error =:= undefined ->
-            {noreply, State};
-        true ->
-            {stop, Error, State}
-    end;
-cloudi_service_handle_info(Request, undefined, Dispatcher) ->
-    % waiting for #init_end{} still
-    erlang:send_after(?INFO_RETRY_INTERVAL,
-                      cloudi_service:self(Dispatcher), Request),
-    {noreply, undefined};
+    {noreply, InitState};
+cloudi_service_handle_info(#init_end{} = InitEnd,
+                           #init_state{} = InitState,
+                           _Dispatcher) ->
+    init_end(InitEnd, InitState);
+cloudi_service_handle_info(Request,
+                           #init_state{info_queued = InfoQueued} = InitState,
+                           _Dispatcher) ->
+    {noreply, InitState#init_state{info_queued = [Request | InfoQueued]}};
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
-                           #state{map_reduce_module = MapReduceModule,
-                                  map_reduce_state = MapReduceState,
-                                  map_requests = MapRequests} = State,
+                           #state{map_requests = MapRequests} = State,
                            Dispatcher) ->
-    case maps:find(TransId, MapRequests) of
-        {ok, [_ | SendArgs]} ->
-            case MapReduceModule:
-                 cloudi_service_map_reduce_resend([Dispatcher | SendArgs],
-                                                  MapReduceState) of
-                {ok, SendArgsNew, MapReduceStateNew} ->
-                    case map_send_request(SendArgsNew,
-                                          maps:remove(TransId, MapRequests)) of
-                        {ok, MapRequestsNew} ->
-                            {noreply,
-                             State#state{map_reduce_state = MapReduceStateNew,
-                                         map_requests = MapRequestsNew}};
-                        {error, _} = Error ->
-                            {stop, Error, State}
-                    end;
-                {error, _} = Error ->
-                    {stop, Error, State}
-            end;
+    case maps:take(TransId, MapRequests) of
+        {#map_send{send_args = [_ | SendArgs],
+                   retry_count = RetryCount},
+         MapRequestsNew} ->
+            map_resend([Dispatcher | SendArgs], RetryCount,
+                       State#state{map_requests = MapRequestsNew});
         error ->
-            cloudi_service_map_reduce_info(Request, State, Dispatcher)
+            map_info(Request, State, Dispatcher)
     end;
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,
@@ -300,20 +348,19 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   map_reduce_state = MapReduceState,
                                   map_requests = MapRequests} = State,
                            Dispatcher) ->
-    case maps:find(TransId, MapRequests) of
-        {ok, [_ | SendArgs]} ->
+    case maps:take(TransId, MapRequests) of
+        {#map_send{send_args = [_ | SendArgs]},
+         MapRequestsNew} ->
             case MapReduceModule:
                  cloudi_service_map_reduce_recv([Dispatcher | SendArgs],
                                                 ResponseInfo, Response,
                                                 Timeout, TransId,
                                                 MapReduceState, Dispatcher) of
                 {ok, MapReduceStateNew} ->
-                    MapRequestsNew = maps:remove(TransId, MapRequests),
                     StateNew = State#state{map_reduce_state = MapReduceStateNew,
                                            map_requests = MapRequestsNew},
                     map_check_continue(StateNew, Dispatcher);
                 {done, MapReduceStateNew} ->
-                    MapRequestsNew = maps:remove(TransId, MapRequests),
                     StateNew = State#state{map_reduce_state = MapReduceStateNew,
                                            map_requests = MapRequestsNew},
                     map_check_done(StateNew);
@@ -321,13 +368,11 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                     {stop, Error, State}
             end;
         error ->
-            cloudi_service_map_reduce_info(Request, State, Dispatcher)
+            map_info(Request, State, Dispatcher)
     end;
 cloudi_service_handle_info(Request, State, Dispatcher) ->
-    cloudi_service_map_reduce_info(Request, State, Dispatcher).
+    map_info(Request, State, Dispatcher).
 
-cloudi_service_terminate(_Reason, _Timeout, undefined) ->
-    ok;
 cloudi_service_terminate(shutdown, _Timeout,
                          #state{log_execution_time = true,
                                 map_requests = #{},
@@ -338,7 +383,7 @@ cloudi_service_terminate(shutdown, _Timeout,
     ?LOG_INFO("total time taken was ~p hours",
               [hours_elapsed(ElapsedSecondsNew)]),
     ok;
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
 
 %%%------------------------------------------------------------------------
@@ -352,6 +397,9 @@ init(#init_begin{prefix = Prefix,
                  map_reduce_name = MapReduceName,
                  concurrency = Concurrency,
                  log_execution_time = LogExecutionTime,
+                 retry = Retry,
+                 retry_delay = RetryDelay,
+                 timeout_max = TimeoutMax,
                  time_start = TimeStart},
      Dispatcher) ->
     MapCount = cloudi_concurrency:count(Concurrency),
@@ -368,6 +416,9 @@ init(#init_begin{prefix = Prefix,
                             map_reduce_name = MapReduceName,
                             map_count = MapCount,
                             log_execution_time = LogExecutionTime,
+                            retry = Retry,
+                            retry_delay = RetryDelay,
+                            timeout_max = TimeoutMax,
                             map_requests = MapRequests,
                             time_running = TimeStart}};
                 {error, _} = Error ->
@@ -377,8 +428,25 @@ init(#init_begin{prefix = Prefix,
             {stop, Error, undefined}
     end.
 
-request(_, undefined, _Dispatcher) ->
-    {reply, {error, init_pending}, undefined};
+init_end(#init_end{state = State,
+                   error = undefined},
+         #init_state{service = Service,
+                     info_queued = InfoQueued}) ->
+    ok = init_end_send(lists:reverse(InfoQueued), Service),
+    {noreply, State};
+init_end(#init_end{state = State,
+                   error = Error},
+         #init_state{}) ->
+    {stop, Error, State}.
+
+init_end_send([], _) ->
+    ok;
+init_end_send([Request | InfoQueued], Service) ->
+    Service ! Request,
+    init_end_send(InfoQueued, Service).
+
+request(_, #init_state{} = InitState, _Dispatcher) ->
+    {reply, {error, init_pending}, InitState};
 request(suspend,
         #state{map_reduce_module = MapReduceModule,
                map_reduce_name = MapReduceName,
@@ -418,7 +486,27 @@ request(resume,
         #state{suspended = false} = State, _Dispatcher) ->
     {reply, {error, already_resumed}, State}.
 
-cloudi_service_map_reduce_info(Request, State, Dispatcher) ->
+map_resend(SendArgs, RetryCount,
+           #state{map_reduce_module = MapReduceModule,
+                  map_reduce_state = MapReduceState,
+                  map_requests = MapRequests} = State) ->
+    RetryCountNew = retry(SendArgs, RetryCount, State),
+    case MapReduceModule:
+         cloudi_service_map_reduce_resend(SendArgs, MapReduceState) of
+        {ok, SendArgsNew, MapReduceStateNew} ->
+            case map_send_request(SendArgsNew, RetryCountNew, MapRequests) of
+                {ok, MapRequestsNew} ->
+                    {noreply,
+                     State#state{map_reduce_state = MapReduceStateNew,
+                                 map_requests = MapRequestsNew}};
+                {error, _} = Error ->
+                    {stop, Error, State}
+            end;
+        {error, _} = Error ->
+            {stop, Error, State}
+    end.
+
+map_info(Request, State, Dispatcher) ->
     #state{map_reduce_module = MapReduceModule,
            map_reduce_state = MapReduceState} = State,
     case MapReduceModule:
@@ -454,9 +542,16 @@ map_send(Count, MapRequests, MapReduceModule, MapReduceState, Dispatcher) ->
     end.
 
 map_send_request(SendArgs, MapRequests) ->
+    map_send_request(SendArgs, 0, MapRequests).
+
+map_send_request(SendArgs, RetryCount, MapRequests) ->
     case erlang:apply(cloudi_service, send_async_active, SendArgs) of
         {ok, TransId} ->
-            {ok, maps:put(TransId, SendArgs, MapRequests)};
+            MapRequestsNew = maps:put(TransId,
+                                      #map_send{send_args = SendArgs,
+                                                retry_count = RetryCount},
+                                      MapRequests),
+            {ok, MapRequestsNew};
         {error, _} = Error ->
             Error
     end.
@@ -482,6 +577,62 @@ map_check_done(#state{map_requests = MapRequests} = State) ->
         _ ->
             {noreply, State}
     end.
+
+retry([_Dispatcher, _Name, _Request,
+       TimeoutMax], RetryCount,
+      #state{retry = Retry,
+             retry_delay = RetryDelay,
+             timeout_max = TimeoutMax}) ->
+    if
+        RetryCount < Retry ->
+            ok = retry_delay(RetryDelay),
+            RetryCount + 1;
+        true ->
+            erlang:exit(retry_max)
+    end;
+retry([_Dispatcher, _Name, _Request,
+       TimeoutMax, _PatternPid], RetryCount,
+      #state{retry = Retry,
+             retry_delay = RetryDelay,
+             timeout_max = TimeoutMax}) ->
+    if
+        RetryCount < Retry ->
+            ok = retry_delay(RetryDelay),
+            RetryCount + 1;
+        true ->
+            erlang:exit(retry_max)
+    end;
+retry([_Dispatcher, _Name, _RequestInfo, _Request,
+       TimeoutMax, _Priority], RetryCount,
+      #state{retry = Retry,
+             retry_delay = RetryDelay,
+             timeout_max = TimeoutMax}) ->
+    if
+        RetryCount < Retry ->
+            ok = retry_delay(RetryDelay),
+            RetryCount + 1;
+        true ->
+            erlang:exit(retry_max)
+    end;
+retry([_Dispatcher, _Name, _RequestInfo, _Request,
+       TimeoutMax, _Priority, _PatternPid], RetryCount,
+      #state{retry = Retry,
+             retry_delay = RetryDelay,
+             timeout_max = TimeoutMax}) ->
+    if
+        RetryCount < Retry ->
+            ok = retry_delay(RetryDelay),
+            RetryCount + 1;
+        true ->
+            erlang:exit(retry_max)
+    end;
+retry(_, RetryCount, _) ->
+    RetryCount.
+
+retry_delay(0) ->
+    ok;
+retry_delay(RetryDelay) ->
+    receive after RetryDelay -> ok end.
 
 hours_elapsed(ElapsedSeconds) ->
     erlang:round((ElapsedSeconds / (60 * 60)) * 10) / 10.
