@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-02-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix bug with suspended services that restart with the
+      service configuration option restart_all set to false (default)
+      that causes the CloudI Service API services_status processing to fail
+
 2021-02-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add retry and retry_delay arguments to cloudi_service_map_reduce

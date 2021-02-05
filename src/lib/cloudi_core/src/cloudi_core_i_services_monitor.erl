@@ -11,7 +11,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
+%%% @copyright 2011-2021 Michael Truog
 %%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -786,7 +786,16 @@ restart(#service{time_start = TimeStart,
 
 restart_stage1(#service{pids = Pids,
                         restart_all = false} = Service,
-               ServiceId, TimeTerminate, PidOld, State) ->
+               ServiceId, TimeTerminate, PidOld,
+               #state{services = Services,
+                      suspended = Suspended} = State) ->
+    case sets:is_element(ServiceId, Suspended) of
+        true ->
+            {PidsSuspended, _} = cloudi_x_key2value:fetch1(ServiceId, Services),
+            ok = resume_restart_pids(PidsSuspended, Pids);
+        false ->
+            ok
+    end,
     StateNew = terminate_service(true, Pids, undefined,
                                  Service, ServiceId, PidOld, State),
     restart_stage2(Service#service{pids = [],
@@ -2124,6 +2133,17 @@ suspend_pids_recv([Pid | PidList], Result)
             suspend_pids_recv(PidList, already_suspended);
         {'cloudi_service_suspended', Pid, ok} ->
             suspend_pids_recv(PidList, Result)
+    end.
+
+resume_restart_pids([], _) ->
+    ok;
+resume_restart_pids([Pid | PidList], PidsRestart) ->
+    case lists:member(Pid, PidsRestart) of
+        true ->
+            resume_restart_pids(PidList, PidsRestart);
+        false ->
+            Pid ! {'cloudi_service_suspended', undefined, false},
+            resume_restart_pids(PidList, PidsRestart)
     end.
 
 resume_pids(PidList, DurationsSuspend, DurationsUpdate, ServiceId) ->

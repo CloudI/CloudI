@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -1348,7 +1348,13 @@ handle_event(EventType, EventContent, StateName, State) ->
                      process_queues(StateNext)
              end}
     end,
-    SuspendPending ! {'cloudi_service_suspended', Dispatcher, Result},
+    if
+        SuspendPending =:= undefined ->
+            ok;
+        is_pid(SuspendPending) ->
+            SuspendPending ! {'cloudi_service_suspended', Dispatcher, Result},
+            ok
+    end,
     {keep_state, StateNew};
 
 'HANDLE'(info, {'cloudi_service_update', UpdatePending, UpdatePlan},

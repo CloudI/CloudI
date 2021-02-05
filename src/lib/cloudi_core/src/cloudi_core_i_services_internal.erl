@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -1697,7 +1697,13 @@ handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
                      process_queues(StateNext)
              end}
     end,
-    SuspendPending ! {'cloudi_service_suspended', Dispatcher, Result},
+    if
+        SuspendPending =:= undefined ->
+            ok;
+        is_pid(SuspendPending) ->
+            SuspendPending ! {'cloudi_service_suspended', Dispatcher, Result},
+            ok
+    end,
     hibernate_check({noreply, StateNew});
 
 handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
@@ -3887,7 +3893,13 @@ duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
                      duo_process_queues(StateNext)
              end}
     end,
-    SuspendPending ! {'cloudi_service_suspended', DuoModePid, Result},
+    if
+        SuspendPending =:= undefined ->
+            ok;
+        is_pid(SuspendPending) ->
+            SuspendPending ! {'cloudi_service_suspended', DuoModePid, Result},
+            ok
+    end,
     {noreply, StateNew};
 
 duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
