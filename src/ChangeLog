@@ -6,6 +6,9 @@
     * Fix bug with suspended services that restart with the
       service configuration option restart_all set to false (default)
       that causes the CloudI Service API services_status processing to fail
+    * Fix count_process_dynamic service configuration option use
+      when a service is suspended so the service avoids changes
+      based on the time spent being suspended
 
 2021-02-02 Michael Truog   <mjtruog at protonmail dot com>
 

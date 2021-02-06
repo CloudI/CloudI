@@ -106,6 +106,7 @@
 -record(pids_change_input,
     {
         terminated = false :: boolean(),
+        ignore = false :: boolean(),
         period :: pos_integer(),
         changes :: list({Direction :: increase | decrease,
                          RateCurrent :: number(),
@@ -653,19 +654,24 @@ handle_info({Direction,
              Pid, Period, RateCurrent,
              RateLimit, CountProcessLimit},
             #state{services = Services,
+                   suspended = Suspended,
                    changes = Changes} = State)
     when (Direction =:= increase);
          (Direction =:= decrease) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], _}} ->
+            Ignore = sets:is_element(ServiceId, Suspended),
             Entry = {Direction, RateCurrent, RateLimit, CountProcessLimit},
             ChangeNew = case maps:find(ServiceId, Changes) of
-                {ok, #pids_change_input{changes = ChangeList} = Change} ->
-                    Change#pids_change_input{changes = [Entry | ChangeList]};
+                {ok, #pids_change_input{ignore = IgnoreOld,
+                                        changes = ChangeList} = Change} ->
+                    Change#pids_change_input{ignore = Ignore orelse IgnoreOld,
+                                             changes = [Entry | ChangeList]};
                 error ->
                     erlang:send_after(Period * 1000, self(),
                                       {changes, ServiceId}),
-                    #pids_change_input{period = Period,
+                    #pids_change_input{ignore = Ignore,
+                                       period = Period,
                                        changes = [Entry]}
             end,
             {noreply, State#state{changes = maps:put(ServiceId,
@@ -1382,6 +1388,8 @@ pids_change_check(ServiceId,
                                   Change#pids_change_input{changes = []},
                                   Changes),
             State#state{changes = ChangesNew};
+        #pids_change_input{ignore = true} ->
+            State#state{changes = Changes};
         #pids_change_input{changes = ChangeList} ->
             pids_change_now(ServiceId, ChangeList,
                             State#state{changes = Changes})
