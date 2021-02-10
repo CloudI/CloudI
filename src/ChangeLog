@@ -1,6 +1,20 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-02-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the suspend_dependants argument to
+      cloudi_service_api_batch for automatically suspending any
+      dependant service (that is already running) and automatically
+      resuming once the queue dependency has finished running
+      all of its queued service configurations
+    * Fix service configuration options rate_request_max,
+      count_process_dynamic and hibernate, in external services,
+      so their intervals start after service initialization has occurred
+    * Improve count_process_dynamic service initialization
+    * Fix Python and Python/C integration tests CloudI API initialization
+      (exceptions are caught properly now)
+
 2021-02-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix bug with suspended services that restart with the

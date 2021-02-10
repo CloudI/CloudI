@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2019-2021 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_batch).
@@ -74,6 +74,10 @@
         % each QueueNameDependency will be checked to ensure they have
         % no services executing or queued to be executed in the future
         % before starting the next queued QueueName service.
+-define(DEFAULT_SUSPEND_DEPENDANTS,          true).
+        % If a dependant (QueueName in the queue_dependencies) is already
+        % running, should the service be suspended
+        % (when QueueNameDependency is created) and resumed later.
 -define(DEFAULT_QUEUES_STATIC,              false).
         % Disable dynamic modifications to the queues
         % (disables the external interface).
@@ -92,6 +96,8 @@
             :: queue:queue(),
         service_id = undefined
             :: undefined | cloudi_service_api:service_id(),
+        suspended = false
+            :: boolean(),
         timeout_init = undefined
             :: undefined |
                cloudi_service_api:timeout_initialize_value_milliseconds(),
@@ -108,6 +114,8 @@
         purge_on_error
             :: boolean(),
         stop_when_done
+            :: boolean(),
+        suspend_dependants
             :: boolean(),
         dependencies
             :: cloudi_x_trie:cloudi_x_trie(), % name -> dependency name list
@@ -235,11 +243,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {purge_on_error,               ?DEFAULT_PURGE_ON_ERROR},
         {queues,                       ?DEFAULT_QUEUES},
         {queue_dependencies,           ?DEFAULT_QUEUE_DEPENDENCIES},
+        {suspend_dependants,           ?DEFAULT_SUSPEND_DEPENDANTS},
         {queues_static,                ?DEFAULT_QUEUES_STATIC},
         {stop_when_done,               ?DEFAULT_STOP_WHEN_DONE}],
-    [PurgeOnError, QueuesList, QueueDependenciesList, QueuesStatic,
-     StopWhenDone] = cloudi_proplists:take_values(Defaults, Args),
+    [PurgeOnError, QueuesList, QueueDependenciesList, SuspendDependants,
+     QueuesStatic, StopWhenDone] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(PurgeOnError),
+    true = is_boolean(SuspendDependants),
     true = is_boolean(QueuesStatic),
     true = is_boolean(StopWhenDone),
     false = cloudi_service_name:pattern(Prefix),
@@ -286,6 +296,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     {ok, #state{service = Service,
                 purge_on_error = PurgeOnError,
                 stop_when_done = StopWhenDone,
+                suspend_dependants = SuspendDependants,
                 dependencies = Dependencies,
                 dependants = Dependants}}.
 
@@ -391,12 +402,14 @@ batch_queue_add(QueueName, Configs,
                     Count = length(Configs),
                     Data = queue:from_list(Configs),
                     Queue = #queue{count = Count,
-                                   data = Data},
+                                   data = Data,
+                                   suspended = true},
                     QueuesNew = cloudi_x_trie:store(QueueName, Queue, Queues),
                     {Count,
                      State#state{queues = QueuesNew}};
                 false ->
-                    batch_queue_run_new(QueueName, Configs, State)
+                    StateNew = batch_queue_suspend_dependants(QueueName, State),
+                    batch_queue_run_new(QueueName, Configs, StateNew)
             end
     end.
 
@@ -437,27 +450,72 @@ batch_queue_resume(QueueNameDependency,
                    #state{dependants = Dependants} = State) ->
     case cloudi_x_trie:find(QueueNameDependency, Dependants) of
         {ok, QueueNameList} ->
-            batch_queue_resume_queue(QueueNameList, State);
+            batch_queue_resume_list(QueueNameList, State);
         error ->
             State
     end.
 
-batch_queue_resume_queue([], State) ->
+batch_queue_resume_list([], State) ->
     State;
-batch_queue_resume_queue([QueueName | QueueNameList],
+batch_queue_resume_list([QueueName | QueueNameList],
                          #state{queues = Queues} = State) ->
     StateNew = case cloudi_x_trie:find(QueueName, Queues) of
-        {ok, #queue{service_id = undefined} = Queue} ->
-            case batch_queue_suspended(QueueName, State) of
-                true ->
-                    State;
-                false ->
-                    batch_queue_run_old(QueueName, Queue, State)
+        {ok, #queue{suspended = Suspended} = Queue} ->
+            if
+                Suspended =:= true ->
+                    case batch_queue_suspended(QueueName, State) of
+                        true ->
+                            State;
+                        false ->
+                            batch_queue_run_old(QueueName, Queue, State)
+                    end;
+                Suspended =:= false ->
+                    State
             end;
         error ->
             State
     end,
-    batch_queue_resume_queue(QueueNameList, StateNew).
+    batch_queue_resume_list(QueueNameList, StateNew).
+
+batch_queue_suspend_dependants(_,
+                               #state{suspend_dependants = false} = State) ->
+    State;
+batch_queue_suspend_dependants(QueueNameDependency,
+                               #state{dependants = Dependants} = State) ->
+    case cloudi_x_trie:find(QueueNameDependency, Dependants) of
+        {ok, QueueNameList} ->
+            batch_queue_suspend_list(QueueNameList, State);
+        error ->
+            State
+    end.
+
+batch_queue_suspend_list([], State) ->
+    State;
+batch_queue_suspend_list([QueueName | QueueNameList],
+                          #state{queues = Queues} = State) ->
+    StateNew = case cloudi_x_trie:find(QueueName, Queues) of
+        {ok, #queue{} = Queue} ->
+            batch_queue_suspend(QueueName, Queue, State);
+        error ->
+            State
+    end,
+    batch_queue_suspend_list(QueueNameList, StateNew).
+
+batch_queue_suspend(QueueName,
+                    #queue{service_id = ServiceId,
+                           suspended = false} = Queue,
+                    #state{queues = Queues} = State)
+    when ServiceId /= undefined ->
+    case cloudi_service_api:services_suspend([ServiceId], infinity) of
+        ok ->
+            QueueNew = Queue#queue{suspended = true},
+            QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
+            State#state{queues = QueuesNew};
+        {error, {service_not_found, ServiceId}} ->
+            State
+    end;
+batch_queue_suspend(_, _, State) ->
+    State.
 
 batch_queue_suspended(QueueName,
                       #state{dependencies = Dependencies,
@@ -677,7 +735,8 @@ running_stopped(false, QueueName,
         #queue{} = Queue ->
             case batch_queue_suspended(QueueName, State) of
                 true ->
-                    QueueNew = Queue#queue{service_id = undefined},
+                    QueueNew = Queue#queue{service_id = undefined,
+                                           suspended = true},
                     QueuesNew = cloudi_x_trie:store(QueueName,
                                                     QueueNew, Queues),
                     State#state{queues = QueuesNew};
@@ -719,6 +778,27 @@ batch_queue_run_new(QueueName, [Config | ConfigsTail],
 
 batch_queue_run_old(QueueName,
                     #queue{count = Count,
+                           service_id = ServiceId,
+                           suspended = true} = Queue,
+                    #state{queues = Queues} = State)
+    when ServiceId /= undefined ->
+    case cloudi_service_api:services_resume([ServiceId], infinity) of
+        ok ->
+            QueueNew = Queue#queue{suspended = false},
+            QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
+            State#state{queues = QueuesNew};
+        {error, {service_not_found, ServiceId}} ->
+            if
+                Count == 0 ->
+                    batch_queue_erase(QueueName, State);
+                Count > 0 ->
+                    batch_queue_run_old(QueueName,
+                                        Queue#queue{service_id = undefined},
+                                        State)
+            end
+    end;
+batch_queue_run_old(QueueName,
+                    #queue{count = Count,
                            data = Data} = Queue,
                     #state{service = Service,
                            queues = Queues} = State) ->
@@ -728,10 +808,10 @@ batch_queue_run_old(QueueName,
             QueueNew = Queue#queue{count = Count - 1,
                                    data = DataNew,
                                    service_id = ServiceId,
+                                   suspended = false,
                                    terminate = false,
                                    terminate_timer = undefined},
-            QueuesNew = cloudi_x_trie:store(QueueName,
-                                            QueueNew, Queues),
+            QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
             State#state{queues = QueuesNew};
         {error, _} ->
             batch_queue_erase(QueueName, State)

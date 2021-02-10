@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -36,12 +36,14 @@ import traceback
 from cloudi_c import API, TerminateException
 
 class _Task(threading.Thread):
-    def __init__(self, api):
+    def __init__(self, thread_index):
         threading.Thread.__init__(self)
-        self.__api = api
+        self.__api = None
+        self.__thread_index = thread_index
 
     def run(self):
         try:
+            self.__api = API(self.__thread_index)
             self.__check_environment()
             # idle service with no subscriptions
             self.__api.shutdown('environment checked successfully')
@@ -76,7 +78,7 @@ def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
 
-    threads = [_Task(API(thread_index))
+    threads = [_Task(thread_index)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -36,7 +36,7 @@ def _main():
     assert thread_count >= 1
 
     Task.api_name = 'python_c'
-    threads = [Task(API(thread_index), TerminateException)
+    threads = [Task(thread_index, TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

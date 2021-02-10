@@ -328,10 +328,9 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
                                   'cloudi_service_init_timeout'),
     case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
         {ok, StateSocket} ->
-            cloudi_x_quickrand:seed(),
+            ok = cloudi_x_quickrand:seed(),
             WordSize = erlang:system_info(wordsize),
-            ConfigOptionsNew =
-                check_init_receive(check_init_send(ConfigOptions)),
+            ConfigOptionsNew = check_init_send(ConfigOptions),
             Variant = application:get_env(cloudi_core, uuid_v1_variant,
                                           ?UUID_V1_VARIANT_DEFAULT),
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
@@ -439,7 +438,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 subscribed = Subscriptions,
                 options = #config_service_options{
                     scope = Scope,
-                    aspects_init_after = Aspects}} = State) ->
+                    aspects_init_after = Aspects} = ConfigOptions} = State) ->
     case aspects_init_after(Aspects, CommandLine, Prefix, Timeout,
                             ServiceState) of
         {ok, ServiceStateNew} ->
@@ -448,6 +447,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             % first time (i.e., by the service code)
             % and all the aspects_init_after functions have been called.
             ok = cancel_timer_async(InitTimer),
+            ConfigOptionsNew = check_init_receive(ConfigOptions),
             ok = cloudi_core_i_services_monitor:
                  process_init_end(Dispatcher, OSPid),
             if
@@ -463,7 +463,8 @@ handle_event(EventType, EventContent, StateName, State) ->
             {keep_state,
              process_queues(State#state{service_state = ServiceStateNew,
                                         init_timer = undefined,
-                                        subscribed = []})};
+                                        subscribed = [],
+                                        options = ConfigOptionsNew})};
         {stop, Reason, ServiceStateNew} ->
             {stop, Reason,
              State#state{service_state = ServiceStateNew,

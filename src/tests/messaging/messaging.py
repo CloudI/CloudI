@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -38,9 +38,9 @@ class Task(threading.Thread):
     """
     messaging thread task
     """
-    def __init__(self, api, thread_index, name, terminate):
+    def __init__(self, thread_index, name, terminate):
         threading.Thread.__init__(self)
-        self.__api = api
+        self.__api = None
         self.__thread_index = thread_index
         self.__name = name
         self.__terminate_exception = terminate
@@ -50,6 +50,7 @@ class Task(threading.Thread):
         run the messaging thread
         """
         try:
+            self.__api = API(self.__thread_index)
             self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
             self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
             self.__api.subscribe('a/b/*/d', self.__sequence1_ab_d)
@@ -523,8 +524,7 @@ def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
 
-    threads = [Task(API(thread_index), thread_index,
-                    'python', TerminateException)
+    threads = [Task(thread_index, 'python', TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

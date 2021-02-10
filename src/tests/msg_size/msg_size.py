@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -43,9 +43,10 @@ class Task(threading.Thread):
     """
     api_name = None
 
-    def __init__(self, api, terminate):
+    def __init__(self, thread_index, terminate):
         threading.Thread.__init__(self)
-        self.__api = api
+        self.__api = None
+        self.__thread_index = thread_index
         self.__terminate_exception = terminate
 
     def run(self):
@@ -53,6 +54,7 @@ class Task(threading.Thread):
         run the msg_size thread
         """
         try:
+            self.__api = API(self.__thread_index)
             self.__api.subscribe(Task.api_name, _request)
 
             result = self.__api.poll()
@@ -84,7 +86,7 @@ def _main():
     assert thread_count >= 1
 
     Task.api_name = 'python'
-    threads = [Task(API(thread_index), TerminateException)
+    threads = [Task(thread_index, TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

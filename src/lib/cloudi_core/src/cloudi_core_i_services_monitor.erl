@@ -106,7 +106,7 @@
 -record(pids_change_input,
     {
         terminated = false :: boolean(),
-        ignore = false :: boolean(),
+        ignore :: boolean(),
         period :: pos_integer(),
         changes :: list({Direction :: increase | decrease,
                          RateCurrent :: number(),
@@ -354,7 +354,6 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
              TimeoutTerm, RestartAll, RestartDelay,
              MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
-    OSPid = undefined,
     TimeStart = cloudi_timestamp:native_monotonic(),
     TimeRestart = undefined,
     Restarts = 0,
@@ -363,26 +362,24 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                              Restarts | A]) of
         {ok, Pid} when is_pid(Pid) ->
             Pids = [Pid],
-            ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
-                new_service_process(M, F, A,
-                                    ProcessIndex, CountProcess,
-                                    CountThread, Scope, Pids, OSPid,
-                                    erlang:monitor(process, Pid),
-                                    TimeStart, TimeRestart, Restarts,
-                                    TimeoutTerm, RestartAll, RestartDelay,
-                                    MaxR, MaxT), Services),
+            ServicesNew = new_service_processes(false, M, F, A,
+                                                ProcessIndex, CountProcess,
+                                                CountThread, Scope, Pids,
+                                                TimeStart, TimeRestart,
+                                                Restarts, TimeoutTerm,
+                                                RestartAll, RestartDelay,
+                                                MaxR, MaxT,
+                                                ServiceId, Services),
             {reply, {ok, Pids}, State#state{services = ServicesNew}};
         {ok, [Pid | _] = Pids} = Success when is_pid(Pid) ->
-            ServicesNew = lists:foldl(fun(P, D) ->
-                cloudi_x_key2value:store(ServiceId, P,
-                    new_service_process(M, F, A,
-                                        ProcessIndex, CountProcess,
-                                        CountThread, Scope, Pids, OSPid,
-                                        erlang:monitor(process, P),
-                                        TimeStart, TimeRestart, Restarts,
-                                        TimeoutTerm, RestartAll, RestartDelay,
-                                        MaxR, MaxT), D)
-            end, Services, Pids),
+            ServicesNew = new_service_processes(false, M, F, A,
+                                                ProcessIndex, CountProcess,
+                                                CountThread, Scope, Pids,
+                                                TimeStart, TimeRestart,
+                                                Restarts, TimeoutTerm,
+                                                RestartAll, RestartDelay,
+                                                MaxR, MaxT,
+                                                ServiceId, Services),
             {reply, Success, State#state{services = ServicesNew}};
         {error, _} = Error ->
             {reply, Error, State}
@@ -665,7 +662,7 @@ handle_info({Direction,
             ChangeNew = case maps:find(ServiceId, Changes) of
                 {ok, #pids_change_input{ignore = IgnoreOld,
                                         changes = ChangeList} = Change} ->
-                    Change#pids_change_input{ignore = Ignore orelse IgnoreOld,
+                    Change#pids_change_input{ignore = IgnoreOld orelse Ignore,
                                              changes = [Entry | ChangeList]};
                 error ->
                     erlang:send_after(Period * 1000, self(),
@@ -1368,34 +1365,38 @@ terminated_service(ConfigurationRemove, ServiceId,
                 changes = ChangesNew}.
 
 pids_change_check(ServiceId,
-                  #state{changes = ChangesOld} = State) ->
-    {Change, Changes} = case maps:find(ServiceId, ChangesOld) of
-        {ok, ChangeValue} ->
-            {ChangeValue, maps:remove(ServiceId, ChangesOld)};
+                  #state{suspended = Suspended,
+                         changes = Changes} = State) ->
+    case maps:take(ServiceId, Changes) of
+        {#pids_change_input{ignore = IgnoreOld} = Change, ChangesNew} ->
+            Ignore = IgnoreOld orelse sets:is_element(ServiceId, Suspended),
+            pids_change_check(Change#pids_change_input{ignore = Ignore},
+                              ServiceId,
+                              State#state{changes = ChangesNew});
         error ->
-            {undefined, ChangesOld}
-    end,
-    case Change of
-        undefined ->
-            State#state{changes = Changes};
-        #pids_change_input{changes = []} ->
-            State#state{changes = Changes};
-        #pids_change_input{terminated = true,
-                           period = Period} = Change ->
-            % remove after the next changes message
-            erlang:send_after(Period * 1000, self(), {changes, ServiceId}),
-            ChangesNew = maps:put(ServiceId,
-                                  Change#pids_change_input{changes = []},
-                                  Changes),
-            State#state{changes = ChangesNew};
-        #pids_change_input{ignore = true} ->
-            State#state{changes = Changes};
-        #pids_change_input{changes = ChangeList} ->
-            pids_change_now(ServiceId, ChangeList,
-                            State#state{changes = Changes})
+            pids_change_check(undefined, ServiceId, State)
     end.
 
-pids_change_now(ServiceId, ChangeList,
+pids_change_check(undefined, _, State) ->
+    State;
+pids_change_check(#pids_change_input{changes = []}, _, State) ->
+    State;
+pids_change_check(#pids_change_input{terminated = true,
+                                     period = Period} = Change,
+                  ServiceId,
+                  #state{changes = Changes} = State) ->
+    % remove after the next changes message
+    erlang:send_after(Period * 1000, self(), {changes, ServiceId}),
+    ChangesNew = maps:put(ServiceId,
+                          Change#pids_change_input{changes = []},
+                          Changes),
+    State#state{changes = ChangesNew};
+pids_change_check(#pids_change_input{ignore = true}, _, State) ->
+    State;
+pids_change_check(#pids_change_input{changes = ChangeList}, ServiceId, State) ->
+    pids_change_now(ChangeList, ServiceId, State).
+
+pids_change_now(ChangeList, ServiceId,
                 #state{services = Services} = State) ->
     {Pids,
      #service{count_thread = CountThread}} = cloudi_x_key2value:
@@ -1506,7 +1507,6 @@ pids_change_increase_loop(Count, ProcessIndex,
                                    max_r = MaxR,
                                    max_t = MaxT} = Service,
                           ServiceId, Services) ->
-    OSPid = undefined,
     ServicesNew = case erlang:apply(M, F, [ProcessIndex, CountProcess,
                                            TimeStart, TimeRestart,
                                            Restarts | A]) of
@@ -1514,31 +1514,21 @@ pids_change_increase_loop(Count, ProcessIndex,
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
                       [service_id(ServiceId), Pid]),
             Pids = [Pid],
-            ok = process_init_begin(Pids),
-            ServicesNext = cloudi_x_key2value:store(ServiceId, Pid,
-                new_service_process(M, F, A,
-                                    ProcessIndex, CountProcess,
-                                    CountThread, Scope, Pids, OSPid,
-                                    erlang:monitor(process, Pid),
-                                    TimeStart, TimeRestart, Restarts,
-                                    TimeoutTerm, RestartAll, RestartDelay,
-                                    MaxR, MaxT), Services),
-            ServicesNext;
+            new_service_processes(true, M, F, A,
+                                  ProcessIndex, CountProcess,
+                                  CountThread, Scope, Pids,
+                                  TimeStart, TimeRestart, Restarts,
+                                  TimeoutTerm, RestartAll, RestartDelay,
+                                  MaxR, MaxT, ServiceId, Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
                       [service_id(ServiceId), Pids]),
-            ok = process_init_begin(Pids),
-            ServicesNext = lists:foldl(fun(P, D) ->
-                cloudi_x_key2value:store(ServiceId, P,
-                    new_service_process(M, F, A,
-                                        ProcessIndex, CountProcess,
-                                        CountThread, Scope, Pids, OSPid,
-                                        erlang:monitor(process, P),
-                                        TimeStart, TimeRestart, Restarts,
-                                        TimeoutTerm, RestartAll, RestartDelay,
-                                        MaxR, MaxT), D)
-            end, Services, Pids),
-            ServicesNext;
+            new_service_processes(true, M, F, A,
+                                  ProcessIndex, CountProcess,
+                                  CountThread, Scope, Pids,
+                                  TimeStart, TimeRestart, Restarts,
+                                  TimeoutTerm, RestartAll, RestartDelay,
+                                  MaxR, MaxT, ServiceId, Services);
         {error, _} = Error ->
             ?LOG_ERROR("failed ~tp increase (count_process_dynamic)~n ~p",
                        [Error, service_id(ServiceId)]),
@@ -2437,6 +2427,54 @@ update_after(UpdateSuccess, PidList, ResultsSuccess,
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
+
+new_service_processes(Init, M, F, A,
+                      ProcessIndex, CountProcess,
+                      CountThread, Scope, Pids,
+                      TimeStart, TimeRestart, Restarts,
+                      TimeoutTerm, RestartAll, RestartDelay,
+                      MaxR, MaxT, ServiceId, Services) ->
+    ServicesNew = new_service_processes_store(Pids, M, F, A,
+                                              ProcessIndex, CountProcess,
+                                              CountThread, Scope, Pids,
+                                              TimeStart, TimeRestart, Restarts,
+                                              TimeoutTerm, RestartAll,
+                                              RestartDelay, MaxR, MaxT,
+                                              ServiceId, Services),
+    if
+        Init =:= true ->
+            ok = process_init_begin(Pids);
+        Init =:= false ->
+            ok
+    end,
+    ServicesNew.
+
+new_service_processes_store([], _, _, _, _, _, _, _, _, _,
+                            _, _, _, _, _, _, _, _, Services) ->
+    Services;
+new_service_processes_store([P | L], M, F, A,
+                            ProcessIndex, CountProcess,
+                            CountThread, Scope, Pids,
+                            TimeStart, TimeRestart, Restarts,
+                            TimeoutTerm, RestartAll, RestartDelay,
+                            MaxR, MaxT, ServiceId, Services) ->
+    OSPid = undefined,
+    MonitorRef = erlang:monitor(process, P),
+    Service = new_service_process(M, F, A,
+                                  ProcessIndex, CountProcess,
+                                  CountThread, Scope, Pids, OSPid,
+                                  MonitorRef,
+                                  TimeStart, TimeRestart, Restarts,
+                                  TimeoutTerm, RestartAll, RestartDelay,
+                                  MaxR, MaxT),
+    ServicesNew = cloudi_x_key2value:store(ServiceId, P,
+                                           Service, Services),
+    new_service_processes_store(L, M, F, A,
+                                ProcessIndex, CountProcess,
+                                CountThread, Scope, Pids,
+                                TimeStart, TimeRestart, Restarts,
+                                TimeoutTerm, RestartAll, RestartDelay,
+                                MaxR, MaxT, ServiceId, ServicesNew).
 
 new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
                     Scope, Pids, OSPid, MonitorRef,
