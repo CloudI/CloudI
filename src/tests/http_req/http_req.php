@@ -4,7 +4,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -30,16 +30,19 @@ require 'CloudI.php';
 class Task //extends \Thread
 {
     private $api;
+    private $thread_index;
 
-    public function __construct($api)
+    public function __construct($thread_index)
     {
-        $this->api = $api;
+        $this->api = null;
+        $this->thread_index = $thread_index;
     }
 
     public function run()
     {
         try
         {
+            $this->api = new \CloudI\API($this->thread_index);
             assert($this->api->subscribe_count('php.xml/get') == 0);
             $this->api->subscribe('php.xml/get', $this, 'request');
             assert($this->api->subscribe_count('php.xml/get') == 1);
@@ -86,7 +89,7 @@ class Task //extends \Thread
 
 $thread_count = \CloudI\API::thread_count();
 assert($thread_count == 1);
-$main_thread = new Task(new \CloudI\API(0));
+$main_thread = new Task(0);
 $main_thread->run();
 
 /*
@@ -94,11 +97,11 @@ $main_thread->run();
 // readily available installation packages
 $thread_count = \CloudI\API::thread_count();
 assert($thread_count >= 1);
-    
+
 $threads = array();
-for ($i = 0; $i < $thread_count; $i++)
+for ($thread_index = 0; $thread_index < $thread_count; $thread_index++)
 {
-    $threads[$i] = new Task(new \CloudI\API($i));
+    $threads[$thread_index] = new Task($thread_index);
 }
 foreach ($threads as $t)
     $t->start();

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -32,28 +32,12 @@ import org.cloudi.API;
 public class Task implements Runnable
 {
     private API api;
+    private final int thread_index;
      
     public Task(final int thread_index)
     {
-        try
-        {
-            this.api = new API(thread_index);
-        }
-        catch (API.InvalidInputException e)
-        {
-            e.printStackTrace(API.err);
-            System.exit(1);
-        }
-        catch (API.MessageDecodingException e)
-        {
-            e.printStackTrace(API.err);
-            System.exit(1);
-        }
-        catch (API.TerminateException e)
-        {
-            API.err.println("terminate http java (before init)");
-            System.exit(1);
-        }
+        this.api = null;
+        this.thread_index = thread_index;
     }
 
     public void text(Integer request_type, String name, String pattern,
@@ -66,7 +50,7 @@ public class Task implements Runnable
     {
         final String value = new String(request);
         API.out.println("(" + value + ")");
-        assert "Test Text" == value : value;
+        assert value.equals("Test Text") : value;
         this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("Test Response").getBytes(),
                          timeout, trans_id, pid);
@@ -76,9 +60,10 @@ public class Task implements Runnable
     {
         try
         {
+            this.api = new API(this.thread_index);
             this.api.subscribe("text/post", this, "text");
-            Object result = this.api.poll();
-            assert result == Boolean.FALSE;
+            boolean result = this.api.poll();
+            assert result == false;
         }
         catch (API.TerminateException e)
         {

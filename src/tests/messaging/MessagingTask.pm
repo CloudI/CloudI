@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -35,9 +35,9 @@ require CloudI::TerminateException;
 sub new
 {
     my $class = shift;
-    my ($api, $thread_index) = @_;
+    my ($thread_index) = @_;
     my $self = bless {
-        api => $api,
+        api => '',
         thread_index => $thread_index,
     }, $class;
     return $self;
@@ -48,6 +48,7 @@ sub run
     my $self = shift;
     eval
     {
+        $self->{api} = CloudI::API->new($self->{thread_index});
         $self->{api}->subscribe('a/b/c/d', $self, '_sequence1_abcd');
         $self->{api}->subscribe('a/b/c/*', $self, '_sequence1_abc_');
         $self->{api}->subscribe('a/b/*/d', $self, '_sequence1_ab_d');
@@ -560,11 +561,11 @@ sub _sequence3
     assert($use_threads);
     my $thread_count = CloudI::API::thread_count();
     my @threads = ();
-    for my $i (0 .. ($thread_count - 1))
+    for my $thread_index (0 .. ($thread_count - 1))
     {
         my $t = threads->create(sub
         {
-            my $task = MessagingTask->new(CloudI::API->new($i), $i);
+            my $task = MessagingTask->new($thread_index);
             return $task->run();
         });
         assert(defined($t));

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-02-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve count_process_dynamic logic
+    * Fix Java, Perl, PHP, Ruby integration tests CloudI API initialization
+      (exceptions are caught properly now)
+
 2021-02-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the suspend_dependants argument to

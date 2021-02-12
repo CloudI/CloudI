@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -33,12 +33,12 @@ require CloudI::TerminateException;
 
 use constant DESTINATION => '/tests/msg_size/erlang';
 
-# not using a task object to keep the source code in a single file
 sub task
 {
-    my ($api) = @_;
+    my ($thread_index) = @_;
     eval
     {
+        my $api = CloudI::API->new($thread_index);
         my $task_request = sub
         {
             my ($request_type, $name, $pattern, $request_info, $request,
@@ -90,9 +90,9 @@ sub assert
     assert($use_threads);
     my $thread_count = CloudI::API::thread_count();
     my @threads = ();
-    for my $i (0 .. ($thread_count - 1))
+    for my $thread_index (0 .. ($thread_count - 1))
     {
-        my $t = threads->create(\&task, (CloudI::API->new($i)));
+        my $t = threads->create(\&task, ($thread_index));
         assert(defined($t));
         push(@threads, $t);
     }

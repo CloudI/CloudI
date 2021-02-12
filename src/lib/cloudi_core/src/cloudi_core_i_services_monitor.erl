@@ -1393,32 +1393,39 @@ pids_change_check(#pids_change_input{terminated = true,
     State#state{changes = ChangesNew};
 pids_change_check(#pids_change_input{ignore = true}, _, State) ->
     State;
-pids_change_check(#pids_change_input{changes = ChangeList}, ServiceId, State) ->
-    pids_change_now(ChangeList, ServiceId, State).
-
-pids_change_now(ChangeList, ServiceId,
-                #state{services = Services} = State) ->
+pids_change_check(#pids_change_input{changes = ChangeList}, ServiceId,
+                  #state{services = Services} = State) ->
     {Pids,
-     #service{count_thread = CountThread}} = cloudi_x_key2value:
+     #service{count_process = CountProcess,
+              count_thread = CountThread}} = cloudi_x_key2value:
                                              fetch1(ServiceId, Services),
-    CountProcessCurrent = erlang:round(erlang:length(Pids) /
-                                       CountThread),
-    {I, Rate} = pids_change(ChangeList, CountProcessCurrent),
-    ServicesNew = if
-        I == 0 ->
-            ?LOG_TRACE("count_process_dynamic(~p):~n "
-                       "constant ~p for ~p requests/second",
-                       [service_id(ServiceId), CountProcessCurrent,
-                        erlang:round(Rate * 10) / 10]),
-            Services;
-        I > 0 ->
-            pids_change_increase(I, Pids, CountProcessCurrent, Rate,
-                                 ServiceId, Services);
-        I < 0 ->
-            pids_change_decrease(I, Pids, CountProcessCurrent, Rate,
-                                 ServiceId, Services)
-    end,
-    State#state{services = ServicesNew}.
+    if
+        length(Pids) =:= CountProcess * CountThread ->
+            {I, Rate} = pids_change(ChangeList, CountProcess),
+            pids_change_now(I, Pids, CountProcess, Rate,
+                            ServiceId, State);
+        true ->
+            % avoid changing count_process while changes are still
+            % in-progress due to past ChangeList data
+            State
+    end.
+
+pids_change_now(I, Pids, CountProcess, Rate, ServiceId,
+                #state{services = Services} = State)
+    when I > 0 ->
+    State#state{services = pids_change_increase(I, Pids, CountProcess, Rate,
+                                                ServiceId, Services)};
+pids_change_now(I, Pids, CountProcess, Rate, ServiceId,
+                #state{services = Services} = State)
+    when I < 0 ->
+    State#state{services = pids_change_decrease(I, Pids, CountProcess, Rate,
+                                                ServiceId, Services)};
+pids_change_now(0, _, CountProcess, Rate, ServiceId, State) ->
+    ?LOG_TRACE("count_process_dynamic(~p):~n "
+               "constant ~p for ~p requests/second",
+               [service_id(ServiceId), CountProcess,
+                erlang:round(Rate * 10) / 10]),
+    State.
 
 pids_change(ChangeList, CountProcessCurrent) ->
     pids_change_loop(ChangeList,
@@ -1513,10 +1520,9 @@ pids_change_increase_loop(Count, ProcessIndex,
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
                       [service_id(ServiceId), Pid]),
-            Pids = [Pid],
             new_service_processes(true, M, F, A,
                                   ProcessIndex, CountProcess,
-                                  CountThread, Scope, Pids,
+                                  CountThread, Scope, [Pid],
                                   TimeStart, TimeRestart, Restarts,
                                   TimeoutTerm, RestartAll, RestartDelay,
                                   MaxR, MaxT, ServiceId, Services);

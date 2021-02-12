@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -90,7 +90,7 @@ namespace
             connect_EACCES,
             connect_EPERM,
             connect_EADDRINUSE,
-            connect_EAFNOSUPPORT,
+            connect_ENOENT,
             connect_EAGAIN,
             connect_EALREADY,
             connect_EBADF,                 // 50
@@ -201,8 +201,8 @@ namespace
                     return "connect_EPERM";
                 case connect_EADDRINUSE:
                     return "connect_EADDRINUSE";
-                case connect_EAFNOSUPPORT:
-                    return "connect_EAFNOSUPPORT";
+                case connect_ENOENT:
+                    return "connect_ENOENT";
                 case connect_EAGAIN:
                     return "connect_EAGAIN";
                 case connect_EALREADY:
@@ -489,8 +489,8 @@ namespace
                     return connect_EPERM;
                 case EADDRINUSE:
                     return connect_EADDRINUSE;
-                case EAFNOSUPPORT:
-                    return connect_EAFNOSUPPORT;
+                case ENOENT:
+                    return connect_ENOENT;
                 case EAGAIN:
                     return connect_EAGAIN;
                 case EALREADY:
@@ -906,13 +906,17 @@ int32_t spawn(char protocol,
             else if (domain == PF_LOCAL)
             {
                 char port_str[16];
-                ::snprintf(port_str, sizeof(port_str), "%d", ports[i]);
-                assert(socket_path_len <= 104 - 10);
+                int const port_str_len = ::snprintf(port_str, sizeof(port_str),
+                                                    "%d", ports[i]);
+                assert(socket_path_len <=
+                       static_cast<uint32_t>(104 - port_str_len));
                 struct sockaddr_un local;
+                ::memset(&local, 0, sizeof(local));
                 local.sun_family = domain;
-                ::memcpy(local.sun_path, socket_path, socket_path_len);
+                ::memcpy(local.sun_path, socket_path, socket_path_len - 1);
                 ::memcpy(&(local.sun_path[socket_path_len - 1]),
-                         port_str, sizeof(port_str));
+                         port_str, port_str_len);
+
                 if (::connect(sockfd,
                               reinterpret_cast<struct sockaddr *>(&local),
                               sizeof(local)) == -1)

@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -35,11 +35,13 @@ if __FILE__ == $PROGRAM_NAME
     threads = (0...thread_count).to_a.map{ |i| Thread.new(i){ |thread_index|
         class Task
             def initialize(thread_index)
-                @api = CloudI::API.new(thread_index)
+                @api = nil
+                @thread_index = thread_index
             end
 
             def run
                 begin
+                    @api = CloudI::API.new(@thread_index)
                     assert{@api.subscribe_count('ruby.xml/get') == 0}
                     @api.subscribe('ruby.xml/get', method(:request))
                     assert{@api.subscribe_count('ruby.xml/get') == 1}
@@ -81,13 +83,8 @@ if __FILE__ == $PROGRAM_NAME
                              response_info, response, timeout, trans_id, pid)
             end
         end
-        begin
-            object = Task.new(thread_index)
-            object.run
-        rescue
-            $stderr.puts $!.message
-            $stderr.puts $!.backtrace
-        end
+
+        Task.new(thread_index).run
     }}
     threads.each{ |t| t.join }
 end

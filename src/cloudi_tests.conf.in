@@ -357,6 +357,8 @@
     {external,
         "/tests/http/",
         "@JAVA@",
+        "-Dfile.encoding=UTF-8 "
+        "-server "
         % enable assertions
         "-ea:org.cloudi... "
         "-jar @cloudi_prefix@/tests/http/java/http.jar",
@@ -386,6 +388,8 @@
     {external,
         "/tests/count/",
         "@JAVA@",
+        "-Dfile.encoding=UTF-8 "
+        "-server "
         % enable assertions
         "-ea:org.cloudi... "
         "-jar @cloudi_prefix@/tests/count/java/count.jar",
@@ -490,6 +494,8 @@
     {external,
         "/tests/http_req/",
         "@JAVA@",
+        "-Dfile.encoding=UTF-8 "
+        "-server "
         % enable assertions
         "-ea:org.cloudi... "
         "-jar @cloudi_prefix@/tests/http_req/java/http_req.jar",
@@ -609,6 +615,8 @@
     {external,
         "/tests/null/response/",
         "@JAVA@",
+        "-Dfile.encoding=UTF-8 "
+        "-server "
         % enable assertions
         "-ea:org.cloudi... "
         "-jar @cloudi_prefix@/tests/null/java/null_.jar",
@@ -693,6 +701,8 @@
     {external,
         "/tests/null/timeout/",
         "@JAVA@",
+        "-Dfile.encoding=UTF-8 "
+        "-server "
         % enable assertions
         "-ea:org.cloudi... "
         "-jar @cloudi_prefix@/tests/null/java/null_.jar",
@@ -926,6 +936,8 @@
     {external,
         "/tests/msg_size/",
         "@JAVA@",
+        "-Dfile.encoding=UTF-8 "
+        "-server "
         % enable assertions
         "-ea:org.cloudi... "
         "-jar @cloudi_prefix@/tests/msg_size/java/msg_size.jar",
@@ -1124,6 +1136,7 @@
     {external,
         "/tests/messaging/java/",
         "@JAVA@",
+        "-Dfile.encoding=UTF-8 "
         % based on http://www.infoq.com/articles/benchmarking-jvm
         "-Xbatch -server -Xmx1G -Xms1G "
         % enable assertions
