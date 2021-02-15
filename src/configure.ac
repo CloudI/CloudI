@@ -70,9 +70,6 @@ AC_SUBST(cloudi_logdir)
 AC_SUBST(cloudi_confdir)
 AC_SUBST(cloudi_bindir)
 
-AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
-         m4_maketemp(/tmp/cloudi_tmp_bin_script_XXXXXX))
-
 AC_MSG_CHECKING([if the C          CloudI API is enabled])
 AC_ARG_ENABLE([c-support],
     [AS_HELP_STRING([--enable-c-support],
@@ -798,6 +795,7 @@ AC_CONFIG_FILES([
     rebar_src.config
     rebar_src_test.config
     reltool.config
+    rel/files/bin_script
     rel/files/cloudi
     rel/files/default.args
     rel/files/erl

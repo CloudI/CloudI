@@ -439,11 +439,8 @@ install-exec-hook:
                       "$(DESTDIR)$(cloudi_bindir)/"
 	$(INSTALL) -m 700 "$(top_builddir)/rel/cloudi/bin/cloudi" \
                       "$(DESTDIR)$(cloudi_bindir)/"
-	echo "#!/bin/sh"               > "$(CLOUDI_TMP_BIN_SCRIPT)"
-	echo "cd $(cloudi_bindir)"     >> "$(CLOUDI_TMP_BIN_SCRIPT)"
-	echo "exec ./cloudi \$$*"      >> "$(CLOUDI_TMP_BIN_SCRIPT)"
-	$(INSTALL) -m 700 "$(CLOUDI_TMP_BIN_SCRIPT)" "$(DESTDIR)$(bindir)/cloudi"
-	rm -f "$(CLOUDI_TMP_BIN_SCRIPT)"
+	$(INSTALL) -m 700 "$(top_builddir)/rel/files/bin_script" \
+                      "$(DESTDIR)$(bindir)/cloudi"
 	test -e "$(DESTDIR)$(cloudi_confdir)/vm.args" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/vm.args" \
              "$(DESTDIR)$(cloudi_confdir)/vm.args.old" || exit 0
