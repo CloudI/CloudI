@@ -38,6 +38,11 @@ Author
 
 Michael Truog (mjtruog at protonmail dot com)
 
+Thanks
+------
+
+* Hans Bolinder (ex2erl utf8 encoding)
+
 License
 -------
 

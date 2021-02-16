@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-02-16 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix Elixir.CloudILogger module encoding
+    * Update reltool_util
+
 2021-02-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve installed cloudi bin script installation
