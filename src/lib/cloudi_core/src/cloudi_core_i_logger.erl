@@ -113,8 +113,6 @@
             :: pos_integer(),
         mode = async
             :: mode_process(),
-        overload_start = undefined
-            :: undefined | cloudi_timestamp:microseconds_monotonic(),
         destination = undefined
             :: undefined | ?MODULE | {?MODULE, node()},
         syslog = undefined
@@ -152,7 +150,27 @@
         error_sync_count = 0
             :: non_neg_integer(),
         error_sync_types = []
-            :: list(file:posix() | badarg | terminated)
+            :: list(file:posix() | badarg | terminated),
+        sync_start = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        sync_start_event = undefined
+            :: undefined | cloudi_timestamp:iso8601(),
+        sync_end = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        sync_end_event = undefined
+            :: undefined | cloudi_timestamp:iso8601(),
+        sync_total = undefined
+            :: undefined | cloudi_service_api:nanoseconds_string(),
+        overload_start = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        overload_start_event = undefined
+            :: undefined | cloudi_timestamp:iso8601(),
+        overload_end = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        overload_end_event = undefined
+            :: undefined | cloudi_timestamp:iso8601(),
+        overload_total = undefined
+            :: undefined | cloudi_service_api:nanoseconds_string()
     }).
 
 %%%------------------------------------------------------------------------
@@ -686,7 +704,7 @@ handle_call({Level, Timestamp, Node, Pid,
                               Module, Line, Function, Arity,
                               MetaData, LogMessage, State) of
         {ok, StateNext} ->
-            case log_mode_check(StateNext) of
+            case log_mode_check(Timestamp, StateNext) of
                 {ok, StateNew} ->
                     {reply, ok, StateNew};
                 {error, Reason} ->
@@ -703,7 +721,18 @@ handle_call(status, _,
                    error_write_count = ErrorWriteCount,
                    error_write_types = ErrorWriteTypes,
                    error_sync_count = ErrorSyncCount,
-                   error_sync_types = ErrorSyncTypes} = State) ->
+                   error_sync_types = ErrorSyncTypes,
+                   sync_start = SyncStart,
+                   sync_start_event = SyncStartEvent,
+                   sync_end = SyncEnd,
+                   sync_end_event = SyncEndEvent,
+                   sync_total = SyncTotal,
+                   overload_start = OverloadStart,
+                   overload_start_event = OverloadStartEvent,
+                   overload_end = OverloadEnd,
+                   overload_end_event = OverloadEndEvent,
+                   overload_total = OverloadTotal} = State) ->
+    TimeOffset = erlang:time_offset(),
     Status0 = if
         ErrorReadCount > 0 ->
             [{file_read_fail_count, erlang:integer_to_list(ErrorReadCount)},
@@ -767,7 +796,65 @@ handle_call(status, _,
         error ->
             Status7
     end,
-    StatusN = [{queue_mode, Mode} | Status8],
+    Status9 = if
+        OverloadStart =:= undefined ->
+            Status8;
+        OverloadEnd =:= undefined ->
+            OverloadStartMicroSeconds = cloudi_timestamp:
+                                        convert(OverloadStart + TimeOffset,
+                                                native, microsecond),
+            [{queue_mode_overload_last_start,
+              microseconds_to_string(OverloadStartMicroSeconds)},
+             {queue_mode_overload_last_start_event,
+              OverloadStartEvent} | Status8];
+        is_list(OverloadTotal) ->
+            OverloadStartMicroSeconds = cloudi_timestamp:
+                                        convert(OverloadStart + TimeOffset,
+                                                native, microsecond),
+            OverloadEndMicroSeconds = cloudi_timestamp:
+                                      convert(OverloadEnd + TimeOffset,
+                                              native, microsecond),
+            [{queue_mode_overload_last_start,
+              microseconds_to_string(OverloadStartMicroSeconds)},
+             {queue_mode_overload_last_start_event,
+              OverloadStartEvent},
+             {queue_mode_overload_last_end,
+              microseconds_to_string(OverloadEndMicroSeconds)},
+             {queue_mode_overload_last_end_event,
+              OverloadEndEvent},
+             {queue_mode_overload_last_total,
+              OverloadTotal} | Status8]
+    end,
+    Status10 = if
+        SyncStart =:= undefined ->
+            Status9;
+        SyncEnd =:= undefined ->
+            SyncStartMicroSeconds = cloudi_timestamp:
+                                    convert(SyncStart + TimeOffset,
+                                            native, microsecond),
+            [{queue_mode_sync_last_start,
+              microseconds_to_string(SyncStartMicroSeconds)},
+             {queue_mode_sync_last_start_event,
+              SyncStartEvent} | Status9];
+        is_list(SyncTotal) ->
+            SyncStartMicroSeconds = cloudi_timestamp:
+                                    convert(SyncStart + TimeOffset,
+                                            native, microsecond),
+            SyncEndMicroSeconds = cloudi_timestamp:
+                                  convert(SyncEnd + TimeOffset,
+                                          native, microsecond),
+            [{queue_mode_sync_last_start,
+              microseconds_to_string(SyncStartMicroSeconds)},
+             {queue_mode_sync_last_start_event,
+              SyncStartEvent},
+             {queue_mode_sync_last_end,
+              microseconds_to_string(SyncEndMicroSeconds)},
+             {queue_mode_sync_last_end_event,
+              SyncEndEvent},
+             {queue_mode_sync_last_total,
+              SyncTotal} | Status9]
+    end,
+    StatusN = [{queue_mode, Mode} | Status10],
     {reply, {ok, StatusN}, State};
 handle_call(status_reset, _, State) ->
     {reply, ok,
@@ -777,7 +864,17 @@ handle_call(status_reset, _, State) ->
                  error_write_count = 0,
                  error_write_types = [],
                  error_sync_count = 0,
-                 error_sync_types = []}};
+                 error_sync_types = [],
+                 sync_start = undefined,
+                 sync_start_event = undefined,
+                 sync_end = undefined,
+                 sync_end_event = undefined,
+                 sync_total = undefined,
+                 overload_start = undefined,
+                 overload_start_event = undefined,
+                 overload_end = undefined,
+                 overload_end_event = undefined,
+                 overload_total = undefined}};
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
@@ -860,7 +957,7 @@ handle_cast({Level, Timestamp, Node, Pid,
                               Module, Line, Function, Arity,
                               MetaData, LogMessage, State) of
         {ok, StateNext} ->
-            case log_mode_check(StateNext) of
+            case log_mode_check(Timestamp, StateNext) of
                 {ok, StateNew} ->
                     {noreply, StateNew};
                 {error, Reason} ->
@@ -1732,13 +1829,13 @@ log_redirect(Node, DestinationNew,
             Error
     end.
 
-log_mode_check(#state{level = Level,
+log_mode_check(Timestamp,
+               #state{level = Level,
                       queue_pending = 0,
                       queue_mode_async = QueueModeAsync,
                       queue_mode_sync = QueueModeSync,
                       queue_mode_overload = QueueModeOverload,
                       mode = ModeOld,
-                      overload_start = OverloadStart,
                       destination = Destination,
                       logger_self = Self} = State) ->
     {message_queue_len,
@@ -1782,39 +1879,58 @@ log_mode_check(#state{level = Level,
         ModeNew /= ModeOld ->
             case load_interface_module(Level, ModeNew, Destination) of
                 {ok, Binary} ->
-                    {LogOverload, OverloadStartNew} = if
-                        ModeNew =:= sync, ModeOld =:= overload ->
-                            {true, undefined};
-                        ModeNew =:= overload, ModeOld =:= sync ->
-                            {false, cloudi_timestamp:microseconds_monotonic()};
-                        true ->
-                            {false, OverloadStart}
-                    end,
-                    StateNew = State#state{interface_module = Binary,
-                                           queue_pending = QueuePending,
-                                           mode = ModeNew,
-                                           overload_start = OverloadStartNew},
-                    if
-                        LogOverload =:= true ->
-                            OverloadEnd = cloudi_timestamp:
-                                          microseconds_monotonic(),
-                            ?LOG_T0_ERROR("logging overload occurred for ~s",
-                                          [cloudi_timestamp:
-                                           microseconds_to_string(
-                                               OverloadEnd - OverloadStart)],
-                                          StateNew);
-                        LogOverload =:= false ->
-                            {ok, StateNew}
-                    end;
+                    log_mode_changed(ModeNew, ModeOld, Timestamp,
+                                     State#state{interface_module = Binary,
+                                                 queue_pending = QueuePending,
+                                                 mode = ModeNew});
                 {error, _} = Error ->
                     Error
             end;
         true ->
             {ok, State#state{queue_pending = QueuePending}}
     end;
-log_mode_check(#state{queue_pending = QueuePending} = State) ->
+log_mode_check(_, #state{queue_pending = QueuePending} = State) ->
     true = QueuePending > 0,
     {ok, State#state{queue_pending = QueuePending - 1}}.
+
+log_mode_changed(sync, async, Timestamp, State) ->
+    {ok, State#state{sync_start = cloudi_timestamp:native_monotonic(),
+                     sync_start_event = timestamp_iso8601(Timestamp),
+                     sync_end = undefined,
+                     sync_end_event = undefined,
+                     sync_total = undefined}};
+log_mode_changed(async, sync, Timestamp,
+                 #state{sync_start = SyncStart} = State) ->
+    SyncEnd = cloudi_timestamp:native_monotonic(),
+    SyncNanoSeconds = cloudi_timestamp:
+                      convert(SyncEnd - SyncStart,
+                              native, nanosecond),
+    SyncTotal = cloudi_timestamp:
+                nanoseconds_to_string(SyncNanoSeconds),
+    {ok, State#state{sync_end = SyncEnd,
+                     sync_end_event = timestamp_iso8601(Timestamp),
+                     sync_total = SyncTotal}};
+log_mode_changed(overload, sync, Timestamp, State) ->
+    {ok, State#state{overload_start = cloudi_timestamp:native_monotonic(),
+                     overload_start_event = timestamp_iso8601(Timestamp),
+                     overload_end = undefined,
+                     overload_end_event = undefined,
+                     overload_total = undefined}};
+log_mode_changed(sync, overload, Timestamp,
+                 #state{overload_start = OverloadStart} = State) ->
+    OverloadEnd = cloudi_timestamp:native_monotonic(),
+    OverloadNanoSeconds = cloudi_timestamp:
+                          convert(OverloadEnd - OverloadStart,
+                                  native, nanosecond),
+    OverloadTotal = cloudi_timestamp:
+                    nanoseconds_to_string(OverloadNanoSeconds),
+    StateNew = State#state{overload_end = OverloadEnd,
+                           overload_end_event = timestamp_iso8601(Timestamp),
+                           overload_total = OverloadTotal},
+    ?LOG_T0_ERROR("logging overload occurred for ~s",
+                  [OverloadTotal], StateNew);
+log_mode_changed(_, _, _, State) ->
+    {ok, State}.
 
 log_level_to_string(fatal) ->
     "FATAL";

@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
+%%% @copyright 2011-2021 Michael Truog
 %%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -979,7 +979,18 @@
                {formatter, module() | undefined} |
                {formatter_config, list()})}).
 -type logging_status() ::
-    list({file_messages_fatal, nonempty_string()} |
+    list({queue_mode, async | sync | overload} |
+         {queue_mode_sync_last_start, nonempty_string()} |
+         {queue_mode_sync_last_start_event, nonempty_string()} |
+         {queue_mode_sync_last_end, nonempty_string()} |
+         {queue_mode_sync_last_end_event, nonempty_string()} |
+         {queue_mode_sync_last_total, nonempty_string()} |
+         {queue_mode_overload_last_start, nonempty_string()} |
+         {queue_mode_overload_last_start_event, nonempty_string()} |
+         {queue_mode_overload_last_end, nonempty_string()} |
+         {queue_mode_overload_last_end_event, nonempty_string()} |
+         {queue_mode_overload_last_total, nonempty_string()} |
+         {file_messages_fatal, nonempty_string()} |
          {file_messages_error, nonempty_string()} |
          {file_messages_warn, nonempty_string()} |
          {file_messages_info, nonempty_string()} |
@@ -988,7 +999,9 @@
          {file_sync_fail_count, nonempty_string()} |
          {file_sync_fail_types, nonempty_list(atom())} |
          {file_write_fail_count, nonempty_string()} |
-         {file_write_fail_types, nonempty_list(atom())}).
+         {file_write_fail_types, nonempty_list(atom())} |
+         {file_read_fail_count, nonempty_string()} |
+         {file_read_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
     nonempty_list({file, string() | undefined} |
                   {stdout, boolean()} |

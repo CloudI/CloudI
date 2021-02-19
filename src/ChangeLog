@@ -1,6 +1,22 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-02-19 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add queue_mode_sync_last values and queue_mode_overload_last values
+      to the CloudI Service API logging_status output for tracking
+      the last occurrence of both queue modes
+      (queue_mode_sync_last_start,
+       queue_mode_sync_last_start_event,
+       queue_mode_sync_last_end,
+       queue_mode_sync_last_end_event,
+       queue_mode_sync_last_total,
+       queue_mode_overload_last_start,
+       queue_mode_overload_last_start_event,
+       queue_mode_overload_last_end,
+       queue_mode_overload_last_end_event,
+       queue_mode_overload_last_total)
+
 2021-02-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Elixir.CloudILogger module encoding
