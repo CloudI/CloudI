@@ -60,6 +60,42 @@ namespace
         std::abort();
     }
 #endif
+
+    class assert_exception_msg : public std::exception
+    {
+        public:
+            assert_exception_msg(std::string const & message) throw () :
+                m_message(message)
+            {
+            }
+            virtual ~assert_exception_msg() throw ()
+            {
+            }
+            virtual char const * what() const throw ()
+            {
+                return m_message.c_str();
+            }
+        private:
+            std::string m_message;
+    };
+
+    class assert_exception : public std::exception
+    {
+        public:
+            assert_exception(std::string const & message) throw () :
+                m_message(message)
+            {
+            }
+            virtual ~assert_exception() throw ()
+            {
+            }
+            virtual char const * what() const throw ()
+            {
+                return m_message.c_str();
+            }
+        private:
+            std::string m_message;
+    };
 }
 
 void assert_initialize()
@@ -80,23 +116,6 @@ namespace boost
                               char const * mm,
                               long line)
     {
-        class assert_exception_msg : public std::exception
-        {
-            public:
-                assert_exception_msg(std::string const & message) throw () :
-                    m_message(message)
-                {
-                }
-                virtual ~assert_exception_msg() throw ()
-                {
-                }
-                virtual char const * what() const throw ()
-                {
-                    return m_message.c_str();
-                }
-            private:
-                std::string m_message;
-        };
         std::ostringstream stream;
         stream << "assert failure: " << expr << ": " << mm;
         throw (boost::enable_error_info(assert_exception_msg(stream.str())) <<
@@ -110,23 +129,6 @@ namespace boost
                           char const * file,
                           long line)
     {
-        class assert_exception : public std::exception
-        {
-            public:
-                assert_exception(std::string const & message) throw () :
-                    m_message(message)
-                {
-                }
-                virtual ~assert_exception() throw ()
-                {
-                }
-                virtual char const * what() const throw ()
-                {
-                    return m_message.c_str();
-                }
-            private:
-                std::string m_message;
-        };
         std::ostringstream stream;
         stream << "assert failure: " << expr;
         throw (boost::enable_error_info(assert_exception(stream.str())) <<
