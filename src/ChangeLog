@@ -3,6 +3,9 @@
 
 2021-02-19 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Improve C/C++ CloudI API termination handler with
+      boost::diagnostic_information output and add the
+      CloudI::API::backtrace() to the assert exception
     * Add queue_mode_sync_last values and queue_mode_overload_last values
       to the CloudI Service API logging_status output for tracking
       the last occurrence of both queue modes

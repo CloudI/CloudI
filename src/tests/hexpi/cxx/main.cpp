@@ -242,6 +242,7 @@ int main(int, char **)
 {
     int status = 0;
 
+    assert_initialize();
     try
     {
         unsigned int const thread_count = CloudI::API::thread_count();

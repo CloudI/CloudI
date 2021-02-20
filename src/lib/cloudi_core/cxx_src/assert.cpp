@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -24,15 +24,62 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
+#include <cstdlib>
+#include <iostream>
 #include <sstream>
 #include <exception>
+#include <boost/exception/all.hpp>
+#undef assert
 #include "assert.hpp"
+
+#if __cplusplus >= 201103L
+// C++11 adds std::rethrow_exception/std::current_exception
+#define CXX11
+#endif
+namespace
+{
+#ifdef CXX11
+    void terminate_with_info()
+    {
+        try
+        {
+            std::rethrow_exception(std::current_exception());
+        }
+        catch (boost::exception const & e)
+        {
+            std::cerr << boost::diagnostic_information(e);
+        }
+        catch (std::exception const & e)
+        {
+            std::cerr << boost::diagnostic_information(e);
+        }
+        catch (...)
+        {
+            std::cerr << "Invalid exception!" << std::endl;
+        }
+        std::abort();
+    }
+#endif
+}
+
+void assert_initialize()
+{
+#ifdef CXX11
+    std::set_terminate(terminate_with_info);
+#endif
+}
+#undef CXX11
+
+typedef boost::error_info<struct stack, std::string> error_info_stack;
 
 namespace boost
 {
-    void assertion_failed_msg(char const * expr, char const * function,        
-                              char const * file, char const * mm, long line)
-    {  
+    void assertion_failed_msg(char const * expr,
+                              char const * function,
+                              char const * file,
+                              char const * mm,
+                              long line)
+    {
         class assert_exception_msg : public std::exception
         {
             public:
@@ -51,11 +98,12 @@ namespace boost
                 std::string m_message;
         };
         std::ostringstream stream;
-        stream << file << ":" << line <<
-            " (" << function << ") failure: " << expr << ": " << mm;
-        throw assert_exception_msg(stream.str());
-    }                                                                          
-   
+        stream << "assert failure: " << expr << ": " << mm;
+        throw (boost::enable_error_info(assert_exception_msg(stream.str())) <<
+               boost::throw_function(function) <<
+               boost::throw_file(file) <<
+               boost::throw_line(line));
+    }
 
     void assertion_failed(char const * expr,
                           char const * function,
@@ -80,9 +128,11 @@ namespace boost
                 std::string m_message;
         };
         std::ostringstream stream;
-        stream << file << ":" << line <<
-            " (" << function << ") failure: " << expr;
-        throw assert_exception(stream.str());
+        stream << "assert failure: " << expr;
+        throw (boost::enable_error_info(assert_exception(stream.str())) <<
+               boost::throw_function(function) <<
+               boost::throw_file(file) <<
+               boost::throw_line(line));
     }
 }
 

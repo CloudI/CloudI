@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -535,12 +535,6 @@ static void exit_handler()
     std::clog.flush();
 }
 
-static void exception_unknown()
-{
-    std::cerr << backtrace_string();
-    ::abort();
-}
-
 static int poll_request(cloudi_instance_t * api,
                         int timeout,
                         int external);
@@ -606,7 +600,7 @@ int cloudi_initialize(cloudi_instance_t * api,
 
     // termination handling
     ::atexit(&exit_handler);
-    std::set_terminate(exception_unknown);
+    assert_initialize();
 
     // unbuffered stdout (stderr is always unbuffered)
     ::setbuf(stdout, NULL);

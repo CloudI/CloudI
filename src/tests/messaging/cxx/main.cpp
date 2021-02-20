@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1087,6 +1087,7 @@ class task_output : public thread_pool_output<task_output_data>
 
 int main(int, char **)
 {
+    assert_initialize();
     try
     {
         unsigned int const thread_count = CloudI::API::thread_count();

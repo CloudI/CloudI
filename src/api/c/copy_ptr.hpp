@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -207,9 +207,7 @@ class copy_ptr
     private:
         T * m_p;
 };
-#ifdef CXX11
 #undef CXX11
-#endif
 
 #endif // COPY_PTR_HPP
 
