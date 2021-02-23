@@ -602,6 +602,9 @@
 % `"0"'
 -type integer_string_ge_0() ::
     nonempty_list($0..$9).
+% `"11"'
+-type integer_string_gt_0() ::
+    nonempty_list($0..$9).
 % `"0.0"'
 -type float_string_ge_0() ::
     nonempty_list($0..$9 | $.).
@@ -614,6 +617,7 @@
               seconds_string/0,
               seconds_string_signed/0,
               integer_string_ge_0/0,
+              integer_string_gt_0/0,
               float_string_ge_0/0]).
 
 -type service_status_internal() ::
@@ -978,29 +982,38 @@
                {output_max_t, cloudi_service_api:seconds()} |
                {formatter, module() | undefined} |
                {formatter_config, list()})}).
+-type iso8601() ::
+    cloudi_timestamp:iso8601().
+-type iso8601_seconds() ::
+    cloudi_timestamp:iso8601_seconds().
+% `"+3.104690 seconds"'
+-type seconds_change_string() ::
+    nonempty_list($a..$z | $0..$9 | $. | $  | $+ | $-).
 -type logging_status() ::
     list({queue_mode, async | sync | overload} |
-         {queue_mode_sync_last_start, nonempty_string()} |
-         {queue_mode_sync_last_start_event, nonempty_string()} |
-         {queue_mode_sync_last_end, nonempty_string()} |
-         {queue_mode_sync_last_end_event, nonempty_string()} |
-         {queue_mode_sync_last_total, nonempty_string()} |
-         {queue_mode_overload_last_start, nonempty_string()} |
-         {queue_mode_overload_last_start_event, nonempty_string()} |
-         {queue_mode_overload_last_end, nonempty_string()} |
-         {queue_mode_overload_last_end_event, nonempty_string()} |
-         {queue_mode_overload_last_total, nonempty_string()} |
-         {file_messages_fatal, nonempty_string()} |
-         {file_messages_error, nonempty_string()} |
-         {file_messages_warn, nonempty_string()} |
-         {file_messages_info, nonempty_string()} |
-         {file_messages_debug, nonempty_string()} |
-         {file_messages_trace, nonempty_string()} |
-         {file_sync_fail_count, nonempty_string()} |
+         {queue_mode_sync_last_start, iso8601()} |
+         {queue_mode_sync_last_start_event, iso8601()} |
+         {queue_mode_sync_last_end, iso8601()} |
+         {queue_mode_sync_last_end_event, iso8601()} |
+         {queue_mode_sync_last_total, nanoseconds_string()} |
+         {queue_mode_overload_last_start, iso8601()} |
+         {queue_mode_overload_last_start_event, iso8601()} |
+         {queue_mode_overload_last_end, iso8601()} |
+         {queue_mode_overload_last_end_event, iso8601()} |
+         {queue_mode_overload_last_total, nanoseconds_string()} |
+         {time_offset_last_change, seconds_change_string()} |
+         {time_offset_last_event, iso8601()} |
+         {file_messages_fatal, integer_string_gt_0()} |
+         {file_messages_error, integer_string_gt_0()} |
+         {file_messages_warn, integer_string_gt_0()} |
+         {file_messages_info, integer_string_gt_0()} |
+         {file_messages_debug, integer_string_gt_0()} |
+         {file_messages_trace, integer_string_gt_0()} |
+         {file_sync_fail_count, integer_string_gt_0()} |
          {file_sync_fail_types, nonempty_list(atom())} |
-         {file_write_fail_count, nonempty_string()} |
+         {file_write_fail_count, integer_string_gt_0()} |
          {file_write_fail_types, nonempty_list(atom())} |
-         {file_read_fail_count, nonempty_string()} |
+         {file_read_fail_count, integer_string_gt_0()} |
          {file_read_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
     nonempty_list({file, string() | undefined} |
@@ -1027,13 +1040,10 @@
               logging_syslog_port/0,
               logging_syslog_set_proplist/0,
               logging_formatters_set_proplist/0,
+              seconds_change_string/0,
               logging_status/0,
               logging_proplist/0]).
 
--type iso8601() ::
-    cloudi_timestamp:iso8601().
--type iso8601_seconds() ::
-    cloudi_timestamp:iso8601_seconds().
 -type code_status_runtime_change() ::
     nonempty_list({type, internal | external} |
                   {file_age, seconds_string()} |

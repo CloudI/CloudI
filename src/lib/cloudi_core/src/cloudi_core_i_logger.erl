@@ -69,6 +69,9 @@
 -include_lib("kernel/include/file.hrl").
 
 %% logging macros used only within this module
+-define(LOG_AT_T0(Level, T, Format, Args, State),
+    log_message_internal_t0(Level, T, ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
+                            Format, Args, State)).
 -define(LOG_T0(Level, Format, Args, State),
     log_message_internal_t0(Level, ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
                             Format, Args, State)).
@@ -157,6 +160,10 @@
             :: undefined | cloudi_timestamp:iso8601(),
         mode_overload_total = undefined
             :: undefined | cloudi_service_api:nanoseconds_string(),
+        time_offset_change = undefined
+            :: undefined | cloudi_service_api:seconds_change_string(),
+        time_offset_event = undefined
+            :: undefined | cloudi_timestamp:iso8601(),
         file_counts = #{}
             :: #{cloudi_service_api:loglevel() := pos_integer()},
         error_read_count = 0
@@ -725,6 +732,8 @@ handle_call(status, _,
                    mode_overload_end = OverloadEnd,
                    mode_overload_end_event = OverloadEndEvent,
                    mode_overload_total = OverloadTotal,
+                   time_offset_change = TimeOffsetChange,
+                   time_offset_event = TimeOffsetEvent,
                    file_counts = FileCounts,
                    error_read_count = ErrorReadCount,
                    error_read_types = ErrorReadTypes,
@@ -797,8 +806,17 @@ handle_call(status, _,
             Status7
     end,
     Status9 = if
-        OverloadStart =:= undefined ->
+        TimeOffsetChange =:= undefined ->
             Status8;
+        is_list(TimeOffsetChange) ->
+            [{time_offset_last_change,
+              TimeOffsetChange},
+             {time_offset_last_event,
+              TimeOffsetEvent} | Status8]
+    end,
+    Status10 = if
+        OverloadStart =:= undefined ->
+            Status9;
         OverloadEnd =:= undefined ->
             OverloadStartMicroSeconds = cloudi_timestamp:
                                         convert(OverloadStart + TimeOffset,
@@ -806,7 +824,7 @@ handle_call(status, _,
             [{queue_mode_overload_last_start,
               microseconds_to_string(OverloadStartMicroSeconds)},
              {queue_mode_overload_last_start_event,
-              OverloadStartEvent} | Status8];
+              OverloadStartEvent} | Status9];
         is_list(OverloadTotal) ->
             OverloadStartMicroSeconds = cloudi_timestamp:
                                         convert(OverloadStart + TimeOffset,
@@ -823,11 +841,11 @@ handle_call(status, _,
              {queue_mode_overload_last_end_event,
               OverloadEndEvent},
              {queue_mode_overload_last_total,
-              OverloadTotal} | Status8]
+              OverloadTotal} | Status9]
     end,
-    Status10 = if
+    Status11 = if
         SyncStart =:= undefined ->
-            Status9;
+            Status10;
         SyncEnd =:= undefined ->
             SyncStartMicroSeconds = cloudi_timestamp:
                                     convert(SyncStart + TimeOffset,
@@ -835,7 +853,7 @@ handle_call(status, _,
             [{queue_mode_sync_last_start,
               microseconds_to_string(SyncStartMicroSeconds)},
              {queue_mode_sync_last_start_event,
-              SyncStartEvent} | Status9];
+              SyncStartEvent} | Status10];
         is_list(SyncTotal) ->
             SyncStartMicroSeconds = cloudi_timestamp:
                                     convert(SyncStart + TimeOffset,
@@ -852,9 +870,9 @@ handle_call(status, _,
              {queue_mode_sync_last_end_event,
               SyncEndEvent},
              {queue_mode_sync_last_total,
-              SyncTotal} | Status9]
+              SyncTotal} | Status10]
     end,
-    StatusN = [{queue_mode, Mode} | Status10],
+    StatusN = [{queue_mode, Mode} | Status11],
     {reply, {ok, StatusN}, State};
 handle_call(status_reset, _, State) ->
     {reply, ok,
@@ -868,6 +886,8 @@ handle_call(status_reset, _, State) ->
                  mode_overload_end = undefined,
                  mode_overload_end_event = undefined,
                  mode_overload_total = undefined,
+                 time_offset_change = undefined,
+                 time_offset_event = undefined,
                  file_counts = #{},
                  error_read_count = 0,
                  error_read_types = [],
@@ -998,19 +1018,19 @@ handle_info({'DOWN', _, process, Process, Info},
     end;
 handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
             #state{log_time_offset = LogTimeOffset,
-                   log_time_offset_nanoseconds = ValueOld,
+                   log_time_offset_nanoseconds = NanoSecondsOld,
                    log_time_offset_monitor = Monitor} = State) ->
-    ValueNew = time_offset_to_nanoseconds(TimeOffset),
-    {Sign, Change} = if
-        ValueNew >= ValueOld ->
-            {"+", ValueNew - ValueOld};
-        true ->
-            {"-", ValueOld - ValueNew}
-    end,
-    case ?LOG_T0(LogTimeOffset,
-                 "Erlang time_offset changed ~s~s seconds",
-                 [Sign, nanoseconds_to_seconds_list(Change)],
-                 State#state{log_time_offset_nanoseconds = ValueNew}) of
+    Timestamp = cloudi_timestamp:timestamp(),
+    NanoSecondsNew = time_offset_to_nanoseconds(TimeOffset),
+    TimeOffsetChange = nanoseconds_to_seconds_change_string(NanoSecondsOld,
+                                                            NanoSecondsNew),
+    TimeOffsetEvent = timestamp_iso8601(Timestamp),
+    case ?LOG_AT_T0(LogTimeOffset, Timestamp,
+                    "Erlang time_offset changed ~s",
+                    [TimeOffsetChange],
+                    State#state{log_time_offset_nanoseconds = NanoSecondsNew,
+                                time_offset_change = TimeOffsetChange,
+                                time_offset_event = TimeOffsetEvent}) of
         {ok, StateNew} ->
             {noreply, StateNew};
         {{error, Reason}, StateNew} ->
@@ -1563,9 +1583,15 @@ flooding_logger(Timestamp1, Process) ->
             end
     end.
 
-log_message_internal_t0(off, _, _, _, _, _, State) ->
+log_message_internal_t0(LevelCheck,
+                        Line, Function, Arity, Format, Args, State) ->
+    log_message_internal_t0(LevelCheck, undefined,
+                            Line, Function, Arity, Format, Args, State).
+
+log_message_internal_t0(off, _, _, _, _, _, _, State) ->
     {ok, State};
-log_message_internal_t0(LevelCheck, Line, Function, Arity, Format, Args,
+log_message_internal_t0(LevelCheck, TimestampOld,
+                        Line, Function, Arity, Format, Args,
                         #state{level = Level,
                                destination = Destination,
                                logger_node = Node,
@@ -1575,7 +1601,12 @@ log_message_internal_t0(LevelCheck, Line, Function, Arity, Format, Args,
     case log_level_allowed(Level, LevelCheck) of
         true ->
             LogMessage = log_message(Format, Args),
-            Timestamp = cloudi_timestamp:timestamp(),
+            Timestamp = if
+                TimestampOld =:= undefined ->
+                    cloudi_timestamp:timestamp();
+                tuple_size(TimestampOld) == 3 ->
+                    TimestampOld
+            end,
             if
                 Destination =:= ?MODULE ->
                     log_message_internal(sync,
@@ -2126,20 +2157,27 @@ aspects_log([F | L], Level, Timestamp, Node, Pid,
                         Module, Line, Function, Arity, MetaData, LogMessage)
     end.
 
-nanoseconds_to_seconds_list(NS) ->
-    L0 = int_to_dec_list(NS, 9, $0),
+nanoseconds_to_seconds_change_string(NanoSecondsOld, NanoSecondsNew) ->
+    {Sign, NanoSecondsChange} = if
+        NanoSecondsNew >= NanoSecondsOld ->
+            {$+, NanoSecondsNew - NanoSecondsOld};
+        true ->
+            {$-, NanoSecondsOld - NanoSecondsNew}
+    end,
+    Str = int_to_dec_list(NanoSecondsChange, 9, $0),
     [NanoSeconds8, NanoSeconds7, NanoSeconds6,
      NanoSeconds5, NanoSeconds4, NanoSeconds3,
-     NanoSeconds2, NanoSeconds1, NanoSeconds0 | L1] = lists:reverse(L0),
-    SecondsFraction = [$.,
-                       NanoSeconds0, NanoSeconds1, NanoSeconds2,
-                       NanoSeconds3, NanoSeconds4, NanoSeconds5,
-                       NanoSeconds6, NanoSeconds7, NanoSeconds8],
+     NanoSeconds2, NanoSeconds1, NanoSeconds0 | Seconds] = lists:reverse(Str),
+    SecondsFractionStr = [$.,
+                          NanoSeconds0, NanoSeconds1, NanoSeconds2,
+                          NanoSeconds3, NanoSeconds4, NanoSeconds5,
+                          NanoSeconds6, NanoSeconds7, NanoSeconds8, $ ,
+                          $s, $e, $c, $o, $n, $d, $s],
     if
-        L1 == [] ->
-            [$0 | SecondsFraction];
+        Seconds == [] ->
+            [Sign, $0 | SecondsFractionStr];
         true ->
-            lists:reverse(L1, SecondsFraction)
+            [Sign | lists:reverse(Seconds, SecondsFractionStr)]
     end.
 
 int_to_dec_list(I) when is_integer(I), I >= 0 ->
