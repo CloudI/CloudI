@@ -66,6 +66,30 @@
          jenkins64_32/1,
          jenkins64_32/2]).
 
+-ifdef(OTP_RELEASE).
+% able to use -if/-elif here
+-if(?OTP_RELEASE >= 24).
+-define(ERLANG_OTP_VERSION_24_FEATURES, true).
+-endif.
+-endif.
+
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+% iodata() recursive type is not infinitely recursive
+% like within the function iodata_to_list/1
+% (unable to only use no_underspecs on iodata_to_list/1)
+-dialyzer({no_underspecs,
+           [jenkins_32/1,
+            jenkins_32/2,
+            jenkins_64/1,
+            jenkins_64/2,
+            jenkins64_128/1,
+            jenkins64_128/2,
+            jenkins64_64/1,
+            jenkins64_64/2,
+            jenkins64_32/1,
+            jenkins64_32/2]}).
+-endif.
+
 % a constant which:
 %  * is not zero
 %  * is odd
@@ -613,11 +637,6 @@ add_64(X0, X1, X2, X3, X4, X5)
 subtract_32(X0, X1)
     when is_integer(X0), is_integer(X1) ->
     (X0 - X1) band ?BITMASK32.
-
-% iodata() recursive type is not infinitely recursive
-% (https://bugs.erlang.org/browse/ERL-1379)
-%-dialyzer({no_underspecs,
-%           [iodata_to_list/1]}).
 
 -spec iodata_to_list(IOData :: iodata()) ->
     {list(byte()), non_neg_integer()}.

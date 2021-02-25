@@ -986,7 +986,7 @@
     cloudi_timestamp:iso8601().
 -type iso8601_seconds() ::
     cloudi_timestamp:iso8601_seconds().
-% `"+3.104690 seconds"'
+% `"+3.104690100 seconds"'
 -type seconds_change_string() ::
     nonempty_list($a..$z | $0..$9 | $. | $  | $+ | $-).
 -type logging_status() ::
