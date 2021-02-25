@@ -2298,7 +2298,7 @@ socket_open_tcp(SocketOptions) ->
                                 {active, false} | SocketOptions]) of
             {ok, Listener} ->
                 {ok, Port} = inet:port(Listener),
-                {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
+                {ok, Acceptor} = socket_open_acceptor(Listener),
                 {ok, #state_socket{protocol = tcp,
                                    port = Port,
                                    listener = Listener,
@@ -2336,7 +2336,7 @@ socket_open_local(SocketOptions, Port, SocketPath) ->
                                 {packet, 4}, {backlog, 1},
                                 {active, false} | SocketOptions]) of
             {ok, Listener} ->
-                {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
+                {ok, Acceptor} = socket_open_acceptor(Listener),
                 {ok, #state_socket{protocol = local,
                                    port = Port,
                                    listener = Listener,
@@ -2351,36 +2351,53 @@ socket_open_local(SocketOptions, Port, SocketPath) ->
             {error, {ErrorType, ErrorReason}}
     end.
 
-socket_accept(Accept, #state_socket{protocol = tcp} = StateSocket) ->
-    socket_accept_tcp(Accept, StateSocket);
-socket_accept(Accept, #state_socket{protocol = local} = StateSocket) ->
-    socket_accept_local(Accept, StateSocket).
+socket_accept({inet_async, Listener, Acceptor, {ok, Socket}},
+              #state_socket{protocol = Protocol,
+                            listener = Listener,
+                            acceptor = Acceptor,
+                            socket_options = SocketOptions} = StateSocket)
+    when Protocol =:= tcp; Protocol =:= local ->
+    ok = socket_accept_connection(Protocol, Socket),
+    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
+    catch gen_tcp:close(Listener),
+    StateSocket#state_socket{listener = undefined,
+                             acceptor = undefined,
+                             socket = Socket}.
 
-socket_accept_tcp({inet_async, Listener, Acceptor, {ok, Socket}},
-                  #state_socket{
-                      protocol = tcp,
-                      listener = Listener,
-                      acceptor = Acceptor,
-                      socket_options = SocketOptions} = StateSocket) ->
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+socket_open_acceptor(Listener) ->
+    Dispatcher = self(),
+    Acceptor = erlang:spawn_link(fun() ->
+        Acceptor = self(),
+        Result = case gen_tcp:accept(Listener) of
+            {ok, Socket} = Success ->
+                case gen_tcp:controlling_process(Socket, Dispatcher) of
+                    ok ->
+                        Success;
+                    {error, _} = Error ->
+                        Error
+                end;
+            {error, _} = Error ->
+                Error
+        end,
+        Dispatcher ! {inet_async, Listener, Acceptor, Result},
+        true = erlang:unlink(Dispatcher)
+    end),
+    {ok, Acceptor}.
+
+socket_accept_connection(_, _) ->
+    ok.
+-else.
+socket_open_acceptor(Listener) ->
+    prim_inet:async_accept(Listener, -1).
+
+socket_accept_connection(tcp, Socket) ->
     true = inet_db:register_socket(Socket, inet_tcp),
-    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
-    catch gen_tcp:close(Listener),
-    StateSocket#state_socket{listener = undefined,
-                             acceptor = undefined,
-                             socket = Socket}.
-
-socket_accept_local({inet_async, Listener, Acceptor, {ok, Socket}},
-                    #state_socket{
-                        protocol = local,
-                        listener = Listener,
-                        acceptor = Acceptor,
-                        socket_options = SocketOptions} = StateSocket) ->
+    ok;
+socket_accept_connection(local, Socket) ->
     true = inet_db:register_socket(Socket, local_tcp),
-    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
-    catch gen_tcp:close(Listener),
-    StateSocket#state_socket{listener = undefined,
-                             acceptor = undefined,
-                             socket = Socket}.
+    ok.
+-endif.
 
 socket_close(socket_closed = Reason,
              #state_socket{socket = Socket} = StateSocket)
@@ -2395,7 +2412,7 @@ socket_close(_Reason,
     if
         Socket =:= undefined ->
             ok;
-        is_port(Socket) ->
+        true ->
             case send('terminate_out'(), StateSocket) of
                 ok ->
                     case inet:setopts(Socket,
@@ -2427,7 +2444,7 @@ socket_close(_Reason,
     if
         Socket =:= undefined ->
             ok;
-        is_port(Socket) ->
+        true ->
             case send('terminate_out'(), StateSocket) of
                 ok ->
                     Timeout = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
@@ -2448,7 +2465,7 @@ socket_close(#state_socket{protocol = Protocol,
     if
         Socket =:= undefined ->
             ok;
-        is_port(Socket) ->
+        true ->
             catch gen_tcp:close(Socket)
     end,
     catch gen_tcp:close(Listener),
@@ -2465,7 +2482,7 @@ socket_close(#state_socket{protocol = udp,
     if
         Socket =:= undefined ->
             ok;
-        is_port(Socket) ->
+        true ->
             catch gen_udp:close(Socket)
     end,
     ok = os_pid_unset(StateSocket),

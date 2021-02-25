@@ -3,6 +3,7 @@
 
 2021-02-24 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add Erlang/OTP 24 socket inet_backend support
     * Update quickrand
 
 2021-02-22 Michael Truog   <mjtruog at protonmail dot com>
