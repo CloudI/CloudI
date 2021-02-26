@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2014-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_write_ahead_logging).
@@ -49,6 +49,13 @@
          store_start/2,
          new/5,
          update/3]).
+
+-ifdef(OTP_RELEASE).
+% able to use -if/-elif here
+-if(?OTP_RELEASE >= 24).
+-define(ERLANG_OTP_VERSION_24_FEATURES, true).
+-endif.
+-endif.
 
 % overhead: chunk_size, chunk_size_used, checksum_size
 -define(CHUNK_OVERHEAD(ChecksumSize), 8 + 8 + ChecksumSize).
@@ -316,7 +323,7 @@ file_open_copy(FilePath) ->
         {ok, _} ->
             ok;
         {error, enoent} ->
-            case file:delete(FilePath ++ ?FILE_EXTENSION_TMP) of
+            case file_delete(FilePath ++ ?FILE_EXTENSION_TMP) of
                 ok ->
                     ok;
                 {error, enoent} ->
@@ -521,6 +528,14 @@ checksum(crc32, Data) ->
     <<I:32/big-unsigned-integer>>;
 checksum(ChecksumType, Data) ->
     crypto:hash(ChecksumType, Data).
+
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+file_delete(FilePath) ->
+    file:delete(FilePath, [raw]).
+-else.
+file_delete(FilePath) ->
+    file:delete(FilePath).
+-endif.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

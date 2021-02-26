@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2014-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_environment).
@@ -97,6 +97,7 @@ status() ->
      ApplicationVersions4} = lists:keytake(compiler, 1, ApplicationVersions3),
     {value, {cloudi_core, _, RuntimeCloudIVersion},
      _} = lists:keytake(cloudi_core, 1, ApplicationVersions4),
+    RuntimeErlangCompilation = erlang_compilation(),
     RuntimeMachineProcessors = erlang:system_info(schedulers),
     ?CODE_STATUS_STATIC ++
     [{build_erlang_erts_c_compiler_version, erts_c_compiler_version()},
@@ -111,6 +112,7 @@ status() ->
      {runtime_erlang_stdlib_version, RuntimeErlangStdlibVersion},
      {runtime_erlang_sasl_version, RuntimeErlangSaslVersion},
      {runtime_erlang_compiler_version, RuntimeErlangCompilerVersion},
+     {runtime_erlang_compilation, RuntimeErlangCompilation},
      {runtime_cloudi_version, RuntimeCloudIVersion},
      {runtime_machine_processors, RuntimeMachineProcessors}].
 
@@ -176,6 +178,19 @@ erts_c_compiler_version() ->
                        [Unexpected]),
             ""
     end.
+
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+erlang_compilation() ->
+    case erlang:system_info(emu_flavor) of
+        jit ->
+            "jit";
+        _ ->
+            "aot"
+    end.
+-else.
+erlang_compilation() ->
+    "aot".
+-endif.
 
 % transform a string using a lookup containing environment variables
 % (the loop doesn't have error conditions by design)

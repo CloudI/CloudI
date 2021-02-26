@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-02-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add runtime_erlang_compilation to the CloudI Service API
+      code_status output for checking aot/jit use
+    * Add Erlang/OTP 24 file:delete/2 use
+
 2021-02-24 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Erlang/OTP 24 socket inet_backend support

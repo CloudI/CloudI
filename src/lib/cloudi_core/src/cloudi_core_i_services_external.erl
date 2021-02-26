@@ -2332,7 +2332,7 @@ socket_open_udp(SocketOptions) ->
 
 socket_open_local(SocketOptions, Port, SocketPath) ->
     try
-        case gen_tcp:listen(0, [binary, local, {ifaddr, {local, SocketPath}},
+        case gen_tcp:listen(0, [binary, {ifaddr, {local, SocketPath}},
                                 {packet, 4}, {backlog, 1},
                                 {active, false} | SocketOptions]) of
             {ok, Listener} ->
@@ -2363,41 +2363,6 @@ socket_accept({inet_async, Listener, Acceptor, {ok, Socket}},
     StateSocket#state_socket{listener = undefined,
                              acceptor = undefined,
                              socket = Socket}.
-
--ifdef(ERLANG_OTP_VERSION_24_FEATURES).
-socket_open_acceptor(Listener) ->
-    Dispatcher = self(),
-    Acceptor = erlang:spawn_link(fun() ->
-        Acceptor = self(),
-        Result = case gen_tcp:accept(Listener) of
-            {ok, Socket} = Success ->
-                case gen_tcp:controlling_process(Socket, Dispatcher) of
-                    ok ->
-                        Success;
-                    {error, _} = Error ->
-                        Error
-                end;
-            {error, _} = Error ->
-                Error
-        end,
-        Dispatcher ! {inet_async, Listener, Acceptor, Result},
-        true = erlang:unlink(Dispatcher)
-    end),
-    {ok, Acceptor}.
-
-socket_accept_connection(_, _) ->
-    ok.
--else.
-socket_open_acceptor(Listener) ->
-    prim_inet:async_accept(Listener, -1).
-
-socket_accept_connection(tcp, Socket) ->
-    true = inet_db:register_socket(Socket, inet_tcp),
-    ok;
-socket_accept_connection(local, Socket) ->
-    true = inet_db:register_socket(Socket, local_tcp),
-    ok.
--endif.
 
 socket_close(socket_closed = Reason,
              #state_socket{socket = Socket} = StateSocket)
@@ -2471,7 +2436,7 @@ socket_close(#state_socket{protocol = Protocol,
     catch gen_tcp:close(Listener),
     if
         Protocol =:= local ->
-            catch file:delete(SocketPath);
+            catch file_delete(SocketPath);
         true ->
             ok
     end,
@@ -2487,6 +2452,47 @@ socket_close(#state_socket{protocol = udp,
     end,
     ok = os_pid_unset(StateSocket),
     ok.
+
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+socket_open_acceptor(Listener) ->
+    Dispatcher = self(),
+    Acceptor = erlang:spawn_link(fun() ->
+        Acceptor = self(),
+        Result = case gen_tcp:accept(Listener) of
+            {ok, Socket} = Success ->
+                case gen_tcp:controlling_process(Socket, Dispatcher) of
+                    ok ->
+                        Success;
+                    {error, _} = Error ->
+                        Error
+                end;
+            {error, _} = Error ->
+                Error
+        end,
+        Dispatcher ! {inet_async, Listener, Acceptor, Result},
+        true = erlang:unlink(Dispatcher)
+    end),
+    {ok, Acceptor}.
+
+socket_accept_connection(_, _) ->
+    ok.
+
+file_delete(FilePath) ->
+    file:delete(FilePath, [raw]).
+-else.
+socket_open_acceptor(Listener) ->
+    prim_inet:async_accept(Listener, -1).
+
+socket_accept_connection(tcp, Socket) ->
+    true = inet_db:register_socket(Socket, inet_tcp),
+    ok;
+socket_accept_connection(local, Socket) ->
+    true = inet_db:register_socket(Socket, local_tcp),
+    ok.
+
+file_delete(FilePath) ->
+    file:delete(FilePath).
+-endif.
 
 socket_data_to_state(#state_socket{protocol = Protocol,
                                    port = Port,

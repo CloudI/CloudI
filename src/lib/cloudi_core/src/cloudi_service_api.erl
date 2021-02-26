@@ -1069,6 +1069,7 @@
                   {runtime_erlang_stdlib_version, nonempty_string()} |
                   {runtime_erlang_sasl_version, nonempty_string()} |
                   {runtime_erlang_compiler_version, nonempty_string()} |
+                  {runtime_erlang_compilation, nonempty_string()} |
                   {runtime_cloudi_version, nonempty_string()} |
                   {runtime_machine_processors, pos_integer()} |
                   {runtime_start, iso8601()} |
