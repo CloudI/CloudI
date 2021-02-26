@@ -2286,7 +2286,7 @@ socket_open(udp, _, _, BufferSize) ->
     socket_open_udp(SocketOptions);
 socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
     SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize},
-                     {nodelay, true}, {delay_send, false}, {keepalive, false},
+                     {delay_send, false}, {keepalive, false},
                      {send_timeout, 5000}, {send_timeout_close, true}],
     ThreadSocketPath = SocketPath ++ erlang:integer_to_list(ThreadIndex),
     socket_open_local(SocketOptions, ThreadIndex, ThreadSocketPath).
