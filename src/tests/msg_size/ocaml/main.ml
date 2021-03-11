@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -65,7 +65,7 @@ let request
     Cloudi.NullError (error)
   | Ok (i0) ->
     let i1 =
-      if i0 = 4294967295 then
+      if i0 = 1073741823 then
         0
       else
         i0 + 1
