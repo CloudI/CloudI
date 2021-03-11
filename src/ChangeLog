@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-03-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix the ocaml count integration test for 32-bit architectures
+
 2021-02-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Erlang/OTP 24 socket inet_backend use with

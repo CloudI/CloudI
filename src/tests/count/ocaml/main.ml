@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -37,7 +37,7 @@ end
 
 let request request_type name pattern _ _ timeout _ trans_id pid state api =
   let {ServiceState.count; _} = state in
-  let count_new = if count == 4294967295 then 0 else count + 1 in
+  let count_new = if count == 1073741823 then 0 else count + 1 in
   state.ServiceState.count <- count_new ;
   print_endline ("count == " ^ (string_of_int count_new) ^ " ocaml") ;
   let response = string_of_int count_new
