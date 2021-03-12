@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -27,8 +27,8 @@ package main
 //
 
 import (
-	"cloudi"
 	"fmt"
+	"github.com/CloudI/cloudi_api_go/v2/cloudi"
 	"math"
 	"os"
 	"reflect"

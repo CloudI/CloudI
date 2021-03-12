@@ -494,6 +494,8 @@ AC_PATH_PROGS([GO],[go])
 if test "x$GO" = "x"; then
     AC_MSG_ERROR([go not found])
 fi
+AX_PROG_GO_VERSION([1.11], ,
+    [AC_MSG_ERROR([go >= 1.11 not found])])
 AC_SUBST(CONFIG_TESTS_GO_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_go\"}, {dest_refresh, none}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{nice, 10}]}]],"])
 AC_SUBST(CONFIG_TESTS_GO_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_go\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
 AC_SUBST(CONFIG_TESTS_GO_MESSAGING, ["[[{prefix, \"/tests/messaging/go/\"}, {file_path, \"$cloudi_prefix/tests/messaging/messaging_go\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{dispatcher_pid_options, [{priority, low}]}, {nice, 15}, {scope, cloudi_service_test_messaging_go}]}]],"])
@@ -876,6 +878,7 @@ AC_CONFIG_FILES([
     tests/count/erlang/Makefile
     tests/count/erlang/src/Makefile
     tests/count/gopath/Makefile
+    tests/count/gopath/go.mod
     tests/count/haskell/Makefile
     tests/count/haskell/count_haskell.cabal
     tests/count/java/Makefile
@@ -903,6 +906,7 @@ AC_CONFIG_FILES([
     tests/http_req/erlang/Makefile
     tests/http_req/erlang/src/Makefile
     tests/http_req/gopath/Makefile
+    tests/http_req/gopath/go.mod
     tests/http_req/haskell/Makefile
     tests/http_req/haskell/http_req_haskell.cabal
     tests/http_req/java/Makefile
@@ -917,6 +921,7 @@ AC_CONFIG_FILES([
     tests/messaging/erlang/Makefile
     tests/messaging/erlang/src/Makefile
     tests/messaging/gopath/Makefile
+    tests/messaging/gopath/go.mod
     tests/messaging/haskell/Makefile
     tests/messaging/haskell/messaging_haskell.cabal
     tests/messaging/java/Makefile
@@ -931,6 +936,7 @@ AC_CONFIG_FILES([
     tests/msg_size/erlang/Makefile
     tests/msg_size/erlang/src/Makefile
     tests/msg_size/gopath/Makefile
+    tests/msg_size/gopath/go.mod
     tests/msg_size/haskell/Makefile
     tests/msg_size/haskell/msg_size_haskell.cabal
     tests/msg_size/java/Makefile
@@ -945,6 +951,7 @@ AC_CONFIG_FILES([
     tests/null/erlang/Makefile
     tests/null/erlang/src/Makefile
     tests/null/gopath/Makefile
+    tests/null/gopath/go.mod
     tests/null/haskell/Makefile
     tests/null/haskell/null_haskell.cabal
     tests/null/java/Makefile

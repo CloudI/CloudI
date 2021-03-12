@@ -1,0 +1,12 @@
+module count_go
+
+replace (
+	github.com/CloudI/cloudi_api_go/v2/cloudi => @abs_top_srcdir@/api/go/cloudi
+	github.com/okeuday/erlang_go/v2/erlang => @abs_top_srcdir@/api/go/erlang
+)
+
+require (
+	github.com/CloudI/cloudi_api_go/v2/cloudi v0.0.0-00000000000000-000000000000
+	github.com/okeuday/erlang_go/v2/erlang v0.0.0-00000000000000-000000000000
+)
+

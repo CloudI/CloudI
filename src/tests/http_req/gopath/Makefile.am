@@ -6,21 +6,8 @@ CLEANFILES = http_req_go
 
 all-local: http_req_go
 
-http_req_go: src/http_req_go/main.go
-	cp -rf $(srcdir)/src $(builddir) || exit 0
-	$(MKDIR_P) $(builddir)/src/http_req_go/vendor
-	rm -rf $(builddir)/src/http_req_go/vendor/cloudi
-	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/http_req_go/vendor/
-	rm -rf $(builddir)/src/http_req_go/vendor/erlang
-	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/http_req_go/vendor/
-	$(MKDIR_P) $(builddir)/bin
-	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x http_req_go
-	cp $(builddir)/bin/http_req_go .
-
-clean-local:
-	rm -rf $(builddir)/src/http_req_go/vendor/ \
-           $(builddir)/pkg \
-           $(builddir)/bin
+http_req_go: main.go
+	GOBIN=$(abs_builddir) $(GO) install -x http_req_go
 
 install-exec-hook: http_req_go
 	$(MKDIR_P) $(instdir)

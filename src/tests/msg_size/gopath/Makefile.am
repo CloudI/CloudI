@@ -6,21 +6,8 @@ CLEANFILES = msg_size_go
 
 all-local: msg_size_go
 
-msg_size_go: src/msg_size_go/main.go
-	cp -rf $(srcdir)/src $(builddir) || exit 0
-	$(MKDIR_P) $(builddir)/src/msg_size_go/vendor
-	rm -rf $(builddir)/src/msg_size_go/vendor/cloudi
-	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/msg_size_go/vendor/
-	rm -rf $(builddir)/src/msg_size_go/vendor/erlang
-	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/msg_size_go/vendor/
-	$(MKDIR_P) $(builddir)/bin
-	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x msg_size_go
-	cp $(builddir)/bin/msg_size_go .
-
-clean-local:
-	rm -rf $(builddir)/src/msg_size_go/vendor/ \
-           $(builddir)/pkg \
-           $(builddir)/bin
+msg_size_go: main.go
+	GOBIN=$(abs_builddir) $(GO) install -x msg_size_go
 
 install-exec-hook: msg_size_go
 	$(MKDIR_P) $(instdir)

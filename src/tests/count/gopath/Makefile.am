@@ -6,21 +6,8 @@ CLEANFILES = count_go
 
 all-local: count_go
 
-count_go: src/count_go/main.go
-	cp -rf $(srcdir)/src $(builddir) || exit 0
-	$(MKDIR_P) $(builddir)/src/count_go/vendor
-	rm -rf $(builddir)/src/count_go/vendor/cloudi
-	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/count_go/vendor/
-	rm -rf $(builddir)/src/count_go/vendor/erlang
-	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/count_go/vendor/
-	$(MKDIR_P) $(builddir)/bin
-	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x count_go
-	cp $(builddir)/bin/count_go .
-
-clean-local:
-	rm -rf $(builddir)/src/count_go/vendor/ \
-           $(builddir)/pkg \
-           $(builddir)/bin
+count_go: main.go
+	GOBIN=$(abs_builddir) $(GO) install -x count_go
 
 install-exec-hook: count_go
 	$(MKDIR_P) $(instdir)

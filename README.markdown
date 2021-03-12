@@ -93,7 +93,7 @@ Optional (default="yes"):
 
 Optional (default="no"):
 
-* `Go >= 1.6`
+* `Go >= 1.11`
   * `(golang /Ubuntu)`
   * Use the "--enable-go-support" configure flag to enable
 * `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`

@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -27,19 +27,40 @@ package main
 //
 
 import (
-	"cloudi"
+	"fmt"
+	"github.com/CloudI/cloudi_api_go/v2/cloudi"
 	"os"
 	"sync"
 )
 
-func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, data interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
-	os.Stdout.WriteString("null go\n")
+type serviceState struct {
+	count uint32
+}
+
+func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
+	stateP := state.(*serviceState)
+	if stateP.count == 4294967295 {
+		stateP.count = 0
+	} else {
+		stateP.count += 1
+	}
+	fmt.Printf("count == %d go\n", stateP.count)
+	response := []byte(fmt.Sprintf("%d", stateP.count))
+	var responseInfo []byte
+	var err error
+	responseInfo, err = cloudi.InfoKeyValueNew(map[string][]string{})
+	if err != nil {
+		return nil, nil, err
+	}
+	api.Return(requestType, name, pattern, responseInfo, response, timeout, transId, pid)
+	// execution doesn't reach here
 	return nil, nil, nil
 }
 
 func task(threadIndex uint32, execution *sync.WaitGroup) {
 	defer execution.Done()
-	api, err := cloudi.API(threadIndex, nil)
+	stateP := &serviceState{count: 0}
+	api, err := cloudi.API(threadIndex, stateP)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
@@ -53,7 +74,14 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 	}
-	os.Stdout.WriteString("terminate null go\n")
+	os.Stdout.WriteString("terminate count go\n")
+}
+
+func assert(value interface{}, expected interface{}) {
+	if value == expected {
+		return
+	}
+	panic("assert failed!")
 }
 
 func main() {
