@@ -10,8 +10,8 @@
 
 2021-03-10 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Fix the ocaml count integration test for 32-bit architectures
-    * Fix the ocaml msg_size integration test for 32-bit architectures
+    * Fix the OCaml count integration test for 32-bit architectures
+    * Fix the OCaml msg_size integration test for 32-bit architectures
 
 2021-02-26 Michael Truog   <mjtruog at protonmail dot com>
 
