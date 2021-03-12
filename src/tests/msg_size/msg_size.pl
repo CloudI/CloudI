@@ -44,7 +44,7 @@ sub task
             my ($request_type, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
             my $i = unpack('L', substr($request, 0, 4));
-            if ($i == 4294967295)
+            if ($i == 1073741823)
             {
                 $i = 0;
             }

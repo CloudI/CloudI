@@ -45,7 +45,7 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 	}
 	iData := [4]byte{request[0], request[1], request[2], request[3]}
 	i := (*uint32)(unsafe.Pointer(&iData))
-	if *i == 4294967295 {
+	if *i == 1073741823 {
 		*i = 0
 	} else {
 		*i += 1

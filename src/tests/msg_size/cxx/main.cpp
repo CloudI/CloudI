@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -52,7 +52,7 @@ static void request(int const request_type,
     assert(request_size == MSG_SIZE);
     ::memcpy(buffer, request, request_size);
     unsigned int *i = reinterpret_cast<unsigned int *>(buffer);
-    if (*i == 4294967295U)
+    if (*i == 1073741823)
         *i = 0;
     else
         (*i)++;

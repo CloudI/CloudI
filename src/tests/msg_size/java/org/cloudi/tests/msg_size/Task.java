@@ -50,7 +50,7 @@ public class Task implements Runnable
             ByteBuffer buffer = ByteBuffer.wrap(request);
             buffer.order(ByteOrder.nativeOrder());
             int i = buffer.getInt(0);
-            if (i == 4294967295L)
+            if (i == 1073741823)
                 i = 0;
             else
                 i++;

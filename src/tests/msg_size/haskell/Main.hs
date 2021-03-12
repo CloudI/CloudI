@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -57,7 +57,7 @@ request_ requestType _ _
             remaining <- Get.getRemainingLazyByteString
             return (fromIntegral i :: Int, remaining)
         (i0, extra) = Get.runGet decode $ LazyByteString.fromStrict request
-        i1 = if i0 == 4294967295 then 0 else i0 + 1
+        i1 = if i0 == 1073741823 then 0 else i0 + 1
         requestNew = LazyByteString.toStrict $ Builder.toLazyByteString $
             (Builder.putWord32host $ fromIntegral i1) `Monoid.mappend`
             (Builder.fromLazyByteString extra)

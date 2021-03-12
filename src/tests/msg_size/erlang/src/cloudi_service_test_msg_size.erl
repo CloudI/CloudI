@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_msg_size).
@@ -140,7 +140,7 @@ cloudi_service_handle_request(_RequestType, _Name, Pattern,
     -5 = Priority,                       % from cxx service
     <<I:32/unsigned-integer-native, Rest/binary>> = Request,
     NewI = if
-        I == 4294967295 ->
+        I == 1073741823 ->
             0;
         true ->
             I + 1

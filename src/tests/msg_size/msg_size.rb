@@ -58,7 +58,7 @@ if __FILE__ == $PROGRAM_NAME
             def request(request_type, name, pattern, request_info, request,
                         timeout, priority, trans_id, pid)
                 i = request[0,4].unpack('L')[0]
-                if i == 4294967295
+                if i == 1073741823
                     i = 0
                 else
                     i += 1

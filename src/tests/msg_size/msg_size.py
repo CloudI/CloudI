@@ -70,7 +70,7 @@ def _request(api, request_type, name, pattern, request_info, request,
     # pylint: disable=unused-argument
     # pylint: disable=too-many-arguments
     i = struct.unpack('=I', request[:4])[0]
-    if i == 4294967295:
+    if i == 1073741823:
         i = 0
     else:
         i += 1

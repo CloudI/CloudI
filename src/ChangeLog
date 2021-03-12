@@ -5,6 +5,8 @@
 
     * Change the Go CloudI API support to require go module use
       (now require go >= 1.11)
+    * Change the msg_size integration tests to use 1073741823 as
+      the maximum request integer to be consistent with 32-bit OCaml
 
 2021-03-10 Michael Truog   <mjtruog at protonmail dot com>
 

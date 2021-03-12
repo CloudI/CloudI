@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -62,7 +62,7 @@ Task.prototype.request = function (request_type, name, pattern,
                                               request[1],
                                               request[2],
                                               request[3]])).buffer))[0];
-    if (i == 4294967295) {
+    if (i == 1073741823) {
         i = 0;
     }
     else {

@@ -64,7 +64,7 @@ class Task //extends \Thread
                             $timeout, $priority, $trans_id, $pid)
     {
         list(, $i) = unpack('L', substr($request, 0, 4));
-        if ($i == 4294967295)
+        if ($i == 1073741823)
             $i = 0;
         else
             $i++;
