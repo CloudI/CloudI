@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -1011,8 +1011,9 @@ request_truncate(#file{size = OldContentsSize,
                         is_list(Request) ->
                             erlang:iolist_to_binary(Request)
                     end,
-                    case files_size_check(FilesSize - OldContentsSize,
-                                          NewContents, FilesSizeLimit) of
+                    case files_size_check(NewContents,
+                                          FilesSize - OldContentsSize,
+                                          FilesSizeLimit) of
                         {ok, NewContentsSize, NewFilesSize} ->
                             case file:write_file(FilePath,
                                                  NewContents, [raw]) of
@@ -1112,8 +1113,9 @@ request_append_file([],
                            cache = Cache,
                            files = Files,
                            use_http_get_suffix = true} = State, Dispatcher) ->
-    case files_size_check(FilesSize - OldContentsSize,
-                          Contents, FilesSizeLimit) of
+    case files_size_check(Contents,
+                          FilesSize - OldContentsSize,
+                          FilesSizeLimit) of
         {ok, ContentsSize, NewFilesSize} ->
             case file:write_file(FilePath, Contents, [raw]) of
                 ok ->
@@ -1400,17 +1402,19 @@ service_name_suffix_write_truncate(FileName) ->
 service_name_suffix_write_append(FileName) ->
     FileName ++ "/post".
 
-files_size_check(FilesSize, _, undefined) ->
-    {ok, 0, FilesSize};
-files_size_check(FilesSize, Contents, FilesSizeLimit)
-    when is_integer(FilesSizeLimit) ->
-    ContentsSize = erlang:byte_size(Contents),
-    NewFilesSize = FilesSize + ContentsSize,
+files_size_check(Contents, FilesSize, FilesSizeLimit) ->
+    ContentsSize = byte_size(Contents),
+    NewFilesSize = ContentsSize + FilesSize,
     if
-        NewFilesSize =< FilesSizeLimit ->
+        FilesSizeLimit =:= undefined ->
             {ok, ContentsSize, NewFilesSize};
-        NewFilesSize > FilesSizeLimit ->
-            {error, ContentsSize}
+        is_integer(FilesSizeLimit) ->
+            if
+                NewFilesSize =< FilesSizeLimit ->
+                    {ok, ContentsSize, NewFilesSize};
+                NewFilesSize > FilesSizeLimit ->
+                    {error, ContentsSize}
+            end
     end.
 
 file_add_read(FileName, File,
@@ -1573,38 +1577,60 @@ file_exists(FileName, Files, UseHttpGetSuffix, Prefix) ->
     Suffix = service_name_suffix_read(FileName, UseHttpGetSuffix),
     cloudi_x_trie:find(Prefix ++ Suffix, Files).
 
-file_read_data_position(F, undefined, Size)
+file_read_data_position(_, _, Size,
+                        FilesSize, FilesSizeLimit)
+    when is_integer(FilesSizeLimit),
+         is_integer(Size), Size + FilesSize > FilesSizeLimit ->
+    true = Size >= 0,
+    {files_size, Size};
+file_read_data_position(F, undefined, undefined,
+                        FilesSize, FilesSizeLimit) ->
+    case file:position(F, eof) of
+        {ok, Size} ->
+            file_read_data_position(F, 0, Size,
+                                    FilesSize, FilesSizeLimit);
+        {error, _} = Error ->
+            Error
+    end;
+file_read_data_position(F, undefined, Size,
+                        FilesSize, _)
     when is_integer(Size) ->
     case file:read(F, Size) of
-        {ok, _} = Success ->
-            Success;
+        {ok, Contents} ->
+            ContentsSize = byte_size(Contents),
+            {ok, Contents, ContentsSize, ContentsSize + FilesSize};
         eof ->
             {error, eof};
         {error, _} = Error ->
             Error
     end;
-file_read_data_position(F, I, undefined)
+file_read_data_position(F, I, undefined,
+                        FilesSize, FilesSizeLimit)
     when is_integer(I) ->
     case file:position(F, eof) of
-        {ok, FileSize} ->
+        {ok, Size} ->
             if
                 I < 0 ->
-                    AbsoluteI = FileSize + I,
+                    AbsoluteI = Size + I,
                     if
                         AbsoluteI >= 0 ->
-                            file_read_data_position(F, AbsoluteI, I * -1);
+                            file_read_data_position(F, AbsoluteI, I * -1,
+                                                    FilesSize, FilesSizeLimit);
                         true ->
-                            file_read_data_position(F, 0, FileSize)
+                            file_read_data_position(F, 0, Size,
+                                                    FilesSize, FilesSizeLimit)
                     end;
-                I < FileSize ->
-                    file_read_data_position(F, I, FileSize - I);
-                I >= FileSize ->
-                    {ok, <<>>}
+                I < Size ->
+                    file_read_data_position(F, I, Size - I,
+                                            FilesSize, FilesSizeLimit);
+                I >= Size ->
+                    {ok, <<>>, 0, FilesSize}
             end;
         {error, _} = Error ->
             Error
     end;
-file_read_data_position(F, I, Size)
+file_read_data_position(F, I, Size,
+                        FilesSize, _)
     when is_integer(I), is_integer(Size) ->
     Location = if
         I < 0 ->
@@ -1615,8 +1641,9 @@ file_read_data_position(F, I, Size)
     case file:position(F, Location) of
         {ok, _} ->
             case file:read(F, Size) of
-                {ok, _} = Success ->
-                    Success;
+                {ok, Contents} ->
+                    ContentsSize = byte_size(Contents),
+                    {ok, Contents, ContentsSize, ContentsSize + FilesSize};
                 eof ->
                     {error, eof};
                 {error, _} = Error ->
@@ -1625,29 +1652,22 @@ file_read_data_position(F, I, Size)
         {error, _} = Error ->
             Error
     end.
-    
-% allow it to read from any non-directory/link type (device, other, regular)
-file_read_data(#file_info{access = Access}, FilePath, I, Size)
-    when Access =:= read; Access =:= read_write ->
-    if
-        I =:= undefined, Size =:= undefined ->
-            file_read(FilePath);
-        true ->
-            case file:open(FilePath, [raw, read, binary]) of
-                {ok, F} ->
-                    Result = file_read_data_position(F, I, Size),
-                    _ = file:close(F),
-                    Result;
-                {error, _} = Error ->
-                    Error
-            end
-    end;
-file_read_data(_, _, _, _) ->
-    {error, enoent}.
 
-file_read(FilePath) ->
-    % related to https://bugs.erlang.org/browse/ERL-315
-    prim_file:read_file(FilePath).
+% allow it to read from any non-directory/link type (device, other, regular)
+file_read_data(#file_info{access = Access}, FilePath, I, Size,
+               FilesSize, FilesSizeLimit)
+    when Access =:= read; Access =:= read_write ->
+    case file:open(FilePath, [raw, read, binary]) of
+        {ok, F} ->
+            Result = file_read_data_position(F, I, Size,
+                                             FilesSize, FilesSizeLimit),
+            _ = file:close(F),
+            Result;
+        {error, _} = Error ->
+            Error
+    end;
+file_read_data(_, _, _, _, _, _) ->
+    {error, enoent}.
 
 file_header_content_disposition(FilePath, true) ->
     [{<<"content-disposition">>,
@@ -1694,32 +1714,29 @@ read_files_init(ReadL, Directory, Toggle, ContentTypeLookup,
                 #file_info{access = Access,
                            mtime = MTime} = FileInfo,
                 case file_read_data(FileInfo, FilePath,
-                                    SegmentI, SegmentSize) of
-                    {ok, Contents} ->
-                        case files_size_check(FilesSize0, Contents,
-                                              FilesSizeLimit) of
-                            {ok, ContentsSize, FilesSize1} ->
-                                Headers = file_headers(FilePath,
-                                                       ContentTypeLookup,
-                                                       UseContentDisposition),
-                                File = #file{contents = Contents,
-                                             size = ContentsSize,
-                                             path = FilePath,
-                                             headers = Headers,
-                                             mtime_i = {MTime, 0},
-                                             access = Access,
-                                             toggle = Toggle},
-                                {FilesSize1,
-                                 file_add_read(FileName, File, Files0,
-                                               UseHttpGetSuffix, Prefix,
-                                               Dispatcher)};
-                            {error, ContentsSize} ->
-                                ?LOG_WARN("file name ~s (size ~w kB) "
-                                          "excluded due to ~w kB files_size",
-                                          [FilePath, ContentsSize div 1024,
-                                           FilesSizeLimit div 1024]),
-                                {FilesSize0, Files0}
-                        end;
+                                    SegmentI, SegmentSize,
+                                    FilesSize0, FilesSizeLimit) of
+                    {ok, Contents, ContentsSize, FilesSize1} ->
+                        Headers = file_headers(FilePath,
+                                               ContentTypeLookup,
+                                               UseContentDisposition),
+                        File = #file{contents = Contents,
+                                     size = ContentsSize,
+                                     path = FilePath,
+                                     headers = Headers,
+                                     mtime_i = {MTime, 0},
+                                     access = Access,
+                                     toggle = Toggle},
+                        {FilesSize1,
+                         file_add_read(FileName, File, Files0,
+                                       UseHttpGetSuffix, Prefix,
+                                       Dispatcher)};
+                    {files_size, ContentsSize} ->
+                        ?LOG_WARN("file name ~s (size ~w kB) "
+                                  "excluded due to ~w kB files_size",
+                                  [FilePath, ContentsSize div 1024,
+                                   FilesSizeLimit div 1024]),
+                        {FilesSize0, Files0};
                     {error, Reason} ->
                         ?LOG_ERROR("file read ~s error: ~p",
                                    [FilePath, Reason]),
@@ -1758,28 +1775,26 @@ read_files_refresh(ReadL, Directory, Toggle,
                        notify = NotifyL,
                        write = Write} = File0} ->
                 case file_read_data(FileInfo, FilePath,
-                                    SegmentI, SegmentSize) of
-                    {ok, Contents} ->
-                        case files_size_check(FilesSize1 - OldContentsSize,
-                                              Contents, FilesSizeLimit) of
-                            {ok, ContentsSize, NextFilesSize1} ->
-                                file_notify_send(NotifyL, Contents, Dispatcher),
-                                MTimeI = mtime_i_update(OldMTimeI, MTime),
-                                File1 = File0#file{contents = Contents,
-                                                   size = ContentsSize,
-                                                   mtime_i = MTimeI,
-                                                   access = Access,
-                                                   toggle = Toggle},
-                                {NextFilesSize1,
-                                 file_refresh(FileName, File1, Files1,
-                                              UseHttpGetSuffix, Prefix)};
-                            {error, ContentsSize} ->
-                                ?LOG_WARN("file name ~s (size ~w kB) update "
-                                          "excluded due to ~w kB files_size",
-                                          [FilePath, ContentsSize div 1024,
-                                           FilesSizeLimit div 1024]),
-                                {FilesSize1, Files1}
-                        end;
+                                    SegmentI, SegmentSize,
+                                    FilesSize1 - OldContentsSize,
+                                    FilesSizeLimit) of
+                    {ok, Contents, ContentsSize, NextFilesSize1} ->
+                        file_notify_send(NotifyL, Contents, Dispatcher),
+                        MTimeI = mtime_i_update(OldMTimeI, MTime),
+                        File1 = File0#file{contents = Contents,
+                                           size = ContentsSize,
+                                           mtime_i = MTimeI,
+                                           access = Access,
+                                           toggle = Toggle},
+                        {NextFilesSize1,
+                         file_refresh(FileName, File1, Files1,
+                                      UseHttpGetSuffix, Prefix)};
+                    {files_size, ContentsSize} ->
+                        ?LOG_WARN("file name ~s (size ~w kB) update "
+                                  "excluded due to ~w kB files_size",
+                                  [FilePath, ContentsSize div 1024,
+                                   FilesSizeLimit div 1024]),
+                        {FilesSize1, Files1};
                     {error, _} when Write =:= [] ->
                         % file was removed during traversal
                         {FilesSize1 - OldContentsSize,
@@ -1795,32 +1810,30 @@ read_files_refresh(ReadL, Directory, Toggle,
                 end;
             error ->
                 case file_read_data(FileInfo, FilePath,
-                                    SegmentI, SegmentSize) of
-                    {ok, Contents} ->
-                        case files_size_check(FilesSize1,
-                                              Contents, FilesSizeLimit) of
-                            {ok, ContentsSize, NextFilesSize1} ->
-                                Headers = file_headers(FilePath,
-                                                       ContentTypeLookup,
-                                                       UseContentDisposition),
-                                File = #file{contents = Contents,
-                                             size = ContentsSize,
-                                             path = FilePath,
-                                             headers = Headers,
-                                             mtime_i = {MTime, 0},
-                                             access = Access,
-                                             toggle = Toggle},
-                                {NextFilesSize1,
-                                 file_add_read(FileName, File, Files1,
-                                               UseHttpGetSuffix, Prefix,
-                                               Dispatcher)};
-                            {error, ContentsSize} ->
-                                ?LOG_WARN("file name ~s (size ~w kB) addition "
-                                          "excluded due to ~w kB files_size",
-                                          [FilePath, ContentsSize div 1024,
-                                           FilesSizeLimit div 1024]),
-                                {FilesSize1, Files1}
-                        end;
+                                    SegmentI, SegmentSize,
+                                    FilesSize1,
+                                    FilesSizeLimit) of
+                    {ok, Contents, ContentsSize, NextFilesSize1} ->
+                        Headers = file_headers(FilePath,
+                                               ContentTypeLookup,
+                                               UseContentDisposition),
+                        File = #file{contents = Contents,
+                                     size = ContentsSize,
+                                     path = FilePath,
+                                     headers = Headers,
+                                     mtime_i = {MTime, 0},
+                                     access = Access,
+                                     toggle = Toggle},
+                        {NextFilesSize1,
+                         file_add_read(FileName, File, Files1,
+                                       UseHttpGetSuffix, Prefix,
+                                       Dispatcher)};
+                    {files_size, ContentsSize} ->
+                        ?LOG_WARN("file name ~s (size ~w kB) addition "
+                                  "excluded due to ~w kB files_size",
+                                  [FilePath, ContentsSize div 1024,
+                                   FilesSizeLimit div 1024]),
+                        {FilesSize1, Files1};
                     {error, _} ->
                         % file was removed during traversal
                         {FilesSize1,

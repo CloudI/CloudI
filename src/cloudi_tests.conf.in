@@ -215,6 +215,7 @@
      {args,
       [{directory, "@cloudi_prefix@/logs/"},
        {read, [{"/cloudi/log/cloudi.log", -16384}]},
+       {files_size, 16},
        {refresh, 10}]},
      {dest_refresh, none}],
     [{prefix, "/shell"},
