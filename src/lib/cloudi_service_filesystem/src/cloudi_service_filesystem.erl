@@ -1838,7 +1838,12 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
         case file_exists(FileName, Files1, UseHttpGetSuffix, Prefix) of
             {ok, #file{size = ContentsSizeOld,
                        write = []}} ->
-                {ReplaceHit1, Replace1,
+                % file was removed
+                {Replace2,
+                 ReplaceHit2} = replace_remove(FileName,
+                                               Replace1,
+                                               ReplaceHit1),
+                {ReplaceHit2, Replace2,
                  FilesSize1 - ContentsSizeOld,
                  file_remove_read(FileName, Files1,
                                   UseHttpGetSuffix, Prefix,
@@ -1883,7 +1888,7 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                                    FilesSizeLimit div 1024]),
                         {ReplaceHit1, Replace1, FilesSize1, Files1};
                     {error, _} when Write =:= [] ->
-                        % file was removed during traversal
+                        % file was removed
                         {Replace2,
                          ReplaceHit2} = replace_remove(FileName,
                                                        Replace1,
@@ -1901,6 +1906,7 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                                       UseHttpGetSuffix, Prefix)}
                 end;
             error ->
+                ReplaceHit2 = replace_add(FileName, Replace1, ReplaceHit1),
                 case file_read_data(FileInfo, FilePath,
                                     SegmentI, SegmentSize,
                                     FilesSize1,
@@ -1916,7 +1922,7 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                                      mtime_i = {MTime, 0},
                                      access = Access,
                                      toggle = Toggle},
-                        {ReplaceHit1, Replace1, FilesSize2,
+                        {ReplaceHit2, Replace1, FilesSize2,
                          file_add_read(FileName, File, Files1,
                                        UseHttpGetSuffix, Prefix,
                                        Dispatcher)};
@@ -1925,17 +1931,11 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                                   "excluded due to ~w kB files_size",
                                   [FilePath, ContentsSize div 1024,
                                    FilesSizeLimit div 1024]),
-                        {ReplaceHit1, Replace1, FilesSize1, Files1};
-                    {error, _} ->
-                        % file was removed during traversal
-                        {Replace2,
-                         ReplaceHit2} = replace_remove(FileName,
-                                                       Replace1,
-                                                       ReplaceHit1),
-                        {ReplaceHit2, Replace2, FilesSize1,
-                         file_remove_read(FileName, Files1,
-                                          UseHttpGetSuffix, Prefix,
-                                          Dispatcher)}
+                        {ReplaceHit2, Replace1, FilesSize1, Files1};
+                    {error, Reason} ->
+                        ?LOG_ERROR("file read ~s error: ~p",
+                                   [FilePath, Reason]),
+                        {ReplaceHit2, Replace1, FilesSize1, Files1}
                 end
         end
     end,
@@ -2469,8 +2469,9 @@ replace_add(_, undefined, ReplaceHit) ->
     ReplaceHit;
 replace_add(FileName,
             #lfuda{age = Age}, ReplaceHit) ->
-    PriorityKey = Age,
-    cloudi_x_trie:store(FileName, {PriorityKey, 0}, ReplaceHit).
+    cloudi_x_trie:update(FileName, fun(Value) ->
+        Value
+    end, {Age, 0}, ReplaceHit).
 
 replace_remove(_, undefined, ReplaceHit) ->
     ReplaceHit;
@@ -2478,7 +2479,13 @@ replace_remove(FileName,
                #lfuda{age = Age} = Replace, ReplaceHit) ->
     case cloudi_x_trie:take(FileName, ReplaceHit) of
         {{PriorityKey, _}, ReplaceHitNew} ->
-            {Replace#lfuda{age = erlang:max(Age, PriorityKey)},
+            ReplaceNew = if
+                Age < PriorityKey ->
+                    Replace#lfuda{age = PriorityKey};
+                true ->
+                    Replace
+            end,
+            {ReplaceNew,
              ReplaceHitNew};
         error ->
             {Replace, ReplaceHit}
