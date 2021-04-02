@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-04-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_filesystem replace argument for setting
+      the cache replacement algorithm
+      (when both refresh and files_size arguments are set,
+       default algorithm is LFUDA)
+
 2021-03-31 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_filesystem files_size argument use

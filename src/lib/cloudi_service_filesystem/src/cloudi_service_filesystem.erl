@@ -59,8 +59,12 @@
 
 -define(DEFAULT_DIRECTORY,           undefined). % required argument, string
 -define(DEFAULT_FILES_SIZE,          undefined). % limit in kB
+        % Set the maximum amount of memory a single service
+        % process will use for file data.
 -define(DEFAULT_REFRESH,             undefined). % seconds, see below:
-        % How often to refresh the in-memory copy of the file data
+        % The refresh frequency for updating the in-memory
+        % copy of the file data from the filesystem based
+        % on the file modification time.
 -define(DEFAULT_CACHE,               undefined). % seconds, see below:
         % If defined, the request is treated as an HTTP request with the
         % modification time checked to determine if the file has changed
@@ -68,6 +72,20 @@
         % possibly reuse its cached copy.  HTTP headers are added to the
         % ResponseInfo to provide the modification time.
         % Use the value 'refresh' to assign (0.5 * refresh).
+-define(DEFAULT_REPLACE,                 false).
+        % Provide a file data cache replacement algorithm
+        % (requires both the files_size and refresh arguments are set).
+        % When set to true (or lfuda) the
+        % "Least-Frequently Used with Dynamic Aging" (LFUDA)
+        % algorithm is used and the LFUDA policy (high byte hit rate).
+        % When set to lfuda_gdsf the LFUDA algorithm is used and the
+        % "GreedyDual-Size with Frequency" (GDSF) policy (high hit rate).
+        %
+        % LFUDA algorithm information:
+        % M. Arlitt, R. F. L. Cherkasova, J. Dilley, and T. Jin.
+        % Evaluating content management techniques for Web proxy caches.
+        % HP Technical Report. Palo Alto, 1999.
+        % https://www.hpl.hp.com/techreports/98/HPL-98-173.pdf
 -define(DEFAULT_READ,                       []). % see below:
         % A list of file service names (provided by this service) that
         % will explicitly specify the files to read from the directory.
@@ -133,6 +151,12 @@
                                  integer() | undefined,
                                  non_neg_integer() | undefined}).
 
+-record(lfuda,
+    {
+        policy :: lfuda | gdsf,
+        age = 0 :: non_neg_integer()
+    }).
+
 -record(state,
     {
         prefix :: string(),
@@ -144,6 +168,8 @@
         files_size :: non_neg_integer(),
         refresh :: undefined | pos_integer(),
         cache :: undefined | pos_integer(),
+        replace :: undefined | #lfuda{},
+        replace_hit :: undefined | cloudi_x_trie:cloudi_x_trie(),
         http_clock_skew_max :: non_neg_integer() | undefined,
         use_http_get_suffix :: boolean(),
         use_content_disposition :: boolean(),
@@ -198,7 +224,7 @@
                  Name :: service_name(),
                  NotifyName :: service_name()) ->
     {{ok, binary()} | {error, any()},
-     NewAgent :: agent()}.
+     AgentNew :: agent()}.
 
 notify_all(Agent, Name, NotifyName) ->
     notify_all(Agent, Name,
@@ -216,7 +242,7 @@ notify_all(Agent, Name, NotifyName) ->
                  NotifyName :: service_name(),
                  NotifyTimeout :: timeout_milliseconds()) ->
     {{ok, binary()} | {error, any()},
-     NewAgent :: agent()}.
+     AgentNew :: agent()}.
 
 notify_all(Agent, Name, NotifyName, NotifyTimeout) ->
     notify_all(Agent, Name,
@@ -235,7 +261,7 @@ notify_all(Agent, Name, NotifyName, NotifyTimeout) ->
                  NotifyTimeout :: timeout_milliseconds(),
                  NotifyPriority :: priority()) ->
     {{ok, binary()} | {error, any()},
-     NewAgent :: agent()}.
+     AgentNew :: agent()}.
 
 notify_all(Agent, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
     notify(Agent, Name,
@@ -252,7 +278,7 @@ notify_all(Agent, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
                  Name :: service_name(),
                  NotifyName :: service_name()) ->
     {{ok, binary()} | {error, any()},
-     NewAgent :: agent()}.
+     AgentNew :: agent()}.
 
 notify_one(Agent, Name, NotifyName) ->
     notify_one(Agent, Name,
@@ -270,7 +296,7 @@ notify_one(Agent, Name, NotifyName) ->
                  NotifyName :: service_name(),
                  NotifyTimeout :: timeout_milliseconds()) ->
     {{ok, binary()} | {error, any()},
-     NewAgent :: agent()}.
+     AgentNew :: agent()}.
 
 notify_one(Agent, Name, NotifyName, NotifyTimeout) ->
     notify_one(Agent, Name,
@@ -289,7 +315,7 @@ notify_one(Agent, Name, NotifyName, NotifyTimeout) ->
                  NotifyTimeout :: timeout_milliseconds(),
                  NotifyPriority :: priority()) ->
     {{ok, binary()} | {error, any()},
-     NewAgent :: agent()}.
+     AgentNew :: agent()}.
 
 notify_one(Agent, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
     notify(Agent, Name,
@@ -304,16 +330,16 @@ notify_one(Agent, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
 -spec notify_clear(Agent :: agent(),
                    Name :: service_name()) ->
     {ok | {error, any()},
-     NewAgent :: agent()}.
+     AgentNew :: agent()}.
 
 notify_clear(Agent, Name) ->
     case cloudi:send_sync(Agent, Name, notify_clear) of
         {{error, _}, _} = Error ->
             Error;
-        {{ok, {error, _} = Error}, NewAgent} ->
-            {Error, NewAgent};
-        {{ok, ok}, NewAgent} ->
-            {ok, NewAgent}
+        {{ok, {error, _} = Error}, AgentNew} ->
+            {Error, AgentNew};
+        {{ok, ok}, AgentNew} ->
+            {ok, AgentNew}
     end.
 
 %%%------------------------------------------------------------------------
@@ -326,6 +352,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {files_size,                   ?DEFAULT_FILES_SIZE},
         {refresh,                      ?DEFAULT_REFRESH},
         {cache,                        ?DEFAULT_CACHE},
+        {replace,                      ?DEFAULT_REPLACE},
         {read,                         ?DEFAULT_READ},
         {write_truncate,               ?DEFAULT_WRITE_TRUNCATE},
         {write_append,                 ?DEFAULT_WRITE_APPEND},
@@ -337,7 +364,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_content_types,            ?DEFAULT_USE_CONTENT_TYPES},
         {use_content_disposition,      ?DEFAULT_USE_CONTENT_DISPOSITION},
         {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX}],
-    [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0,
+    [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0, Replace0,
      ReadL0, WriteTruncateL, WriteAppendL, RedirectL,
      NotifyOneL, NotifyAllL, NotifyOnStart,
      HTTPClockSkewMax,
@@ -361,6 +388,19 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         is_integer(Cache0), is_integer(Refresh),
         Cache0 > 0, Cache0 =< 31536000 ->
             Cache0
+    end,
+    {ReplaceN,
+     ReplaceHit0} = if
+        Replace0 =:= false ->
+            {undefined,
+             undefined};
+        Replace0 =:= true;
+        Replace0 =:= lfuda;
+        Replace0 =:= lfuda_gdsf ->
+            true = is_integer(FilesSizeLimitN) andalso
+                   is_integer(Refresh),
+            {replace_new(Replace0),
+             cloudi_x_trie:new()}
     end,
     true = is_list(ReadL0),
     true = is_list(WriteTruncateL),
@@ -416,11 +456,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         end
     end, ReadL0),
     Toggle = true,
-    {FilesSizeN,
-     Files1} = read_files_init(ReadLN, Directory, Toggle, ContentTypeLookup,
+    {ReplaceHitN,
+     FilesSizeN,
+     Files1} = read_files_init(ReplaceHit0, ReplaceN, ReadLN, Toggle,
+                               ContentTypeLookup,
                                UseContentDisposition, UseHttpGetSuffix,
-                               FilesSizeLimitN, Prefix, Dispatcher),
-    MTimeFake = calendar:now_to_universal_time(os:timestamp()),
+                               FilesSizeLimitN, Directory, Prefix, Dispatcher),
+    MTimeFake = datetime_utc(cloudi_timestamp:native_monotonic()),
     Files7 = lists:foldl(fun(Pattern, Files2) ->
         true = UseHttpGetSuffix,
         PatternRead = Pattern ++ "/get",
@@ -436,12 +478,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                   write = []} = File,
             if
                 Access =:= read_write ->
-                    NewFile = File#file{write = [truncate]},
+                    FileNew = File#file{write = [truncate]},
                     FileName = lists:nthtail(DirectoryLength, FilePath),
-                    Files5 = file_add_write_truncate(FileName, NewFile,
+                    Files5 = file_add_write_truncate(FileName, FileNew,
                                                      Files4, Prefix,
                                                      Dispatcher),
-                    file_refresh(FileName, NewFile,
+                    file_refresh(FileName, FileNew,
                                  Files5, true, Prefix);
                 true ->
                     ?LOG_ERROR("unable to read and write file: \"~s\"",
@@ -487,12 +529,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                   write = Write} = File,
             if
                 Access =:= read_write ->
-                    NewFile = File#file{write = [append | Write]},
+                    FileNew = File#file{write = [append | Write]},
                     FileName = lists:nthtail(DirectoryLength, FilePath),
-                    Files11 = file_add_write_append(FileName, NewFile,
+                    Files11 = file_add_write_append(FileName, FileNew,
                                                     Files10, Prefix,
                                                     Dispatcher),
-                    file_refresh(FileName, NewFile,
+                    file_refresh(FileName, FileNew,
                                  Files11, true, Prefix);
                 true ->
                     ?LOG_ERROR("unable to read and write file: \"~s\"",
@@ -586,9 +628,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                     erlang:exit({Reason, {Pattern, RedirectPattern}}),
                     undefined
             end,
-            NewFile = File#file{redirect = RedirectName},
+            FileNew = File#file{redirect = RedirectName},
             FileName = lists:nthtail(DirectoryLength, FilePath),
-            file_refresh(FileName, NewFile,
+            file_refresh(FileName, FileNew,
                          Files22, true, Prefix)
         end, undefined, Files20),
         if
@@ -634,6 +676,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 files_size = FilesSizeN,
                 refresh = Refresh,
                 cache = CacheN,
+                replace = ReplaceN,
+                replace_hit = ReplaceHitN,
                 http_clock_skew_max = HTTPClockSkewMax,
                 read = ReadLN,
                 toggle = Toggle,
@@ -652,8 +696,8 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern, _RequestInfo,
                                      } = State, _Dispatcher) ->
     case files_notify(Notify, Name, Files, Timeout, Priority,
                       Prefix, DirectoryLength, UseHttpGetSuffix) of
-        {ok, Contents, NewFiles} ->
-            {reply, Contents, State#state{files = NewFiles}};
+        {ok, Contents, FilesNew} ->
+            {reply, Contents, State#state{files = FilesNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -668,9 +712,9 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern, _RequestInfo,
     case cloudi_x_trie:find(Name, Files) of
         {ok, #file{path = FilePath} = File} ->
             FileName = lists:nthtail(DirectoryLength, FilePath),
-            NewFiles = file_refresh(FileName, File#file{notify = []},
+            FilesNew = file_refresh(FileName, File#file{notify = []},
                                     Files, UseHttpGetSuffix, Prefix),
-            {reply, ok, State#state{files = NewFiles}};
+            {reply, ok, State#state{files = FilesNew}};
         error ->
             {reply, {error, not_found}, State}
     end;
@@ -681,10 +725,7 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
                                      use_http_get_suffix = UseHttpGetSuffix
                                      } = State, Dispatcher) ->
     case cloudi_x_trie:find(Name, Files) of
-        {ok, #file{contents = Contents,
-                   headers = FileHeaders,
-                   mtime_i = MTimeI,
-                   redirect = Redirect} = File} ->
+        {ok, #file{redirect = Redirect} = File} ->
             if
                 UseHttpGetSuffix =:= true ->
                     if
@@ -693,13 +734,9 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
                                 {NamePath, "options"} ->
                                     request_options(NamePath, State);
                                 {_, "head"} ->
-                                    request_header(MTimeI,
-                                                   Contents, FileHeaders,
-                                                   RequestInfo, State);
+                                    request_header(File, RequestInfo, State);
                                 {_, "get"} ->
-                                    request_read(MTimeI,
-                                                 Contents, FileHeaders,
-                                                 RequestInfo, State);
+                                    request_read(File, RequestInfo, State);
                                 {_, "put"} ->
                                     request_truncate(File,
                                                      RequestInfo, Request,
@@ -716,8 +753,7 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
                              <<>>, State}
                     end;
                 UseHttpGetSuffix =:= false ->
-                    request_read(MTimeI, Contents, FileHeaders,
-                                 RequestInfo, State)
+                    request_read(File, RequestInfo, State)
             end;
         error ->
             % possible if a sending service has stale service name lookup data
@@ -732,9 +768,12 @@ cloudi_service_handle_info(refresh,
                                   prefix_length = PrefixLength,
                                   service = Service,
                                   directory = Directory,
+                                  directory_length = DirectoryLength,
                                   files_size_limit = FilesSizeLimit,
                                   files_size = FilesSize,
                                   refresh = Refresh,
+                                  replace = Replace,
+                                  replace_hit = ReplaceHit,
                                   read = ReadL,
                                   toggle = Toggle,
                                   files = Files,
@@ -744,29 +783,34 @@ cloudi_service_handle_info(refresh,
                                   content_type_lookup =
                                       ContentTypeLookup} = State,
                            Dispatcher) ->
-    NewToggle = not Toggle,
-    {NewFilesSize,
-     NewFiles} = read_files_refresh(ReadL, Directory, NewToggle,
+    ToggleNew = not Toggle,
+    {ReplaceHitNew,
+     ReplaceNew,
+     FilesSizeNew,
+     FilesNew} = read_files_refresh(ReplaceHit, Replace, ReadL, ToggleNew,
                                     FilesSize, Files, ContentTypeLookup,
                                     UseContentDisposition, UseHttpGetSuffix,
-                                    FilesSizeLimit, PrefixLength,
+                                    FilesSizeLimit, DirectoryLength,
+                                    Directory, PrefixLength,
                                     Prefix, Dispatcher),
     _ = erlang:send_after(Refresh * 1000, Service, refresh),
-    {noreply, State#state{files_size = NewFilesSize,
-                          toggle = NewToggle,
-                          files = NewFiles}};
+    {noreply, State#state{files_size = FilesSizeNew,
+                          replace = ReplaceNew,
+                          replace_hit = ReplaceHitNew,
+                          toggle = ToggleNew,
+                          files = FilesNew}};
 
 cloudi_service_handle_info({append_clear, Name, Id},
                            #state{files = Files} = State, _Dispatcher) ->
-    NewFiles = case cloudi_x_trie:find(Name, Files) of
+    FilesNew = case cloudi_x_trie:find(Name, Files) of
         {ok, #file{write_appends = Appends} = File} ->
-            {value, _, NewAppends} = request_append_take(Id, Appends),
+            {value, _, AppendsNew} = request_append_take(Id, Appends),
             cloudi_x_trie:store(Name,
-                                File#file{write_appends = NewAppends}, Files);
+                                File#file{write_appends = AppendsNew}, Files);
         error ->
             Files
     end,
-    {noreply, State#state{files = NewFiles}};
+    {noreply, State#state{files = FilesNew}};
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
@@ -778,7 +822,8 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-request_options(NamePath, #state{files = Files} = State) ->
+request_options(NamePath,
+                #state{files = Files} = State) ->
     [_ | Methods] = cloudi_x_trie:fold_match(NamePath ++ "/*",
                                              fun(Name, _, L) ->
         [", ", cloudi_string:uppercase(cloudi_string:afterr($/, Name)) | L]
@@ -788,11 +833,14 @@ request_options(NamePath, #state{files = Files} = State) ->
      [{<<"allow">>, Allow} |
       contents_ranges_headers(true)], <<>>, State}.
 
-request_header(MTimeI, Contents, FileHeaders, RequestInfo,
+request_header(#file{contents = Contents,
+                     headers = FileHeaders,
+                     mtime_i = MTimeI} = File, RequestInfo,
                #state{cache = undefined,
                       use_http_get_suffix = true} = State) ->
+    TimeNative = cloudi_timestamp:native_monotonic(),
+    NowTime = datetime_utc(TimeNative),
     KeyValues = cloudi_request_info:key_value_parse(RequestInfo),
-    NowTime = calendar:now_to_universal_time(os:timestamp()),
     ETag = cache_header_etag(MTimeI),
     case contents_ranges_read(ETag, KeyValues, MTimeI) of
         {206, RangeList} ->
@@ -801,7 +849,8 @@ request_header(MTimeI, Contents, FileHeaders, RequestInfo,
                     {reply,
                      Headers ++
                      cacheless_headers_data(NowTime, MTimeI, ETag, true),
-                     <<>>, State};
+                     <<>>,
+                     replace_hit(File, TimeNative, State)};
                 {416, Headers} ->
                     {reply, Headers, <<>>, State}
             end;
@@ -811,7 +860,8 @@ request_header(MTimeI, Contents, FileHeaders, RequestInfo,
             {reply,
              FileHeaders ++
              cacheless_headers_data(NowTime, MTimeI, ETag, true),
-             <<>>, State};
+             <<>>,
+             replace_hit(File, TimeNative, State)};
         {416, undefined} ->
             {reply,
              [{<<"status">>, <<"416">>},
@@ -821,12 +871,15 @@ request_header(MTimeI, Contents, FileHeaders, RequestInfo,
         {400, undefined} ->
             {reply, [{<<"status">>, <<"400">>}], <<>>, State}
     end;
-request_header(MTimeI, Contents, FileHeaders, RequestInfo,
+request_header(#file{contents = Contents,
+                     headers = FileHeaders,
+                     mtime_i = MTimeI} = File, RequestInfo,
                #state{cache = Cache,
                       http_clock_skew_max = HTTPClockSkewMax,
                       use_http_get_suffix = true} = State) ->
+    TimeNative = cloudi_timestamp:native_monotonic(),
+    NowTime = datetime_utc(TimeNative),
     KeyValues = cloudi_request_info:key_value_parse(RequestInfo),
-    NowTime = calendar:now_to_universal_time(os:timestamp()),
     InvalidTime = invalid_time(NowTime, HTTPClockSkewMax),
     ETag = cache_header_etag(MTimeI),
     case cache_status(ETag, KeyValues, MTimeI, InvalidTime) of
@@ -839,7 +892,8 @@ request_header(MTimeI, Contents, FileHeaders, RequestInfo,
                              Headers ++
                              cache_headers_data(NowTime, MTimeI,
                                                 ETag, Cache, true),
-                             <<>>, State};
+                             <<>>,
+                             replace_hit(File, TimeNative, State)};
                         {416, Headers} ->
                             {reply, Headers, <<>>, State}
                     end;
@@ -849,7 +903,8 @@ request_header(MTimeI, Contents, FileHeaders, RequestInfo,
                     {reply,
                      FileHeaders ++
                      cache_headers_data(NowTime, MTimeI, ETag, Cache, true),
-                     <<>>, State};
+                     <<>>,
+                     replace_hit(File, TimeNative, State)};
                 {416, undefined} ->
                     {reply,
                      [{<<"status">>, <<"416">>},
@@ -867,14 +922,17 @@ request_header(MTimeI, Contents, FileHeaders, RequestInfo,
              <<>>, State}
     end.
 
-request_read(MTimeI, Contents, FileHeaders, RequestInfo,
+request_read(#file{contents = Contents,
+                   headers = FileHeaders,
+                   mtime_i = MTimeI} = File, RequestInfo,
              #state{cache = undefined,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
+    TimeNative = cloudi_timestamp:native_monotonic(),
     if
         UseHttpGetSuffix =:= true ->
+            NowTime = datetime_utc(TimeNative),
             KeyValues = cloudi_request_info:
                         key_value_parse(RequestInfo),
-            NowTime = calendar:now_to_universal_time(os:timestamp()),
             ETag = cache_header_etag(MTimeI),
             case contents_ranges_read(ETag, KeyValues, MTimeI) of
                 {206, RangeList} ->
@@ -884,9 +942,10 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
                              Headers ++
                              cacheless_headers_data(NowTime, MTimeI, ETag,
                                                     UseHttpGetSuffix),
-                             Response, State};
-                        {416, Headers, Response} ->
-                            {reply, Headers, Response, State}
+                             Response,
+                             replace_hit(File, TimeNative, State)};
+                        {416, Headers, <<>>} ->
+                            {reply, Headers, <<>>, State}
                     end;
                 {Status, undefined}
                     when Status == 200;
@@ -895,7 +954,8 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
                      FileHeaders ++
                      cacheless_headers_data(NowTime, MTimeI, ETag,
                                             UseHttpGetSuffix),
-                     Contents, State};
+                     Contents,
+                     replace_hit(File, TimeNative, State)};
                 {416, undefined} ->
                     {reply,
                      [{<<"status">>, <<"416">>},
@@ -906,14 +966,18 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
                     {reply, [{<<"status">>, <<"400">>}], <<>>, State}
             end;
         UseHttpGetSuffix =:= false ->
-            {reply, Contents, State}
+            {reply, Contents,
+             replace_hit(File, TimeNative, State)}
     end;
-request_read(MTimeI, Contents, FileHeaders, RequestInfo,
+request_read(#file{contents = Contents,
+                   headers = FileHeaders,
+                   mtime_i = MTimeI} = File, RequestInfo,
              #state{cache = Cache,
                     http_clock_skew_max = HTTPClockSkewMax,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
+    TimeNative = cloudi_timestamp:native_monotonic(),
+    NowTime = datetime_utc(TimeNative),
     KeyValues = cloudi_request_info:key_value_parse(RequestInfo),
-    NowTime = calendar:now_to_universal_time(os:timestamp()),
     InvalidTime = invalid_time(NowTime, HTTPClockSkewMax),
     ETag = cache_header_etag(MTimeI),
     case cache_status(ETag, KeyValues, MTimeI, InvalidTime) of
@@ -929,9 +993,10 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
                                      cache_headers_data(NowTime, MTimeI,
                                                         ETag, Cache,
                                                         UseHttpGetSuffix),
-                                     Response, State};
-                                {416, Headers, Response} ->
-                                    {reply, Headers, Response, State}
+                                     Response,
+                                     replace_hit(File, TimeNative, State)};
+                                {416, Headers, <<>>} ->
+                                    {reply, Headers, <<>>, State}
                             end;
                         {Status, undefined}
                             when Status == 200;
@@ -940,7 +1005,8 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
                              FileHeaders ++
                              cache_headers_data(NowTime, MTimeI,
                                                 ETag, Cache, UseHttpGetSuffix),
-                             Contents, State};
+                             Contents,
+                             replace_hit(File, TimeNative, State)};
                         {416, undefined} ->
                             {reply,
                              [{<<"status">>, <<"416">>},
@@ -954,7 +1020,8 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
                     {reply,
                      cache_headers_data(NowTime, MTimeI,
                                         ETag, Cache, UseHttpGetSuffix),
-                     Contents, State}
+                     Contents,
+                     replace_hit(File, TimeNative, State)}
             end;
         Status ->
             % not modified due to caching
@@ -964,31 +1031,9 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
              <<>>, State}
     end.
 
-request_truncate_file(#file{contents = Contents,
-                            path = FilePath,
-                            headers = FileHeaders,
-                            mtime_i = {MTime, _} = MTimeI} = File,
-                      #state{prefix = Prefix,
-                             directory_length = DirectoryLength,
-                             cache = Cache,
-                             files = Files,
-                             use_http_get_suffix = true} = State) ->
-    FileName = lists:nthtail(DirectoryLength, FilePath),
-    ETag = cache_header_etag(MTimeI),
-    NewFiles = file_refresh(FileName, File, Files, true, Prefix),
-    Headers = if
-        Cache =:= undefined ->
-            cacheless_headers_data(MTime, MTimeI, ETag, true);
-        true ->
-            cache_headers_data(MTime, MTimeI, ETag, Cache, true)
-    end,
-    {reply,
-     FileHeaders ++ Headers, Contents,
-     State#state{files = NewFiles}}.
-
-request_truncate(#file{size = OldContentsSize,
+request_truncate(#file{size = ContentsSizeOld,
                        path = FilePath,
-                       mtime_i = OldMTimeI,
+                       mtime_i = MTimeIOld,
                        write = Write,
                        notify = NotifyL} = File,
                  RequestInfo, Request,
@@ -1005,31 +1050,31 @@ request_truncate(#file{size = OldContentsSize,
                      [{<<"status">>, <<"400">>}],
                      <<>>, State};
                 error ->
-                    NewContents = if
+                    ContentsNew = if
                         is_binary(Request) ->
                             Request;
                         is_list(Request) ->
                             erlang:iolist_to_binary(Request)
                     end,
-                    case files_size_check(NewContents,
-                                          FilesSize - OldContentsSize,
+                    case files_size_check(ContentsNew,
+                                          FilesSize - ContentsSizeOld,
                                           FilesSizeLimit) of
-                        {ok, NewContentsSize, NewFilesSize} ->
+                        {ok, ContentsSizeNew, FilesSizeNew} ->
                             case file:write_file(FilePath,
-                                                 NewContents, [raw]) of
+                                                 ContentsNew, [raw]) of
                                 ok ->
                                     {ok, FileInfo} = read_file_info(FilePath),
-                                    file_notify_send(NotifyL, NewContents,
+                                    file_notify_send(NotifyL, ContentsNew,
                                                      Dispatcher),
                                     #file_info{mtime = MTime,
                                                access = Access} = FileInfo,
-                                    MTimeI = mtime_i_update(OldMTimeI, MTime),
+                                    MTimeI = mtime_i_update(MTimeIOld, MTime),
                                     request_truncate_file(
-                                        File#file{contents = NewContents,
-                                                  size = NewContentsSize,
+                                        File#file{contents = ContentsNew,
+                                                  size = ContentsSizeNew,
                                                   mtime_i = MTimeI,
                                                   access = Access},
-                                        State#state{files_size = NewFilesSize});
+                                        State#state{files_size = FilesSizeNew});
                                 {error, Reason} ->
                                     ?LOG_ERROR("file write ~s error: ~p",
                                                [FilePath, Reason]),
@@ -1037,10 +1082,10 @@ request_truncate(#file{size = OldContentsSize,
                                      [{<<"status">>, <<"500">>}],
                                      <<>>, State}
                             end;
-                        {error, NewContentsSize} ->
+                        {error, ContentsSizeNew} ->
                             ?LOG_WARN("file name ~s (size ~w kB) truncate "
                                       "excluded due to ~w kB files_size",
-                                      [FilePath, NewContentsSize div 1024,
+                                      [FilePath, ContentsSizeNew div 1024,
                                        FilesSizeLimit div 1024]),
                             {reply,
                              [{<<"status">>, <<"400">>}],
@@ -1053,9 +1098,86 @@ request_truncate(#file{size = OldContentsSize,
              <<>>, State}
     end.
 
+request_truncate_file(#file{contents = Contents,
+                            path = FilePath,
+                            headers = FileHeaders,
+                            mtime_i = {MTime, _} = MTimeI} = File,
+                      #state{prefix = Prefix,
+                             directory_length = DirectoryLength,
+                             cache = Cache,
+                             files = Files,
+                             use_http_get_suffix = true} = State) ->
+    FileName = lists:nthtail(DirectoryLength, FilePath),
+    ETag = cache_header_etag(MTimeI),
+    FilesNew = file_refresh(FileName, File, Files, true, Prefix),
+    Headers = if
+        Cache =:= undefined ->
+            cacheless_headers_data(MTime, MTimeI, ETag, true);
+        true ->
+            cache_headers_data(MTime, MTimeI, ETag, Cache, true)
+    end,
+    {reply,
+     FileHeaders ++ Headers, Contents,
+     replace_hit(File, undefined,
+                 State#state{files = FilesNew})}.
+
+request_append(#file{contents = Contents,
+                     mtime_i = MTimeI,
+                     write = Write,
+                     write_appends = Appends} = File,
+               Name, RequestInfo, Request, Timeout,
+               #state{service = Service,
+                      files = Files,
+                      use_http_get_suffix = true} = State, Dispatcher) ->
+    case lists:member(append, Write) of
+        true ->
+            KeyValues = cloudi_request_info:
+                        key_value_parse(RequestInfo),
+            ETag = cache_header_etag(MTimeI),
+            case contents_ranges_append(ETag, KeyValues, MTimeI) of
+                {Status, {Range, Id, true, Index}} % last range
+                    when Status == 200;
+                         Status == 206 ->
+                    AppendsNext = request_append_store(Id, Index,
+                                                       Range, Request,
+                                                       Appends),
+                    {value,
+                     RangeRequests,
+                     AppendsNew} = request_append_take(Id, AppendsNext),
+                    request_append_file(RangeRequests,
+                                        File#file{write_appends = AppendsNew},
+                                        State, Dispatcher);
+                {Status, {Range, Id, false, Index}} % not the last range
+                    when Status == 200;
+                         Status == 206 ->
+                    AppendsNew = request_append_store(Id, Index, Name,
+                                                      Range, Request, Timeout,
+                                                      Appends, Service),
+                    FileNew = File#file{write_appends = AppendsNew},
+                    FilesNew = cloudi_x_trie:store(Name, FileNew, Files),
+                    {reply, [], <<>>, State#state{files = FilesNew}};
+                {416, undefined} ->
+                    {reply,
+                     [{<<"status">>, <<"416">>},
+                      contents_ranges_header_length(Contents) |
+                      contents_ranges_headers(true)],
+                     <<>>, State};
+                {Status, undefined}
+                    when Status == 400;
+                         Status == 410 ->
+                    {reply,
+                     [{<<"status">>, erlang:integer_to_binary(Status)}],
+                     <<>>, State}
+            end;
+        false ->
+            {reply,
+             [{<<"status">>, <<"400">>}],
+             <<>>, State}
+    end.
+
 request_append_take(Id, Appends) ->
     case lists:keytake(Id, 1, Appends) of
-        {value, {_, L}, NewAppends} ->
+        {value, {_, L}, AppendsNew} ->
             Value = lists:map(fun({_Index, Tref, RangeRequest}) ->
                 if
                     Tref /= undefined ->
@@ -1067,16 +1189,16 @@ request_append_take(Id, Appends) ->
                 end,
                 RangeRequest
             end, L),
-            {value, Value, NewAppends};
+            {value, Value, AppendsNew};
         false ->
             false
     end.
 
 request_append_store(Id, Index, Range, Request, Appends) ->
     case lists:keytake(Id, 1, Appends) of
-        {value, {_, L}, NextAppends} ->
-            NewL = lists:umerge(L, [{Index, undefined, {Range, Request}}]),
-            lists:umerge(NextAppends, [{Id, NewL}]);
+        {value, {_, L}, AppendsNext} ->
+            LNew = lists:umerge(L, [{Index, undefined, {Range, Request}}]),
+            lists:umerge(AppendsNext, [{Id, LNew}]);
         false ->
             L = [{Index, undefined, {Range, Request}}],
             lists:umerge(Appends, [{Id, L}])
@@ -1086,9 +1208,9 @@ request_append_store(Id, Index,
                      Name, Range, Request, Timeout,
                      Appends, Service) ->
     case lists:keytake(Id, 1, Appends) of
-        {value, {_, L}, NextAppends} ->
-            NewL = lists:umerge(L, [{Index, undefined, {Range, Request}}]),
-            lists:umerge(NextAppends, [{Id, NewL}]);
+        {value, {_, L}, AppendsNext} ->
+            LNew = lists:umerge(L, [{Index, undefined, {Range, Request}}]),
+            lists:umerge(AppendsNext, [{Id, LNew}]);
         false ->
             % first append multipart chunk creates a timer to enforce
             % the request timeout for all the multipart chunks
@@ -1101,10 +1223,10 @@ request_append_store(Id, Index,
 
 request_append_file([],
                     #file{contents = Contents,
-                          size = OldContentsSize,
+                          size = ContentsSizeOld,
                           path = FilePath,
                           headers = FileHeaders,
-                          mtime_i = OldMTimeI,
+                          mtime_i = MTimeIOld,
                           notify = NotifyL} = File,
                     #state{prefix = Prefix,
                            directory_length = DirectoryLength,
@@ -1114,21 +1236,21 @@ request_append_file([],
                            files = Files,
                            use_http_get_suffix = true} = State, Dispatcher) ->
     case files_size_check(Contents,
-                          FilesSize - OldContentsSize,
+                          FilesSize - ContentsSizeOld,
                           FilesSizeLimit) of
-        {ok, ContentsSize, NewFilesSize} ->
+        {ok, ContentsSize, FilesSizeNew} ->
             case file:write_file(FilePath, Contents, [raw]) of
                 ok ->
                     {ok, FileInfo} = read_file_info(FilePath),
                     file_notify_send(NotifyL, Contents, Dispatcher),
                     #file_info{mtime = MTime,
                                access = Access} = FileInfo,
-                    MTimeI = mtime_i_update(OldMTimeI, MTime),
-                    NewFile = File#file{size = ContentsSize,
+                    MTimeI = mtime_i_update(MTimeIOld, MTime),
+                    FileNew = File#file{size = ContentsSize,
                                         mtime_i = MTimeI,
                                         access = Access},
                     FileName = lists:nthtail(DirectoryLength, FilePath),
-                    NewFiles = file_refresh(FileName, NewFile,
+                    FilesNew = file_refresh(FileName, FileNew,
                                             Files, true, Prefix),
                     ETag = cache_header_etag(MTimeI),
                     Headers = if
@@ -1139,8 +1261,9 @@ request_append_file([],
                     end,
                     {reply,
                      FileHeaders ++ Headers, Contents,
-                     State#state{files_size = NewFilesSize,
-                                 files = NewFiles}};
+                     replace_hit(FileNew, undefined,
+                                 State#state{files_size = FilesSizeNew,
+                                             files = FilesNew})};
                 {error, Reason} ->
                     ?LOG_ERROR("file write ~s error: ~p",
                                [FilePath, Reason]),
@@ -1159,14 +1282,14 @@ request_append_file([],
     end;
 request_append_file([{undefined, Request} | RangeRequests],
                     #file{contents = Contents} = File, State, Dispatcher) ->
-    NewContents = if
+    ContentsNew = if
         is_binary(Request) ->
             <<Contents/binary, Request/binary>>;
         is_list(Request) ->
             erlang:iolist_to_binary([Contents, Request])
     end,
     request_append_file(RangeRequests,
-                        File#file{contents = NewContents}, State, Dispatcher);
+                        File#file{contents = ContentsNew}, State, Dispatcher);
 request_append_file([{Range, Request} | RangeRequests],
                     #file{contents = Contents} = File, State, Dispatcher) ->
     RequestBin = if
@@ -1202,7 +1325,7 @@ request_append_file([{Range, Request} | RangeRequests],
     end,
     if
         Start =< End ->
-            NewContents = if
+            ContentsNew = if
                 End < ContentLength ->
                     StartBinBits = Start * 8,
                     EndBinBits = (End - Start + 1) * 8,
@@ -1228,7 +1351,7 @@ request_append_file([{Range, Request} | RangeRequests],
                       RequestBin/binary>>
             end,
             request_append_file(RangeRequests,
-                                File#file{contents = NewContents},
+                                File#file{contents = ContentsNew},
                                 State, Dispatcher);
         true ->
             ContentLengthBin = erlang:integer_to_binary(ContentLength),
@@ -1237,60 +1360,6 @@ request_append_file([{Range, Request} | RangeRequests],
               {<<"content-range">>,
                <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
               contents_ranges_headers(true)],
-             <<>>, State}
-    end.
-
-request_append(#file{contents = Contents,
-                     mtime_i = MTimeI,
-                     write = Write,
-                     write_appends = Appends} = File,
-               Name, RequestInfo, Request, Timeout,
-               #state{service = Service,
-                      files = Files,
-                      use_http_get_suffix = true} = State, Dispatcher) ->
-    case lists:member(append, Write) of
-        true ->
-            KeyValues = cloudi_request_info:
-                        key_value_parse(RequestInfo),
-            ETag = cache_header_etag(MTimeI),
-            case contents_ranges_append(ETag, KeyValues, MTimeI) of
-                {Status, {Range, Id, true, Index}} % last range
-                    when Status == 200;
-                         Status == 206 ->
-                    NextAppends = request_append_store(Id, Index,
-                                                       Range, Request,
-                                                       Appends),
-                    {value,
-                     RangeRequests,
-                     NewAppends} = request_append_take(Id, NextAppends),
-                    request_append_file(RangeRequests,
-                                        File#file{write_appends = NewAppends},
-                                        State, Dispatcher);
-                {Status, {Range, Id, false, Index}} % not the last range
-                    when Status == 200;
-                         Status == 206 ->
-                    NewAppends = request_append_store(Id, Index, Name,
-                                                      Range, Request, Timeout,
-                                                      Appends, Service),
-                    NewFile = File#file{write_appends = NewAppends},
-                    NewFiles = cloudi_x_trie:store(Name, NewFile, Files),
-                    {reply, [], <<>>, State#state{files = NewFiles}};
-                {416, undefined} ->
-                    {reply,
-                     [{<<"status">>, <<"416">>},
-                      contents_ranges_header_length(Contents) |
-                      contents_ranges_headers(true)],
-                     <<>>, State};
-                {Status, undefined}
-                    when Status == 400;
-                         Status == 410 ->
-                    {reply,
-                     [{<<"status">>, erlang:integer_to_binary(Status)}],
-                     <<>>, State}
-            end;
-        false ->
-            {reply,
-             [{<<"status">>, <<"400">>}],
              <<>>, State}
     end.
 
@@ -1309,8 +1378,8 @@ notify(Agent, Name, [I | _] = NotifyName,
                                        priority = NotifyPriority}) of
         {{error, _}, _} = Error ->
             Error;
-        {{ok, {error, _} = Error}, NewAgent} ->
-            {Error, NewAgent};
+        {{ok, {error, _} = Error}, AgentNew} ->
+            {Error, AgentNew};
         {{ok, Contents}, _} = Success when is_binary(Contents) ->
             Success
     end.
@@ -1331,23 +1400,23 @@ files_notify(#file_notify{timeout = NotifyTimeout,
         #file{contents = Contents1,
               path = FilePath,
               notify = NotifyL} = File,
-        NewNotifyTimeout = if
+        NotifyTimeoutNew = if
             is_integer(NotifyTimeout) ->
                 NotifyTimeout;
             true ->
                 Timeout
         end,
-        NewNotifyPriority = if
+        NotifyPriorityNew = if
             is_integer(NotifyPriority) ->
                 NotifyPriority;
             true ->
                 Priority
         end,
-        NewNotify = Notify#file_notify{timeout = NewNotifyTimeout,
-                                       priority = NewNotifyPriority},
+        NotifyNew = Notify#file_notify{timeout = NotifyTimeoutNew,
+                                       priority = NotifyPriorityNew},
         FileName = lists:nthtail(DirectoryLength, FilePath),
         Files3 = file_refresh(FileName,
-                              File#file{notify = [NewNotify | NotifyL]},
+                              File#file{notify = [NotifyNew | NotifyL]},
                               Files2, UseHttpGetSuffix, Prefix),
         Contents2 = if
             Contents0 =:= undefined ->
@@ -1404,15 +1473,15 @@ service_name_suffix_write_append(FileName) ->
 
 files_size_check(Contents, FilesSize, FilesSizeLimit) ->
     ContentsSize = byte_size(Contents),
-    NewFilesSize = ContentsSize + FilesSize,
+    FilesSizeNew = ContentsSize + FilesSize,
     if
         FilesSizeLimit =:= undefined ->
-            {ok, ContentsSize, NewFilesSize};
+            {ok, ContentsSize, FilesSizeNew};
         is_integer(FilesSizeLimit) ->
             if
-                NewFilesSize =< FilesSizeLimit ->
-                    {ok, ContentsSize, NewFilesSize};
-                NewFilesSize > FilesSizeLimit ->
+                FilesSizeNew =< FilesSizeLimit ->
+                    {ok, ContentsSize, FilesSizeNew};
+                FilesSizeNew > FilesSizeLimit ->
                     {error, ContentsSize}
             end
     end.
@@ -1704,19 +1773,22 @@ file_notify_send([#file_notify{send = Send,
     cloudi_service:Send(Dispatcher, Name, <<>>, Contents, Timeout, Priority),
     file_notify_send(NotifyL, Contents, Dispatcher).
 
-read_files_init(ReadL, Directory, Toggle, ContentTypeLookup,
+read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
                 UseContentDisposition, UseHttpGetSuffix,
-                FilesSizeLimit, Prefix, Dispatcher) ->
-    Finit = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
-                {FilesSize0, Files0}) ->
+                FilesSizeLimit, Directory, Prefix, Dispatcher) ->
+    FilesSize0 = 0,
+    Files0 = cloudi_x_trie:new(),
+    InitF = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
+                {ReplaceHit1, FilesSize1, Files1}) ->
         case cloudi_service_name:pattern(FileName) of
             false ->
+                ReplaceHit2 = replace_add(FileName, Replace, ReplaceHit1),
                 #file_info{access = Access,
                            mtime = MTime} = FileInfo,
                 case file_read_data(FileInfo, FilePath,
                                     SegmentI, SegmentSize,
-                                    FilesSize0, FilesSizeLimit) of
-                    {ok, Contents, ContentsSize, FilesSize1} ->
+                                    FilesSize1, FilesSizeLimit) of
+                    {ok, Contents, ContentsSize, FilesSize2} ->
                         Headers = file_headers(FilePath,
                                                ContentTypeLookup,
                                                UseContentDisposition),
@@ -1727,8 +1799,8 @@ read_files_init(ReadL, Directory, Toggle, ContentTypeLookup,
                                      mtime_i = {MTime, 0},
                                      access = Access,
                                      toggle = Toggle},
-                        {FilesSize1,
-                         file_add_read(FileName, File, Files0,
+                        {ReplaceHit2, FilesSize2,
+                         file_add_read(FileName, File, Files1,
                                        UseHttpGetSuffix, Prefix,
                                        Dispatcher)};
                     {files_size, ContentsSize} ->
@@ -1736,57 +1808,72 @@ read_files_init(ReadL, Directory, Toggle, ContentTypeLookup,
                                   "excluded due to ~w kB files_size",
                                   [FilePath, ContentsSize div 1024,
                                    FilesSizeLimit div 1024]),
-                        {FilesSize0, Files0};
+                        {ReplaceHit2, FilesSize1, Files1};
                     {error, Reason} ->
                         ?LOG_ERROR("file read ~s error: ~p",
                                    [FilePath, Reason]),
-                        {FilesSize0, Files0}
+                        {ReplaceHit2, FilesSize1, Files1}
                 end;
             true ->
                 ?LOG_ERROR("file name \"~s\" error: invalid character(s)",
                            [FilePath]),
-                {FilesSize0, Files0}
+                {ReplaceHit1, FilesSize1, Files1}
         end
     end,
-    Ainit = {0, cloudi_x_trie:new()},
+    InitA = {ReplaceHit0, FilesSize0, Files0},
     if
         ReadL == [] ->
-            fold_files(Directory, Finit, Ainit);
+            fold_files(Directory, InitF, InitA);
         true ->
-            fold_files_exact(ReadL, Directory, Finit, Ainit)
+            fold_files_exact(ReadL, Directory, InitF, InitA)
     end.
 
-read_files_refresh(ReadL, Directory, Toggle,
+read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                    FilesSize0, Files0, ContentTypeLookup,
                    UseContentDisposition, UseHttpGetSuffix,
-                   FilesSizeLimit, PrefixLength, Prefix, Dispatcher) ->
-    Frefresh = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
-                   {FilesSize1, Files1}) ->
+                   FilesSizeLimit, DirectoryLength, Directory,
+                   PrefixLength, Prefix, Dispatcher) ->
+    RefreshRemoveF = fun(FileName, _,
+                         {ReplaceHit1, Replace1, FilesSize1, Files1}) ->
+        case file_exists(FileName, Files1, UseHttpGetSuffix, Prefix) of
+            {ok, #file{size = ContentsSizeOld,
+                       write = []}} ->
+                {ReplaceHit1, Replace1,
+                 FilesSize1 - ContentsSizeOld,
+                 file_remove_read(FileName, Files1,
+                                  UseHttpGetSuffix, Prefix,
+                                  Dispatcher)};
+            _ ->
+                {ReplaceHit1, Replace1, FilesSize1, Files1}
+        end
+    end,
+    RefreshUpdateF = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
+                         {ReplaceHit1, Replace1, FilesSize1, Files1}) ->
         #file_info{access = Access,
                    mtime = MTime} = FileInfo,
         case file_exists(FileName, Files1, UseHttpGetSuffix, Prefix) of
             {ok, #file{mtime_i = {MTime, _}} = File0} ->
                 File1 = File0#file{toggle = Toggle},
-                {FilesSize1,
+                {ReplaceHit1, Replace1, FilesSize1,
                  file_refresh(FileName, File1, Files1,
                               UseHttpGetSuffix, Prefix)};
-            {ok, #file{size = OldContentsSize,
-                       mtime_i = OldMTimeI,
+            {ok, #file{size = ContentsSizeOld,
+                       mtime_i = MTimeIOld,
                        notify = NotifyL,
                        write = Write} = File0} ->
                 case file_read_data(FileInfo, FilePath,
                                     SegmentI, SegmentSize,
-                                    FilesSize1 - OldContentsSize,
+                                    FilesSize1 - ContentsSizeOld,
                                     FilesSizeLimit) of
-                    {ok, Contents, ContentsSize, NextFilesSize1} ->
+                    {ok, Contents, ContentsSize, FilesSize2} ->
                         file_notify_send(NotifyL, Contents, Dispatcher),
-                        MTimeI = mtime_i_update(OldMTimeI, MTime),
+                        MTimeI = mtime_i_update(MTimeIOld, MTime),
                         File1 = File0#file{contents = Contents,
                                            size = ContentsSize,
                                            mtime_i = MTimeI,
                                            access = Access,
                                            toggle = Toggle},
-                        {NextFilesSize1,
+                        {ReplaceHit1, Replace1, FilesSize2,
                          file_refresh(FileName, File1, Files1,
                                       UseHttpGetSuffix, Prefix)};
                     {files_size, ContentsSize} ->
@@ -1794,17 +1881,22 @@ read_files_refresh(ReadL, Directory, Toggle,
                                   "excluded due to ~w kB files_size",
                                   [FilePath, ContentsSize div 1024,
                                    FilesSizeLimit div 1024]),
-                        {FilesSize1, Files1};
+                        {ReplaceHit1, Replace1, FilesSize1, Files1};
                     {error, _} when Write =:= [] ->
                         % file was removed during traversal
-                        {FilesSize1 - OldContentsSize,
+                        {Replace2,
+                         ReplaceHit2} = replace_remove(FileName,
+                                                       Replace1,
+                                                       ReplaceHit1),
+                        {ReplaceHit2, Replace2,
+                         FilesSize1 - ContentsSizeOld,
                          file_remove_read(FileName, Files1,
                                           UseHttpGetSuffix, Prefix,
                                           Dispatcher)};
                     {error, _} ->
                         File1 = File0#file{access = Access,
                                            toggle = Toggle},
-                        {FilesSize1,
+                        {ReplaceHit1, Replace1, FilesSize1,
                          file_refresh(FileName, File1, Files1,
                                       UseHttpGetSuffix, Prefix)}
                 end;
@@ -1813,7 +1905,7 @@ read_files_refresh(ReadL, Directory, Toggle,
                                     SegmentI, SegmentSize,
                                     FilesSize1,
                                     FilesSizeLimit) of
-                    {ok, Contents, ContentsSize, NextFilesSize1} ->
+                    {ok, Contents, ContentsSize, FilesSize2} ->
                         Headers = file_headers(FilePath,
                                                ContentTypeLookup,
                                                UseContentDisposition),
@@ -1824,7 +1916,7 @@ read_files_refresh(ReadL, Directory, Toggle,
                                      mtime_i = {MTime, 0},
                                      access = Access,
                                      toggle = Toggle},
-                        {NextFilesSize1,
+                        {ReplaceHit1, Replace1, FilesSize2,
                          file_add_read(FileName, File, Files1,
                                        UseHttpGetSuffix, Prefix,
                                        Dispatcher)};
@@ -1833,55 +1925,66 @@ read_files_refresh(ReadL, Directory, Toggle,
                                   "excluded due to ~w kB files_size",
                                   [FilePath, ContentsSize div 1024,
                                    FilesSizeLimit div 1024]),
-                        {FilesSize1, Files1};
+                        {ReplaceHit1, Replace1, FilesSize1, Files1};
                     {error, _} ->
                         % file was removed during traversal
-                        {FilesSize1,
+                        {Replace2,
+                         ReplaceHit2} = replace_remove(FileName,
+                                                       Replace1,
+                                                       ReplaceHit1),
+                        {ReplaceHit2, Replace2, FilesSize1,
                          file_remove_read(FileName, Files1,
                                           UseHttpGetSuffix, Prefix,
                                           Dispatcher)}
                 end
         end
     end,
-    Arefresh = {FilesSize0, Files0},
-    if
-        ReadL == [] ->
-            {FilesSize2,
-             Files2} = fold_files(Directory, Frefresh, Arefresh),
-            % remove anything not updated, since the file was removed
-            {FilesSizesLN,
-             FilesN} = cloudi_x_trie:foldl(fun(Pattern,
-                                               #file{size = OldContentsSize,
-                                                     path = FilePath,
-                                                     toggle = FileToggle,
-                                                     write = Write} = File,
-                                               {FilesSizesL0, Files3}) ->
+    RefreshA = {ReplaceHit0, Replace0, FilesSize0, Files0},
+    {ReplaceHitN,
+     ReplaceN,
+     FilesSize3,
+     Files3} = replace_fold(ReplaceHit0, Replace0,
+                            ReadL, Directory,
+                            RefreshRemoveF, RefreshUpdateF, RefreshA),
+    % remove anything not updated, since the file was removed
+    {_,
+     FilesSizeN,
+     FilesN} = cloudi_x_trie:fold(fun(Pattern,
+                                      #file{size = ContentsSizeOld,
+                                            path = FilePath,
+                                            toggle = FileToggle,
+                                            write = Write} = File,
+                                      {Removed,
+                                       FilesSize4, Files4}) ->
+        if
+            FileToggle =/= Toggle ->
                 if
-                    FileToggle =/= Toggle ->
-                        if
-                            Write =:= [] ->
-                                Suffix = lists:nthtail(PrefixLength, Pattern),
-                                cloudi_service:unsubscribe(Dispatcher, Suffix),
-                                {lists:keystore(FilePath, 1, FilesSizesL0,
-                                                {FilePath, OldContentsSize}),
-                                 cloudi_x_trie:erase(Pattern, Files3)};
+                    Write =:= [] ->
+                        undefined = ReplaceN,
+                        FileName = lists:nthtail(DirectoryLength,
+                                                 FilePath),
+                        Suffix = lists:nthtail(PrefixLength, Pattern),
+                        cloudi_service:unsubscribe(Dispatcher, Suffix),
+                        case cloudi_x_trie:is_key(FileName, Removed) of
                             true ->
-                                {FilesSizesL0,
-                                 cloudi_x_trie:store(Pattern,
-                                                     File#file{toggle = Toggle},
-                                                     Files3)}
+                                {Removed, FilesSize4,
+                                 cloudi_x_trie:erase(Pattern, Files4)};
+                            false ->
+                                {cloudi_x_trie:store(FileName, Removed),
+                                 FilesSize4 - ContentsSizeOld,
+                                 cloudi_x_trie:erase(Pattern, Files4)}
                         end;
                     true ->
-                        {FilesSizesL0, Files3}
-                end
-            end, {[], Files2}, Files2),
-            FilesSizeN = lists:foldl(fun({_, OldContentSize}, FilesSize3) ->
-                FilesSize3 - OldContentSize
-            end, FilesSize2, FilesSizesLN),
-            {FilesSizeN, FilesN};
-        true ->
-            fold_files_exact(ReadL, Directory, Frefresh, Arefresh)
-    end.
+                        {Removed, FilesSize4,
+                         cloudi_x_trie:store(Pattern,
+                                             File#file{toggle = Toggle},
+                                             Files4)}
+                end;
+            true ->
+                {Removed, FilesSize4, Files4}
+        end
+    end, {cloudi_x_trie:new(), FilesSize3, Files3}, Files3),
+    {ReplaceHitN, ReplaceN, FilesSizeN, FilesN}.
 
 -type fold_files_f() :: fun((string(), string(), #file_info{},
                              integer() | undefined,
@@ -2166,11 +2269,11 @@ contents_ranges_append(ETag, KeyValues, {MTime, _}) ->
     end,
     case contents_ranges_read(ETag, KeyValues, MTime) of
         {200, undefined} ->
-            NewLast = Last orelse (Id =:= undefined),
-            {200, {undefined, Id, NewLast, Index}};
+            LastNew = Last orelse (Id =:= undefined),
+            {200, {undefined, Id, LastNew, Index}};
         {206, [Range]} ->
-            NewLast = Last orelse (Id =:= undefined),
-            {206, {Range, Id, NewLast, Index}};
+            LastNew = Last orelse (Id =:= undefined),
+            {206, {Range, Id, LastNew, Index}};
         {206, [_ | _] = RangeList} ->
             try lists:nth(Index + 1, RangeList) of
                 Range ->
@@ -2354,6 +2457,108 @@ content_range_list_check([I | RangeList], Boundary,
     when is_integer(I) ->
     content_range_list_check([{I, infinity} | RangeList], Boundary,
                              ContentLengthBin, ContentLength).
+
+replace_new(true) ->
+    replace_new(lfuda); % default algorithm
+replace_new(lfuda) ->
+    #lfuda{policy = lfuda};
+replace_new(lfuda_gdsf) ->
+    #lfuda{policy = gdsf}.
+
+replace_add(_, undefined, ReplaceHit) ->
+    ReplaceHit;
+replace_add(FileName,
+            #lfuda{age = Age}, ReplaceHit) ->
+    PriorityKey = Age,
+    cloudi_x_trie:store(FileName, {PriorityKey, 0}, ReplaceHit).
+
+replace_remove(_, undefined, ReplaceHit) ->
+    ReplaceHit;
+replace_remove(FileName,
+               #lfuda{age = Age} = Replace, ReplaceHit) ->
+    case cloudi_x_trie:take(FileName, ReplaceHit) of
+        {{PriorityKey, _}, ReplaceHitNew} ->
+            {Replace#lfuda{age = erlang:max(Age, PriorityKey)},
+             ReplaceHitNew};
+        error ->
+            {Replace, ReplaceHit}
+    end.
+
+replace_hit(_, _,
+            #state{replace = undefined} = State) ->
+    State;
+replace_hit(#file{size = ContentsSize,
+                  path = FilePath}, _TimeNativeOld,
+            #state{directory_length = DirectoryLength,
+                   replace = #lfuda{policy = Policy,
+                                    age = Age},
+                   replace_hit = ReplaceHit} = State) ->
+    FileName = lists:nthtail(DirectoryLength, FilePath),
+    ReplaceHitNew = cloudi_x_trie:update(FileName, fun({_, HitsOld}) ->
+        Hits = HitsOld + 1,
+        PriorityKey = if
+            Policy =:= lfuda ->
+                % Ki = Ci * Fi + L with Ci set to 1
+                Hits + Age;
+            Policy =:= gdsf ->
+                % Ki = Fi * Ci / Si + L with Ci set to 1
+                Hits div ContentsSize + Age
+        end,
+        % first tuple element is used as the sorting key in descending order
+        % (when the cached data is refreshed from the filesystem)
+        {PriorityKey, Hits}
+    end, {Age, 1}, ReplaceHit),
+    State#state{replace_hit = ReplaceHitNew}.
+
+replace_fold(_, undefined, ReadL, Directory,
+             _, UpdateF, A) ->
+    if
+        ReadL == [] ->
+            fold_files(Directory, UpdateF, A);
+        true ->
+            fold_files_exact(ReadL, Directory, UpdateF, A)
+    end;
+replace_fold(ReplaceHit, #lfuda{} = Replace, ReadL, Directory,
+             RemoveF, UpdateF, A) ->
+    ReplaceRemove0 = ReplaceHit,
+    ReplaceList0 = [],
+    ReplaceF = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
+                   {ReplaceRemove1, ReplaceList1}) ->
+        {PriorityKey,
+         ReplaceRemove3} = case cloudi_x_trie:take(FileName, ReplaceRemove1) of
+            {{PriorityKeyValue, _}, ReplaceRemove2} ->
+                {PriorityKeyValue,
+                 ReplaceRemove2};
+            error ->
+                {Replace#lfuda.age,
+                 ReplaceRemove1}
+        end,
+        ReplaceFile = {PriorityKey,
+                       FilePath, FileName, FileInfo, SegmentI, SegmentSize},
+        {ReplaceRemove3,
+         lists:keymerge(1, ReplaceList1, [ReplaceFile])}
+    end,
+    ReplaceA = {ReplaceRemove0, ReplaceList0},
+    {ReplaceRemoveN,
+     ReplaceListN} = if
+        ReadL == [] ->
+            fold_files(Directory, ReplaceF, ReplaceA);
+        true ->
+            fold_files_exact(ReadL, Directory, ReplaceF, ReplaceA)
+    end,
+    UpdateA = cloudi_x_trie:fold(RemoveF, A, ReplaceRemoveN),
+    replace_fold_list(lists:reverse(ReplaceListN), UpdateF, UpdateA).
+
+replace_fold_list([], _, A) ->
+    A;
+replace_fold_list([{_, FilePath, FileName, FileInfo, SegmentI, SegmentSize} |
+                   ReplaceList], F, A) ->
+    replace_fold_list(ReplaceList, F,
+                      F(FilePath, FileName, FileInfo,
+                        SegmentI, SegmentSize, A)).
+
+datetime_utc(TimeNative) ->
+    cloudi_timestamp:datetime_utc(TimeNative + erlang:time_offset()).
 
 rfc1123_format_day(1) ->
     "Mon";

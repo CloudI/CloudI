@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
+%%% @copyright 2015-2021 Michael Truog
 %%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -38,6 +38,7 @@
 
 %% external interface
 -export([convert/3,
+         datetime_utc/1,
          datetime_utc_to_string/1,
          timestamp/0,
          native/0,
@@ -160,6 +161,28 @@ convert(Time, FromUnit, ToUnit) ->
             ToUnit
     end,
     erlang:convert_time_unit(Time, FromUnitDeprecated, ToUnitDeprecated).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a datetime in UTC from native time units.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec datetime_utc(TimeNativeNow :: integer()) ->
+    calendar:datetime().
+
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+datetime_utc(TimeNativeNow) ->
+    calendar:system_time_to_universal_time(TimeNativeNow, native).
+-else.
+datetime_utc(TimeNativeNow) ->
+    TotalMicroSeconds = convert(TimeNativeNow, native, microsecond),
+    TotalSeconds = TotalMicroSeconds div 1000000,
+    MegaSeconds = TotalSeconds div 1000000,
+    Seconds = TotalSeconds - MegaSeconds * 1000000,
+    MicroSeconds = TotalMicroSeconds - TotalSeconds * 1000000,
+    calendar:now_to_universal_time({MegaSeconds, Seconds, MicroSeconds}).
 -endif.
 
 %%-------------------------------------------------------------------------
