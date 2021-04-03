@@ -1887,7 +1887,12 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                                            mtime_i = MTimeI,
                                            access = Access,
                                            toggle = Toggle},
-                        {ReplaceHit1, Replace1, FilesSize2,
+                        ReplaceHit2 = replace_hit_update(FileName,
+                                                         ContentsSize,
+                                                         TimeNative,
+                                                         Replace1,
+                                                         ReplaceHit1),
+                        {ReplaceHit2, Replace1, FilesSize2,
                          file_refresh(FileName, File1, Files1,
                                       UseHttpGetSuffix, Prefix)};
                     {files_size, ContentsSize} ->
@@ -2499,8 +2504,9 @@ replace_add(FileName, TimeNative,
         Value
     end, TimeNative, ReplaceHit).
 
-replace_remove(_, undefined, ReplaceHit) ->
-    ReplaceHit;
+replace_remove(_, undefined = Replace, ReplaceHit) ->
+    {Replace,
+     ReplaceHit};
 replace_remove(FileName,
                #lfuda{age = Age} = Replace, ReplaceHit) ->
     case cloudi_x_trie:take(FileName, ReplaceHit) of
@@ -2525,13 +2531,22 @@ replace_hit(_, _,
             #state{replace = undefined} = State) ->
     State;
 replace_hit(#file{size = ContentsSize,
-                  path = FilePath}, _TimeNativeOld,
+                  path = FilePath}, TimeNativeOld,
             #state{directory_length = DirectoryLength,
-                   replace = #lfuda{policy = Policy,
-                                    age = Age},
+                   replace = Replace,
                    replace_hit = ReplaceHit} = State) ->
     FileName = lists:nthtail(DirectoryLength, FilePath),
-    ReplaceHitNew = cloudi_x_trie:update(FileName, fun({_, HitsOld}) ->
+    State#state{replace_hit = replace_hit_update(FileName, ContentsSize,
+                                                 TimeNativeOld,
+                                                 Replace, ReplaceHit)}.
+
+replace_hit_update(_, _, _,
+                   undefined, ReplaceHit) ->
+    ReplaceHit;
+replace_hit_update(FileName, ContentsSize, _,
+                   #lfuda{policy = Policy,
+                          age = Age}, ReplaceHit) ->
+    cloudi_x_trie:update(FileName, fun({_, HitsOld}) ->
         Hits = HitsOld + 1,
         PriorityKey = if
             Policy =:= lfuda ->
@@ -2544,21 +2559,16 @@ replace_hit(#file{size = ContentsSize,
         % first tuple element is used as the sorting key in descending order
         % (when the cached data is refreshed from the filesystem)
         {PriorityKey, Hits}
-    end, {Age, 1}, ReplaceHit),
-    State#state{replace_hit = ReplaceHitNew};
-replace_hit(#file{path = FilePath}, TimeNativeOld,
-            #state{directory_length = DirectoryLength,
-                   replace = #lru{},
-                   replace_hit = ReplaceHit} = State) ->
-    FileName = lists:nthtail(DirectoryLength, FilePath),
+    end, {Age, 1}, ReplaceHit);
+replace_hit_update(FileName, _, TimeNativeOld,
+                   #lru{}, ReplaceHit) ->
     TimeNative = if
         TimeNativeOld =:= undefined ->
             cloudi_timestamp:native_monotonic();
         is_integer(TimeNativeOld) ->
             TimeNativeOld
     end,
-    ReplaceHitNew = cloudi_x_trie:store(FileName, TimeNative, ReplaceHit),
-    State#state{replace_hit = ReplaceHitNew}.
+    cloudi_x_trie:store(FileName, TimeNative, ReplaceHit).
 
 replace_fold(_, undefined, ReadL, Directory,
              _, UpdateF, A) ->
