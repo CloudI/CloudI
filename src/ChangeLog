@@ -7,6 +7,9 @@
       the cache replacement algorithm
       (when both refresh and files_size arguments are set,
        default algorithm is LFUDA)
+    * Fix cloudi_service_filesystem filesystem access to ensure
+      device files, named pipes and other unreadable things
+      do not block a refresh
 
 2021-03-31 Michael Truog   <mjtruog at protonmail dot com>
 

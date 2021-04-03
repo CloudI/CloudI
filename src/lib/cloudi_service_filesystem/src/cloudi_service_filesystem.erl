@@ -80,6 +80,7 @@
         % algorithm is used and the LFUDA policy (high byte hit rate).
         % When set to lfuda_gdsf the LFUDA algorithm is used and the
         % "GreedyDual-Size with Frequency" (GDSF) policy (high hit rate).
+        % When set to lru the "Least Recently Used" (LRU) algorithm is used.
         %
         % LFUDA algorithm information:
         % M. Arlitt, R. F. L. Cherkasova, J. Dilley, and T. Jin.
@@ -157,6 +158,10 @@
         age = 0 :: non_neg_integer()
     }).
 
+-record(lru,
+    {
+    }).
+
 -record(state,
     {
         prefix :: string(),
@@ -168,7 +173,7 @@
         files_size :: non_neg_integer(),
         refresh :: undefined | pos_integer(),
         cache :: undefined | pos_integer(),
-        replace :: undefined | #lfuda{},
+        replace :: undefined | #lfuda{} | #lru{},
         replace_hit :: undefined | cloudi_x_trie:cloudi_x_trie(),
         http_clock_skew_max :: non_neg_integer() | undefined,
         use_http_get_suffix :: boolean(),
@@ -396,7 +401,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
              undefined};
         Replace0 =:= true;
         Replace0 =:= lfuda;
-        Replace0 =:= lfuda_gdsf ->
+        Replace0 =:= lfuda_gdsf;
+        Replace0 =:= lru ->
             true = is_integer(FilesSizeLimitN) andalso
                    is_integer(Refresh),
             {replace_new(Replace0),
@@ -1776,13 +1782,15 @@ file_notify_send([#file_notify{send = Send,
 read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
                 UseContentDisposition, UseHttpGetSuffix,
                 FilesSizeLimit, Directory, Prefix, Dispatcher) ->
+    TimeNative = cloudi_timestamp:native_monotonic(),
     FilesSize0 = 0,
     Files0 = cloudi_x_trie:new(),
     InitF = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
                 {ReplaceHit1, FilesSize1, Files1}) ->
         case cloudi_service_name:pattern(FileName) of
             false ->
-                ReplaceHit2 = replace_add(FileName, Replace, ReplaceHit1),
+                ReplaceHit2 = replace_add(FileName, TimeNative,
+                                          Replace, ReplaceHit1),
                 #file_info{access = Access,
                            mtime = MTime} = FileInfo,
                 case file_read_data(FileInfo, FilePath,
@@ -1833,6 +1841,7 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                    UseContentDisposition, UseHttpGetSuffix,
                    FilesSizeLimit, DirectoryLength, Directory,
                    PrefixLength, Prefix, Dispatcher) ->
+    TimeNative = cloudi_timestamp:native_monotonic(),
     RefreshRemoveF = fun(FileName, _,
                          {ReplaceHit1, Replace1, FilesSize1, Files1}) ->
         case file_exists(FileName, Files1, UseHttpGetSuffix, Prefix) of
@@ -1906,7 +1915,8 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                                       UseHttpGetSuffix, Prefix)}
                 end;
             error ->
-                ReplaceHit2 = replace_add(FileName, Replace1, ReplaceHit1),
+                ReplaceHit2 = replace_add(FileName, TimeNative,
+                                          Replace1, ReplaceHit1),
                 case file_read_data(FileInfo, FilePath,
                                     SegmentI, SegmentSize,
                                     FilesSize1,
@@ -2008,7 +2018,10 @@ fold_files_exact_element([{FileName, SegmentI, SegmentSize} | ReadL],
     FilePath = filename:join(Directory, FileName),
     case read_file_info(FilePath) of
         {ok, #file_info{type = Type} = FileInfo} ->
-            true = (Type /= directory),
+            true = (Type /= directory) andalso
+                   (Type /= device) andalso
+                   (Type /= other) andalso
+                   (Type /= undefined),
             fold_files_exact_element(ReadL, Directory, F,
                                      F(FilePath, FileName, FileInfo,
                                        SegmentI, SegmentSize, A));
@@ -2073,6 +2086,12 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
         {ok, #file_info{type = directory}} ->
             fold_files_directory(FileNames, Directory, F,
                                  fold_files(Directory, FileName, F, A));
+        {ok, #file_info{type = Type}}
+            when Type =:= device;
+                 Type =:= other;
+                 Type =:= undefined ->
+            ?LOG_WARN("file ~s type ~s", [FilePath, Type]),
+            fold_files_directory(FileNames, Directory, F, A);
         {ok, FileInfo} ->
             fold_files_directory(FileNames, Directory, F,
                                  fold_files_f(FilePath, FileName, FileInfo,
@@ -2463,15 +2482,22 @@ replace_new(true) ->
 replace_new(lfuda) ->
     #lfuda{policy = lfuda};
 replace_new(lfuda_gdsf) ->
-    #lfuda{policy = gdsf}.
+    #lfuda{policy = gdsf};
+replace_new(lru) ->
+    #lru{}.
 
-replace_add(_, undefined, ReplaceHit) ->
+replace_add(_, _, undefined, ReplaceHit) ->
     ReplaceHit;
-replace_add(FileName,
+replace_add(FileName, _,
             #lfuda{age = Age}, ReplaceHit) ->
     cloudi_x_trie:update(FileName, fun(Value) ->
         Value
-    end, {Age, 0}, ReplaceHit).
+    end, {Age, 0}, ReplaceHit);
+replace_add(FileName, TimeNative,
+            #lru{}, ReplaceHit) ->
+    cloudi_x_trie:update(FileName, fun(Value) ->
+        Value
+    end, TimeNative, ReplaceHit).
 
 replace_remove(_, undefined, ReplaceHit) ->
     ReplaceHit;
@@ -2489,7 +2515,11 @@ replace_remove(FileName,
              ReplaceHitNew};
         error ->
             {Replace, ReplaceHit}
-    end.
+    end;
+replace_remove(FileName,
+               #lru{} = Replace, ReplaceHit) ->
+    {Replace,
+     cloudi_x_trie:erase(FileName, ReplaceHit)}.
 
 replace_hit(_, _,
             #state{replace = undefined} = State) ->
@@ -2515,6 +2545,19 @@ replace_hit(#file{size = ContentsSize,
         % (when the cached data is refreshed from the filesystem)
         {PriorityKey, Hits}
     end, {Age, 1}, ReplaceHit),
+    State#state{replace_hit = ReplaceHitNew};
+replace_hit(#file{path = FilePath}, TimeNativeOld,
+            #state{directory_length = DirectoryLength,
+                   replace = #lru{},
+                   replace_hit = ReplaceHit} = State) ->
+    FileName = lists:nthtail(DirectoryLength, FilePath),
+    TimeNative = if
+        TimeNativeOld =:= undefined ->
+            cloudi_timestamp:native_monotonic();
+        is_integer(TimeNativeOld) ->
+            TimeNativeOld
+    end,
+    ReplaceHitNew = cloudi_x_trie:store(FileName, TimeNative, ReplaceHit),
     State#state{replace_hit = ReplaceHitNew}.
 
 replace_fold(_, undefined, ReadL, Directory,
@@ -2525,19 +2568,31 @@ replace_fold(_, undefined, ReadL, Directory,
         true ->
             fold_files_exact(ReadL, Directory, UpdateF, A)
     end;
-replace_fold(ReplaceHit, #lfuda{} = Replace, ReadL, Directory,
+replace_fold(ReplaceHit, Replace, ReadL, Directory,
              RemoveF, UpdateF, A) ->
+    PriorityKeyDefault = case Replace of
+        #lfuda{age = Age} ->
+            Age;
+        #lru{} ->
+            0
+    end,
     ReplaceRemove0 = ReplaceHit,
     ReplaceList0 = [],
     ReplaceF = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
                    {ReplaceRemove1, ReplaceList1}) ->
         {PriorityKey,
          ReplaceRemove3} = case cloudi_x_trie:take(FileName, ReplaceRemove1) of
-            {{PriorityKeyValue, _}, ReplaceRemove2} ->
+            {ReplaceValue, ReplaceRemove2} ->
+                PriorityKeyValue = if
+                    is_tuple(ReplaceValue) ->
+                        element(1, ReplaceValue);
+                    is_integer(ReplaceValue) ->
+                        ReplaceValue
+                end,
                 {PriorityKeyValue,
                  ReplaceRemove2};
             error ->
-                {Replace#lfuda.age,
+                {PriorityKeyDefault,
                  ReplaceRemove1}
         end,
         ReplaceFile = {PriorityKey,
