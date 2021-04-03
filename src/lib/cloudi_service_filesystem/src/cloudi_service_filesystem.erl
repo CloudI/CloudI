@@ -60,7 +60,8 @@
 -define(DEFAULT_DIRECTORY,           undefined). % required argument, string
 -define(DEFAULT_FILES_SIZE,          undefined). % limit in KiB
         % Set the maximum amount of memory a single service
-        % process will use for file data.
+        % process will use for file data
+        % (n.b., does not limit write_append accumulated file data).
 -define(DEFAULT_REFRESH,             undefined). % seconds, see below:
         % The refresh frequency for updating the in-memory
         % copy of the file data from the filesystem based
@@ -114,6 +115,10 @@
         % (n.b., use to update with a range request in bytes).
         % If a service name pattern is provided, it must match at
         % least one existing file path.
+        % If used with files_size it is possible for append data
+        % to accumulate while maintaining file consistency in-memory
+        % if the files_size limit prevents the append data from being
+        % written to the filesystem.
 -define(DEFAULT_REDIRECT,                   []). % see below:
         % A list of file service name patterns
         % ({Pattern, RedirectPattern}) to provide a mapping from
@@ -2609,7 +2614,7 @@ replace_fold(ReplaceHit, Replace, ReadL, Directory,
         ReplaceFile = {PriorityKey,
                        FilePath, FileName, FileInfo, SegmentI, SegmentSize},
         {ReplaceRemove3,
-         lists:keymerge(1, ReplaceList1, [ReplaceFile])}
+         replace_fold_sort(ReplaceList1, ReplaceFile)}
     end,
     ReplaceA = {ReplaceRemove0, ReplaceList0},
     {ReplaceRemoveN,
@@ -2620,7 +2625,20 @@ replace_fold(ReplaceHit, Replace, ReadL, Directory,
             fold_files_exact(ReadL, Directory, ReplaceF, ReplaceA)
     end,
     UpdateA = cloudi_x_trie:fold(RemoveF, A, ReplaceRemoveN),
-    replace_fold_list(lists:reverse(ReplaceListN), UpdateF, UpdateA).
+    replace_fold_list(ReplaceListN, UpdateF, UpdateA).
+
+replace_fold_sort([], ReplaceFileAdd) ->
+    [ReplaceFileAdd];
+replace_fold_sort([{PriorityKey, _, _,
+                    #file_info{size = Size}, _, _} = ReplaceFile | ReplaceList],
+                  {PriorityKeyAdd, _, _,
+                   #file_info{size = SizeAdd}, _, _} = ReplaceFileAdd)
+    when (PriorityKeyAdd < PriorityKey) orelse
+         ((PriorityKeyAdd == PriorityKey) andalso (SizeAdd > Size)) ->
+    % PriorityKey descending, Size ascending order
+    [ReplaceFile | replace_fold_sort(ReplaceList, ReplaceFileAdd)];
+replace_fold_sort(ReplaceList, ReplaceFileAdd) ->
+    [ReplaceFileAdd | ReplaceList].
 
 replace_fold_list([], _, A) ->
     A;

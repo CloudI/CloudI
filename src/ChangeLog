@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-04-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_service_filesystem replace argument usage
+      so files are sorted based on PriorityKey and Size
+      to maximize the number of files loaded
+
 2021-04-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_filesystem replace argument for setting
