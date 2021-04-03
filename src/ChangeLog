@@ -10,6 +10,7 @@
     * Fix cloudi_service_filesystem filesystem access to ensure
       device files, named pipes and other unreadable things
       do not block a refresh
+    * Fix cloudi_service_filesystem KiB unit use
 
 2021-03-31 Michael Truog   <mjtruog at protonmail dot com>
 

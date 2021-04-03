@@ -58,7 +58,7 @@
 -include_lib("kernel/include/file.hrl").
 
 -define(DEFAULT_DIRECTORY,           undefined). % required argument, string
--define(DEFAULT_FILES_SIZE,          undefined). % limit in kB
+-define(DEFAULT_FILES_SIZE,          undefined). % limit in KiB
         % Set the maximum amount of memory a single service
         % process will use for file data.
 -define(DEFAULT_REFRESH,             undefined). % seconds, see below:
@@ -1089,8 +1089,8 @@ request_truncate(#file{size = ContentsSizeOld,
                                      <<>>, State}
                             end;
                         {error, ContentsSizeNew} ->
-                            ?LOG_WARN("file name ~s (size ~w kB) truncate "
-                                      "excluded due to ~w kB files_size",
+                            ?LOG_WARN("file name ~s (size ~w KiB) truncate "
+                                      "excluded due to ~w KiB files_size",
                                       [FilePath, ContentsSizeNew div 1024,
                                        FilesSizeLimit div 1024]),
                             {reply,
@@ -1278,8 +1278,8 @@ request_append_file([],
                      <<>>, State}
             end;
         {error, ContentsSize} ->
-            ?LOG_WARN("file name ~s (size ~w kB) append "
-                      "excluded due to ~w kB files_size",
+            ?LOG_WARN("file name ~s (size ~w KiB) append "
+                      "excluded due to ~w KiB files_size",
                       [FilePath, ContentsSize div 1024,
                        FilesSizeLimit div 1024]),
             {reply,
@@ -1812,8 +1812,8 @@ read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
                                        UseHttpGetSuffix, Prefix,
                                        Dispatcher)};
                     {files_size, ContentsSize} ->
-                        ?LOG_WARN("file name ~s (size ~w kB) "
-                                  "excluded due to ~w kB files_size",
+                        ?LOG_WARN("file name ~s (size ~w KiB) "
+                                  "excluded due to ~w KiB files_size",
                                   [FilePath, ContentsSize div 1024,
                                    FilesSizeLimit div 1024]),
                         {ReplaceHit2, FilesSize1, Files1};
@@ -1896,8 +1896,8 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                          file_refresh(FileName, File1, Files1,
                                       UseHttpGetSuffix, Prefix)};
                     {files_size, ContentsSize} ->
-                        ?LOG_WARN("file name ~s (size ~w kB) update "
-                                  "excluded due to ~w kB files_size",
+                        ?LOG_WARN("file name ~s (size ~w KiB) update "
+                                  "excluded due to ~w KiB files_size",
                                   [FilePath, ContentsSize div 1024,
                                    FilesSizeLimit div 1024]),
                         {ReplaceHit1, Replace1, FilesSize1, Files1};
@@ -1942,8 +1942,8 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
                                        UseHttpGetSuffix, Prefix,
                                        Dispatcher)};
                     {files_size, ContentsSize} ->
-                        ?LOG_WARN("file name ~s (size ~w kB) addition "
-                                  "excluded due to ~w kB files_size",
+                        ?LOG_WARN("file name ~s (size ~w KiB) addition "
+                                  "excluded due to ~w KiB files_size",
                                   [FilePath, ContentsSize div 1024,
                                    FilesSizeLimit div 1024]),
                         {ReplaceHit2, Replace1, FilesSize1, Files1};
@@ -2554,7 +2554,8 @@ replace_hit_update(FileName, ContentsSize, _,
                 Hits + Age;
             Policy =:= gdsf ->
                 % Ki = Fi * Ci / Si + L with Ci set to 1
-                Hits div ContentsSize + Age
+                % (Si is in KiB because files_size is in KiB)
+                Hits div kibibytes_consumed(ContentsSize) + Age
         end,
         % first tuple element is used as the sorting key in descending order
         % (when the cached data is refreshed from the filesystem)
@@ -2631,6 +2632,18 @@ replace_fold_list([{_, FilePath, FileName, FileInfo, SegmentI, SegmentSize} |
 
 datetime_utc(TimeNative) ->
     cloudi_timestamp:datetime_utc(TimeNative + erlang:time_offset()).
+
+kibibytes_consumed(Bytes)
+    when Bytes > 1024 ->
+    RoundUp = if
+        Bytes rem 1024 == 0 ->
+            0;
+        true ->
+            1
+    end,
+    Bytes div 1024 + RoundUp;
+kibibytes_consumed(_) ->
+    1.
 
 rfc1123_format_day(1) ->
     "Mon";
