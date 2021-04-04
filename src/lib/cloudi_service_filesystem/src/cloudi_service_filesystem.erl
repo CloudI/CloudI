@@ -165,6 +165,7 @@
 
 -record(lru,
     {
+        start :: cloudi_timestamp:native_monotonic()
     }).
 
 -record(state,
@@ -2494,7 +2495,7 @@ replace_new(lfuda) ->
 replace_new(lfuda_gdsf) ->
     #lfuda{policy = gdsf};
 replace_new(lru) ->
-    #lru{}.
+    #lru{start = erlang:system_info(start_time)}.
 
 replace_add(_, _, undefined, ReplaceHit) ->
     ReplaceHit;
@@ -2589,8 +2590,8 @@ replace_fold(ReplaceHit, Replace, ReadL, Directory,
     PriorityKeyDefault = case Replace of
         #lfuda{age = Age} ->
             Age;
-        #lru{} ->
-            0
+        #lru{start = Start} ->
+            Start
     end,
     ReplaceRemove0 = ReplaceHit,
     ReplaceList0 = [],

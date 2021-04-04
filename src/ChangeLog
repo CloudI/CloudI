@@ -6,6 +6,7 @@
     * Improve cloudi_service_filesystem replace argument usage
       so files are sorted based on PriorityKey and Size
       to maximize the number of files loaded
+    * Fix cloudi_service_filesystem replace argument lru use
 
 2021-04-02 Michael Truog   <mjtruog at protonmail dot com>
 
