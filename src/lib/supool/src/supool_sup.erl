@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supool_sup).
@@ -110,10 +110,11 @@ init([Name, Options]) ->
     [MaxR, MaxT] = take_values(Defaults, Options),
     true = is_integer(MaxR) andalso (MaxR >= 0),
     true = is_integer(MaxT) andalso (MaxT >= 1),
+    Shutdown = 2000, % milliseconds
     {ok, {{one_for_one, MaxR, MaxT}, 
           [{supool,
             {supool, pool_worker_start_link, [Name, self()]},
-            permanent, brutal_kill, worker, [supool]}]}}.
+            permanent, Shutdown, worker, [supool]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
