@@ -41,6 +41,7 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/rpc/nodes_remove.json"`
   * `"/cloudi/api/rpc/nodes_alive.json"`
   * `"/cloudi/api/rpc/nodes_dead.json"`
+  * `"/cloudi/api/rpc/nodes_status.json"`
   * `"/cloudi/api/rpc/nodes.json"`
   * `"/cloudi/api/rpc/logging_set.json"`
   * `"/cloudi/api/rpc/logging_file_set.json"`
@@ -49,6 +50,8 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/rpc/logging_syslog_set.json"`
   * `"/cloudi/api/rpc/logging_formatters_set"`
   * `"/cloudi/api/rpc/logging_redirect_set.json"`
+  * `"/cloudi/api/rpc/logging_status.json"`
+  * `"/cloudi/api/rpc/logging_status_reset.json"`
   * `"/cloudi/api/rpc/logging.json"`
   * `"/cloudi/api/rpc/code_path_add.json"`
   * `"/cloudi/api/rpc/code_path_remove.json"`
