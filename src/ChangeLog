@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-04-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_filesystem replace_index argument for
+      writing the cache replacement data to the filesystem
+    * Add cloudi_service_filesystem debug/debug_level arguments for
+      logging the currently loaded files_size in bytes
+
 2021-04-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update CloudI Service API README

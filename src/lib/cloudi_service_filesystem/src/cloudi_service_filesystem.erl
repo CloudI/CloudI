@@ -88,6 +88,9 @@
         % Evaluating content management techniques for Web proxy caches.
         % HP Technical Report. Palo Alto, 1999.
         % https://www.hpl.hp.com/techreports/98/HPL-98-173.pdf
+-define(DEFAULT_REPLACE_INDEX,            true).
+        % Write the replacement algorithm ordering to the filesystem
+        % for usage after a restart.
 -define(DEFAULT_READ,                       []). % see below:
         % A list of file service names (provided by this service) that
         % will explicitly specify the files to read from the directory.
@@ -152,6 +155,8 @@
         % subscriptions as would be used from HTTP related senders like
         % cloudi_service_http_cowboy1.  Required for write-related
         % functionality and reading ranges.
+-define(DEFAULT_DEBUG,                    true).
+-define(DEFAULT_DEBUG_LEVEL,             trace).
 
 -type read_list_exact() :: list({string(),
                                  integer() | undefined,
@@ -180,10 +185,12 @@
         refresh :: undefined | pos_integer(),
         cache :: undefined | pos_integer(),
         replace :: undefined | #lfuda{} | #lru{},
+        replace_index_used :: boolean(),
         replace_hit :: undefined | cloudi_x_trie:cloudi_x_trie(),
         http_clock_skew_max :: non_neg_integer() | undefined,
         use_http_get_suffix :: boolean(),
         use_content_disposition :: boolean(),
+        debug_level :: off | trace | debug | info | warn | error | fatal,
         read :: read_list_exact(),
         toggle :: boolean(),
         files :: cloudi_x_trie:cloudi_x_trie(),
@@ -214,6 +221,8 @@
                                           {any(), any()}})}),
         redirect = undefined :: undefined | binary()
     }).
+
+-define(REPLACE_INDEX_FILENAME, ".cloudi_service_filesystem_replace_index").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -364,6 +373,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {refresh,                      ?DEFAULT_REFRESH},
         {cache,                        ?DEFAULT_CACHE},
         {replace,                      ?DEFAULT_REPLACE},
+        {replace_index,                ?DEFAULT_REPLACE_INDEX},
         {read,                         ?DEFAULT_READ},
         {write_truncate,               ?DEFAULT_WRITE_TRUNCATE},
         {write_append,                 ?DEFAULT_WRITE_APPEND},
@@ -374,14 +384,18 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {http_clock_skew_max,          ?DEFAULT_HTTP_CLOCK_SKEW_MAX},
         {use_content_types,            ?DEFAULT_USE_CONTENT_TYPES},
         {use_content_disposition,      ?DEFAULT_USE_CONTENT_DISPOSITION},
-        {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX}],
-    [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0, Replace0,
+        {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX},
+        {debug,                        ?DEFAULT_DEBUG},
+        {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
+    [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0, Replace0, ReplaceIndexUsed,
      ReadL0, WriteTruncateL, WriteAppendL, RedirectL,
-     NotifyOneL, NotifyAllL, NotifyOnStart,
-     HTTPClockSkewMax,
-     UseContentTypes, UseContentDisposition, UseHttpGetSuffix] =
-        cloudi_proplists:take_values(Defaults, Args),
+     NotifyOneL, NotifyAllL, NotifyOnStart, HTTPClockSkewMax,
+     UseContentTypes, UseContentDisposition, UseHttpGetSuffix,
+     Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
+    false = cloudi_service_name:pattern(Prefix),
     true = is_list(DirectoryRaw),
+    Directory = cloudi_environment:transform(DirectoryRaw),
+    DirectoryLength = erlang:length(Directory),
     FilesSizeLimitN = if
         FilesSizeLimit0 =:= undefined ->
             undefined;
@@ -400,6 +414,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         Cache0 > 0, Cache0 =< 31536000 ->
             Cache0
     end,
+    true = is_boolean(ReplaceIndexUsed),
     {ReplaceN,
      ReplaceHit0} = if
         Replace0 =:= false ->
@@ -411,8 +426,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         Replace0 =:= lru ->
             true = is_integer(FilesSizeLimitN) andalso
                    is_integer(Refresh),
-            {replace_new(Replace0),
-             cloudi_x_trie:new()}
+            replace_new(Replace0, ReplaceIndexUsed, Directory)
     end,
     true = is_list(ReadL0),
     true = is_list(WriteTruncateL),
@@ -431,9 +445,19 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             (WriteTruncateL == []) andalso
             (WriteAppendL == []) andalso
             (RedirectL == [])),
-    false = cloudi_service_name:pattern(Prefix),
-    Directory = cloudi_environment:transform(DirectoryRaw),
-    DirectoryLength = erlang:length(Directory),
+    true = is_boolean(Debug),
+    true = ((DebugLevel =:= trace) orelse
+            (DebugLevel =:= debug) orelse
+            (DebugLevel =:= info) orelse
+            (DebugLevel =:= warn) orelse
+            (DebugLevel =:= error) orelse
+            (DebugLevel =:= fatal)),
+    DebugLogLevel = if
+        Debug =:= false ->
+            off;
+        Debug =:= true ->
+            DebugLevel
+    end,
     ContentTypeLookup = if
         UseContentTypes =:= true ->
             cloudi_response_info:lookup_content_type();
@@ -689,6 +713,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 refresh = Refresh,
                 cache = CacheN,
                 replace = ReplaceN,
+                replace_index_used = ReplaceIndexUsed,
                 replace_hit = ReplaceHitN,
                 http_clock_skew_max = HTTPClockSkewMax,
                 read = ReadLN,
@@ -696,7 +721,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 files = FilesN,
                 use_http_get_suffix = UseHttpGetSuffix,
                 use_content_disposition = UseContentDisposition,
-                content_type_lookup = ContentTypeLookup}}.
+                content_type_lookup = ContentTypeLookup,
+                debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_request(_RequestType, Name, _Pattern, _RequestInfo,
                               #file_notify{} = Notify,
@@ -785,6 +811,7 @@ cloudi_service_handle_info(refresh,
                                   files_size = FilesSize,
                                   refresh = Refresh,
                                   replace = Replace,
+                                  replace_index_used = ReplaceIndexUsed,
                                   replace_hit = ReplaceHit,
                                   read = ReadL,
                                   toggle = Toggle,
@@ -793,19 +820,31 @@ cloudi_service_handle_info(refresh,
                                   use_content_disposition =
                                       UseContentDisposition,
                                   content_type_lookup =
-                                      ContentTypeLookup} = State,
+                                      ContentTypeLookup,
+                                  debug_level = DebugLogLevel} = State,
                            Dispatcher) ->
     ToggleNew = not Toggle,
     {ReplaceHitNew,
      ReplaceNew,
      FilesSizeNew,
-     FilesNew} = read_files_refresh(ReplaceHit, Replace, ReadL, ToggleNew,
+     FilesNew} = read_files_refresh(ReplaceHit, Replace, ReplaceIndexUsed,
+                                    ReadL, ToggleNew,
                                     FilesSize, Files, ContentTypeLookup,
                                     UseContentDisposition, UseHttpGetSuffix,
                                     FilesSizeLimit, DirectoryLength,
                                     Directory, PrefixLength,
                                     Prefix, Dispatcher),
     _ = erlang:send_after(Refresh * 1000, Service, refresh),
+    if
+        FilesSizeLimit =:= undefined ->
+            ?LOG(DebugLogLevel,
+                 "loaded files_size ~w bytes",
+                 [FilesSizeNew]);
+        is_integer(FilesSizeLimit) ->
+            ?LOG(DebugLogLevel,
+                 "loaded files_size ~w bytes <= ~w bytes",
+                 [FilesSizeNew, FilesSizeLimit])
+    end,
     {noreply, State#state{files_size = FilesSizeNew,
                           replace = ReplaceNew,
                           replace_hit = ReplaceHitNew,
@@ -1842,7 +1881,7 @@ read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
             fold_files_exact(ReadL, Directory, InitF, InitA)
     end.
 
-read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
+read_files_refresh(ReplaceHit0, Replace0, ReplaceIndexUsed, ReadL, Toggle,
                    FilesSize0, Files0, ContentTypeLookup,
                    UseContentDisposition, UseHttpGetSuffix,
                    FilesSizeLimit, DirectoryLength, Directory,
@@ -1967,6 +2006,7 @@ read_files_refresh(ReplaceHit0, Replace0, ReadL, Toggle,
      Files3} = replace_fold(ReplaceHit0, Replace0,
                             ReadL, Directory,
                             RefreshRemoveF, RefreshUpdateF, RefreshA),
+    ok = replace_persist(ReplaceHitN, ReplaceN, ReplaceIndexUsed, Directory),
     % remove anything not updated, since the file was removed
     {_,
      FilesSizeN,
@@ -2052,8 +2092,9 @@ fold_files_exact_element([{FileName, SegmentI, SegmentSize} | ReadL],
 fold_files(Directory, F, A)
     when is_function(F, 6) ->
     case file:list_dir_all(Directory) of
-        {ok, FileNames} ->
-            fold_files_directory(FileNames, Directory, F, A);
+        {ok, FileNames0} ->
+            FileNamesN = lists:delete(?REPLACE_INDEX_FILENAME, FileNames0),
+            fold_files_directory(FileNamesN, Directory, F, A);
         {error, Reason} ->
             ?LOG_WARN("directory ~s error: ~p", [Directory, Reason]),
             A
@@ -2488,14 +2529,134 @@ content_range_list_check([I | RangeList], Boundary,
     content_range_list_check([{I, infinity} | RangeList], Boundary,
                              ContentLengthBin, ContentLength).
 
-replace_new(true) ->
-    replace_new(lfuda); % default algorithm
-replace_new(lfuda) ->
-    #lfuda{policy = lfuda};
-replace_new(lfuda_gdsf) ->
-    #lfuda{policy = gdsf};
-replace_new(lru) ->
-    #lru{start = erlang:system_info(start_time)}.
+replace_type(#lfuda{policy = Policy}) ->
+    if
+        Policy =:= lfuda ->
+            lfuda;
+        Policy =:= gdsf ->
+            lfuda_gdsf
+    end;
+replace_type(#lru{}) ->
+    lru.
+
+replace_new(true, ReplaceIndexUsed, Directory) ->
+    replace_new(lfuda, ReplaceIndexUsed, Directory); % default algorithm
+replace_new(lfuda, ReplaceIndexUsed, Directory) ->
+    replace_new_index(#lfuda{policy = lfuda},
+                      ReplaceIndexUsed, Directory);
+replace_new(lfuda_gdsf, ReplaceIndexUsed, Directory) ->
+    replace_new_index(#lfuda{policy = gdsf},
+                      ReplaceIndexUsed, Directory);
+replace_new(lru, ReplaceIndexUsed, Directory) ->
+    replace_new_index(#lru{start = erlang:system_info(start_time)},
+                      ReplaceIndexUsed, Directory).
+
+replace_new_index(Replace, false, _) ->
+    {Replace, cloudi_x_trie:new()};
+replace_new_index(Replace, true, Directory) ->
+    IndexPath = filename:join(Directory, ?REPLACE_INDEX_FILENAME),
+    case file:consult(IndexPath) of
+        {ok, IndexData} ->
+            replace_new_index_data(IndexData, replace_type(Replace), Replace);
+        {error, Reason} ->
+            if
+                Reason /= enoent ->
+                    ?LOG_ERROR("Failed to load replace index file ~s: ~p",
+                               [IndexPath, Reason]);
+                true ->
+                    ok
+            end,
+            {Replace, cloudi_x_trie:new()}
+    end.
+
+replace_new_index_data([{ReplaceType, ReplaceIndex}], ReplaceType, Replace)
+    when is_list(ReplaceIndex) ->
+    replace_new_index_load(ReplaceIndex, Replace);
+replace_new_index_data([{ReplaceTypeFile, _}], ReplaceType, Replace) ->
+    ?LOG_WARN("Unable to use replace index file due to type mismatch ~s != ~s",
+              [ReplaceTypeFile, ReplaceType]),
+    {Replace, cloudi_x_trie:new()};
+replace_new_index_data(_, _, Replace) ->
+    ?LOG_ERROR("Malformed replace index file!", []),
+    {Replace, cloudi_x_trie:new()}.
+
+replace_new_index_load(ReplaceIndex, Replace) ->
+    replace_new_index_load(ReplaceIndex,
+                           cloudi_x_trie:new(), undefined, Replace).
+
+replace_new_index_load([], ReplaceHit, ReplaceIndexStatus, Replace) ->
+    replace_new_index_loaded(ReplaceHit, ReplaceIndexStatus, Replace);
+replace_new_index_load([ReplaceIndexValue | ReplaceIndex],
+                       ReplaceHit, ReplaceIndexStatus, Replace) ->
+    ReplaceIndexStatusNew = replace_new_index_load_status(ReplaceIndexValue,
+                                                          ReplaceIndexStatus,
+                                                          Replace),
+    ReplaceHitNew = replace_new_index_load_value(ReplaceIndexValue,
+                                                 ReplaceHit),
+    replace_new_index_load(ReplaceIndex,
+                           ReplaceHitNew, ReplaceIndexStatusNew, Replace).
+
+replace_new_index_load_status({_, TimeNativeOld}, ReplaceIndexStatus,
+                              #lru{}) ->
+    if
+        ReplaceIndexStatus =:= undefined ->
+            TimeNativeOld;
+        is_integer(ReplaceIndexStatus) ->
+            erlang:max(ReplaceIndexStatus, TimeNativeOld)
+    end;
+replace_new_index_load_status(_, undefined, _) ->
+    undefined.
+
+replace_new_index_load_value({FileName, Value}, ReplaceHit) ->
+    cloudi_x_trie:store(FileName, Value, ReplaceHit).
+
+replace_new_index_loaded(ReplaceHit, undefined, Replace) ->
+    {Replace, ReplaceHit};
+replace_new_index_loaded(ReplaceHit, TimeNativeOldMax,
+                         #lru{start = Start} = Replace) ->
+    TimeNativeOffset = TimeNativeOldMax - Start,
+    StartNew = Start - TimeNativeOffset,
+    ReplaceHitNew = cloudi_x_trie:map(fun(_, TimeNativeOld) ->
+        TimeNativeOld - TimeNativeOffset
+    end, ReplaceHit),
+    {Replace#lru{start = StartNew}, ReplaceHitNew}.
+
+replace_persist(_, undefined, _, _) ->
+    ok;
+replace_persist(_, _, false, _) ->
+    ok;
+replace_persist(ReplaceHit,
+                #lfuda{age = Age} = Replace, true, Directory) ->
+    ReplaceIndex = cloudi_x_trie:foldr(fun(FileName,
+                                           {PriorityKey, HitsOld}, L) ->
+        [{FileName, {PriorityKey - Age, HitsOld}} | L]
+    end, [], ReplaceHit),
+    replace_persist_index_data({replace_type(Replace), ReplaceIndex},
+                               Directory);
+replace_persist(ReplaceHit, Replace, true, Directory) ->
+    ReplaceIndex = cloudi_x_trie:to_list(ReplaceHit),
+    replace_persist_index_data({replace_type(Replace), ReplaceIndex},
+                               Directory).
+
+replace_persist_index_data(IndexData, Directory) ->
+    IndexPath = filename:join(Directory, ?REPLACE_INDEX_FILENAME),
+    IndexPathTmp = IndexPath ++ "_tmp",
+    IndexDataBin = unicode:characters_to_binary(io_lib:format("~tp.~n",
+                                                              [IndexData])),
+    Result = case file:write_file(IndexPathTmp, IndexDataBin, [raw]) of
+        ok ->
+            file:rename(IndexPathTmp, IndexPath);
+        {error, _} = Error ->
+            Error
+    end,
+    case Result of
+        ok ->
+            ok;
+        {error, Reason} ->
+            ?LOG_ERROR("Failed to write replace index file ~s: ~p",
+                       [IndexPath, Reason]),
+            ok
+    end.
 
 replace_add(_, _, undefined, ReplaceHit) ->
     ReplaceHit;
