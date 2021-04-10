@@ -2615,11 +2615,10 @@ replace_new_index_loaded(ReplaceHit, undefined, Replace) ->
 replace_new_index_loaded(ReplaceHit, TimeNativeOldMax,
                          #lru{start = Start} = Replace) ->
     TimeNativeOffset = TimeNativeOldMax - Start,
-    StartNew = Start - TimeNativeOffset,
     ReplaceHitNew = cloudi_x_trie:map(fun(_, TimeNativeOld) ->
         TimeNativeOld - TimeNativeOffset
     end, ReplaceHit),
-    {Replace#lru{start = StartNew}, ReplaceHitNew}.
+    {Replace, ReplaceHitNew}.
 
 replace_persist(_, undefined, _, _) ->
     ok;
