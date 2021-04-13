@@ -75,8 +75,8 @@ start_link(Name, Count,
         {ok, _} ->
             PoolWorker = erlang:whereis(Name),
             true = is_pid(PoolWorker),
-            % needs to be the first message to the pool worker process to
-            % make sure pool processes exist before they are requested
+            % start needs to be the first message to the pool worker process
+            % to ensure pool processes exist before they are requested
             PoolWorker ! {start, ChildSpecs},
             Result;
         _ ->
@@ -110,11 +110,12 @@ init([Name, Options]) ->
     [MaxR, MaxT] = take_values(Defaults, Options),
     true = is_integer(MaxR) andalso (MaxR >= 0),
     true = is_integer(MaxT) andalso (MaxT >= 1),
-    Shutdown = 2000, % milliseconds
-    {ok, {{one_for_one, MaxR, MaxT}, 
+    % brutal_kill is used for Shutdown due to usage of which_children/1
+    % (avoids blocking during supervisor shutdown)
+    {ok, {{one_for_one, MaxR, MaxT},
           [{supool,
             {supool, pool_worker_start_link, [Name, self()]},
-            permanent, Shutdown, worker, [supool]}]}}.
+            permanent, brutal_kill, worker, [supool]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

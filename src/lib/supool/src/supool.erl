@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supool).
@@ -52,14 +52,12 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--include("supool_logging.hrl").
-
 -record(state,
     {
         supervisor :: pid(),
         index = 1 :: pos_integer(),
-        pool = undefined :: tuple() | undefined,
-        count = undefined :: pos_integer() | undefined
+        count = undefined :: pos_integer() | undefined,
+        pool = undefined :: tuple() | undefined
     }).
 
 -type options() ::
@@ -148,29 +146,11 @@ init([Supervisor]) ->
     self() ! restart,
     {ok, #state{supervisor = Supervisor}}.
 
-handle_call(get, _, #state{supervisor = Supervisor,
-                           index = I,
-                           pool = Pool,
-                           count = Count} = State) ->
-    Pid = erlang:element(I, Pool),
-    case erlang:is_process_alive(Pid) of
-        true ->
-            {reply, Pid, State#state{index = increment(I, Count)}};
-        false ->
-            NewPids = supool_sup:which_children(Supervisor),
-            case erlang:length(NewPids) of
-                0 ->
-                    {stop, {error, noproc}, undefined, State};
-                NewCount ->
-                    NewPool = erlang:list_to_tuple(NewPids),
-                    NewI = if I > NewCount -> 1; true -> I end,
-                    {reply, erlang:element(NewI, NewPool),
-                     State#state{index = increment(NewI, NewCount),
-                                 pool = NewPool,
-                                 count = NewCount}}
-            end
-    end;
-
+handle_call(get, _, #state{index = Index,
+                           count = Count,
+                           pool = Pool} = State) ->
+    {Result, IndexNew} = pool_pid(Index, Count, Pool),
+    {reply, Result, State#state{index = IndexNew}};
 handle_call(Request, _, State) ->
     {stop, lists:flatten(io_lib:format("Unknown call \"~w\"", [Request])),
      error, State}.
@@ -184,25 +164,33 @@ handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
         {ok, []} ->
             {stop, {error, noproc}, State};
         {ok, Pids} ->
-            {noreply, State#state{pool = erlang:list_to_tuple(Pids),
-                                  count = erlang:length(Pids)}};
+            {noreply, State#state{count = length(Pids),
+                                  pool = erlang:list_to_tuple(Pids)}};
         {error, _} = Error ->
             {stop, Error, State}
     end;
-
 handle_info(restart, #state{supervisor = Supervisor} = State) ->
     Pids = supool_sup:which_children(Supervisor),
-    case erlang:length(Pids) of
+    case length(Pids) of
         0 ->
             % pool worker started for the first time
             {noreply, State};
         Count ->
             % pool worker restarted
             {noreply,
-             State#state{pool = erlang:list_to_tuple(Pids),
-                         count = Count}}
+             State#state{count = Count,
+                         pool = erlang:list_to_tuple(Pids)}}
     end;
-
+handle_info(update, #state{supervisor = Supervisor} = State) ->
+    Pids = supool_sup:which_children(Supervisor),
+    case length(Pids) of
+        0 ->
+            {stop, {error, noproc}, State};
+        Count ->
+            {noreply,
+             State#state{count = Count,
+                         pool = erlang:list_to_tuple(Pids)}}
+    end;
 handle_info(Request, State) ->
     {stop, lists:flatten(io_lib:format("Unknown info \"~w\"", [Request])),
      State}.
@@ -216,6 +204,27 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+pool_pid(I, Count, Pool) ->
+    Pid = element(I, Pool),
+    case erlang:is_process_alive(Pid) of
+        true ->
+            {Pid, increment(I, Count)};
+        false ->
+            self() ! update,
+            pool_pid(increment(I, Count), I, Count, Pool)
+    end.
+
+pool_pid(I, I, _, _) ->
+    {undefined, I};
+pool_pid(I, IndexStart, Count, Pool) ->
+    Pid = element(I, Pool),
+    case erlang:is_process_alive(Pid) of
+        true ->
+            {Pid, increment(I, Count)};
+        false ->
+            pool_pid(increment(I, Count), IndexStart, Count, Pool)
+    end.
 
 increment(Count, Count) ->
     1;

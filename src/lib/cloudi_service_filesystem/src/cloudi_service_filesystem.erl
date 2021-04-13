@@ -76,12 +76,12 @@
 -define(DEFAULT_REPLACE,                 false).
         % Provide a file data cache replacement algorithm
         % (requires both the files_size and refresh arguments are set).
-        % When set to true (or lfuda) the
+        % When set to 'true' (or 'lfuda') the
         % "Least-Frequently Used with Dynamic Aging" (LFUDA)
         % algorithm is used and the LFUDA policy (high byte hit rate).
-        % When set to lfuda_gdsf the LFUDA algorithm is used and the
+        % When set to 'lfuda_gdsf' the LFUDA algorithm is used and the
         % "GreedyDual-Size with Frequency" (GDSF) policy (high hit rate).
-        % When set to lru the "Least Recently Used" (LRU) algorithm is used.
+        % When set to 'lru' the "Least Recently Used" (LRU) algorithm is used.
         %
         % LFUDA algorithm information:
         % M. Arlitt, R. F. L. Cherkasova, J. Dilley, and T. Jin.
@@ -150,6 +150,9 @@
         % Should the content-disposition ResponseInfo data be set
         % to provide the filename and mark the file data as an
         % attachment to download
+-define(DEFAULT_USE_EXPIRES,              true). % see below:
+        % Should the expires HTTP header be used instead of the
+        % cache-control max-age value?
 -define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % see below:
         % Uses the "/get" suffix on service name patterns used for
         % subscriptions as would be used from HTTP related senders like
@@ -190,6 +193,7 @@
         http_clock_skew_max :: non_neg_integer() | undefined,
         use_http_get_suffix :: boolean(),
         use_content_disposition :: boolean(),
+        use_expires :: boolean(),
         debug_level :: off | trace | debug | info | warn | error | fatal,
         read :: read_list_exact(),
         toggle :: boolean(),
@@ -384,13 +388,14 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {http_clock_skew_max,          ?DEFAULT_HTTP_CLOCK_SKEW_MAX},
         {use_content_types,            ?DEFAULT_USE_CONTENT_TYPES},
         {use_content_disposition,      ?DEFAULT_USE_CONTENT_DISPOSITION},
+        {use_expires,                  ?DEFAULT_USE_EXPIRES},
         {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX},
         {debug,                        ?DEFAULT_DEBUG},
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
     [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0, Replace0, ReplaceIndexUsed,
      ReadL0, WriteTruncateL, WriteAppendL, RedirectL,
      NotifyOneL, NotifyAllL, NotifyOnStart, HTTPClockSkewMax,
-     UseContentTypes, UseContentDisposition, UseHttpGetSuffix,
+     UseContentTypes, UseContentDisposition, UseExpires, UseHttpGetSuffix,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = is_list(DirectoryRaw),
@@ -439,6 +444,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             (HTTPClockSkewMax >= 0)) orelse
            (HTTPClockSkewMax =:= undefined),
     true = is_boolean(UseContentTypes),
+    true = is_boolean(UseContentDisposition),
+    true = is_boolean(UseExpires),
     true = (UseHttpGetSuffix =:= true) orelse
            ((UseHttpGetSuffix =:= false) andalso
             (UseContentTypes =:= false) andalso
@@ -464,7 +471,6 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         UseContentTypes =:= false ->
             undefined
     end,
-    true = is_boolean(UseContentDisposition),
     true = if
         Refresh =:= undefined ->
             filelib:is_dir(Directory);
@@ -721,6 +727,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 files = FilesN,
                 use_http_get_suffix = UseHttpGetSuffix,
                 use_content_disposition = UseContentDisposition,
+                use_expires = UseExpires,
                 content_type_lookup = ContentTypeLookup,
                 debug_level = DebugLogLevel}}.
 
@@ -927,6 +934,7 @@ request_header(#file{contents = Contents,
                      mtime_i = MTimeI} = File, RequestInfo,
                #state{cache = Cache,
                       http_clock_skew_max = HTTPClockSkewMax,
+                      use_expires = UseExpires,
                       use_http_get_suffix = true} = State) ->
     TimeNative = cloudi_timestamp:native_monotonic(),
     NowTime = datetime_utc(TimeNative),
@@ -941,7 +949,7 @@ request_header(#file{contents = Contents,
                         {206, Headers} ->
                             {reply,
                              Headers ++
-                             cache_headers_data(NowTime, MTimeI,
+                             cache_headers_data(UseExpires, NowTime, MTimeI,
                                                 ETag, Cache, true),
                              <<>>,
                              replace_hit(File, TimeNative, State)};
@@ -953,7 +961,8 @@ request_header(#file{contents = Contents,
                          Status == 410 ->
                     {reply,
                      FileHeaders ++
-                     cache_headers_data(NowTime, MTimeI, ETag, Cache, true),
+                     cache_headers_data(UseExpires, NowTime, MTimeI,
+                                        ETag, Cache, true),
                      <<>>,
                      replace_hit(File, TimeNative, State)};
                 {416, undefined} ->
@@ -1025,6 +1034,7 @@ request_read(#file{contents = Contents,
                    mtime_i = MTimeI} = File, RequestInfo,
              #state{cache = Cache,
                     http_clock_skew_max = HTTPClockSkewMax,
+                    use_expires = UseExpires,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
     TimeNative = cloudi_timestamp:native_monotonic(),
     NowTime = datetime_utc(TimeNative),
@@ -1041,7 +1051,8 @@ request_read(#file{contents = Contents,
                                 {206, Headers, Response} ->
                                     {reply,
                                      Headers ++
-                                     cache_headers_data(NowTime, MTimeI,
+                                     cache_headers_data(UseExpires,
+                                                        NowTime, MTimeI,
                                                         ETag, Cache,
                                                         UseHttpGetSuffix),
                                      Response,
@@ -1054,7 +1065,7 @@ request_read(#file{contents = Contents,
                                  Status == 410 ->
                             {reply,
                              FileHeaders ++
-                             cache_headers_data(NowTime, MTimeI,
+                             cache_headers_data(UseExpires, NowTime, MTimeI,
                                                 ETag, Cache, UseHttpGetSuffix),
                              Contents,
                              replace_hit(File, TimeNative, State)};
@@ -1069,7 +1080,7 @@ request_read(#file{contents = Contents,
                     end;
                 UseHttpGetSuffix =:= false ->
                     {reply,
-                     cache_headers_data(NowTime, MTimeI,
+                     cache_headers_data(UseExpires, NowTime, MTimeI,
                                         ETag, Cache, UseHttpGetSuffix),
                      Contents,
                      replace_hit(File, TimeNative, State)}
@@ -1157,6 +1168,7 @@ request_truncate_file(#file{contents = Contents,
                              directory_length = DirectoryLength,
                              cache = Cache,
                              files = Files,
+                             use_expires = UseExpires,
                              use_http_get_suffix = true} = State) ->
     FileName = lists:nthtail(DirectoryLength, FilePath),
     ETag = cache_header_etag(MTimeI),
@@ -1165,7 +1177,7 @@ request_truncate_file(#file{contents = Contents,
         Cache =:= undefined ->
             cacheless_headers_data(MTime, MTimeI, ETag, true);
         true ->
-            cache_headers_data(MTime, MTimeI, ETag, Cache, true)
+            cache_headers_data(UseExpires, MTime, MTimeI, ETag, Cache, true)
     end,
     {reply,
      FileHeaders ++ Headers, Contents,
@@ -1285,6 +1297,7 @@ request_append_file([],
                            files_size = FilesSize,
                            cache = Cache,
                            files = Files,
+                           use_expires = UseExpires,
                            use_http_get_suffix = true} = State, Dispatcher) ->
     case files_size_check(Contents,
                           FilesSize - ContentsSizeOld,
@@ -1308,7 +1321,8 @@ request_append_file([],
                         Cache =:= undefined ->
                             cacheless_headers_data(MTime, MTimeI, ETag, true);
                         true ->
-                            cache_headers_data(MTime, MTimeI, ETag, Cache, true)
+                            cache_headers_data(UseExpires, MTime, MTimeI,
+                                               ETag, Cache, true)
                     end,
                     {reply,
                      FileHeaders ++ Headers, Contents,
@@ -2241,7 +2255,9 @@ cache_header_etag({MTime, I}) ->
                            [calendar:datetime_to_gregorian_seconds(MTime), I]),
     erlang:iolist_to_binary(Output).
 
-cache_header_control(Cache) ->
+cache_header_control(true, _) ->
+    <<"public">>;
+cache_header_control(false, Cache) ->
     Output = io_lib:format("public,max-age=~w", [Cache]),
     erlang:iolist_to_binary(Output).
 
@@ -2250,10 +2266,18 @@ cache_header_expires(ATime, Cache) ->
     Expires = calendar:gregorian_seconds_to_datetime(Seconds + Cache),
     rfc1123_format(Expires).
 
-cache_headers_data(NowTime, {MTime, _}, ETag, Cache, UseHttpGetSuffix) ->
-    [{<<"etag">>, ETag},
-     {<<"cache-control">>, cache_header_control(Cache)},
+cache_headers_data(true = UseExpires, NowTime, {MTime, _},
+                   ETag, Cache, UseHttpGetSuffix) ->
+    [{<<"cache-control">>, cache_header_control(UseExpires, Cache)},
      {<<"expires">>, cache_header_expires(NowTime, Cache)},
+     {<<"etag">>, ETag},
+     {<<"last-modified">>, rfc1123_format(MTime)},
+     {<<"date">>, rfc1123_format(NowTime)} |
+     contents_ranges_headers(UseHttpGetSuffix)];
+cache_headers_data(false = UseExpires, NowTime, {MTime, _},
+                   ETag, Cache, UseHttpGetSuffix) ->
+    [{<<"cache-control">>, cache_header_control(UseExpires, Cache)},
+     {<<"etag">>, ETag},
      {<<"last-modified">>, rfc1123_format(MTime)},
      {<<"date">>, rfc1123_format(NowTime)} |
      contents_ranges_headers(UseHttpGetSuffix)].

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2009-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_sup).
@@ -99,9 +99,9 @@ start_link(Config) when is_record(Config, config) ->
         [child_specification(cloudi_core_i_logger_sup, Config),
          child_specification(cloudi_core_i_logger, Config),
          child_specification(cloudi_core_i_nodes, Config),
-         child_specification(cloudi_core_i_services_monitor),
          child_specification(?OS_SPAWN_POOL),
          child_specification(?OS_COMMAND_POOL),
+         child_specification(cloudi_core_i_services_monitor),
          child_specification(cloudi_core_i_services_external_sup),
          child_specification(cloudi_core_i_services_internal_sup),
          child_specification(cloudi_core_i_configurator, Config),
@@ -124,41 +124,21 @@ child_specification(cloudi_core_i_logger_sup, Config) ->
     {cloudi_core_i_logger_sup,
      {cloudi_core_i_logger_sup, start_link, [Config]},
      permanent, infinity, supervisor, [cloudi_core_i_logger_sup]};
-
 child_specification(cloudi_core_i_logger, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_logger,
      {cloudi_core_i_logger, start_link, [Config]},
      permanent, Shutdown, worker, [cloudi_core_i_logger]};
-
 child_specification(cloudi_core_i_nodes, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_nodes,
      {cloudi_core_i_nodes, start_link, [Config]},
      permanent, Shutdown, worker, [cloudi_core_i_nodes]};
-
 child_specification(cloudi_core_i_configurator, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_configurator,
      {cloudi_core_i_configurator, start_link, [Shutdown, Config]},
      permanent, Shutdown, worker, [cloudi_core_i_configurator]}.
-
-child_specification(cloudi_core_i_services_monitor) ->
-    Shutdown = 2000, % milliseconds
-    {cloudi_core_i_services_monitor,
-     {cloudi_core_i_services_monitor, start_link, []},
-     permanent, Shutdown, worker, [cloudi_core_i_services_monitor]};
-
-child_specification(cloudi_core_i_services_internal_reload) ->
-    Shutdown = 2000, % milliseconds
-    {cloudi_core_i_services_internal_reload,
-     {cloudi_core_i_services_internal_reload, start_link, []},
-     permanent, Shutdown, worker, [cloudi_core_i_services_internal_reload]};
-
-child_specification(cloudi_core_i_services_internal_sup) ->
-    {cloudi_core_i_services_internal_sup,
-     {cloudi_core_i_services_internal_sup, start_link, []},
-     permanent, infinity, supervisor, [cloudi_core_i_services_internal_sup]};
 
 child_specification(?OS_SPAWN_POOL = OSSpawnPool) ->
     Shutdown = 2000, % milliseconds
@@ -168,7 +148,6 @@ child_specification(?OS_SPAWN_POOL = OSSpawnPool) ->
        {undefined, {cloudi_core_i_os_spawn, start_link, []},
         permanent, Shutdown, worker, [cloudi_core_i_os_spawn]}, []]},
      permanent, infinity, supervisor, [cloudi_x_supool_sup]};
-
 child_specification(?OS_COMMAND_POOL = OSCommandPool) ->
     Shutdown = 2000, % milliseconds
     {OSCommandPool,
@@ -177,11 +156,24 @@ child_specification(?OS_COMMAND_POOL = OSCommandPool) ->
        {undefined, {cloudi_core_i_os_command, start_link, []},
         permanent, Shutdown, worker, [cloudi_core_i_os_command]}, []]},
      permanent, infinity, supervisor, [cloudi_x_supool_sup]};
-
+child_specification(cloudi_core_i_services_monitor) ->
+    Shutdown = 2000, % milliseconds
+    {cloudi_core_i_services_monitor,
+     {cloudi_core_i_services_monitor, start_link, []},
+     permanent, Shutdown, worker, [cloudi_core_i_services_monitor]};
 child_specification(cloudi_core_i_services_external_sup) ->
     {cloudi_core_i_services_external_sup,
      {cloudi_core_i_services_external_sup, start_link, []},
-     permanent, infinity, supervisor, [cloudi_core_i_services_external_sup]}.
+     permanent, infinity, supervisor, [cloudi_core_i_services_external_sup]};
+child_specification(cloudi_core_i_services_internal_sup) ->
+    {cloudi_core_i_services_internal_sup,
+     {cloudi_core_i_services_internal_sup, start_link, []},
+     permanent, infinity, supervisor, [cloudi_core_i_services_internal_sup]};
+child_specification(cloudi_core_i_services_internal_reload) ->
+    Shutdown = 2000, % milliseconds
+    {cloudi_core_i_services_internal_reload,
+     {cloudi_core_i_services_internal_reload, start_link, []},
+     permanent, Shutdown, worker, [cloudi_core_i_services_internal_reload]}.
 
 os_process_count() ->
     erlang:system_info(schedulers).

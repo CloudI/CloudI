@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2015-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supool_test_server).
@@ -83,7 +83,6 @@ module_test_() ->
     ]}.
 
 t_basic() ->
-    %application:start(sasl),
     application:start(supool),
     ChildSpec = {undefined, {supool_test_server, start_link, []},
                  permanent, brutal_kill, worker, [supool_test_server]},
@@ -97,7 +96,7 @@ t_basic() ->
     pong = supool_test_server:ping(Child0),
     pong = supool_test_server:ping(Child1),
     erlang:exit(Child0, kill),
-    receive after 500 -> ok end,
+    Child1 = supool:get(group_0),
     Child0New = supool:get(group_0),
     true = (Child0 /= Child0New),
     true = is_pid(Child0New),
