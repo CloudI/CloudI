@@ -1628,33 +1628,58 @@ service_instance([Pid | Pids], Results, ServiceId, Services) ->
 service_ids_pids(ServiceIdList, Services) ->
     service_ids_pids(ServiceIdList, [], Services).
 
-service_ids_pids([], Pids, _) ->
-    {ok, Pids};
-service_ids_pids([ServiceId | ServiceIdList], Pids, Services) ->
+service_ids_pids([], PidsList, _) ->
+    {ok, lists:flatten(lists:reverse(PidsList))};
+service_ids_pids([ServiceId | ServiceIdList], PidsList, Services) ->
     case service_id_pids(ServiceId, Services) of
-        {ok, PidList} ->
-            service_ids_pids(ServiceIdList, Pids ++ PidList, Services);
+        {ok, PidsOrdered} ->
+            service_ids_pids(ServiceIdList, [PidsOrdered | PidsList], Services);
         {error, _} = Error ->
             Error
     end.
 
 service_id_pids(ServiceId, Services) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
-        {ok, {Pids, #service{}}} ->
-            % all pids must be in process_index order
-            PidsOrdered1 = lists:foldl(fun(Pid, PidsOrdered0) ->
-                {_, Service} = cloudi_x_key2value:fetch2(Pid, Services),
-                #service{process_index = ProcessIndex,
-                         pids = ProcessPids} = Service,
-                lists:umerge(PidsOrdered0, [{ProcessIndex, ProcessPids}])
-            end, [], Pids),
-            PidsOrderedN = lists:flatmap(fun({_, PidList}) ->
-                PidList
-            end, PidsOrdered1),
-            {ok, PidsOrderedN};
+        {ok, {Pids, #service{count_process = CountProcess}}} ->
+            {PidsOrdered,
+             _} = service_id_pids_ordered(Pids, CountProcess, Services),
+            {ok, PidsOrdered};
         error ->
             {error, not_found}
     end.
+
+service_id_pids_ordered(Pids, CountProcess, Services) ->
+    % all pids must be in process_index order
+    service_id_pids_ordered(CountProcess - 1, [], [],
+                            service_id_pids_ordered_put(Pids, #{}, Services)).
+
+service_id_pids_ordered(ProcessIndex, Pids, OSPids, ProcessLookup) ->
+    {ProcessPids, OSPid} = maps:get(ProcessIndex, ProcessLookup),
+    PidsNew = ProcessPids ++ Pids,
+    OSPidsNew = if
+        OSPid =:= undefined ->
+            OSPids;
+        is_integer(OSPid) ->
+            [OSPid | OSPids]
+    end,
+    if
+        ProcessIndex == 0 ->
+            {PidsNew, OSPidsNew};
+        ProcessIndex > 0 ->
+            service_id_pids_ordered(ProcessIndex - 1,
+                                    PidsNew, OSPidsNew, ProcessLookup)
+    end.
+
+service_id_pids_ordered_put([], ProcessLookup, _) ->
+    ProcessLookup;
+service_id_pids_ordered_put([Pid | Pids], ProcessLookup, Services) ->
+    {_,
+     #service{process_index = ProcessIndex,
+              pids = ProcessPids,
+              os_pid = OSPid}} = cloudi_x_key2value:fetch2(Pid, Services),
+    ProcessLookupNew = maps:put(ProcessIndex,
+                                {ProcessPids, OSPid}, ProcessLookup),
+    service_id_pids_ordered_put(Pids, ProcessLookupNew, Services).
 
 service_ids_status(ServiceIdList, TimeNow,
                    DurationsUpdate, DurationsSuspend, Suspended,
@@ -1697,14 +1722,14 @@ service_id_status(ServiceId, TimeNow,
                   DurationsUpdate, DurationsSuspend, Suspended,
                   DurationsRestart, Services) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
-        {ok, {_, #service{service_m = Module,
-                          service_f = Function,
-                          service_a = Arguments,
-                          count_process = CountProcess,
-                          count_thread = CountThread,
-                          time_start = TimeStart,
-                          time_restart = TimeRestart,
-                          restart_count_total = Restarts}}} ->
+        {ok, {Pids, #service{service_m = Module,
+                             service_f = Function,
+                             service_a = Arguments,
+                             count_process = CountProcess,
+                             count_thread = CountThread,
+                             time_start = TimeStart,
+                             time_restart = TimeRestart,
+                             restart_count_total = Restarts}}} ->
             cloudi_core_i_spawn = Module,
             DurationsStateUpdate = cloudi_core_i_status:
                                    durations_state(ServiceId,
@@ -2096,12 +2121,18 @@ service_id_status(ServiceId, TimeNow,
                         {uptime_processing, UptimeProcessing},
                         {uptime_restarts,
                          erlang:integer_to_list(Restarts)} | Status25],
+            {PidsOrdered,
+             OSPidsOrdered} = service_id_pids_ordered(Pids, CountProcess,
+                                                      Services),
             StatusN = if
                 Function =:= start_internal ->
+                    [] = OSPidsOrdered,
                     Module:status_internal(CountProcess,
+                                           PidsOrdered,
                                            Arguments, Status26);
                 Function =:= start_external ->
                     Module:status_external(CountProcess, CountThread,
+                                           OSPidsOrdered, PidsOrdered,
                                            Arguments, Status26)
             end,
             {ok, StatusN};

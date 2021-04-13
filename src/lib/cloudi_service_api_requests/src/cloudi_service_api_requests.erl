@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -659,7 +659,7 @@ convert_term_to_json({ok, Statuses}, services_status = Method, Space) ->
     json_encode([{<<"success">>, true},
                  {erlang:atom_to_binary(Method, utf8),
                   [[{<<"id">>, erlang:list_to_binary(Id)} |
-                    convert_term_to_json_options(Status)]
+                    convert_term_to_json_service_status(Status)]
                    || {Id, Status} <- Statuses]}], Space);
 convert_term_to_json({ok, SuccessL}, Method, Space)
     when Method =:= services_add;
@@ -797,6 +797,20 @@ convert_term_to_json_service(#external{prefix = Prefix,
      {<<"env">>,
       [erlang:list_to_binary(Key ++ "=" ++ Value)
        || {Key, Value} <- Env]} | ServiceN].
+
+convert_term_to_json_service_status([]) ->
+    [];
+convert_term_to_json_service_status([{pids_os, Value} | Options]) ->
+    [{<<"pids_os">>, Value} |
+     convert_term_to_json_service_status(Options)];
+convert_term_to_json_service_status([{pids_erlang, Value} | Options]) ->
+    [{<<"pids_erlang">>,
+      [erlang:list_to_binary(erlang:pid_to_list(Pid)) || Pid <- Value]} |
+     convert_term_to_json_service_status(Options)];
+convert_term_to_json_service_status([{Key, Value} | Options]) ->
+    [{erlang:atom_to_binary(Key, utf8),
+      convert_term_to_json_option(Value)} |
+     convert_term_to_json_service_status(Options)].
 
 convert_term_to_json_option([] = Value) ->
     Value;

@@ -625,6 +625,7 @@
                   {prefix, cloudi:service_name_pattern()} |
                   {module, atom()} |
                   {count_process, pos_integer()} |
+                  {pids_erlang, list(pid())} |
                   {suspended, boolean()} |
                   {uptime_total, nanoseconds_string()} |
                   {uptime_running, nanoseconds_string()} |
@@ -664,6 +665,8 @@
                   {file_path, file_path()} |
                   {count_process, pos_integer()} |
                   {count_thread, pos_integer()} |
+                  {pids_os, list(pos_integer())} |
+                  {pids_erlang, list(pid())} |
                   {suspended, boolean()} |
                   {uptime_total, nanoseconds_string()} |
                   {uptime_running, nanoseconds_string()} |

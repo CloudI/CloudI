@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -39,8 +39,8 @@
 %% external interface
 -export([start_internal/18,
          start_external/21,
-         status_internal/3,
-         status_external/4,
+         status_internal/4,
+         status_external/6,
          update_external/3,
          update_internal_f/9,
          update_external_f/12]).
@@ -192,7 +192,7 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
             Error
     end.
 
-status_internal(CountProcess,
+status_internal(CountProcess, PidsOrdered,
                 [_GroupLeader,
                  Module, _Args, _TimeoutInit, Prefix,
                  _TimeoutAsync, _TimeoutSync, _TimeoutTerm,
@@ -202,9 +202,10 @@ status_internal(CountProcess,
     [{type, internal},
      {prefix, Prefix},
      {module, Module},
-     {count_process, CountProcess} | Status].
+     {count_process, CountProcess},
+     {pids_erlang, PidsOrdered} | Status].
 
-status_external(CountProcess, CountThread,
+status_external(CountProcess, CountThread, OSPidsOrdered, PidsOrdered,
                 [_ThreadsPerProcess,
                  Filename, _Arguments, _Environment,
                  _Protocol, _BufferSize, _TimeoutInit, Prefix,
@@ -216,7 +217,9 @@ status_external(CountProcess, CountThread,
      {prefix, Prefix},
      {file_path, Filename},
      {count_process, CountProcess},
-     {count_thread, CountThread} | Status].
+     {count_thread, CountThread},
+     {pids_os, OSPidsOrdered},
+     {pids_erlang, PidsOrdered} | Status].
 
 update_external(Pids, Ports,
                 [ProcessIndex, ProcessCount, ThreadsPerProcess,
