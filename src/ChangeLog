@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-04-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_core_i_os_port:sync/3 typespec use
+
 2021-04-13 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add CloudI Service API services_status process identifiers in

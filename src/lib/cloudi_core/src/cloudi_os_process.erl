@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2020-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2020-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_os_process).
@@ -237,18 +237,23 @@ os_spawn_kill_pids(SignalInteger, Group, OSPids)
     os_spawn_kill_pids(SignalInteger, Group, [OSPids]);
 os_spawn_kill_pids(SignalInteger, Group, OSPids)
     when is_integer(SignalInteger), is_boolean(Group), is_list(OSPids) ->
-    CommandProcess = cloudi_x_supool:get(?OS_COMMAND_POOL),
-    case cloudi_core_i_os_command:kill_pids(CommandProcess,
-                                            SignalInteger, Group, OSPids) of
-        {ok, ErrorString} ->
-            if
-                ErrorString == "" ->
-                    ok;
-                is_list(ErrorString) ->
-                    {error, ErrorString}
+    case cloudi_x_supool:get(?OS_COMMAND_POOL) of
+        CommandProcess when is_pid(CommandProcess) ->
+            case cloudi_core_i_os_command:kill_pids(CommandProcess,
+                                                    SignalInteger,
+                                                    Group, OSPids) of
+                {ok, ErrorString} ->
+                    if
+                        ErrorString == "" ->
+                            ok;
+                        is_list(ErrorString) ->
+                            {error, ErrorString}
+                    end;
+                {error, _} = Error ->
+                    Error
             end;
-        {error, _} = Error ->
-            Error
+        undefined ->
+            {error, noproc}
     end.
 
 ospids_to_iolist(OSPids)
