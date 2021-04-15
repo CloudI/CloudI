@@ -3,6 +3,15 @@
 
 2021-04-14 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add the service configuration options
+      aspects_suspend and aspects_resume for executing aspect functions
+      when a service is suspended or resumed
+    * Add cloudi_service_map_reduce functions
+      aspect_suspend/1 and aspect_resume/1 for use with the
+      aspects_suspend and aspects_resume service configuration options
+      for suspending the map-reduce execution using the
+      CloudI Service API services_suspend function
+    * Fix configuration validation of {{_, _}} aspect function arity
     * Fix cloudi_core_i_os_port:sync/3 typespec use
 
 2021-04-13 Michael Truog   <mjtruog at protonmail dot com>

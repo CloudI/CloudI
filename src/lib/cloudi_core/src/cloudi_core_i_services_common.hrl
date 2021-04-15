@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -513,6 +513,29 @@ aspects_terminate_before([F | L],
     try {ok, _} = F(Reason, TimeoutTerm, ServiceState) of
         {ok, ServiceStateNew} ->
             aspects_terminate_before(L, Reason, TimeoutTerm, ServiceStateNew)
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [F, ErrorType, Error, ErrorStackTrace]),
+            {ok, ServiceState}
+    end.
+
+aspects_suspend_resume([], ServiceState) ->
+    {ok, ServiceState};
+aspects_suspend_resume([{M, F} = Aspect | L], ServiceState) ->
+    try {ok, _} = M:F(ServiceState) of
+        {ok, ServiceStateNew} ->
+            aspects_suspend_resume(L, ServiceStateNew)
+    catch
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
+            {ok, ServiceState}
+    end;
+aspects_suspend_resume([F | L], ServiceState) ->
+    try {ok, _} = F(ServiceState) of
+        {ok, ServiceStateNew} ->
+            aspects_suspend_resume(L, ServiceStateNew)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",

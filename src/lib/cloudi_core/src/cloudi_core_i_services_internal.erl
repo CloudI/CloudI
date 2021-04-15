@@ -1665,7 +1665,11 @@ handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
             #state{dispatcher = Dispatcher,
                    suspended = SuspendedOld,
                    queue_requests = QueueRequests,
-                   duo_mode_pid = undefined} = State) ->
+                   service_state = ServiceState,
+                   duo_mode_pid = undefined,
+                   options = #config_service_options{
+                       aspects_suspend = AspectsSuspend,
+                       aspects_resume = AspectsResume}} = State) ->
     {Result, StateNew} = case SuspendedOld of
         #suspended{processing = Suspend} ->
             {if
@@ -1678,17 +1682,23 @@ handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
         #suspended{processing = false}
             when Suspend =:= true ->
             TimeSuspend = cloudi_timestamp:native_monotonic(),
+            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsSuspend,
+                                                           ServiceState),
             {ok,
              State#state{suspended = #suspended{
                              processing = true,
                              busy = QueueRequests,
                              time_suspend = TimeSuspend},
-                         queue_requests = true}};
+                         queue_requests = true,
+                         service_state = ServiceStateNew}};
         #suspended{processing = true,
                    busy = Busy,
                    time_suspend = TimeSuspend}
             when Suspend =:= false ->
-            StateNext = State#state{suspended = #suspended{}},
+            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsResume,
+                                                           ServiceState),
+            StateNext = State#state{suspended = #suspended{},
+                                    service_state = ServiceStateNew},
             {{ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
              if
                  Busy =:= true ->
@@ -3861,7 +3871,11 @@ duo_handle_info('cloudi_rate_request_max_rate',
 duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
                 #state_duo{duo_mode_pid = DuoModePid,
                            suspended = SuspendedOld,
-                           queue_requests = QueueRequests} = State) ->
+                           queue_requests = QueueRequests,
+                           service_state = ServiceState,
+                           options = #config_service_options{
+                               aspects_suspend = AspectsSuspend,
+                               aspects_resume = AspectsResume}} = State) ->
     {Result, StateNew} = case SuspendedOld of
         #suspended{processing = Suspend} ->
             {if
@@ -3874,17 +3888,23 @@ duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
         #suspended{processing = false}
             when Suspend =:= true ->
             TimeSuspend = cloudi_timestamp:native_monotonic(),
+            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsSuspend,
+                                                           ServiceState),
             {ok,
              State#state_duo{suspended = #suspended{
                                  processing = true,
                                  busy = QueueRequests,
                                  time_suspend = TimeSuspend},
-                             queue_requests = true}};
+                             queue_requests = true,
+                             service_state = ServiceStateNew}};
         #suspended{processing = true,
                    busy = Busy,
                    time_suspend = TimeSuspend}
             when Suspend =:= false ->
-            StateNext = State#state_duo{suspended = #suspended{}},
+            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsResume,
+                                                           ServiceState),
+            StateNext = State#state_duo{suspended = #suspended{},
+                                        service_state = ServiceStateNew},
             {{ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
              if
                  Busy =:= true ->

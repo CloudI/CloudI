@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -350,6 +350,11 @@
         aspects_terminate_before = []
             :: list(cloudi_service_api:aspect_terminate_before_internal() |
                     cloudi_service_api:aspect_terminate_before_external()),
+        % aspects may also be used when a service is suspended or resumed
+        aspects_suspend = []
+            :: list(cloudi_service_api:aspect_suspend()),
+        aspects_resume = []
+            :: list(cloudi_service_api:aspect_resume()),
 
         % Only Relevant for External Services:
 

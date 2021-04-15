@@ -44,7 +44,9 @@
 -export([resume/2,
          resume/3,
          suspend/2,
-         suspend/3]).
+         suspend/3,
+         aspect_suspend/1,
+         aspect_resume/1]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -83,6 +85,8 @@
 
 -record(state,
     {
+        service
+            :: pid(),
         map_reduce_module
             :: module(),
         map_reduce_state
@@ -237,6 +241,37 @@ suspend(Agent, Prefix) ->
 suspend(Agent, Prefix, Timeout) ->
     cloudi:send_sync(Agent, Prefix, suspend, Timeout).
 
+-spec aspect_suspend(State :: #state{}) ->
+    {ok, #state{}}.
+
+aspect_suspend(#state{map_reduce_module = MapReduceModule,
+                      map_reduce_name = MapReduceName,
+                      time_running = TimeRunningStart,
+                      suspended = false,
+                      elapsed_seconds = ElapsedSeconds} = State) ->
+    TimeRunningEnd = cloudi_timestamp:seconds_monotonic(),
+    ElapsedSecondsNew = ElapsedSeconds + (TimeRunningEnd - TimeRunningStart),
+    ?LOG_INFO("~s ~ts suspended", [MapReduceModule, MapReduceName]),
+    {ok,
+     State#state{suspended = true,
+                 elapsed_seconds = ElapsedSecondsNew}};
+aspect_suspend(#state{suspended = true} = State) ->
+    {ok, State}.
+
+-spec aspect_resume(State :: #state{}) ->
+    {ok, #state{}}.
+
+aspect_resume(#state{service = Service,
+                     map_reduce_module = MapReduceModule,
+                     map_reduce_name = MapReduceName,
+                     suspended = true} = State) ->
+    TimeRunningStart = cloudi_timestamp:seconds_monotonic(),
+    Service ! cloudi_service_map_reduce_resumed,
+    ?LOG_INFO("~s ~ts resumed", [MapReduceModule, MapReduceName]),
+    {ok,
+     State#state{time_running = TimeRunningStart,
+                 suspended = false}}.
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
@@ -292,8 +327,8 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              State, Dispatcher) ->
-    request(Request, State, Dispatcher).
+                              State, _Dispatcher) ->
+    request(Request, State).
 
 cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
                            #init_state{} = InitState,
@@ -370,6 +405,27 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
         error ->
             map_info(Request, State, Dispatcher)
     end;
+cloudi_service_handle_info(cloudi_service_map_reduce_resumed,
+                           #state{map_reduce_module = MapReduceModule,
+                                  map_reduce_state = MapReduceState,
+                                  map_count = MapCount,
+                                  map_requests = MapRequests,
+                                  suspended = Suspended} = State,
+                           Dispatcher) ->
+    if
+        Suspended =:= true ->
+            {noreply, State};
+        Suspended =:= false ->
+            case map_send(MapCount - maps:size(MapRequests), MapRequests,
+                          MapReduceModule, MapReduceState, Dispatcher) of
+                {ok, MapRequestsNew, MapReduceStateNew} ->
+                    {noreply,
+                     State#state{map_reduce_state = MapReduceStateNew,
+                                 map_requests = MapRequestsNew}};
+                {error, _} = Error ->
+                    {stop, Error, State}
+            end
+    end;
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     map_info(Request, State, Dispatcher).
 
@@ -390,7 +446,8 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-init(#init_begin{prefix = Prefix,
+init(#init_begin{service = Service,
+                 prefix = Prefix,
                  timeout = Timeout,
                  map_reduce_module = MapReduceModule,
                  map_reduce_args = MapReduceArgs,
@@ -411,7 +468,8 @@ init(#init_begin{prefix = Prefix,
                           MapReduceModule, MapReduceState, Dispatcher) of
                 {ok, MapRequests, MapReduceStateNew} ->
                     {noreply,
-                     #state{map_reduce_module = MapReduceModule,
+                     #state{service = Service,
+                            map_reduce_module = MapReduceModule,
                             map_reduce_state = MapReduceStateNew,
                             map_reduce_name = MapReduceName,
                             map_count = MapCount,
@@ -445,46 +503,26 @@ init_end_send([Request | InfoQueued], Service) ->
     Service ! Request,
     init_end_send(InfoQueued, Service).
 
-request(_, #init_state{} = InitState, _Dispatcher) ->
+request(_, #init_state{} = InitState) ->
     {reply, {error, init_pending}, InitState};
 request(suspend,
-        #state{map_reduce_module = MapReduceModule,
-               map_reduce_name = MapReduceName,
-               time_running = TimeRunningStart,
-               suspended = false,
-               elapsed_seconds = ElapsedSeconds} = State, _Dispatcher) ->
-    TimeRunningEnd = cloudi_timestamp:seconds_monotonic(),
-    ElapsedSecondsNew = ElapsedSeconds + (TimeRunningEnd - TimeRunningStart),
-    ?LOG_INFO("~s ~ts suspended", [MapReduceModule, MapReduceName]),
-    {reply, ok,
-     State#state{suspended = true,
-                 elapsed_seconds = ElapsedSecondsNew}};
-request(suspend,
-        #state{suspended = true} = State, _Dispatcher) ->
-    {reply, {error, already_suspended}, State};
-request(resume,
-        #state{map_reduce_module = MapReduceModule,
-               map_reduce_state = MapReduceState,
-               map_reduce_name = MapReduceName,
-               map_count = MapCount,
-               map_requests = MapRequests,
-               suspended = true} = State, Dispatcher) ->
-    TimeRunningStart = cloudi_timestamp:seconds_monotonic(),
-    case map_send(MapCount - maps:size(MapRequests), MapRequests,
-                  MapReduceModule, MapReduceState, Dispatcher) of
-        {ok, MapRequestsNew, MapReduceStateNew} ->
-            ?LOG_INFO("~s ~ts resumed", [MapReduceModule, MapReduceName]),
-            {reply, ok,
-             State#state{map_reduce_state = MapReduceStateNew,
-                         map_requests = MapRequestsNew,
-                         time_running = TimeRunningStart,
-                         suspended = false}};
-        {error, _} = Error ->
-            {stop, Error, State}
+        #state{suspended = Suspended} = State) ->
+    if
+        Suspended =:= true ->
+            {reply, {error, already_suspended}, State};
+        Suspended =:= false ->
+            {ok, StateNew} = aspect_suspend(State),
+            {reply, ok, StateNew}
     end;
 request(resume,
-        #state{suspended = false} = State, _Dispatcher) ->
-    {reply, {error, already_resumed}, State}.
+        #state{suspended = Suspended} = State) ->
+    if
+        Suspended =:= true ->
+            {ok, StateNew} = aspect_resume(State),
+            {reply, ok, StateNew};
+        Suspended =:= false ->
+            {reply, {error, already_resumed}, State}
+    end.
 
 map_resend(SendArgs, RetryCount,
            #state{map_reduce_module = MapReduceModule,

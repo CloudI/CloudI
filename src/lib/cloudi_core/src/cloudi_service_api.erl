@@ -336,6 +336,24 @@
               aspect_terminate_before_external_f/0,
               aspect_terminate_before_internal/0,
               aspect_terminate_before_external/0]).
+-type aspect_suspend_f() ::
+    fun((State :: any()) ->
+        {ok, State :: any()}).
+-type aspect_suspend() ::
+    aspect_suspend_f() |
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
+-type aspect_resume_f() ::
+    fun((State :: any()) ->
+        {ok, State :: any()}).
+-type aspect_resume() ::
+    aspect_resume_f() |
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
+-export_type([aspect_suspend_f/0,
+              aspect_suspend/0,
+              aspect_resume_f/0,
+              aspect_resume/0]).
 
 -type max_heap_size_options() ::
     non_neg_integer() |
@@ -458,6 +476,8 @@
          {aspects_info_before, list(aspect_info_before_internal())} |
          {aspects_info_after, list(aspect_info_after_internal())} |
          {aspects_terminate_before, list(aspect_terminate_before_internal())} |
+         {aspects_suspend, list(aspect_suspend())} |
+         {aspects_resume, list(aspect_resume())} |
          {application_name, undefined | atom()} |
          {init_pid_options,
           list({priority, low | normal | high} |
@@ -529,6 +549,8 @@
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |
          {aspects_terminate_before, list(aspect_terminate_before_external())} |
+         {aspects_suspend, list(aspect_suspend())} |
+         {aspects_resume, list(aspect_resume())} |
          {limit, limit_external()} |
          {owner, owner_external()} |
          {nice, nice_external()} |
@@ -783,6 +805,8 @@
          {aspects_info_before, list(aspect_info_before_internal())} |
          {aspects_info_after, list(aspect_info_after_internal())} |
          {aspects_terminate_before, list(aspect_terminate_before_internal())} |
+         {aspects_suspend, list(aspect_suspend())} |
+         {aspects_resume, list(aspect_resume())} |
          {init_pid_options,
           list({priority, low | normal | high} |
                {fullsweep_after, non_neg_integer()} |
@@ -844,6 +868,8 @@
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |
          {aspects_terminate_before, list(aspect_terminate_before_external())} |
+         {aspects_suspend, list(aspect_suspend())} |
+         {aspects_resume, list(aspect_resume())} |
          {limit, limit_external()}).
 -type service_update_plan() ::
     service_update_plan_internal() |
