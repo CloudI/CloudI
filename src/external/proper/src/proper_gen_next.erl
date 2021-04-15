@@ -1,7 +1,7 @@
 %%% -*- coding: utf-8 -*-
 %%% -*- erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
-%%% Copyright (c) 2017-2018, Andreas Löscher <andreas.loscher@it.uu.se>
+%%% Copyright (c) 2017-2020, Andreas Löscher <andreas.loscher@it.uu.se>
 %%%                     and  Kostis Sagonas <kostis@it.uu.se>
 %%%
 %%% This file is part of PropEr.
@@ -19,26 +19,20 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2017-2018 Andreas Löscher and Kostis Sagonas
+%%% @copyright 2017-2020 Andreas Löscher and Kostis Sagonas
 %%% @version {@version}
 %%% @author Andreas Löscher
 
 -module(proper_gen_next).
 
--export([from_proper_generator/1, set_temperature_scaling/1, update_caches/1, init/0, cleanup/0,
-         set_user_nf/2, set_matcher/2, get_neighborhood_function/1]).
+-export([init/0, cleanup/0, from_proper_generator/1,
+	 match/3, set_matcher/2, set_user_nf/2, update_caches/1]).
 
--export([match/3, structural_match/3, extract_outer_safe/1]).
-
--export_type([matcher/0, temperature/0, nf/0]).
+-export_type([matcher/0, temperature/0, depth/0, nf/0]).
 
 -include("proper_internal.hrl").
 
--ifdef(AT_LEAST_19).
 -dialyzer({no_improper_lists, construct_improper/2}).
--else.
--export([construct_improper/2]).
--endif.
 
 -define(GENERATORS, [{fun is_user_defined/1, fun user_defined_gen_sa/1}, %% needs to be first!
                      {fun is_atom/1, fun dont_change/1},
@@ -61,34 +55,33 @@
 -define(TEMP(T), calculate_temperature(T)).
 -define(SLTEMP(T), adjust_temperature(T)).
 
+-define(GEN_NEXT_CACHE,  proper_gen_next_cache).
+-define(GEN_NEXT_BACKUP, proper_gen_next_cache_backup).
+-define(GEN_NEXT_DEPTH,  proper_gen_next_cache_depth).
+
 -type temperature() :: float().
--type nf() :: fun((pos_integer(), temperature()) -> term()).
+-type depth() :: pos_integer().
+-type nf_temp() :: temperature() | {depth(), temperature()} | null.
+-type nf() :: fun((term(), nf_temp()) -> proper_types:type()).
 -type matcher() :: fun((term(), proper_types:raw_type(), temperature()) -> term()).
 
 -spec update_caches('accept' | 'reject') -> 'ok'.
 update_caches(accept) ->
-  put(proper_gen_next_cache_backup, get(proper_gen_next_cache)),
+  put(?GEN_NEXT_BACKUP, get(?GEN_NEXT_CACHE)),
   ok;
 update_caches(reject) ->
-  put(proper_gen_next_cache, get(proper_gen_next_cache_backup)),
+  put(?GEN_NEXT_CACHE, get(?GEN_NEXT_BACKUP)),
   ok.
 
--spec from_proper_generator(proper_types:type()) -> proper_target:tmap().
+-spec from_proper_generator(proper_types:type()) -> proper_target:next_fun().
 from_proper_generator(RawGenerator) ->
   ensure_initialized(),
-  Next = replace_generators(RawGenerator),
-  #{first => RawGenerator, next => Next}.
+  replace_generators(RawGenerator).
 
 ensure_initialized() ->
-  L = [get(proper_gen_next_cache),
-       get(proper_gen_next_cache_backup),
-       get(proper_gen_next_depth_cache),
-       get(rand_seed),
-       get('$any_type'),
-       get('$left'),
-       get('$constraint_tries'),
-       get('$typeserver_pid')],
-  case lists:member(undefined, L) of
+  L = [?GEN_NEXT_CACHE, ?GEN_NEXT_BACKUP, ?GEN_NEXT_DEPTH, ?SEED_NAME,
+       '$left', '$constraint_tries', '$typeserver_pid'],
+  case lists:any(fun(X) -> get(X) =:= undefined end, L) of
     true ->
       %% not correctly initialized
       init(),
@@ -100,17 +93,15 @@ ensure_initialized() ->
 
 -spec init() -> ok.
 init() ->
-  init_pd(proper_gen_next_cache, #{}),
-  init_pd(proper_gen_next_cache_backup, #{}),
-  init_pd(proper_gen_next_depth_cache, #{max => 1}),
+  init_pd(?GEN_NEXT_CACHE,  #{}),
+  init_pd(?GEN_NEXT_BACKUP, #{}),
+  init_pd(?GEN_NEXT_DEPTH,  #{max => 1}),
   ok.
 
 -spec cleanup() -> ok.
 cleanup() ->
-  erase(proper_gen_next_cache),
-  erase(proper_gen_next_cache_backup),
-  erase(proper_gen_next_depth_cache),
-  ok.
+  L = [?GEN_NEXT_CACHE, ?GEN_NEXT_BACKUP, ?GEN_NEXT_DEPTH],
+  lists:foreach(fun(X) -> erase(X) end, L).
 
 init_pd(Key, Value) ->
   case get(Key) of
@@ -128,16 +119,11 @@ set_user_nf(Type, NF) ->
 set_matcher(Type, Matcher) ->
   proper_types:add_prop(matcher, Matcher, Type).
 
-get_depth() ->
-  DS = get(proper_gen_next_depth_cache),
-  #{max := Max} = DS,
-  Max.
-
 store_max_depth(Depth) ->
-  DS = get(proper_gen_next_depth_cache),
-  #{max := Current} = DS,
-  NewMax = max(Depth, Current),
-  put(proper_gen_next_depth_cache, DS#{max => NewMax}),
+  DS = get(?GEN_NEXT_DEPTH),
+  #{max := CurrentMax} = DS,
+  NewMax = max(Depth, CurrentMax),
+  put(?GEN_NEXT_DEPTH, DS#{max => NewMax}),
   NewMax.
 
 replace_generators(RawGen) ->
@@ -147,7 +133,8 @@ replace_generators(RawGen) ->
       %% replaced generator
       UnrestrictedGenerator = Replacer(Gen),
       RestrictedGenerator = apply_constraints(UnrestrictedGenerator, Gen),
-      apply_temperature_scaling(RestrictedGenerator);
+      TemperaturedGenerator = apply_temperature_scaling(RestrictedGenerator),
+      apply_parameters(TemperaturedGenerator, Gen);
     _ ->
       %% fallback
       case proper_types:is_type(Gen) of
@@ -155,7 +142,8 @@ replace_generators(RawGen) ->
           %% warning
           case get(proper_sa_testing) of
             true -> error(proper_sa_fallback);
-            false -> io:format("Fallback using regular generator instead: ~p~n", [Gen])
+            false ->
+	      io:format("Fallback using regular generator instead: ~p~n", [Gen])
           end;
         false ->
           %% literal value -> no warning
@@ -196,7 +184,8 @@ restrict_generation(_, _, T, 0, Type, none) ->
 restrict_generation(_, _, _, 0, _, {ok, WeakInstance}) -> WeakInstance;
 restrict_generation(Gen, B, T, TriesLeft, Type, WeakInstance) ->
   Instance = Gen(B, T),
-  case proper_types:satisfies_all(Instance, Type) of
+  CleanInstance = proper_gen:clean_instance(Instance),
+  case proper_types:satisfies_all(CleanInstance, Type) of
     {true, true} ->
       %% strong
       Instance;
@@ -210,12 +199,25 @@ restrict_generation(Gen, B, T, TriesLeft, Type, WeakInstance) ->
 
 apply_temperature_scaling(Generator) ->
   fun (Base, Temp) ->
-      %%     Generator(Base, Temp)
       case Temp of
         {Depth, Temperature} -> Generator(Base, {Depth + 1, Temperature});
         null -> Generator(Base, null);
         _ -> Generator(Base, {1, Temp})
       end
+  end.
+
+apply_parameters(Generator, RawType) ->
+  MaybeParameters = proper_types:find_prop(parameters, RawType),
+  fun (Base, Temp) ->
+      BaseType = ?LAZY(Generator(Base, Temp)),
+      Type = case MaybeParameters of
+               {ok, Parameters} ->
+                 proper_types:with_parameters(Parameters, BaseType);
+               error ->
+                 BaseType
+             end,
+      {ok, Generated} = proper_gen:safe_generate(Type),
+      Generated
   end.
 
 adjust_temperature({Depth, Temperature}) ->
@@ -225,23 +227,18 @@ adjust_temperature({Depth, Temperature}) ->
 adjust_temperature(Temp) ->
   adjust_temperature({1, Temp}).
 
--spec set_temperature_scaling(boolean) -> 'ok'.
-set_temperature_scaling(Enabled) ->
-  put(proper_gen_next_temperature_scaling, Enabled).
-
 temperature_scaling(null, _) -> 0.0;
 temperature_scaling(Temp, Depth) ->
   case get(proper_gen_next_temperature_scaling) of
+    undefined -> 1.0;
     false -> 1.0;
     true ->
       M = 0.25,
-      MaxD = get_depth(),
+      #{max := MaxD} = get(?GEN_NEXT_DEPTH),
       case MaxD of
         1 -> Temp;
         _ -> M + M*1/(1-MaxD) * Temp * (Depth-1)
-      end;
-    _ ->
-      1.0
+      end
   end.
 
 calculate_temperature(null) ->
@@ -273,9 +270,9 @@ make_inrange(Val, L, R) when (R=:=inf orelse Val =< R) andalso (L=:=inf orelse V
 make_inrange(Val, L, _R) when Val < L -> L;
 make_inrange(Val, _L, R) when Val > R -> R.
 
-make_inrange(Val, Offset, L, R) when L =/= inf andalso Val + Offset < L ->
+make_inrange(Val, Offset, L, R) when L =/= inf, Val + Offset < L ->
   make_inrange(Val - Offset, L, R);
-make_inrange(Val, Offset, L, R) when R =/= inf andalso Val + Offset > R ->
+make_inrange(Val, Offset, L, R) when R =/= inf, Val + Offset > R ->
   make_inrange(Val - Offset, L, R);
 make_inrange(Val, Offset, L, R) -> make_inrange(Val + Offset, L, R).
 
@@ -330,7 +327,7 @@ list_choice(empty, Temp) ->
 list_choice({list, GrowthCoefficient}, Temp) ->
   C = ?RANDOM_MOD:uniform(),
   AddCoefficient = 0.3 * GrowthCoefficient,
-  DelCoefficient = 0.3 * (1- GrowthCoefficient),
+  DelCoefficient = 0.3 * (1 - GrowthCoefficient),
   C_Add =          AddCoefficient * Temp,
   C_Del = C_Add + (DelCoefficient * Temp),
   C_Mod = C_Del + (0.15 * Temp),
@@ -371,7 +368,7 @@ list_gen_internal([H|T], null, InternalType, ElementType, GrowthCoefficient) ->
 list_gen_internal(L=[H|T], Temp, InternalType, ElementType, GrowthCoefficient) ->
   %% chance to modify current element
   %% chance to delete current element
-  %% chance to add element infront of current element
+  %% chance to add element in front of current element
   case list_choice({list, GrowthCoefficient}, ?TEMP(Temp)) of
     add ->
       {ok, New} = proper_gen:safe_generate(InternalType),
@@ -598,8 +595,8 @@ union_gen_sa(Type) ->
 
 %% let
 is_let_type({'$type', Props}) ->
-  {kind, constructed} =:= proplists:lookup(kind, Props) andalso
-    {shrink_to_parts, false} =:= proplists:lookup(shrink_to_parts, Props);
+  constructed =:= proplists:get_value(kind, Props) andalso
+    false =:= proplists:get_value(shrink_to_parts, Props);
 is_let_type(_) ->
   false.
 
@@ -609,19 +606,15 @@ let_gen_sa(Type) ->
   Matcher = get_matcher(Type),
   PartsGen = replace_generators(PartsType),
   fun (Base, Temp) ->
-      LetOuter = case extract_outer_safe(Base) of
-                   {ok, Outer} -> PartsGen(Outer, ?SLTEMP(Temp));
-                   fail -> sample_from_type(PartsType, ?SLTEMP(Temp))
+      LetOuter = case Base of
+                   {'$used', Outer, _} -> PartsGen(Outer, ?SLTEMP(Temp));
+                   _ -> sample_from_type(PartsType, ?SLTEMP(Temp))
                  end,
       CleanOuter = proper_gen:clean_instance(LetOuter),
       RawCombined = Combine(CleanOuter),
       NewValue = Matcher(Base, RawCombined, Temp),
       {'$used', LetOuter, NewValue}
   end.
-
--spec extract_outer_safe(proper_gen:imm_instance()) -> {ok, proper_gen:imm_instance()} | fail.
-extract_outer_safe({'$used', Extracted, _}) -> {ok, Extracted};
-extract_outer_safe(_) -> fail.
 
 get_matcher(Type) ->
   case proper_types:find_prop(matcher, Type) of
@@ -655,33 +648,33 @@ structural_match(UncleanBase, UncleanRawType, Temp) ->
           Gen(BaseNormalized, ?SLTEMP(Temp))
       end;
     false ->
-      if
-        is_tuple(RawType) ->
-          case is_set(RawType) orelse is_dict(RawType) of
-            true ->
-              %% we do not take apart Erlang's dicts and sets
-              sample_from_type(RawType, ?TEMP(Temp));
-            _ ->
+      case sets:is_set(RawType) orelse is_dict(RawType) of
+	true -> %% we do not take apart sets and dicts
+          sample_from_type(RawType, ?TEMP(Temp));
+        false ->
+	  if
+            is_tuple(RawType) ->
+	      RawTypeLst = tuple_to_list(RawType),
               MC = case is_tuple(Base) of
-                     true ->
-                       structural_match(tuple_to_list(Base), tuple_to_list(RawType), Temp);
+		     true ->
+                       structural_match(tuple_to_list(Base), RawTypeLst, Temp);
                      false ->
-                       structural_match(no_matching, tuple_to_list(RawType), Temp)
+                       structural_match(no_matching, RawTypeLst, Temp)
                    end,
-              list_to_tuple(MC)
-          end;
-        is_list(RawType) andalso is_list(Base) ->
-          case safe_zip(Base, RawType) of
-            {ok, ZippedBasesWithTypes} ->
-              per_element_match_cook(ZippedBasesWithTypes, Temp);
-            impossible ->
-              sample_from_type(RawType, ?TEMP(Temp))
-          end;
-        is_list(RawType) ->
-          %% the base is not matching
-          per_element_match_cook(no_matching_list_zip(RawType), Temp);
-        true ->
-          sample_from_type(RawType, ?TEMP(Temp))
+	      list_to_tuple(MC);
+            is_list(RawType) andalso is_list(Base) ->
+              case safe_zip(Base, RawType) of
+		{ok, ZippedBasesWithTypes} ->
+		  per_element_match_cook(ZippedBasesWithTypes, Temp);
+		impossible ->
+		  sample_from_type(RawType, ?TEMP(Temp))
+	      end;
+            is_list(RawType) ->
+	     %% the base is not matching
+	     per_element_match_cook(no_matching_list_zip(RawType), Temp);
+            true ->
+	     sample_from_type(RawType, ?TEMP(Temp))
+	 end
       end
   end.
 
@@ -725,18 +718,12 @@ safe_zip(ITL, ITR, Acc) ->
     _ -> {ok, construct_improper(Acc, {ITL, ITR})}
   end.
 
--ifndef(AT_LEAST_19).
--spec construct_improper(list(), term()) -> term().
--endif.
 construct_improper([], IT) ->
   IT;
 construct_improper([H|T], IT) ->
   [H | construct_improper(T, IT)].
 
-%% unsafe checks
-is_set({set, _, _, _, _, _, _, _, _}) -> true;
-is_set(_) -> false.
-
+%% unsafe check
 is_dict({dict, _, _, _, _, _, _, _, _}) -> true;
 is_dict(_) -> false.
 
@@ -747,7 +734,7 @@ is_wrapper_type(Type) ->
 
 get_cached_size(Type) ->
   Key = erlang:phash2({sized_type, Type}),
-  case get(proper_gen_next_cache) of
+  case get(?GEN_NEXT_CACHE) of
     Map when is_map(Map) ->
       case maps:find(Key, Map) of
         error -> not_found;
@@ -758,8 +745,8 @@ get_cached_size(Type) ->
 
 set_cache_size(Type, Size) ->
   Key = erlang:phash2({sized_type, Type}),
-  M = get(proper_gen_next_cache),
-  put(proper_gen_next_cache, maps:put(Key, Size, M)).
+  M = get(?GEN_NEXT_CACHE),
+  put(?GEN_NEXT_CACHE, maps:put(Key, Size, M)).
 
 get_size(Type, Temp) ->
   Size = case get_cached_size(Type) of
@@ -834,8 +821,8 @@ user_defined_gen_sa(Type) ->
 dont_change(X) ->
   fun (_, _) -> X end.
 
-%% @doc constructs a neighborhood function `Fun(Base, Temp)' from `Type'
--spec get_neighborhood_function(proper_types:type()) -> proper_gen_next:nf().
-get_neighborhood_function(Type) ->
-  #{next := Next} = from_proper_generator(Type),
-  Next.
+%%%% -- constructs a neighborhood function `Fun(Base, Temp)' from `Type'
+%%-spec get_neighborhood_function(proper_types:type()) -> proper_gen_next:nf().
+%%get_neighborhood_function(Type) ->
+%%  #{next := Next} = from_proper_generator(Type),
+%%  Next.

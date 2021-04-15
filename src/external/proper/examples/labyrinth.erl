@@ -1,8 +1,7 @@
-%%% -*- coding: utf-8 -*-
-%%% -*- erlang-indent-level: 2 -*-
+%%% -*- coding: utf-8; erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
-%%% Copyright (c) 2017, Andreas Löscher <andreas.loscher@it.uu.se>
-%%%                and  Kostis Sagonas <kostis@it.uu.se>
+%%% Copyright (c) 2017-2021 Andreas Löscher <andreas.loscher@it.uu.se>
+%%%                     and Kostis Sagonas <kostis@it.uu.se>
 %%%
 %%% This file is part of PropEr.
 %%%
@@ -19,39 +18,39 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2017 Andreas Löscher and Kostis Sagonas
+%%% @copyright 2017-2021 Andreas Löscher and Kostis Sagonas
 %%% @version {@version}
-%%% @author Andreas Löscher
+%%% @author Andreas Löscher and Kostis Sagonas
 
--module(level).
--export([level0/0, level1/0, level2/0, build_level/1]).
--export([prop_exit/1, prop_exit_targeted/1]).
+-module(labyrinth).
+-export([maze/1]).
+-export([prop_exit_random/1,
+	 prop_exit_targeted_user/1,
+	 prop_exit_targeted_auto/1]).
 
 -include_lib("proper/include/proper.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Types
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--type pos() :: {integer(), integer()}.
--type brick() :: wall | exit | entrance.
--type level_data() :: [string()].
--type level() :: #{pos() => brick(),
-                   exit=>pos(),
-                   entrance => pos()}.
--type step() :: left | right | up | down.
+-type pos()     :: {integer(), integer()}.
+-type brick()   :: wall | exit | entrance.
+-type maze()    :: list(string()).
+-type mazemap() :: #{pos() => brick(), exit := pos(), entrance := pos()}.
+-type step()    :: left | right | up | down.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Levels
+%% Mazes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--spec level0() -> level_data().
-level0() ->
+
+-spec maze(0..2) -> maze().
+maze(0) ->
   ["#########",
    "#X     E#",
-   "#########"].
-
--spec level1() -> level_data().
-level1() ->
+   "#########"];
+maze(1) ->
   ["######################################################################",
    "#                                                                    #",
    "#   E                                                                #",
@@ -75,11 +74,8 @@ level1() ->
    "#                                              #####                 #",
    "#                                                              X     #",
    "#                                                                    #",
-   "######################################################################"].
-
-
--spec level2() -> level_data().
-level2() ->
+   "######################################################################"];
+maze(2) ->
   ["######################################################################",
    "#                                                                    #",
    "#    X                                                               #",
@@ -105,49 +101,48 @@ level2() ->
    "#                                                                    #",
    "######################################################################"].
 
--spec build_level(list(string())) -> level().
-build_level(Data) ->
-  build_level(Data, #{}, 0).
+-spec draw_map(maze()) -> mazemap().
+draw_map(Maze) ->
+  draw_map(Maze, #{}, 0).
 
-build_level([], Acc, _) -> Acc;
-build_level([Line | T], Acc, X) ->
-  NewAcc = build_level_line(Line, Acc, X, 0),
-  build_level(T, NewAcc, X + 1).
+draw_map([], Acc, _) -> Acc;
+draw_map([Line | T], Acc, X) ->
+  NewAcc = draw_line(Line, Acc, X, 0),
+  draw_map(T, NewAcc, X + 1).
 
-build_level_line([], Acc, _, _) -> Acc;
-build_level_line([$ | T], Acc, X, Y) ->
-  build_level_line(T, Acc, X, Y + 1);
-build_level_line([$# | T], Acc, X, Y) ->
-  build_level_line(T, Acc#{{X, Y} => wall}, X, Y + 1);
-build_level_line([$X | T], Acc, X, Y) ->
-  build_level_line(T, Acc#{{X, Y} => exit, exit => {X, Y}}, X, Y + 1);
-build_level_line([$E | T], Acc, X, Y) ->
-  build_level_line(T, Acc#{{X, Y} => entrance, entrance => {X, Y}}, X, Y + 1);
-build_level_line(_, _, _, _) ->
-  error(level_data).
+draw_line([], Acc, _, _) -> Acc;
+draw_line([$ | T], Acc, X, Y) ->
+  draw_line(T, Acc, X, Y + 1);
+draw_line([$# | T], Acc, X, Y) ->
+  draw_line(T, Acc#{{X, Y} => wall}, X, Y + 1);
+draw_line([$X | T], Acc, X, Y) ->
+  draw_line(T, Acc#{{X, Y} => exit, exit => {X, Y}}, X, Y + 1);
+draw_line([$E | T], Acc, X, Y) ->
+  draw_line(T, Acc#{{X, Y} => entrance, entrance => {X, Y}}, X, Y + 1).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Movement
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--spec do_step(pos(), step(), level()) -> pos().
-do_step(Pos = {X, Y}, Step, Level) ->
+
+-spec try_move_a_step(pos(), step(), mazemap()) -> pos().
+try_move_a_step(Pos = {X, Y}, Step, MazeMap) ->
   NextPos = case Step of
               left -> {X, Y - 1};
               right -> {X, Y + 1};
               up -> {X - 1, Y};
               down -> {X + 1, Y}
             end,
-  case Level of
+  case MazeMap of
     #{NextPos := wall} -> Pos;
     _ -> NextPos
   end.
 
--spec follow_path(pos(), [step()], level()) -> pos() | {exited, pos()}.
-follow_path(Start, Path, Level) ->
-  #{exit := Exit} = Level,
+-spec follow_path(pos(), [step()], mazemap()) -> pos() | {exited, pos()}.
+follow_path(Start, Path, MazeMap) ->
+  #{exit := Exit} = MazeMap,
   lists:foldl(fun (_, Final = {exited, _}) -> Final;
                   (Step, CurrPos) ->
-                  case do_step(CurrPos, Step, Level) of
+                  case try_move_a_step(CurrPos, Step, MazeMap) of
                     Exit -> {exited, Exit};
                     NewPos -> NewPos
                   end
@@ -156,15 +151,12 @@ follow_path(Start, Path, Level) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Generators
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 step() ->
   oneof([left, right, up, down]).
 
 path() ->
   list(step()).
-
-path_sa() ->
-  #{first => path(),
-    next => path_next()}.
 
 path_next() ->
   fun (PrevPath, _) ->
@@ -174,31 +166,88 @@ path_next() ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Properties
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_exit(LevelData) ->
-  Level = build_level(LevelData),
-  #{entrance := Entrance} = Level,
+
+prop_exit_random(Maze) ->
+  MazeMap = draw_map(Maze),
+  #{entrance := Entrance} = MazeMap,
   ?FORALL(Path, path(),
-          case follow_path(Entrance, Path, Level) of
+          case follow_path(Entrance, Path, MazeMap) of
             {exited, _} -> false;
             _ -> true
           end).
 
-prop_exit_targeted(LevelData) ->
-  Level = build_level(LevelData),
-  #{entrance := Entrance} = Level,
-  #{exit := Exit} = Level,
-  ?FORALL_SA(Path, ?TARGET(path_sa()),
-             case follow_path(Entrance, Path, Level) of
-               {exited, _Pos} -> false;
-               Pos ->
-                 case length(Path) > 500 of
-                   true -> proper_sa:reset(), true;
-                   _ ->
-                     UV = distance(Pos, Exit),
-                     ?MINIMIZE(UV),
-                     true
-                 end
-             end).
+prop_exit_targeted_user(Maze) ->
+  MazeMap = draw_map(Maze),
+  #{entrance := Entrance, exit := Exit} = MazeMap,
+  ?FORALL_TARGETED(Path, ?USERNF(path(), path_next()),
+                   case follow_path(Entrance, Path, MazeMap) of
+                     {exited, _Pos} -> false;
+                     Pos ->
+                       case length(Path) > 2000 of
+                         true ->
+                           proper_target:reset(),
+                           true;
+                         _ ->
+                           UV = distance(Pos, Exit),
+                           ?MINIMIZE(UV),
+                           true
+                       end
+                   end).
+
+prop_exit_targeted_auto(Maze) ->
+  MazeMap = draw_map(Maze),
+  #{entrance := Entrance, exit := Exit} = MazeMap,
+  ?FORALL_TARGETED(Path, path(),
+                   case follow_path(Entrance, Path, MazeMap) of
+                     {exited, _Pos} -> false;
+                     Pos ->
+                       UV = distance(Pos, Exit),
+                       ?MINIMIZE(UV),
+                       true
+                   end).
 
 distance({X1, Y1}, {X2, Y2}) ->
   math:sqrt(math:pow(X1 - X2, 2) + math:pow(Y1 - Y2, 2)).
+
+
+%% -----------------------------------------------------------------------------
+%% EUnit tests
+%% -----------------------------------------------------------------------------
+
+-define(_passes(Test),       ?_passes(Test, [])).
+-define(_passes(Test, Opts), ?_assert(proper:quickcheck(Test, Opts))).
+-define(_fails(Test, Opts),
+        ?_test(
+           begin
+             Result = proper:quickcheck(Test, Opts),
+             CExm = proper:counterexample(),
+             proper:clean_garbage(),
+             ?assertNot(Result),
+             ?checkCExm(CExm, Test, Opts)
+           end)).
+-define(_failsWith(ExpectedCExm, Test), ?_failsWith(ExpectedCExm, Test, [])).
+-define(_failsWith(ExpectedCExm, Test, Opts),
+        ?_test(
+           begin
+             Result = proper:quickcheck(Test, Opts),
+             CExm = proper:counterexample(),
+             proper:clean_garbage(),
+             ?assertNot(Result),
+             ?assertMatch(ExpectedCExm, CExm),
+             ?checkCExm(CExm, Test, Opts)
+           end)).
+-define(checkCExm(CExm, Test, Opts),
+        ?assertNot(proper:check(Test, CExm, Opts))).
+
+labyrinth_props_test_() ->
+  FailOpts = [{numtests,7500}, noshrink],        % see comment above
+  M0 = labyrinth:maze(0), M1 = labyrinth:maze(1), M2 = labyrinth:maze(2),
+  SixLeft = [[left,left,left,left,left,left]],
+  [{"Random", ?_failsWith(SixLeft, prop_exit_random(M0), [500])},
+   {"Targeted user Maze 0", ?_failsWith(SixLeft, prop_exit_targeted_user(M0))},
+   {timeout, 42,
+    {"Targeted user Maze 1", ?_fails(prop_exit_targeted_user(M1), FailOpts)}},
+   {timeout, 42,
+    {"Targeted user Maze 2", ?_fails(prop_exit_targeted_user(M2), FailOpts)}},
+   {timeout, 42,
+    {"Targeted user Maze 3", ?_fails(prop_exit_targeted_auto(M2), FailOpts)}}].

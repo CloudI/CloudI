@@ -1,7 +1,7 @@
 %%% -*- coding: utf-8 -*-
 %%% -*- erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
-%%% Copyright 2010-2018 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2021 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -20,7 +20,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2018 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2021 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 
@@ -81,7 +81,8 @@
 %%%   `#rec_name{}' syntax. To use a typed record in a `?FORALL', enclose the
 %%%   record in a custom type like so:
 %%%   ``` -type rec_name() :: #rec_name{}. '''
-%%%   and use the custom type instead.</li>
+%%%   and use the custom type instead. (Note that it is a good idea in general
+%%%   to do the above, i.e., give a name to all record types.)</li>
 %%% <li>`?FORALL's may contain references to self-recursive or mutually
 %%%   recursive native types, so long as each type in the hierarchy has a clear
 %%%   base case.
@@ -188,7 +189,7 @@
 %% CAUTION: all these must be sorted
 -define(STD_TYPES_0,
 	[any,arity,atom,binary,bitstring,bool,boolean,byte,char,float,integer,
-	 list,neg_integer,non_neg_integer,number,pos_integer,string,term,
+	 list,neg_integer,nil,non_neg_integer,number,pos_integer,string,term,
 	 timeout]).
 -define(HARD_ADTS,
 	%% gb_trees:iterator and gb_sets:iterator are NOT hardcoded
@@ -246,8 +247,8 @@
 -type type_repr() :: {'abs_type',abs_type(),[var_name()],symb_info()}
 		   | {'cached',fin_type(),abs_type(),symb_info()}
 		   | {'abs_record',[{field_name(),abs_type()}]}.
--type gen_fun() :: fun((size()) -> fin_type()).
--type rec_fun() :: fun(([gen_fun()],size()) -> fin_type()).
+-type gen_fun() :: fun((proper_gen:size()) -> fin_type()).
+-type rec_fun() :: fun(([gen_fun()],proper_gen:size()) -> fin_type()).
 -type rec_arg() :: {boolean() | {'list',boolean(),rec_fun()},full_type_ref()}.
 -type rec_args() :: [rec_arg()].
 -type ret_type() :: {'simple',fin_type()} | {'rec',rec_fun(),rec_args()}.
@@ -503,39 +504,41 @@ make_spec_test({Mod,_Fun,_Arity}=MFA, {Domain,_Range}=FunRepr, SpecTimeout, Fals
 	    Error
     end.
 
--spec apply_spec_test(mfa(), fun_repr(), timeout(), false_positive_mfas(), term()) -> proper:test().
+-spec apply_spec_test(mfa(), fun_repr(), timeout(), false_positive_mfas(), [term()]) -> proper:test().
 apply_spec_test({Mod,Fun,_Arity}=MFA, {_Domain,Range}, SpecTimeout, FalsePositiveMFAs, Args) ->
-    ?TIMEOUT(SpecTimeout,
-             begin
-                 %% NOTE: only call apply/3 inside try/catch (do not trust ?MODULE:is_instance/3)
-                 {Result, StackTrace} =
-                     try apply(Mod, Fun, Args) of
-                         X -> {{ok, X}, none}
-                     catch
-                         ?STACKTRACE(X, Y, Trace) %, is in macro
-                         {{X, Y}, Trace}
-                     end,
-                 case Result of
-                     {ok, Z} ->
-                         case ?MODULE:is_instance(Z, Mod, Range) of
-                             true ->
-                                 true;
-                             false when is_function(FalsePositiveMFAs) ->
-                                 FalsePositiveMFAs(MFA, Args, {fail, Z});
-                             false ->
-                                 false
-                         end;
-                     Exception when is_function(FalsePositiveMFAs) ->
-                         case FalsePositiveMFAs(MFA, Args, Exception) of
-                             true ->
-                                 true;
-                             false ->
-                                 error(Exception, StackTrace)
-                         end;
-                     Exception ->
-                         error(Exception, StackTrace)
-                 end
-             end).
+    Prop =
+	?DELAY(
+	   begin
+	       %% NOTE: only call apply/3 inside try/catch (do not trust ?MODULE:is_instance/3)
+	       {Result, StackTrace} =
+		   try apply(Mod, Fun, Args) of
+		       X -> {{ok, X}, none}
+		   catch
+		       ?STACKTRACE(X, Y, Trace) %, is in macro
+		       {{X, Y}, Trace}
+		       end,
+	       case Result of
+		   {ok, Z} ->
+		       case ?MODULE:is_instance(Z, Mod, Range) of
+			   true ->
+			       true;
+			   false when is_function(FalsePositiveMFAs) ->
+			       FalsePositiveMFAs(MFA, Args, {fail, Z});
+			   false ->
+			       false
+		       end;
+		   Exception when is_function(FalsePositiveMFAs) ->
+		       case FalsePositiveMFAs(MFA, Args, Exception) of
+			   true ->
+			       true;
+			   false ->
+			       error(Exception, StackTrace)
+		       end;
+		   Exception ->
+		       error(Exception, StackTrace)
+	       end
+	   end),
+    proper:timeout(SpecTimeout, Prop).
 
 -spec get_exp_specced(mod_name(), state()) -> rich_result2([mfa()],state()).
 get_exp_specced(Mod, State) ->
@@ -1032,6 +1035,8 @@ collect_vars(FullADTRef, {paren_type,_,[Type]}, UsedVars) ->
     collect_vars(FullADTRef, Type, UsedVars);
 collect_vars(FullADTRef, {ann_type,_,[_Var,Type]}, UsedVars) ->
     collect_vars(FullADTRef, Type, UsedVars);
+collect_vars(_FullADTRef, {type,_,map,any}, UsedVars) ->
+    UsedVars;
 collect_vars(_FullADTRef, {type,_,tuple,any}, UsedVars) ->
     UsedVars;
 collect_vars({_Mod,SameName,Arity} = FullADTRef, {type,_,SameName,ArgForms},
@@ -1088,13 +1093,15 @@ update_vars({remote_type,Line,[RemModForm,NameForm,ArgForms]}, VarSubstsDict,
 	    UnboundToAny) ->
     NewArgForms = [update_vars(A,VarSubstsDict,UnboundToAny) || A <- ArgForms],
     {remote_type, Line, [RemModForm,NameForm,NewArgForms]};
-update_vars({T,_,tuple,any} = Call, _VarSubstsDict, _UnboundToAny) when ?IS_TYPE_TAG(T) ->
-    Call;
+update_vars({type,_,map,any} = Type, _VarSubstsDict, _UnboundToAny) ->
+    Type;
+update_vars({type,_,tuple,any} = Type, _VarSubstsDict, _UnboundToAny) ->
+    Type;
 update_vars({T,Line,Name,ArgForms}, VarSubstsDict, UnboundToAny) when ?IS_TYPE_TAG(T) ->
     NewArgForms = [update_vars(A,VarSubstsDict,UnboundToAny) || A <- ArgForms],
     {T, Line, Name, NewArgForms};
-update_vars(Call, _VarSubstsDict, _UnboundToAny) ->
-    Call.
+update_vars(Type, _VarSubstsDict, _UnboundToAny) ->
+    Type.
 
 
 %%------------------------------------------------------------------------------
@@ -1143,21 +1150,21 @@ match([Tag|PatRest], [X|ToMatchRest], Acc, TypeMode) when is_atom(Tag) ->
 %% CAUTION: these must be sorted
 -define(NON_ATOM_TYPES,
 	[arity,binary,bitstring,byte,char,float,'fun',function,integer,iodata,
-	 iolist,list,maybe_improper_list,mfa,neg_integer,nil,no_return,
+	 iolist,list,map,maybe_improper_list,mfa,neg_integer,nil,no_return,
 	 non_neg_integer,none,nonempty_improper_list,nonempty_list,
 	 nonempty_maybe_improper_list,nonempty_string,number,pid,port,
 	 pos_integer,range,record,reference,string,tuple]).
 -define(NON_TUPLE_TYPES,
 	[arity,atom,binary,bitstring,bool,boolean,byte,char,float,'fun',
-	 function,identifier,integer,iodata,iolist,list,maybe_improper_list,
-	 neg_integer,nil,no_return,node,non_neg_integer,none,
+	 function,identifier,integer,iodata,iolist,list,map,maybe_improper_list,
+	 module,neg_integer,nil,no_return,node,non_neg_integer,none,
 	 nonempty_improper_list,nonempty_list,nonempty_maybe_improper_list,
 	 nonempty_string,number,pid,port,pos_integer,range,reference,string,
 	 timeout]).
 -define(NO_HEAD_TYPES,
 	[arity,atom,binary,bitstring,bool,boolean,byte,char,float,'fun',
-	 function,identifier,integer,mfa,module,neg_integer,nil,no_return,node,
-	 non_neg_integer,none,number,pid,port,pos_integer,range,record,
+	 function,identifier,integer,map,mfa,module,neg_integer,nil,no_return,
+	 node,non_neg_integer,none,number,pid,port,pos_integer,range,record,
 	 reference,timeout,tuple]).
 
 -spec can_be_tag(atom(), abs_type()) -> boolean().
@@ -1369,8 +1376,7 @@ is_instance(X, Mod, {type,_,list,[Type]}, _Stack) ->
 is_instance(X, Mod, {type,_,maybe_improper_list,[Cont,Term]}, _Stack) ->
     list_test(X, Mod, Cont, Term, true, true, true);
 is_instance(X, _Mod, {type,_,module,[]}, _Stack) ->
-    is_atom(X) orelse
-    is_tuple(X) andalso X =/= {} andalso is_atom(element(1,X));
+    is_atom(X);
 is_instance([], _Mod, {type,_,nil,[]}, _Stack) ->
     true;
 is_instance(X, _Mod, {type,_,neg_integer,[]}, _Stack) ->
@@ -1418,6 +1424,8 @@ is_instance(X, Mod, {type,_,record,[{atom,_,Name} = NameForm | RawSubsts]},
     end;
 is_instance(X, _Mod, {type,_,reference,[]}, _Stack) ->
     is_reference(X);
+is_instance(X, _Mod, {type,_,map,any}, _Stack) ->
+    is_map(X);
 is_instance(X, _Mod, {type,_,tuple,any}, _Stack) ->
     is_tuple(X);
 is_instance(X, Mod, {type,_,tuple,Fields}, _Stack) ->
@@ -1621,7 +1629,7 @@ convert(_Mod, {type,_,range,[LowExpr,HighExpr]}, State, _Stack, _VarDict) ->
 	    expr_error(invalid_range, LowExpr, HighExpr)
     end;
 convert(_Mod, {type,_,nil,[]}, State, _Stack, _VarDict) ->
-    {ok, {simple,proper_types:exactly([])}, State};
+    {ok, {simple,proper_types:nil()}, State};
 convert(Mod, {type,_,list,[ElemForm]}, State, Stack, VarDict) ->
     convert_list(Mod, false, ElemForm, State, Stack, VarDict);
 convert(Mod, {type,_,nonempty_list,[ElemForm]}, State, Stack, VarDict) ->
@@ -1630,6 +1638,8 @@ convert(_Mod, {type,_,nonempty_list,[]}, State, _Stack, _VarDict) ->
     {ok, {simple,proper_types:non_empty(proper_types:list())}, State};
 convert(_Mod, {type,_,nonempty_string,[]}, State, _Stack, _VarDict) ->
     {ok, {simple,proper_types:non_empty(proper_types:string())}, State};
+convert(_Mod, {type,_,map,any}, State, _Stack, _VarDict) ->
+    {ok, {simple,proper_types:map()}, State};
 convert(_Mod, {type,_,tuple,any}, State, _Stack, _VarDict) ->
     {ok, {simple,proper_types:tuple()}, State};
 convert(Mod, {type,_,tuple,ElemForms}, State, Stack, VarDict) ->
@@ -2362,8 +2372,8 @@ same_rec_arg(_, _, _NumRecArgs) ->
 
 -spec same_substs_dict(substs_dict(), substs_dict()) -> boolean().
 same_substs_dict(SubstsDict1, SubstsDict2) ->
-    SameKVPair = fun({{_K,V1},{_K,V2}}) -> same_ret_type(V1,V2);
-		    (_)                 -> false
+    SameKVPair = fun({{K1,V1},{K2,V2}}) when K1 =:= K2 -> same_ret_type(V1,V2);
+		    (_)                                -> false
 		 end,
     SubstsKVList1 = lists:sort(dict:to_list(SubstsDict1)),
     SubstsKVList2 = lists:sort(dict:to_list(SubstsDict2)),

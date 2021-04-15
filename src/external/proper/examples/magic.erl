@@ -1,5 +1,4 @@
-%%% -*- coding: utf-8 -*-
-%%% -*- erlang-indent-level: 2 -*-
+%%% -*- coding: utf-8; erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
 %%% Copyright (c) 2017, Andreas Löscher <andreas.loscher@it.uu.se>
 %%%
@@ -23,11 +22,12 @@
 %%% @author Andreas Löscher
 
 -module(magic).
--export([spells/0, cast_spell/2, cast_spells/2]).
--export([run_random/1, run_generated/1, run_handwritten/1, count_spells/1]).
+-export([spells/0, cast_spell/2, cast_spells/2, count_spells/1]).
+-export([run_random/1, run_targeted_auto/1, run_targeted_user/1]).
 
 
 -include_lib("proper/include/proper.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -record(attr, {strength     = 0 :: integer(),
                constitution = 0 :: integer(),
@@ -102,6 +102,12 @@ cast_spells(Attrs, [Spell | LeftSpells]) ->
 
 %% Properties
 %% ----------
+
+initial_attr() ->
+    #attr{strength  = 5, constitution = 5, defense    = 5,
+	  dexterity = 5, intelligence = 5, charisma   = 5,
+	  wisdom    = 5, willpower    = 5, perception = 5, luck = 5}.
+
 sum_attr(Attrs) ->
   Attrs#attr.strength + Attrs#attr.constitution +
     Attrs#attr.defense + Attrs#attr.dexterity +
@@ -112,19 +118,10 @@ sum_attr(Attrs) ->
 list_of_spells() ->
   list(proper_types:noshrink(oneof(spells()))).
 
-prop_spells() ->
+prop_spells_random() ->
   ?FORALL(Spells, list_of_spells(),
           begin
-            InitialAttr = #attr{strength     = 5,
-                                constitution = 5,
-                                defense      = 5,
-                                dexterity    = 5,
-                                intelligence = 5,
-                                charisma     = 5,
-                                wisdom       = 5,
-                                willpower    = 5,
-                                perception   = 5,
-                                luck         = 5},
+            InitialAttr = initial_attr(),
             BuffedAttr = cast_spells(InitialAttr, Spells),
             SumAttr = sum_attr(BuffedAttr),
             ?WHENFAIL(io:format("Number of Spells: ~p~nTotal Attr: ~p~n",
@@ -132,51 +129,29 @@ prop_spells() ->
                       SumAttr < 2 * sum_attr(InitialAttr))
           end).
 
-prop_spells_gen() ->
-  ?FORALL_SA(Spells, ?TARGET(#{gen => list_of_spells()}),
-             begin
-               InitialAttr = #attr{strength     = 5,
-                                   constitution = 5,
-                                   defense      = 5,
-                                   dexterity    = 5,
-                                   intelligence = 5,
-                                   charisma     = 5,
-                                   wisdom       = 5,
-                                   willpower    = 5,
-                                   perception   = 5,
-                                   luck         = 5},
-               BuffedAttr = cast_spells(InitialAttr, Spells),
-               SumAttr = sum_attr(BuffedAttr),
-               ?MAXIMIZE(SumAttr),
-               ?WHENFAIL(io:format("Number of Spells: ~p~nTotal Attr: ~p~n",
-                                   [length(Spells), SumAttr]),
-                         SumAttr < 2 * sum_attr(InitialAttr))
-             end).
+prop_spells_targeted_auto() ->
+  ?FORALL_TARGETED(Spells, list_of_spells(),
+                   begin
+                     InitialAttr = initial_attr(),
+                     BuffedAttr = cast_spells(InitialAttr, Spells),
+                     SumAttr = sum_attr(BuffedAttr),
+                     ?MAXIMIZE(SumAttr),
+                     ?WHENFAIL(io:format("Number of Spells: ~p~nTotal Attr: ~p~n",
+                                         [length(Spells), SumAttr]),
+                               SumAttr < 2 * sum_attr(InitialAttr))
+                   end).
 
-prop_spells_hw() ->
-  ?FORALL_SA(Spells, ?TARGET(list_of_spells_sa()),
-             begin
-               InitialAttr = #attr{strength     = 5,
-                                   constitution = 5,
-                                   defense      = 5,
-                                   dexterity    = 5,
-                                   intelligence = 5,
-                                   charisma     = 5,
-                                   wisdom       = 5,
-                                   willpower    = 5,
-                                   perception   = 5,
-                                   luck         = 5},
-               BuffedAttr = cast_spells(InitialAttr, Spells),
-               SumAttr = sum_attr(BuffedAttr),
-               ?MAXIMIZE(SumAttr),
-               ?WHENFAIL(io:format("Number of Spells: ~p~nTotal Attr: ~p~n",
-                                   [length(Spells), SumAttr]),
-                         SumAttr < 2 * sum_attr(InitialAttr))
-             end).
-
-list_of_spells_sa() ->
-  #{first => list_of_spells(),
-    next => list_of_spells_next()}.
+prop_spells_targeted_user() ->
+  ?FORALL_TARGETED(Spells, ?USERNF(list_of_spells(), list_of_spells_next()),
+                   begin
+                     InitialAttr = initial_attr(),
+                     BuffedAttr = cast_spells(InitialAttr, Spells),
+                     SumAttr = sum_attr(BuffedAttr),
+                     ?MAXIMIZE(SumAttr),
+                     ?WHENFAIL(io:format("Number of Spells: ~p~nTotal Attr: ~p~n",
+                                         [length(Spells), SumAttr]),
+                               SumAttr < 2 * sum_attr(InitialAttr))
+                   end).
 
 list_of_spells_next() ->
   Del = 10,
@@ -193,7 +168,7 @@ add_some_spells(Spells, Percentage, _) ->
   NumAdd = max(1, trunc(length(Spells) * Percentage / 100)),
   ?LET(AddIndices, indices(NumAdd, 0, length(Spells)),
        begin
-         %% have to be able to inser elements in the front of the list
+         %% have to be able to insert elements in the front of the list
          {Spells2, AddIndices2} = case AddIndices of
                                     [0 | NormalIndices] ->
                                       {[oneof(spells()) | Spells], NormalIndices};
@@ -243,13 +218,13 @@ index(Low, High, Blacklist) ->
 
 %% utility functions
 run_random(N) ->
-  proper:quickcheck(prop_spells(), N).
+  proper:quickcheck(prop_spells_random(), [{numtests, N}]).
 
-run_generated(N) ->
-  proper:quickcheck(prop_spells_gen(), [{numtests, N}, noshrink]).
+run_targeted_auto(N) ->
+  proper:quickcheck(prop_spells_targeted_auto(), [{numtests, N}, noshrink]).
 
-run_handwritten(N) ->
-  proper:quickcheck(prop_spells_hw(), [{numtests, N}, noshrink]).
+run_targeted_user(N) ->
+  proper:quickcheck(prop_spells_targeted_user(), [{numtests, N}, noshrink]).
 
 count_spells(Spells) ->
   CountedSpells = maps:to_list(count_spells(Spells, #{})),
@@ -262,3 +237,31 @@ count_spells([H|T], Acc) ->
              _ -> Acc#{H => 1}
            end,
   count_spells(T, NewAcc).
+
+
+%% -----------------------------------------------------------------------------
+%% EUnit tests
+%% -----------------------------------------------------------------------------
+
+-define(_passes(Test),       ?_passes(Test, [])).
+-define(_passes(Test, Opts), ?_assert(proper:quickcheck(Test, Opts))).
+-define(_fails(Test, Opts),
+        ?_test(
+           begin
+             Result = proper:quickcheck(Test, Opts),
+             CExm = proper:counterexample(),
+             proper:clean_garbage(),
+             ?assertNot(Result),
+             ?checkCExm(CExm, Test, Opts)
+           end)).
+-define(checkCExm(CExm, Test, Opts),
+        ?assertNot(proper:check(Test, CExm, Opts))).
+
+magic_props_test_() ->
+  %% no point shrinking tests executed only for checking that they fail
+  FailOpts = [{numtests,10000}, noshrink],
+  [{"Random", ?_passes(prop_spells_random(), [500])},% let's hope we are unlucky
+   {timeout, 60,
+    {"Targeted auto", ?_fails(prop_spells_targeted_auto(), FailOpts)}},
+   {timeout, 60,
+    {"Targeted user", ?_fails(prop_spells_targeted_user(), FailOpts)}}].

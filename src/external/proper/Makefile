@@ -1,4 +1,4 @@
-# Copyright 2010-2018 Manolis Papadakis <manopapad@gmail.com>,
+# Copyright 2010-2021 Manolis Papadakis <manopapad@gmail.com>,
 #                     Eirini Arvaniti <eirinibob@gmail.com>
 #                 and Kostis Sagonas <kostis@cs.ntua.gr>
 #
@@ -17,10 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-# Author(s):   Manolis Papadakis, Kostis Sagonas
+# Author(s):   Manolis Papadakis and Kostis Sagonas
 # Description: Instructions for make
 
-.PHONY: default fast all get-deps compile dialyzer check_escripts tests doc clean distclean rebuild retest
+.PHONY: default all compile dialyzer check_escripts test test-examples doc clean distclean rebuild retest
 
 ifneq (,$(findstring Windows,$(OS)))
     SEP := $(strip \)
@@ -28,46 +28,52 @@ else
     SEP := $(strip /)
 endif
 
-REBAR := .$(SEP)rebar
+REBAR3_URL := https://s3.amazonaws.com/rebar3/rebar3
+REBAR3 ?= $(shell which rebar3 || which .$(SEP)rebar3 || \
+            (wget $(REBAR3_URL) && chmod +x rebar3 && echo .$(SEP)rebar3))
+COVER ?= false
 
-default: fast
+default: compile
 
-fast: get-deps compile
-
-all: fast dialyzer doc tests
-
-get-deps:
-	$(REBAR) get-deps
+all: compile dialyzer doc test #test-examples -- this is another GitHub action
 
 compile:
-	$(REBAR) compile
+	$(RM) ebin
+	$(REBAR3) compile
+	ln -s _build/default/lib/proper/ebin .
 
 dialyzer: .plt/proper_plt compile
-	dialyzer -n -nn --plt $< -Wunmatched_returns ebin $(find .  -path 'deps/*/ebin/*.beam')
+	dialyzer -nn --plt $< -Wunmatched_returns -Wunknown ebin
 
 .plt/proper_plt: .plt
-	dialyzer --build_plt --output_plt $@ --apps erts kernel stdlib compiler crypto syntax_tools
+	dialyzer --build_plt --output_plt $@ --apps erts kernel stdlib compiler crypto syntax_tools eunit mnesia tools runtime_tools
 
 check_escripts:
-	./check_escripts.sh make_doc
+	./scripts/check_escripts.sh make_doc
 
-tests: compile
-	$(REBAR) eunit
+test: compile
+ifeq ($(COVER), true)
+	$(REBAR3) do eunit -c, cover, covertool generate
+else
+	$(REBAR3) eunit
+endif
+
+test-examples:
+	$(REBAR3) eunit --dir=examples --verbose
 
 doc: compile
-	./make_doc
+	./scripts/make_doc
 
 clean:
-	./clean_temp.sh
+	./scripts/clean_temp.sh
 
 distclean: clean
-	$(RM) -r .eunit .rebar
+	$(REBAR3) clean
 	$(RM) .plt/proper_plt
-	$(REBAR) clean
+	$(RM) -r _build ebin rebar3 rebar.lock
 
-rebuild: distclean
-	$(REBAR) compile
+rebuild: distclean compile
 
-retest: compile
-	$(RM) -r .eunit
-	$(REBAR) eunit
+retest:
+	$(RM) -r _build/test/lib/proper/test
+	$(REBAR3) eunit

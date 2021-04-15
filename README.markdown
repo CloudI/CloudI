@@ -62,7 +62,7 @@ Please see the [FAQ](https://cloudi.org/faq.html) for more details.
 
 ### Requirements
 
-* `Erlang >= 19.3 (erlang /Ubuntu)`
+* `Erlang >= 20.0 (erlang /Ubuntu)`
 * `C++ (g++ /Ubuntu)`
 * `boost >= 1.36.0 (libboost-system-dev libboost-thread-dev libboost-dev /Ubuntu)`
 

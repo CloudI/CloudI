@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-04-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update proper (minimum Erlang/OTP becomes 20.0)
+
 2021-04-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the service configuration options

@@ -31,11 +31,11 @@
 %% Test generation macros
 %%------------------------------------------------------------------------------
 
--define(FORALL(X,RawType,Prop), proper:forall(RawType,fun(X) -> Prop end)).
+-define(FORALL(X,RawType,Prop), proper:forall(RawType, fun(X) -> Prop end)).
 -define(EXISTS(X,RawType,Prop), proper:exists(RawType, fun(X) -> Prop end, false)).
 -define(NOT_EXISTS(X,RawType,Prop), proper:exists(RawType, fun(X) -> Prop end, true)).
 -define(FORALL_TARGETED(X, RawType, Prop),
-        proper:exists(RawType, fun(X) -> not Prop end, true)).
+        proper:targeted(RawType, fun(X) -> Prop end)).
 -define(IMPLIES(Pre,Prop), proper:implies(Pre,?DELAY(Prop))).
 -define(WHENFAIL(Action,Prop), proper:whenfail(?DELAY(Action),?DELAY(Prop))).
 -define(TRAPEXIT(Prop), proper:trapexit(?DELAY(Prop))).
@@ -63,22 +63,10 @@
         proper_types:add_constraint(RawType,fun(X) -> Condition end,false)).
 
 %%------------------------------------------------------------------------------
-%% Target macros
+%% Targeted macros
 %%------------------------------------------------------------------------------
 
--define(MAXIMIZE(Fitness), proper_target:update_target_uvs(Fitness, inf)).
+-define(MAXIMIZE(Fitness), proper_target:update_uv(Fitness, inf)).
 -define(MINIMIZE(Fitness), ?MAXIMIZE(-Fitness)).
 -define(USERNF(Type, NF), proper_gen_next:set_user_nf(Type, NF)).
 -define(USERMATCHER(Type, Matcher), proper_gen_next:set_matcher(Type, Matcher)).
-
-%%------------------------------------------------------------------------------
-%% Macros for backwards compatibility
-%%------------------------------------------------------------------------------
-
--define(TARGET(TMap), proper_target:targeted(make_ref(), TMap)).
--define(STRATEGY(Strat, Prop), ?SETUP(fun (Opts) ->
-                                          proper_target:use_strategy(Strat, Opts),
-                                          fun proper_target:cleanup_strategy/0
-                                      end, Prop)).
--define(FORALL_SA(X, RawType, Prop),
-        ?STRATEGY(proper_sa, proper:forall(RawType,fun(X) -> Prop end))).

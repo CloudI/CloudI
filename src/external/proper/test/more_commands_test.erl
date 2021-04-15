@@ -1,7 +1,7 @@
 %%% -*- coding: utf-8 -*-
 %%% -*- erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
-%%% Copyright 2010-2020 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2020-     Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -20,39 +20,46 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2020 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2020 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
-%%% @author Eirini Arvaniti
+%%% @author Kostis Sagonas
 
--module(nogen_statem).
--behaviour(proper_statem).
+%%
+%% Test inspired by https://github.com/proper-testing/proper/issues/192
+%%
+-module(more_commands_test).
 
 -export([command/1, initial_state/0, next_state/3,
-	 precondition/2, postcondition/3, foo/1, bar/0]).
+         precondition/2, postcondition/3, foo/0]).
 
 -include_lib("proper/include/proper.hrl").
 
-initial_state() -> [].
+%%
+%% The two properties that show diff of commands/1 with more_commands/2.
+%%
 
-command(_S) ->
-    oneof([{call,?MODULE,foo,[impossible_arg()]},
-	   {call,?MODULE,bar,[]}]).
+prop_commands_passes() ->	% This property, most likely, passes
+  ?FORALL(Cmds, commands(?MODULE),
+	  measure("Length of Cmds", length(Cmds), length(Cmds) =< 42)).
 
-impossible_arg() ->
-    ?SUCHTHAT(X, non_neg_integer(), X < 0).
+prop_more_commands_fails() ->	% This property, most likely, fails
+  ?FORALL(Cmds, more_commands(17, commands(?MODULE) ),
+	  measure("Length of Cmds", length(Cmds), length(Cmds) =< 42)).
+
+%%
+%% Auxiliary functions below - not important for the test
+%%
+
+command(_S) ->	% just one command suffices for this test
+  exactly({call,?MODULE,foo,[]}).
+
+-spec initial_state() -> 'ok'.
+initial_state() -> ok.
+ 
+next_state(_, _, _) -> ok.
 
 precondition(_, _) -> true.
 
-next_state(S, _, _) -> S.
-
 postcondition(_, _, _) -> true.
 
-foo(_) -> ok.
-bar() -> 42.
-
-prop_simple() ->
-    ?FORALL(Cmds, commands(?MODULE),
-	    begin
-		{_H,_S,Res} = run_commands(?MODULE, Cmds),
-		equals(Res, ok)
-	    end).
+foo() -> 42.

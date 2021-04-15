@@ -32,32 +32,6 @@
 -define(PROPER_OPTIONS_SHRINKING, [quiet, {search_steps, 1000}]).
 -define(timeout(Timeout, Tests), {timeout, Timeout, Tests}).
 
-%% Backwards Compatibility Test
-prop_strategy() ->
-  ?STRATEGY(proper_sa,
-            ?FORALL(X, ?TARGET(#{gen => integer()}),
-                    begin
-                      ?MAXIMIZE(X),
-                      X < 10
-                    end)).
-
-prop_forall_sa() ->
-  ?FORALL_SA(X, ?TARGET(#{gen => integer()}),
-             begin
-               ?MAXIMIZE(X),
-               X < 10
-             end).
-
-strategy_test() ->
-  false = proper:quickcheck(prop_strategy(), ?PROPER_OPTIONS_SHRINKING),
-  [10] = proper:counterexample(),
-  ok.
-
-forall_sa_test() ->
-  false = proper:quickcheck(prop_forall_sa(), ?PROPER_OPTIONS_SHRINKING),
-  [10] = proper:counterexample(),
-  ok.
-
 %% Macros Test
 prop_exists() ->
   ?FORALL(X, integer(),
@@ -78,8 +52,16 @@ prop_forall_targeted() ->
   ?FORALL_TARGETED(I, integer(),
                    begin
                      ?MAXIMIZE(I),
-                     I < 10
+                     I < 100
                    end).
+
+prop_forall_targeted_trapexit() ->
+  ?FORALL_TARGETED(I, integer(),
+                   ?TRAPEXIT(
+                     begin
+                       ?MAXIMIZE(I),
+                       I < 100
+                     end)).
 
 exists_test() ->
   ?assert(proper:quickcheck(prop_exists(), ?PROPER_OPTIONS)).
@@ -91,7 +73,12 @@ not_exists_test() ->
 
 forall_targeted_test() ->
   false = proper:quickcheck(prop_forall_targeted(), ?PROPER_OPTIONS_SHRINKING),
-  [10] = proper:counterexample(),
+  [100] = proper:counterexample(),
+  ok.
+
+forall_targeted_trapexit_test() ->
+  false = proper:quickcheck(prop_forall_targeted_trapexit(), ?PROPER_OPTIONS_SHRINKING),
+  [100] = proper:counterexample(),
   ok.
 
 %% configuration tests
@@ -137,7 +124,7 @@ integer_test() ->
   proper:global_state_init_size(10),
   proper_gen_next:init(),
   Gen = proper_types:integer(),
-  #{next := TG} = proper_gen_next:from_proper_generator(Gen),
+  TG = proper_gen_next:from_proper_generator(Gen),
   %% apply the generator 100 times and check that nothing crashes
   appl(TG, 0, 100),
   proper_gen_next:cleanup(),
@@ -149,7 +136,7 @@ list_test() ->
   proper:global_state_init_size(10),
   proper_gen_next:init(),
   Gen = proper_types:list(atom),
-  #{next := TG} = proper_gen_next:from_proper_generator(Gen),
+  TG = proper_gen_next:from_proper_generator(Gen),
   %% apply the generator 100 times and check that nothing crashes
   appl(TG, [], 100),
   proper_gen_next:cleanup(),
@@ -161,7 +148,7 @@ combine_test() ->
   proper:global_state_init_size(10),
   proper_gen_next:init(),
   Gen = proper_types:list(proper_types:list(proper_types:integer())),
-  #{next := TG} = proper_gen_next:from_proper_generator(Gen),
+  TG = proper_gen_next:from_proper_generator(Gen),
   %% apply the generator 100 times and check that nothing crashes
   appl(TG, [], 100),
   ok.
@@ -338,7 +325,7 @@ prop_reset() ->
                 ?MAXIMIZE(I),
                 case I < 10 of
                   true -> ok;
-                  false -> proper_sa:reset()
+                  false -> proper_target:reset()
                 end,
                 %% I will be 10 when resetting
                 %% and then 0 in the next run
@@ -508,3 +495,25 @@ prop_not_exists_crash() ->
 -spec count_crash_in_not_exists_as_failure_test() -> 'ok'.
 count_crash_in_not_exists_as_failure_test() ->
   ?assertEqual(false, proper:quickcheck(prop_not_exists_crash(), ?PROPER_OPTIONS)).
+
+prop_no_type(1) ->
+  ?FORALL_TARGETED(I, 1, begin ?MAXIMIZE(I), I < 10 end);
+prop_no_type(2) ->
+  ?FORALL_TARGETED(L, [integer()],
+                   begin
+                     [I | _] = L,
+                     ?MAXIMIZE(I),
+                     I < 10
+                   end);
+prop_no_type(3) ->
+  ?FORALL_TARGETED(T, {integer()},
+                   begin
+                     I = element(1, T),
+                     ?MAXIMIZE(I),
+                     I < 10
+                   end).
+
+no_type_test_() ->
+  [?_assertEqual(true, proper:quickcheck(prop_no_type(1), ?PROPER_OPTIONS)),
+   ?_assertEqual(false, proper:quickcheck(prop_no_type(2), ?PROPER_OPTIONS)),
+   ?_assertEqual(false, proper:quickcheck(prop_no_type(3), ?PROPER_OPTIONS))].

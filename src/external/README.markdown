@@ -231,8 +231,8 @@ Erlang `proper`
 `PropEr (PROPerty-based testing tool for ERlang)`
 
 - `https://github.com/proper-testing/proper`
-- `commit 16f9f7cb181f41ffb882c4a31052275dfad16ee1`
-- `Sat Oct 20 19:09:19 PDT 2018`
+- `commit cca1edf641b18543098cf534600eb018bb38d16d`
+- `Thu Apr 15 23:07:33 UTC 2021`
 - `GPLv3` (build/test-time dependency only)
 
 Erlang `ranch1`

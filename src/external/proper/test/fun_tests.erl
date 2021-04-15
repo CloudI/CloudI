@@ -1,7 +1,7 @@
 %%% -*- coding: utf-8 -*-
 %%% -*- erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
-%%% Copyright 2010-2019 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2020-     Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -20,24 +20,33 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2019 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2020 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
-%%% @author Manolis Papadakis
-%%% @doc This module contains types for testing the typeserver.
+%%% @author Kostis Sagonas
 
--module(types_test1).
--export([function_that_uses_local_types_only/1]).
+%%
+%% Contains some tests for function generators
+%%
+-module(fun_tests).
 
--export_type([exp1/0]).
+-include_lib("proper/include/proper.hrl").
 
--record(rec1, {a = 42 :: integer(), b :: float(), c = this_atom :: term()}).
--type rec1() :: #rec1{}.
--opaque exp1() :: rec1() | atom().
--type type1() :: {exp1(), [float() | boolean()]}.
--type type2(T) :: {T,T} | [T].
--type rem1() :: types_test2:exp1(integer()) | integer().
--type rem2() :: {bitstring(), types_test2:exp2()}.
+%%----------------------
+%% Properties that pass
+%%----------------------
 
--spec function_that_uses_local_types_only(type2(type1())) -> {rem1(), rem2()}.
-function_that_uses_local_types_only(_) ->
-    {42, {<<42>>, gazonk}}.
+prop_fun_bool() ->
+  ?FORALL({F, X}, {function(1,boolean()), any()}, is_boolean(F(X))).
+
+%%-----------------------------
+%% Properties that should fail
+%%-----------------------------
+
+prop_fun_int_int() ->
+  ?FORALL({F, X}, {function([integer()],integer()), integer()}, F(X) < 42).
+
+prop_lists_map_filter() ->
+  ?FORALL({MapFun, FilterFun, List},
+	  {function([int()],any()), function([int()],bool()), list(int())},
+	  lists:map(MapFun, lists:filter(FilterFun, List)) =:=
+	    lists:filter(FilterFun, lists:map(MapFun, List))).
