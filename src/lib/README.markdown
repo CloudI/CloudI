@@ -82,8 +82,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pool as a Supervisor`
 
 - `https://github.com/okeuday/supool`
-- `commit f571db3bf4939c7dd4076cc6a05b061df93cf8d6 (v2.0.1)`
-- `Fri Nov 27 19:52:40 UTC 2020`
+- `commit a8d9506fb274869e10ffc34dac49f3f715fb4498`
+- `Tue Apr 13 06:50:16 UTC 2021`
 - `MIT`
 
 `syslog_socket`
