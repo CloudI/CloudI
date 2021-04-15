@@ -2151,7 +2151,7 @@ services_validate([#internal{
            {services_validate_option_aspects_init_after_external, 2},
            {services_validate_option_aspects_request_before_external, 2},
            {services_validate_option_aspects_request_after_external, 2},
-           {services_validate_option_aspects_external, 5}]}).
+           {services_validate_option_aspects_external, 7}]}).
 -define(CLOUDI_CORE_SUPPORT_EXTERNAL,
     ;).
 -else.
