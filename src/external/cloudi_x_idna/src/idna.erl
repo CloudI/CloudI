@@ -1,4 +1,8 @@
 %% -*- coding: utf-8 -*-
+%%%
+%%% This file is part of erlang-idna released under the MIT license.
+%%% See the LICENSE for more information.
+%%%
 -module(idna).
 
 %% API
@@ -205,7 +209,7 @@ check_context([CP | Rest], Label, CheckJoiners, Pos) ->
       ok =  valid_contexto(CP, Label, Pos, CheckJoiners),
       check_context(Rest, Label, CheckJoiners, Pos + 1);
     _Status ->
-      ErrorMsg = error_msg("Codepoint ~p not allowed (~p) at posion ~p in ~p", [CP, _Status, Pos, Label]),
+      ErrorMsg = error_msg("Codepoint ~p not allowed (~p) at position ~p in ~p", [CP, _Status, Pos, Label]),
       erlang:exit({bad_label, {context, ErrorMsg}})
   end;
 check_context([], _, _, _) ->
@@ -217,7 +221,7 @@ valid_contextj(CP, Label, Pos, true) ->
     true ->
       ok;
     false ->
-      ErrorMsg = error_msg("Joiner ~p not allowed at posion ~p in ~p", [CP, Pos, Label]),
+      ErrorMsg = error_msg("Joiner ~p not allowed at position ~p in ~p", [CP, Pos, Label]),
       erlang:exit({bad_label, {contextj, ErrorMsg}})
   end;
 valid_contextj(_CP, _Label, _Pos, false) ->
@@ -228,7 +232,7 @@ valid_contexto(CP, Label, Pos, true) ->
     true ->
       ok;
     false ->
-      ErrorMsg = error_msg("Joiner ~p not allowed at posion ~p in ~p", [CP, Pos, Label]),
+      ErrorMsg = error_msg("Joiner ~p not allowed at position ~p in ~p", [CP, Pos, Label]),
       erlang:exit({bad_label, {contexto, ErrorMsg}})
   end;
 valid_contexto(_CP, _Label, _Pos, false) ->

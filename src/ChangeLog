@@ -3,6 +3,7 @@
 
 2021-04-15 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Update hackney, certifi, idna, unicode_util_compat
     * Update exometer_core, hut, folsom, bear
     * Update epgsql
     * Update parse_trans

@@ -51,8 +51,8 @@ Erlang `certifi`
 `SSL Certificates for Erlang`
 
 - `https://github.com/certifi/erlang-certifi`
-- `commit 549670ddfe96727a703a295c75c423d8a2c50718 (2.5.2)`
-- `Sat May 30 23:57:14 UTC 2020`
+- `commit 0be2c6a16f3c3f9c98a44bf22caac6a05b43b18e (2.6.1)`
+- `Fri Apr 16 04:40:29 UTC 2021`
 - `BSD`
 
 Erlang `cowboy1`
@@ -141,8 +141,8 @@ Erlang `hackney`
 `HTTP client library in Erlang`
 
 - `https://github.com/benoitc/hackney`
-- `commit f3e9292db22c807e73f57a8422402d6b423ddf5f (1.16.0)`
-- `Sat May 30 23:57:14 UTC 2020`
+- `commit 6e79b2bb11a77389d3ba9ff3a0828a45796fe7a8 (1.17.4)`
+- `Fri Apr 16 04:40:29 UTC 2021`
 - `Apache License 2.0`
 
 Erlang `hut`
@@ -159,8 +159,8 @@ Erlang `idna`
 `A pure Erlang IDNA implementation`
 
 - `https://github.com/benoitc/erlang-idna`
-- `commit cda8d41eec752469053db6155ca8afeeeb2b5387 (6.0.1)`
-- `Sat May 30 23:57:14 UTC 2020`
+- `commit 792832450c7017c3b91f3f2ddd267533492146eb (6.1.1)`
+- `Fri Apr 16 04:40:29 UTC 2021`
 - `BSD`
 
 Erlang `jsx`
@@ -276,8 +276,8 @@ Erlang `unicode_util_compat`
 `unicode_util compatibility library for Erlang < 21`
 
 - `https://github.com/benoitc/unicode_util_compat`
-- `commit 6b43143b6fddaffc6cfcc3dc02f0ba136cf047f2 (0.5.0)`
-- `Sat May 30 23:57:14 UTC 2020`
+- `commit 0c658d8a946ca756da2847259c79791887209d37 (0.7.0)`
+- `Fri Apr 16 04:40:29 UTC 2021`
 - `Apache License 2.0`
 
 Haskell `binary`

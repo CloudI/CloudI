@@ -72,6 +72,84 @@
 	 sub_word/2,sub_word/3,left/2,left/3,right/2,right/3,
 	 sub_string/2,sub_string/3,centre/2,centre/3, join/2]).
 -export([to_upper/1, to_lower/1]).
+
+
+-ifdef(OTP20).
+
+is_empty(String) -> string:is_empty(String).
+length(String) -> string:length(String).
+to_graphemes(String) -> string:to_graphemes(String).
+reverse(String) -> string:reverse(String).
+equal(A,B) -> string:equal(A, B).
+equal(A, B, IgnoreCase) -> string:equal(A, B, IgnoreCase).
+equal(A, B, IgnoreCase, Norm) -> string:equal(A, B, IgnoreCase, Norm).
+slice(String, Start) -> string:slice(String, Start).
+slice(String, Start, Length) -> string:slice(String, Start, Length).
+pad(String, Length) -> string:pad(String, Length).
+pad(String, Length, Dir) -> string:pad(String, Length, Dir).
+pad(String, Length, Dir, Char) -> string:pad(String, Length, Dir, Char).
+trim(String) -> string:trim(String).
+trim(String, Dir) -> string:trim(String, Dir).
+trim(String, Dir, Characters) -> string:trim(String, Dir, Characters).
+chomp(String) -> string:chomp(String).
+take(String, Characters) -> string:take(String, Characters).
+take(String, Characters, Complement) -> string:take(String, Characters, Complement).
+take(String, Characters, Complement, Dir) -> string:take(String, Characters, Complement, Dir).
+lexemes(String, SeperatorList) -> string:lexemes(String, SeperatorList).
+nth_lexeme(String, N, SeparatorList) -> string:nth_lexeme(String, N, SeparatorList).
+uppercase(String) -> string:uppercase(String).
+lowercase(String) -> string:lowercase(String).
+titlecase(String) -> strring:titlecase(String).
+casefold(String) -> string:casefold(String).
+prefix(String, Prefix) -> string:prefix(String, Prefix).
+split(String, SearchPattern) -> string:split(String, SearchPattern).
+split(String, SearchPattern, Where) -> string:split(String, SearchPattern, Where).
+replace(String, SearchPattern, Replacement) -> string:replace(String, SearchPattern, Replacement).
+replace(String, SearchPattern, Replacement, Where) -> string:replace(String, SearchPattern, Replacement, Where).
+find(String, SearchPattern) -> string:find(String, SearchPattern).
+find(String, SearchPattern, Dir) -> string:find(String, SearchPattern, Dir).
+next_codepoint(CD) -> string:next_codepoint(CD).
+next_grapheme(CD) -> string:next_grapheme(CD).
+
+to_float(String) -> string:to_float(String).
+to_integer(String) -> string:to_integer(String).
+
+len(S) -> string:len(S).
+concat(S1, S2) -> string:concat(S1, S2).
+chr(String, Character) -> string:chr(String, Character).
+rchr(String, Character)  -> string:rchr(String, Character).
+str(S, Sub) -> string:str(S, Sub).
+rstr(S, Sub) -> string:rstr(S, Sub).
+span(String, Chars) -> string:span(String, Chars).
+cspan(String, Chars) -> cstring:span(String, Chars).
+substr(String, Start) -> string:substr(String, Start).
+substr(String, Start, Length) -> string:substr(String, Start, Length).
+tokens(String, SeparatorList) -> string:tokens(String, SeparatorList).
+chars(Character, Number) -> string:chars(Character, Number).
+chars(Character, Number, Tail) -> string:chars(Character, Number, Tail).
+copies(String, Number) -> string:copies(String, Number).
+words(String) -> string:words(String).
+words(String, Character) -> string:words(String, Character).
+strip(String) ->  string:strip(String).
+strip(String, Direction) -> string:strip(String, Direction).
+strip(String, Direction, Character) -> string:strip(String, Direction, Character).
+sub_word(String, Number) -> string:sub_word(String, Number).
+left(String, Number) -> string:left(String, Number).
+left(String, Number, Character) -> string:left(String, Number, Character).
+right(String, Number) -> string:right(String, Number).
+right(String, Number, Character) -> string:right(String, Number, Character).
+sub_word(String, Number, Character) -> string:sub_word(String, Number, Character).
+sub_string(String, Start) -> string:sub_string(String, Start).
+sub_string(String, Start, Stop) -> string:sub_string(String, Start, Stop).
+centre(String, Number) -> string:centre(String, Number).
+centre(String, Number, Character) -> string:centre(String, Number, Character).
+join(StringList, Separator) -> string:join(StringList, Separator).
+
+to_upper(String) -> string:to_upper(String).
+to_lower(String) -> string:to_lower(String).
+-else.
+
+
 %%
 -import(lists,[member/2]).
 -compile({no_auto_import,[length/1]}).
@@ -2242,3 +2320,4 @@ join([], Sep) when is_list(Sep) ->
     [];
 join([H|T], Sep) ->
     H ++ lists:append([Sep ++ X || X <- T]).
+-endif.

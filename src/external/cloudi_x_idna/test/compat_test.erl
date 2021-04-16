@@ -1,11 +1,7 @@
-%%%-------------------------------------------------------------------
-%%% @author benoitc
-%%% @copyright (C) 2018, <COMPANY>
-%%% @doc
 %%%
-%%% @end
-%%% Created : 09. Aug 2018 14:36
-%%%-------------------------------------------------------------------
+%%% This file is part of erlang-idna released under the MIT license.
+%%% See the LICENSE for more information.
+%%%
 -module(compat_test).
 -author("benoitc").
 

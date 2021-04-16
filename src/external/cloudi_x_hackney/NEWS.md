@@ -1,5 +1,53 @@
 # NEWS
 
+1.17.4 - 2021-03-18
+-------------------
+
+- fix checking when socket is put back in the pool when the requester died.
+
+1.17.3 - 2021-03-17
+-------------------
+
+- fix: ensure we release a socket in the pool when the requester died before beeing monitored.
+
+1.17.2 - 2021-03-16
+-------------------
+
+- use parse_trans 3.3.1 only (fix compatibility with Erlang < 21)
+- bump certifi version
+- Allow merging of SSL opts
+
+1.17.1 - 2021-03-15
+-------------------
+
+- fix: Avoid `parse_trans` warning when using hackney as a dependency
+- fix: Link checkout process to fix dangling aborted request
+
+1.17.0 - 2020-12-19
+-------------------
+
+- fix SSL compatibility with erlang OTP 23
+- handle empty trailers
+- fix race condition in connection pool
+- fix memory leak in connection pool
+- IDNA update to unicode 13.0.0
+- fix build on macosx with OTP >= 20.1
+- fix network Location on redirect
+- produce uppercase hexadecimal in URLS
+- pool queue count metric is now named `queue_count`
+- miscellaneous fixes in documentation
+
+
+** possible breaking change **
+
+- pool queue count metric is now named `queue_count`. You should update your dashboard to reflect it.
+
+- possible breacking changes when producing uppercase hexadecimal in urls
+
+This change the behaviour of urlencode and pathencode to produce
+uppercase hexadecimal to comply to the RFC3986 which may affect
+systems using URL as signature or in an hash.
+
 1.16.0 - 2020-05-25
 -------------------
 
@@ -28,21 +76,21 @@
 1.15.2 - 2019-09-25
 -------------------
 
-- doc: fix tes run example in readme
+- doc: fix test run example in readme
 - fix: hackney stream, send `hackney_response` before calling `handle_error`
 - fix: error remove ssl `honor_cipher_order` option
 - doc: document self-signed certificate usage
 - bump `ssl_verify_fun` to 1.1.5
 - fix: don't use default pool if set to false
 - fix: `hackney_headers_new:store/3`  fix value appending to a list
-- fix: miscellaeous specs
+- fix: miscellaneous specs
 - doc: miscellaneous improvements
 
 
 1.15.1 - 2019-02-26
 -------------------
 
-- fix: don't try to encode encode to IDN with full ASCII names.
+- fix: don't try to encode to IDN with full ASCII names.
 
 > this behaviour is similar to curl and fix errors some people had with docker
 > creating domain names containing a `_`
@@ -118,7 +166,7 @@
 - fix: change when hackney loads the hackney metric module (speed improvement)
 - fix: return value from the function `del_from_queue` in connection pool
 - fix: handle empty or invalid content-length
-- fix documentation on removed method
+- fix: documentation on removed method
 
 
 1.10.1 - 2017-10-20

@@ -1,4 +1,9 @@
 %% -*- coding: utf-8 -*-
+%%%
+%%% This file is part of erlang-idna released under the MIT license.
+%%% See the LICENSE for more information.
+%%%
+
 -module(idna_bidi).
 -author("benoitc").
 

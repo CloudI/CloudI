@@ -1,8 +1,4 @@
 %%% -*- erlang -*-
-%%%
-%%% This file is part of erlang-idna released under the BSD license.
-%%% See the LICENSE for more information.
-%%%
 %%
 %% Copyright Ericsson AB 2005-2016. All Rights Reserved.
 %%

@@ -2,15 +2,15 @@
 
 # hackney - HTTP client library in Erlang #
 
-Copyright (c) 2012-2020 Benoît Chesneau.
+Copyright (c) 2012-2021 Benoît Chesneau.
 
-__Version:__ 1.16.0
+__Version:__ 1.17.4
 
 # hackney
 
 **hackney** is an HTTP client library for Erlang.
 
-[![Build Status](https://travis-ci.org/benoitc/hackney.png?branch=master)](https://travis-ci.org/benoitc/hackney)
+[![Build Status](https://github.com/benoitc/hackney/workflows/build/badge.svg)](https://github.com/benoitc/hackney/actions?query=workflow%3Abuild)
 [![Hex pm](http://img.shields.io/hexpm/v/hackney.svg?style=flat)](https://hex.pm/packages/hackney)
 
 ## Main features:
@@ -337,9 +337,10 @@ LoopFun(LoopFun, ClientRef).
 
 ### Use the default pool
 
-To reuse a connection globally in your application you can also use a
-socket pool. On startup, hackney launches a pool named default. To use it
-do the following:
+Hackney uses socket pools to reuse connections globally. By default,
+hackney uses a pool named `default`. You may want to use different
+pools in your application which allows you to maintain a group of
+connections. To use a different pool, do the following:
 
 ```erlang
 
@@ -347,16 +348,15 @@ Method = get,
 URL = <<"https://friendpaste.com">>,
 Headers = [],
 Payload = <<>>,
-Options = [{pool, default}],
+Options = [{pool, mypool}],
 {ok, StatusCode, RespHeaders, ClientRef} = hackney:request(Method, URL, Headers,
                                                         Payload, Options).
 ```
 
-By adding the tuple `{pool, default}` to the options, hackney will use
-the connections stored in that pool.
-
-You can also use different pools in your application which allows
-you to maintain a group of connections.
+By adding the tuple `{pool, mypool}` to the options, hackney will use
+the connections stored in that pool. The pool gets started automatically
+the first time it is used. You can also explicitly configure and start
+the pool like this:
 
 ```erlang
 
@@ -379,7 +379,11 @@ hackney_pool:stop_pool(PoolName).
 > Note: Sometimes you want to disable the default pool in your app
 > without having to set the client option each time. You can now do this
 > by setting the hackney application environment key `use_default_pool`
-> to false.
+> to false. This means that hackney will not use socket pools unless
+> specifically requested using the `pool` option as described above.
+>
+> To disable socket pools for a single request, specify the option
+> `{pool, false}`.
 
 ### Use a custom pool handler.
 
@@ -513,24 +517,26 @@ been started.
 
 #### Metrics per Hosts
 
-|Name                        |Type     | Description                |
-|----------------------------|---------|----------------------------|
-|hackney.HOST.nb_requests    |counter  | Number of running requests |
-|hackney.HOST.request_time   |histogram| Request time               |
-|hackney.HOST.connect_time   |histogram| Connect time               |
-|hackney.HOST.response_time  |histogram| Response time              |
-|hackney.HOST.connect_timeout|counter  | Number of connect timeout  |
-|hackney.HOST.connect_error  |counter  | Number of timeout errors   |
+|Name                              |Type     | Description                               |
+|----------------------------------|---------|-------------------------------------------|
+|hackney.HOST.nb_requests          |counter  | Number of running requests                |
+|hackney.HOST.request_time         |histogram| Request time                              |
+|hackney.HOST.connect_time         |histogram| Connect time                              |
+|hackney.HOST.response_time        |histogram| Response time                             |
+|hackney.HOST.connect_timeout      |counter  | Number of connect timeout                 |
+|hackney.HOST.connect_error        |counter  | Number of timeout errors                  |
+|hackney_pool.HOST.new_connection  |counter  | Number of new pool connections per host   |
+|hackney_pool.HOST.reuse_connection|counter  | Number of reused pool connections per host|
 
 #### Metrics per Pool
 
-|Name                          |Type       | Description                                                        |
-|------------------------------|-----------|--------------------------------------------------------------------|
-|hackney.POOLNAME.take_rate    |meter    | meter recording rate at which a connection is retrieved from the pool|
-|hackney.POOLNAME.no_socket    |counter  | Count of new connections                                             |
-|hackney.POOLNAME.in_use_count |histogram| How many connections from the pool are used                          |
-|hackney.POOLNAME.free_count   |histogram| Number of free sockets in the pool                                   |
-|hackney.POOLNAME.queue_counter|histogram| queued clients                                                       |
+|Name                              |Type     | Description                                                          |
+|----------------------------------|---------|----------------------------------------------------------------------|
+|hackney_pool.POOLNAME.take_rate   |meter    | meter recording rate at which a connection is retrieved from the pool|
+|hackney_pool.POOLNAME.no_socket   |counter  | Count of new connections                                             |
+|hackney_pool.POOLNAME.in_use_count|histogram| How many connections from the pool are used                          |
+|hackney_pool.POOLNAME.free_count  |histogram| Number of free sockets in the pool                                   |
+|hackney_pool.POOLNAME.queue_count |histogram| queued clients                                                       |
 
 ## Contribute
 

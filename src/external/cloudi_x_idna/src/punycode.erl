@@ -1,4 +1,8 @@
 %% -*- coding: utf-8 -*-
+%%%
+%%% This file is part of erlang-idna released under the MIT license.
+%%% See the LICENSE for more information.
+%%%
 %% @doc Punycode ([RFC 3492](http://tools.ietf.org/html/rfc3492)) implementation.
 
 -module(punycode).

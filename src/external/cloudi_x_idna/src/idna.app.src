@@ -1,6 +1,6 @@
 {application, idna, [
   {description, "A pure Erlang IDNA implementation"},
-  {vsn, "6.0.1"},
+  {vsn, "6.1.1"},
   {modules, []},
   {registered, []},
   {applications, [kernel, stdlib, unicode_util_compat]},

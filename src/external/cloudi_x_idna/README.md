@@ -51,3 +51,21 @@ Legacy support of IDNA 2003 is also available with  `to_ascii` and `to_unicode` 
 3> idna:to_unicode(Encoded).
 [119,119,119,46,35449,22982,26031,46,99,111,109]
 ```
+
+
+
+Update Unicode data
+
+wget -O test/IdnaTestV2.txt https://www.unicode.org/Public/idna/latest/IdnaTestV2.txt
+wget -O uc_spec/ArabicShaping.txt https://www.unicode.org/Public/UNIDATA/ArabicShaping.txt
+wget -O uc_spec/IdnaMappingTable.txt https://www.unicode.org/Public/idna/latest/IdnaMappingTable.txt
+wget -O uc_spec/Scripts.txt https://www.unicode.org/Public/UNIDATA/Scripts.txt
+wget -O uc_spec/UnicodeData.txt https://www.unicode.org/Public/UNIDATA/UnicodeData.txt
+
+git clone https://github.com/kjd/idna.git
+./idna/tools/idna-data make-table --version 13.0.0 > uc_spec/idna-table.txt
+
+cd uc_spec
+./gen_idnadata_mod.escript
+./gen_idna_table_mod.escript
+./gen_idna_mapping_mod.escript

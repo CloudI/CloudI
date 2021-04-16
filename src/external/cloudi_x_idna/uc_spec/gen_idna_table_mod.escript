@@ -18,7 +18,7 @@
 
 
 main(_) ->
-  {ok, IM} = file:open("../uc_spec/idna-table-11.0.0.txt", [read, raw, {read_ahead, 1000000}]),
+  {ok, IM} = file:open("../uc_spec/idna-table.txt", [read, raw, {read_ahead, 1000000}]),
   Data = foldl(fun parse_idna_table/2, [], IM),
   file:close(IM),
 

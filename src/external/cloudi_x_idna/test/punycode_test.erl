@@ -1,11 +1,7 @@
-%%%-------------------------------------------------------------------
-%%% @author benoitc
-%%% @copyright (C) 2018, <COMPANY>
-%%% @doc
 %%%
-%%% @end
-%%% Created : 01. Aug 2018 15:12
-%%%-------------------------------------------------------------------
+%%% This file is part of erlang-idna released under the MIT license.
+%%% See the LICENSE for more information.
+%%%
 -module(punycode_test).
 -author("benoitc").
 
