@@ -213,8 +213,8 @@ Erlang `parse_trans`
 `Erlang parse transforms`
 
 - `https://github.com/uwiger/parse_trans`
-- `commit 76abb347c3c1d00fb0ccf9e4b43e22b3d2288484 (3.3.0)`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit 8ba366f81789c913cd63d69c6d1da948c200d18a (3.3.1)`
+- `Fri Apr 16 02:13:25 UTC 2021`
 - `Apache License 2.0`
 
 Erlang `pgsql`

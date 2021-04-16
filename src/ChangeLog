@@ -3,6 +3,7 @@
 
 2021-04-15 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Update parse_trans
     * Update proper (minimum Erlang/OTP becomes 20.0)
 
 2021-04-14 Michael Truog   <mjtruog at protonmail dot com>

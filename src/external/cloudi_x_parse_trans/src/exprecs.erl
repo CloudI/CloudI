@@ -770,6 +770,7 @@ generate_f(attribute, {attribute,L,export_records,_} = Form, _Ctxt,
           end, Es),
     {[], Form,
      [{attribute,L,export,Exports},
+      {attribute,L,ignore_xref,Exports},
       {attribute,L,export_type, TypeExports}],
      false, Acc#pass1{inserted = true}};
 generate_f(function, Form, _Context, #pass1{generated = false} = Acc) ->

@@ -30,6 +30,8 @@
 
 -module(parse_trans).
 
+-compile({no_auto_import,[error/3]}).
+
 -export([plain_transform/2]).
 
 -export([
@@ -242,7 +244,7 @@ get_module(Forms) ->
 %%% A = atom()
 %%%
 %%% @doc
-%%% Returns the value of the first occurence of attribute A.
+%%% Returns the value of the first occurrence of attribute A.
 %%% @end
 %%%
 -spec get_attribute(atom(), [any()]) ->
@@ -411,7 +413,8 @@ do_insert_forms(below, Insert, Forms, _Context) when is_list(Insert) ->
 insert_below([F|Rest], Insert) ->
     case type(F) of
         eof_marker ->
-            Insert ++ [F];
+            %% In the unlikely case someone misused eof_marker
+            Insert ++ [F | Rest];
         _ ->
             [F|insert_below(Rest, Insert)]
     end.
