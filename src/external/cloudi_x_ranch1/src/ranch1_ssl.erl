@@ -79,6 +79,12 @@
 -type opts() :: [opt()].
 -export_type([opts/0]).
 
+-ifdef(OTP_RELEASE).
+-if(?OTP_RELEASE >= 24).
+-define(ERLANG_OTP_VERSION_24_FEATURES, true).
+-endif.
+-endif.
+
 name() -> ssl.
 
 -spec secure() -> boolean().
@@ -124,6 +130,11 @@ accept(LSocket, Timeout) ->
 	ssl:transport_accept(LSocket, Timeout).
 
 -spec accept_ack(ssl:sslsocket(), timeout()) -> ok.
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+accept_ack(CSocket, _) ->
+	ok = close(CSocket),
+	error(not_implemented).
+-else.
 accept_ack(CSocket, Timeout) ->
 	case ssl:ssl_accept(CSocket, Timeout) of
 		ok ->
@@ -140,6 +151,7 @@ accept_ack(CSocket, Timeout) ->
 			ok = close(CSocket),
 			error(Reason)
 	end.
+-endif.
 
 %% @todo Probably filter Opts?
 -spec connect(inet:ip_address() | inet:hostname(),
@@ -225,6 +237,10 @@ close(Socket) ->
 %% returns a list of all cipher suites that are supported by default,
 %% minus the elliptic-curve ones.
 -spec unbroken_cipher_suites() -> [ssl:erl_cipher_suite()].
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+unbroken_cipher_suites() ->
+	[].
+-else.
 unbroken_cipher_suites() ->
 	case proplists:get_value(ssl_app, ssl:versions()) of
 		Version when Version =:= "5.3"; Version =:= "5.3.1" ->
@@ -234,3 +250,4 @@ unbroken_cipher_suites() ->
 		_ ->
 			ssl:cipher_suites()
 	end.
+-endif.

@@ -3,6 +3,11 @@
 
 2021-04-15 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Cause runtime failure in ranch1_ssl for Erlang/OTP >= 24
+      due to ssl:ssl_accept/2 and ssl:cipher_suites/0 functions
+      getting removed in Erlang/OTP
+        * cloudi_service_http_cowboy1 ssl use will be broken
+          in Erlang/OTP >= 24
     * Update hackney, certifi, idna, unicode_util_compat
     * Update exometer_core, hut, folsom, bear
     * Update epgsql
