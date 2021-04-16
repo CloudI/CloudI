@@ -36,7 +36,7 @@
 
 -include("epgsql.hrl").
 -include("protocol.hrl").
--include("../epgsql_copy.hrl").
+-include("epgsql_copy.hrl").
 
 -record(copy_stdin,
         {query :: iodata(),

@@ -14,7 +14,7 @@
 
 -include("epgsql.hrl").
 -include("protocol.hrl").
--include("../epgsql_replication.hrl").
+-include("epgsql_replication.hrl").
 
 -record(start_repl,
         {slot,

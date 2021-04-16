@@ -15,7 +15,7 @@
 
 %% -include("epgsql.hrl").
 -include("protocol.hrl").
--include("../epgsql_copy.hrl").
+-include("epgsql_copy.hrl").
 
 init(_) ->
     [].
