@@ -1,11 +1,13 @@
 %%% coding: utf-8
 %%% @doc
 %%% SCRAM--SHA-256 helper functions
-%%% See
-%%% https://www.postgresql.org/docs/current/static/sasl-authentication.html
-%%% https://en.wikipedia.org/wiki/Salted_Challenge_Response_Authentication_Mechanism
-%%% https://tools.ietf.org/html/rfc7677
-%%% https://tools.ietf.org/html/rfc5802
+%%%
+%%% <ul>
+%%%  <li>[https://www.postgresql.org/docs/current/static/sasl-authentication.html]</li>
+%%%  <li>[https://en.wikipedia.org/wiki/Salted_Challenge_Response_Authentication_Mechanism]</li>
+%%%  <li>[https://tools.ietf.org/html/rfc7677]</li>
+%%%  <li>[https://tools.ietf.org/html/rfc5802]</li>
+%%% </ul>
 %%% @end
 
 -module(epgsql_scram).
@@ -74,7 +76,7 @@ get_client_final(SrvFirst, ClientNonce, UserName, Password) ->
     Salt = proplists:get_value(salt, SrvFirst),
     I = proplists:get_value(i, SrvFirst),
 
-    SaltedPassword = hi(normalize(Password), Salt, I),
+    SaltedPassword = hi(epgsql_sasl_prep_profile:validate(Password), Salt, I),
     ClientKey = hmac(SaltedPassword, "Client Key"),
     StoredKey = h(ClientKey),
     ClientFirstBare = client_first_bare(UserName, ClientNonce),
@@ -98,15 +100,6 @@ parse_server_final(<<"e=", ServerError/binary>>) ->
 
 %% Helpers
 
-%% TODO: implement according to rfc3454
-normalize(Str) ->
-    lists:all(fun is_ascii_non_control/1, unicode:characters_to_list(Str, utf8))
-        orelse error({scram_non_ascii_password, Str}),
-    Str.
-
-is_ascii_non_control(C) when C > 16#1F, C < 16#7F -> true;
-is_ascii_non_control(_) -> false.
-
 check_nonce(ClientNonce, ServerNonce) ->
     Size = size(ClientNonce),
     <<ClientNonce:Size/binary, _/binary>> = ServerNonce,
@@ -123,8 +116,18 @@ hi1(Str, U, Hi, I) ->
     Hi1 = bin_xor(Hi, U2),
     hi1(Str, U2, Hi1, I - 1).
 
+-ifdef(OTP_RELEASE).
+ -if(?OTP_RELEASE >= 23).
+ hmac(Key, Str) ->
+     crypto:mac(hmac, sha256, Key, Str).
+ -else.
+ hmac(Key, Str) ->
+     crypto:hmac(sha256, Key, Str).
+ -endif.
+-else.
 hmac(Key, Str) ->
     crypto:hmac(sha256, Key, Str).
+-endif.
 
 h(Str) ->
     crypto:hash(sha256, Str).
@@ -133,16 +136,8 @@ h(Str) ->
 bin_xor(B1, B2) ->
     crypto:exor(B1, B2).
 
-
--ifndef(SLOW_MAPS).
 unique() ->
     erlang:unique_integer([positive]).
--else.
-unique() ->
-    %% POSIX timestamp microseconds
-    {Mega, Secs, Micro} = erlang:now(),
-    (Mega * 1000000 + Secs) * 1000000 + Micro.
--endif.
 
 
 -ifdef(TEST).
@@ -164,9 +159,5 @@ exchange_test() ->
     {CF, ServerProof} = get_client_final(SF, Nonce, Username, Password),
     ?assertEqual(ClientFinal, iolist_to_binary(CF)),
     ?assertEqual({ok, ServerProof}, parse_server_final(ServerFinal)).
-
-normalize_test() ->
-    ?assertEqual(<<"123 !~">>, normalize(<<"123 !~">>)),
-    ?assertError({scram_non_ascii_password, _}, normalize(<<"привет"/utf8>>)).
 
 -endif.

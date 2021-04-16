@@ -5,7 +5,7 @@
 -export([decode/2, encode/2]).
 -export([j2date/1, date2j/1]).
 
--include("epgsql_protocol.hrl").
+-include("protocol.hrl").
 
 -define(POSTGRES_EPOC_JDATE, 2451545).
 -define(POSTGRES_EPOC_USECS, 946684800000000).

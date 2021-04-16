@@ -1,5 +1,5 @@
-%%% Behaviour module for epgsql_sock commands.
-%%%
+%%% @doc Behaviour module for epgsql_sock commands.
+%%% @end
 %%% Copyright (C) 2017 - Sergey Prokhorov.  All rights reserved.
 
 -module(epgsql_command).
@@ -15,7 +15,12 @@
 
 -type execute_return() ::
         {ok, epgsql_sock:pg_sock(), state()}
+      | {send, epgsql_wire:packet_type(), PktData :: iodata(),
+         epgsql_sock:pg_sock(), state()}
+      | {send_multi, [{epgsql_wire:packet_type(), PktData :: iodata()}],
+         epgsql_sock:pg_sock(), state()}
       | {stop, Reason :: any(), Response :: any(), epgsql_sock:pg_sock()}.
+
 %% Execute command. It should send commands to socket.
 %% May be called many times if 'handle_message' will return 'requeue'.
 -callback execute(epgsql_sock:pg_sock(), state()) -> execute_return().
@@ -48,6 +53,7 @@
         %% Unknown packet. Terminate `epgsql_sock' process
       | unknown.
 %% Handle incoming packet
+
 -callback handle_message(Type :: byte(), Payload :: binary() | epgsql:query_error(),
                          epgsql_sock:pg_sock(), state()) -> handle_message_return().
 

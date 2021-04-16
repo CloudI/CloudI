@@ -96,8 +96,8 @@ Erlang `epgsql`
 `Erlang PostgreSQL (native) Driver (epgsql community fork)`
 
 - `https://github.com/epgsql/epgsql`
-- `commit b3138f76759750ab5e6202766cb39acd88c8ff54 (4.2.1)`
-- `Mon Dec  3 20:45:23 UTC 2018`
+- `commit f811a09926892dbd1359afe44a9bfa8f6907b322 (devel)`
+- `Fri Apr 16 02:47:47 UTC 2021`
 - `BSD`
 
 Erlang `exometer`
