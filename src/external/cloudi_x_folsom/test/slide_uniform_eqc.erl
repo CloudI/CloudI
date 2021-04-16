@@ -23,19 +23,27 @@
 
 -module(slide_uniform_eqc).
 
--compile(export_all).
+-compile([export_all, nowarn_export_all]).
 
 -ifdef(TEST).
 -ifdef(EQC).
--include("folsom.hrl").
+-define(QC_MOD, eqc).
 
 -include_lib("eqc/include/eqc.hrl").
 -include_lib("eqc/include/eqc_statem.hrl").
+-else.
+-define(QC_MOD, proper).
+
+-include_lib("proper/include/proper.hrl").
+-endif.
+
+-include("folsom.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(NUMTESTS, 200).
 -define(QC_OUT(P),
-        eqc:on_output(fun(Str, Args) ->
+        ?QC_MOD:on_output(fun(Str, Args) ->
                               io:format(user, Str, Args) end, P)).
 
 -define(WINDOW, 60).
@@ -67,7 +75,7 @@ next_state(S, V, {call, ?MODULE, new_histo, []}) ->
 next_state(S, V, {call, ?MODULE, tick, [_Moment]}) ->
     S#state{moment=V};
 next_state(#state{moment=Moment, values=Values0, sample=Sample, count=Count}=S, NewSample, {call, ?MODULE, update, [_, Val]}) ->
-    S#state{values={call, slide_uniform_eqc, new_state_values, [Sample, Moment, Values0, Val, Count]},
+    S#state{values={call, ?MODULE, new_state_values, [Sample, Moment, Values0, Val, Count]},
             count={call, orddict, update_counter, [Moment, 1, Count]},
             sample=NewSample};
 next_state(#state{values=Values, moment=Moment}=S, _V, {call, ?MODULE, trim, _}) ->
@@ -111,13 +119,15 @@ prop_window_test_() ->
     {setup, fun() -> ok end, fun(_X) -> (catch meck:unload(folsom_utils)), folsom:stop() end,
      fun(_X) ->
                 {timeout, 30,
-                           ?_assert(eqc:quickcheck(eqc:numtests(?NUMTESTS, ?QC_OUT(prop_window()))))} end}.
+                           ?_assert(?QC_MOD:quickcheck(?QC_MOD:numtests(?NUMTESTS, ?QC_OUT(prop_window()))))} end}.
 
 prop_window() ->
-    folsom:start(),
-    (catch meck:new(folsom_utils)),
-    (catch meck:expect(folsom_utils, update_counter, fun(Tid, Key, Value) -> meck:passthrough([Tid, Key, Value]) end)),
-    (catch meck:expect(folsom_utils, timestamp, fun() -> Res = os:timestamp(), put(timestamp, Res), Res end)),
+    {ok, _} = application:ensure_all_started(folsom),
+    (catch meck:new(folsom_utils, [passthrough])),
+    (catch meck:expect(folsom_utils, rand_uniform, fun(N) -> Rnd = meck:passthrough([N]),
+                                                             put({?MODULE, rand_uniform}, Rnd),
+                                                             Rnd
+                                                   end)),
     ?FORALL(Cmds, commands(?MODULE),
             aggregate(command_names(Cmds),
                       begin
@@ -148,7 +158,7 @@ new_histo() ->
     {Ref, Slide}.
 
 tick(Moment) ->
-    IncrBy = trunc(random:uniform(10)),
+    IncrBy = trunc(folsom_utils:rand_uniform(10)),
     meck:expect(folsom_utils, now_epoch, fun() -> Moment + IncrBy end),
     meck:expect(folsom_utils, now_epoch, fun(_Now) -> Moment + IncrBy end),
     Moment+IncrBy.
@@ -178,7 +188,7 @@ new_state_values(_Sample, Moment, Values, Val, Count) ->
     case Cnt > ?SIZE of
         true ->
             %% replace
-            {Rnd, _} = random:uniform_s(Cnt, get(timestamp)),
+            Rnd = get({?MODULE, rand_uniform}),
             case Rnd =< ?SIZE of
                 true ->
                     lists:keyreplace({Moment, Rnd}, 1, Values, {{Moment, Rnd}, Val});
@@ -190,5 +200,4 @@ new_state_values(_Sample, Moment, Values, Val, Count) ->
             Values ++ [{{Moment, Cnt}, Val}]
     end.
 
--endif.
 -endif.

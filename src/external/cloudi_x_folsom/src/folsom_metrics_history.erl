@@ -24,12 +24,24 @@
 
 -module(folsom_metrics_history).
 
+-behaviour(gen_server).
+
 -export([new/1,
+         new/2,
          update/3,
          get_events/1,
          get_events/2,
          get_value/1
         ]).
+
+-export([start_link/0]).
+
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3, format_status/2]).
+
+-define(SERVER, ?MODULE).
+
+-record(state, {}).
 
 -include("folsom.hrl").
 
@@ -40,9 +52,10 @@
                  ]).
 
 new(Name) ->
-    Tid = ets:new(history, ?ETSOPTS),
-    ets:insert(?HISTORY_TABLE, {Name, #history{tid=Tid}}),
-    ok.
+    new(Name, ?DEFAULT_SIZE).
+
+new(Name, SampleSize) ->
+    gen_server:call(?SERVER, {new, Name, SampleSize}).
 
 update(Name, Size, Value) ->
     #history{tid=Tid} = get_value(Name),
@@ -81,3 +94,37 @@ get_prev_event(Name, Key, Count, Acc) when length(Acc) < Count ->
     get_prev_event(Name, ets:prev(Name, Key), Count, lists:append(Acc, Event));
 get_prev_event(_, _, _, Acc) ->
     Acc.
+
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+init([]) ->
+    process_flag(trap_exit, true),
+    {ok, #state{}}.
+
+handle_call({new, Name, SampleSize}, _From, State) ->
+    Reply = case ets:member(?HISTORY_TABLE, Name) of
+                false ->
+                    Tid = ets:new(history, ?ETSOPTS),
+                    ets:insert(?HISTORY_TABLE, {Name, #history{tid=Tid}}),
+                    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = history, history_size = SampleSize}}),
+                    ok;
+                true ->
+                    ok
+            end,
+    {reply, Reply, State}.
+
+handle_cast(_Request, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+format_status(_Opt, Status) ->
+    Status.

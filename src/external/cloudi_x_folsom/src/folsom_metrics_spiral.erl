@@ -25,6 +25,8 @@
 
 -module(folsom_metrics_spiral).
 
+-behaviour(gen_server).
+
 -export([new/1,
          new/2,
          update/2,
@@ -32,6 +34,15 @@
          get_value/1,
          get_values/1
         ]).
+
+-export([start_link/0]).
+
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3, format_status/2]).
+
+-define(SERVER, ?MODULE).
+
+-record(state, {}).
 
 %% size of the window in seconds
 -define(WINDOW, 60).
@@ -43,19 +54,7 @@ new(Name) ->
     new(Name, fast).
 
 new(Name, Update) when Update == fast orelse Update == no_exceptions ->
-    UpdateFun = case Update of
-                    fast ->
-                        update_counter;
-                    no_exceptions ->
-                        update_counter_no_exceptions
-                end,
-    Spiral = #spiral{update=UpdateFun},
-    Pid = folsom_sample_slide_sup:start_slide_server(?MODULE,
-                                                           Spiral#spiral.tid,
-                                                           ?WINDOW),
-    ets:insert_new(Spiral#spiral.tid,
-                   [{{count, N}, 0} || N <- lists:seq(0,?WIDTH-1)]),
-    ets:insert(?SPIRAL_TABLE, {Name, Spiral#spiral{server=Pid}}).
+    gen_server:call(?SERVER, {new, Name, Update}).
 
 update(Name, Value) ->
     #spiral{tid=Tid, update=Update} = get_value(Name),
@@ -84,4 +83,46 @@ get_values(Name) ->
 oldest() ->
     folsom_utils:now_epoch() - ?WINDOW.
 
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+init([]) ->
+    process_flag(trap_exit, true),
+    {ok, #state{}}.
+
+handle_call({new, Name, Update}, _From, State) ->
+    Reply = case folsom_ets:handler_exists(Name) of
+                false ->
+                    UpdateFun = case Update of
+                                    fast ->
+                                        update_counter;
+                                    no_exceptions ->
+                                        update_counter_no_exceptions
+                                end,
+                    Spiral = #spiral{update=UpdateFun},
+                    Pid = folsom_sample_slide_sup:start_slide_server(?MODULE,
+                                                                     Spiral#spiral.tid,
+                                                                     ?WINDOW),
+                    ets:insert_new(Spiral#spiral.tid,
+                                   [{{count, N}, 0} || N <- lists:seq(0,?WIDTH-1)]),
+                    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = spiral}}),
+                    ets:insert(?SPIRAL_TABLE, {Name, Spiral#spiral{server=Pid}});
+                true ->
+                    true
+            end,
+    {reply, Reply, State}.
+
+handle_cast(_Request, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+format_status(_Opt, Status) ->
+    Status.

@@ -80,13 +80,6 @@
 -export([test_run/1, test_run/2,
          test_series/0]).
 
-%% -compile({parse_transform, exometer_igor}).
-%% -compile({igor, [{files, ["src/exometer_util.erl"
-%%                           , "src/exometer_proc.erl"
-%%                           , "src/exometer_slot_slide.erl"
-%%                           , "src/exometer_slide.erl"
-%%                          ]}]}).
-
 -include("exometer.hrl").
 
 -record(st, {name,

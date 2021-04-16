@@ -30,13 +30,6 @@
 
 -compile(inline).
 
-%% -compile({parse_transform, exometer_igor}).
-%% -compile({igor, [{files, ["src/exometer_util.erl"
-%%                           , "src/exometer_proc.erl"
-%%                           , "src/exometer_slot_slide.erl"
-%%                          ]}]}).
-%% -compile({igor, [{verbose, true}]}).
-
 -include("exometer.hrl").
 -import(netlink_stat, [get_value/1]).
 -record(st, {name,

@@ -42,8 +42,8 @@ Erlang `bear`
 `Statistics functions for Erlang`
 
 - `https://github.com/folsom-project/bear`
-- `commit b31a294c4c7d6f2c124b9d524c480fbeb3fbbb8a (0.8.7)`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit 22849b90a3cc8909a2cba9cc8b83385fe388387b (1.0)`
+- `Fri Apr 16 04:03:35 UTC 2021`
 - `Apache License 2.0`
 
 Erlang `certifi`
@@ -114,8 +114,8 @@ Erlang `exometer_core`
 `Erlang instrumentation package core`
 
 - `https://github.com/Feuerlabs/exometer_core`
-- `commit 547f28bc93c7cb3d3f1174fb4c510667a4ebb645 (v1.5.7)`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit 358d5c6724b823104f122ca4f16439ae0e767c82`
+- `Fri Apr 16 04:03:35 UTC 2021`
 - `Mozilla Public License 2.0`
 
 Erlang `exometer_influxdb`
@@ -132,8 +132,8 @@ Erlang `folsom`
 `Erlang Events and Metrics`
 
 - `https://github.com/folsom-project/folsom`
-- `commit 9309bad9ffadeebbefe97521577c7480c7cfcd8a (0.8.7)`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit 62fd0714e6f0b4e7833880afe371a9c882ea0fc2 (1.0)`
+- `Fri Apr 16 04:03:35 UTC 2021`
 - `Apache License 2.0`
 
 Erlang `hackney`
@@ -150,8 +150,8 @@ Erlang `hut`
 `helper library for making Erlang libraries logging framework agnostic`
 
 - `https://github.com/tolbrino/hut`
-- `commit 37e281ff39d5767221314210f46d46c78ad530bf (v1.2.1)`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit 9a9ac53401524548d6b6079d07e010ddb5cb15a1 (v1.3.0)`
+- `Fri Apr 16 04:03:35 UTC 2021`
 - `MIT`
 
 Erlang `idna`

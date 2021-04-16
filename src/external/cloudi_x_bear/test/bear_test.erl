@@ -265,6 +265,12 @@ get_statistics_subset_regular_test() ->
     %% Regular case
     ?assertEqual([{max, 50},{min, -49}], bear:get_statistics_subset(sample1(), [max,min])).
 
+get_statistics_subset_empty_test() ->
+    Percentile = [{50, 0.0}, {75, 0.0}, {95, 0.0}, {99, 0.0}, {999, 0.0}],
+    ?assertEqual([{percentile, Percentile}], bear:get_statistics_subset([], [{percentile, [50, 75, 95, 99, 999]}])),
+    ?assertEqual([{histogram, [{0, 0}]}], bear:get_statistics_subset([], [histogram])),
+    ?assertEqual([{max, 0.0}, {min, 0.0}], bear:get_statistics_subset([], [max, min])).
+
 subset_test() ->
     Stats = bear:get_statistics(test_values()),
     match_values(Stats).

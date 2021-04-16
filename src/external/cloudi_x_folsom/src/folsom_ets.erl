@@ -48,12 +48,6 @@
          get_tags/1
         ]).
 
--record(metric, {
-          tags = sets:new(),
-          type,
-          history_size
-         }).
-
 -include("folsom.hrl").
 
 %%%===================================================================
@@ -196,38 +190,26 @@ get_tags(Name) ->
 
 maybe_add_handler(counter, Name, false) ->
     true = folsom_metrics_counter:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = counter}}),
     ok;
 maybe_add_handler(gauge, Name, false) ->
     true = folsom_metrics_gauge:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = gauge}}),
     ok;
 maybe_add_handler(histogram, Name, false) ->
     true = folsom_metrics_histogram:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = histogram}}),
     ok;
 maybe_add_handler(duration, Name, false) ->
-    true = folsom_metrics_histogram:new(Name),
     true = folsom_metrics_duration:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = duration}}),
     ok;
 maybe_add_handler(history, Name, false) ->
-    ok = folsom_metrics_history:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = history, history_size = ?DEFAULT_SIZE}}),
-    ok;
+    ok = folsom_metrics_history:new(Name);
 maybe_add_handler(meter, Name, false) ->
-    ok = folsom_meter_timer_server:register(Name, folsom_metrics_meter),
     true = folsom_metrics_meter:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = meter}}),
     ok;
 maybe_add_handler(meter_reader, Name, false) ->
-    ok = folsom_meter_timer_server:register(Name, folsom_metrics_meter_reader),
     true = folsom_metrics_meter_reader:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = meter_reader}}),
     ok;
 maybe_add_handler(spiral, Name, false) ->
     true = folsom_metrics_spiral:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = spiral}}),
     ok;
 maybe_add_handler(Type, _, false) ->
     {error, Type, unsupported_metric_type};
@@ -236,15 +218,11 @@ maybe_add_handler(_, Name, true) ->
 
 maybe_add_handler(histogram, Name, SampleType, false) ->
     true = folsom_metrics_histogram:new(Name, SampleType),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = histogram}}),
     ok;
 maybe_add_handler(history, Name, SampleSize, false) ->
-    ok = folsom_metrics_history:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = history, history_size = SampleSize}}),
-    ok;
+    ok = folsom_metrics_history:new(Name, SampleSize);
 maybe_add_handler(spiral, Name, Update, false) ->
     true = folsom_metrics_spiral:new(Name, Update),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = spiral}}),
     ok;
 maybe_add_handler(Type, _, _, false) ->
     {error, Type, unsupported_metric_type};
@@ -253,7 +231,6 @@ maybe_add_handler(_, Name, _, true) ->
 
 maybe_add_handler(histogram, Name, SampleType, SampleSize, false) ->
     true = folsom_metrics_histogram:new(Name, SampleType, SampleSize),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = histogram}}),
     ok;
 maybe_add_handler(Type, _, _, _, false) ->
     {error, Type, unsupported_metric_type};
@@ -262,12 +239,9 @@ maybe_add_handler(_, Name, _, _, true) ->
 
 maybe_add_handler(histogram, Name, SampleType, SampleSize, Alpha, false) ->
     true = folsom_metrics_histogram:new(Name, SampleType, SampleSize, Alpha),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = histogram}}),
     ok;
 maybe_add_handler(duration, Name, SampleType, SampleSize, Alpha, false) ->
-    true = folsom_metrics_histogram:new(Name, SampleType, SampleSize, Alpha),
-    true = folsom_metrics_duration:new(Name),
-    true = ets:insert(?FOLSOM_TABLE, {Name, #metric{type = duration}}),
+    true = folsom_metrics_duration:new(Name, SampleType, SampleSize, Alpha),
     ok;
 maybe_add_handler(Type, _, _, _, _, false) ->
     {error, Type, unsupported_metric_type};
@@ -397,6 +371,13 @@ notify(Name, Value, histogram, false) ->
     add_handler(histogram, Name),
     folsom_metrics_histogram:update(Name, Value),
     ok;
+notify(Name, Value, {histogram, _SampleType}, true) ->
+    folsom_metrics_histogram:update(Name, Value),
+    ok;
+notify(Name, Value, {histogram, SampleType}, false) ->
+    add_handler(histogram, Name, SampleType),
+    folsom_metrics_histogram:update(Name, Value),
+    ok;
 notify(Name, Value, history, true) ->
     [{_, #metric{history_size = HistorySize}}] = ets:lookup(?FOLSOM_TABLE, Name),
     folsom_metrics_history:update(Name, HistorySize, Value),
@@ -436,4 +417,3 @@ notify(Name, Value, spiral, false) ->
     ok;
 notify(_, _, Type, _) ->
     {error, Type, unsupported_metric_type}.
-

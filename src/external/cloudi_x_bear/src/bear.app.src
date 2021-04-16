@@ -1,9 +1,10 @@
 {application, bear,
  [
   {description, "A set of statistics functions for erlang"},
-  {vsn, "0.8.7"}, %% replace as appropriate after tagging repo
+  {vsn, "1.0.0"}, %% replace as appropriate after tagging repo
   {registered, []},
-  {applications, []},
+  {applications, [kernel,
+                  stdlib]},
   {env, []},
   {modules, []},
   {maintainers, ["Joe Williams"]},

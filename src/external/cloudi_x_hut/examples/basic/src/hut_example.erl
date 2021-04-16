@@ -8,7 +8,7 @@ start() ->
     % Ensure hut is started so all app env are available
     ok = application:start(hut),
     ?log(info, "Testing hut log levels with type ~s", [?log_type]),
-    lists:map(
+    lists:foreach(
       fun
           ({M}) ->
               log_m(M);
@@ -17,6 +17,13 @@ start() ->
           ({M, A, O}) ->
               log_mao(M, A, O)
       end, messages()),
+    lists:foreach(
+      fun
+          ({R}) ->
+              slog(R);
+          ({R, M}) ->
+              slog(R, M)
+      end, reports()),
     ?log(info, "Testing DONE"),
     ok.
 
@@ -31,6 +38,12 @@ messages() ->
      {"Example Log Entry"},
      {"Example Log Entry ~s ~s", ["with", "arguments"]},
      {"Example Log Entry", [], [with, options]}
+    ].
+
+reports() ->
+    [
+     {#{from => {127,0,0,1}, to => {127,0,0,1}}},
+     {#{from => {127,0,0,1}, to => {127,0,0,1}}, #{domain => [test]}}
     ].
 
 % Helper functions to test the HUT_LAGER option as well
@@ -66,4 +79,27 @@ log_mao(M, A, O) ->
     ?log(critical, M, A, O),
     ?log(alert, M, A, O),
     ?log(emergency, M, A, O),
+    ok.
+
+slog(R) ->
+    ?slog(debug, R),
+    ?slog(info, R),
+    ?slog(notice, R),
+    ?slog(warning, R),
+    ?slog(error, R),
+    ?slog(critical, R),
+    ?slog(alert, R),
+    ?slog(emergency, R),
+    ok.
+
+slog(R, M) ->
+    ?set_process_metadata(#{foo => bar}),
+    ?slog(debug, R, M),
+    ?slog(info, R, M),
+    ?slog(notice, R, M),
+    ?slog(warning, R, M),
+    ?slog(error, R, M),
+    ?slog(critical, R, M),
+    ?slog(alert, R, M),
+    ?slog(emergency, R, M),
     ok.

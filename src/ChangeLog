@@ -3,6 +3,7 @@
 
 2021-04-15 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Update exometer_core, hut, folsom, bear
     * Update epgsql
     * Update parse_trans
     * Update proper (minimum Erlang/OTP becomes 20.0)

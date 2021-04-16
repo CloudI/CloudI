@@ -24,6 +24,8 @@
 
 -module(folsom_metrics_meter).
 
+-behaviour(gen_server).
+
 -export([new/1,
          tick/1,
          mark/1,
@@ -32,6 +34,14 @@
          get_acceleration/1
         ]).
 
+-export([start_link/0]).
+
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3, format_status/2]).
+
+-define(SERVER, ?MODULE).
+
+-record(state, {}).
 
 -record(meter, {
           instant,
@@ -46,20 +56,7 @@
 -include("folsom.hrl").
 
 new(Name) ->
-    Instant = folsom_ewma:instant_ewma(),
-    OneMin = folsom_ewma:one_minute_ewma(),
-    FiveMin = folsom_ewma:five_minute_ewma(),
-    FifteenMin = folsom_ewma:fifteen_minute_ewma(),
-    OneDay = folsom_ewma:one_day_ewma(),
-
-    ets:insert(?METER_TABLE,
-               {Name, #meter{
-                             instant = Instant,
-                             one = OneMin,
-                             five = FiveMin,
-                             fifteen = FifteenMin,
-                             day = OneDay,
-                             start_time = folsom_utils:now_epoch_micro()}}).
+    gen_server:call(?SERVER, {new, Name}).
 
 tick(Name) ->
     #meter{instant = Instant,
@@ -155,8 +152,10 @@ get_value(Name) ->
 calc_mean_rate(_, 0) ->
     0.0;
 calc_mean_rate(Start, Count) ->
-    Elapsed = folsom_utils:now_epoch_micro() - Start,
-    Count / Elapsed.
+    case folsom_utils:now_epoch_micro() - Start of
+        0 -> 0.0;
+        Elapsed -> Count / Elapsed
+    end.
 
 calc_acceleration(Rate1, Rate2, Interval) ->
      % most current velocity minus previous velocity
@@ -166,3 +165,48 @@ get_rate(Value1, Value2, Interval) ->
     Delta = Value1 - Value2,
     Delta / Interval.
 
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+init([]) ->
+    process_flag(trap_exit, true),
+    {ok, #state{}}.
+
+handle_call({new, Name}, _From, State) ->
+    Reply = case ets:member(?METER_TABLE, Name) of
+                false ->
+                    ok = folsom_meter_timer_server:register(Name, folsom_metrics_meter),
+                    Instant = folsom_ewma:instant_ewma(),
+                    OneMin = folsom_ewma:one_minute_ewma(),
+                    FiveMin = folsom_ewma:five_minute_ewma(),
+                    FifteenMin = folsom_ewma:fifteen_minute_ewma(),
+                    OneDay = folsom_ewma:one_day_ewma(),
+
+                    ets:insert(?METER_TABLE,
+                               {Name, #meter{
+                                         instant = Instant,
+                                         one = OneMin,
+                                         five = FiveMin,
+                                         fifteen = FifteenMin,
+                                         day = OneDay,
+                                         start_time = folsom_utils:now_epoch_micro()}}),
+                    ets:insert(?FOLSOM_TABLE, {Name, #metric{type = meter}});
+                true ->
+                    true
+            end,
+    {reply, Reply, State}.
+
+handle_cast(_Request, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+format_status(_Opt, Status) ->
+    Status.

@@ -92,7 +92,41 @@ init([]) ->
     SlideSup = {folsom_sample_slide_sup, {folsom_sample_slide_sup, start_link, []},
                 permanent, 5000, supervisor, [folsom_sample_slide_sup]},
 
-    {ok, {SupFlags, [SlideSup, TimerServer, HistETSServer]}}.
+    SpiralServer = {folsom_metrics_spiral,
+                    {folsom_metrics_spiral, start_link, []},
+                    Restart, Shutdown, Type, [folsom_metrics_spiral]},
+
+    HistoryServer = {folsom_metrics_history,
+                    {folsom_metrics_history, start_link, []},
+                    Restart, Shutdown, Type, [folsom_metrics_history]},
+
+    HistogramServer = {folsom_metrics_histogram,
+                       {folsom_metrics_histogram, start_link, []},
+                       Restart, Shutdown, Type, [folsom_metrics_histogram]},
+
+    DurationServer = {folsom_metrics_duration,
+                      {folsom_metrics_duration, start_link, []},
+                      Restart, Shutdown, Type, [folsom_metrics_duration]},
+
+    CounterServer = {folsom_metrics_counter,
+                     {folsom_metrics_counter, start_link, []},
+                     Restart, Shutdown, Type, [folsom_metrics_counter]},
+
+    GaugeServer = {folsom_metrics_gauge,
+                     {folsom_metrics_gauge, start_link, []},
+                     Restart, Shutdown, Type, [folsom_metrics_gauge]},
+
+    MeterServer = {folsom_metrics_meter,
+                   {folsom_metrics_meter, start_link, []},
+                   Restart, Shutdown, Type, [folsom_metrics_meter]},
+
+    MeterReaderServer = {folsom_metrics_meter_reader,
+                         {folsom_metrics_meter_reader, start_link, []},
+                         Restart, Shutdown, Type, [folsom_metrics_meter_reader]},
+
+    {ok, {SupFlags, [SlideSup, TimerServer, HistETSServer, SpiralServer, HistoryServer,
+                     HistogramServer, DurationServer, CounterServer, GaugeServer,
+                     MeterServer, MeterReaderServer]}}.
 
 %%%===================================================================
 %%% Internal functions

@@ -1,0 +1,12 @@
+%% -*- erlang -*-
+
+{erl_opts, [debug_info]}.
+
+{deps, [
+        {hut, {path, "../../"}},
+        {hut_example, {path, "../basic"}}
+       ]}.
+
+{plugins, [
+           rebar3_path_deps
+          ]}.

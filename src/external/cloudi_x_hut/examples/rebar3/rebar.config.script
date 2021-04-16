@@ -1,0 +1,60 @@
+%% -*- erlang -*-
+
+MaybeAddDepLager = fun
+                       ('HUT_LAGER', App, Overrides) ->
+                           New = {add, App, [{deps, [lager]}]},
+                           [New | Overrides];
+                       (_, _, Overrides) ->
+                           Overrides
+                   end,
+MaybeAddErlopts = fun
+                       ('HUT_LAGER' = HutOption, App, Overrides) ->
+                           New = {override, App,
+                                  [{erl_opts,
+                                    [{d, HutOption},
+                                     {parse_transform, lager_transform}]}]},
+                           [New | Overrides];
+                       (Option, App, Overrides) ->
+                          case erlang:atom_to_list(Option) of
+                              "HUT_" ++ _ ->
+                                  New = {override, App, [{erl_opts, [{d, Option}]}]},
+                                  [New | Overrides];
+                              _ ->
+                                  Overrides
+                          end
+                   end,
+
+ProcessErlopts = fun
+                     ([], _, Acc0, Fun) ->
+                         Acc0;
+                     ([{d, Option} | OptsRest], Deps, Acc0, Fun) ->
+                         Acc1 = lists:foldl(fun(App, Acc) ->
+                                                    MaybeAddErlopts(Option, App, Acc)
+                                            end,
+                                            Acc0, Deps),
+                         Acc2 = lists:foldl(fun(App, Acc) ->
+                                                    MaybeAddDepLager(Option, App, Acc)
+                                            end,
+                                            Acc1, Deps),
+                        Fun(OptsRest, Deps, Acc2, Fun);
+                     ([_ | OptsRest], Deps, Acc0, Fun) ->
+                        Fun(OptsRest, Deps, Acc0, Fun)
+                 end,
+
+FilterDepsKeys = fun
+                     ([], _) ->
+                         [];
+                     ([App | Rest], Fun) when is_atom(App) ->
+                         [App | Fun(Rest, Fun)];
+                     ([App | Rest], Fun) when is_tuple(App) ->
+                         [element(1, App) | Fun(Rest, Fun)];
+                     ([_| Rest], Fun) ->
+                         Fun(Rest, Fun)
+                 end,
+
+Overrides0 = proplists:get_value(overrides, CONFIG, []),
+ErlOpts = proplists:get_value(erl_opts, CONFIG, []),
+Deps0 = proplists:get_value(deps, CONFIG, []),
+Deps = FilterDepsKeys(Deps0, FilterDepsKeys),
+Overrides1 = ProcessErlopts(ErlOpts, Deps, Overrides0, ProcessErlopts),
+lists:keystore(overrides, 1, CONFIG, {overrides, Overrides1}).

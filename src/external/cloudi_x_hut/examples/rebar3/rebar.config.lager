@@ -1,0 +1,17 @@
+%% -*- erlang -*-
+
+{erl_opts, [
+            debug_info,
+            {d, 'HUT_LAGER'},
+            {parse_transform, lager_transform}
+           ]}.
+
+{deps, [
+        {hut, {path, "../../"}},
+        {hut_example, {path, "../basic"}},
+        lager
+       ]}.
+
+{plugins, [
+           rebar3_path_deps
+          ]}.

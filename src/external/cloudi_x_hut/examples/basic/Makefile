@@ -3,7 +3,6 @@ PROJECT_DESCRIPTION = example of using various hut configurations
 PROJECT_VERSION 	= 0.1.0
 
 DEPS = lager
-dep_lager_commit = 3.0.2
 
 all:: run_example_default
 
@@ -17,6 +16,11 @@ erlc_includes		= -pz $(hut_dir)
 .PHONY: run_example_default
 run_example_default: export ERLC_OPTS = $(erlc_includes)
 run_example_default: clean app
+	$(exec)
+
+.PHONY: run_example_sasl
+run_example_sasl: export ERLC_OPTS = -DHUT_SASL $(erlc_includes)
+run_example_sasl: clean app
 	$(exec)
 
 .PHONY: run_example_default_no_gate

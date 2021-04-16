@@ -52,10 +52,10 @@ get_system_info() ->
     [{Key, convert_system_info(Key, get_system_info(Key))} || Key <- ?SYSTEM_INFO].
 
 get_process_info() ->
-    [{pid_port_fun_to_atom(Pid), get_process_info(Pid)} || Pid <- processes()].
+    [{pid_port_fun_to_binary(Pid), get_process_info(Pid)} || Pid <- processes()].
 
 get_port_info() ->
-    [{pid_port_fun_to_atom(Port), get_port_info(Port)} || Port <- erlang:ports(),
+    [{pid_port_fun_to_binary(Port), get_port_info(Port)} || Port <- erlang:ports(),
         begin
             {name, Type} = erlang:port_info(Port, name), Type /= "forker"
         end
@@ -250,7 +250,7 @@ get_ets_dets_info(Type, Tab) ->
     case Type:info(Tab) of
         undefined -> [];
         Entries when is_list(Entries) ->
-            [{Key, pid_port_fun_to_atom(Value)} || {Key, Value} <- Entries]
+            [{Key, pid_port_fun_to_binary(Value)} || {Key, Value} <- Entries]
     end.
 
 ip_to_binary(Tuple) ->
@@ -259,24 +259,24 @@ ip_to_binary(Tuple) ->
 convert_port_info({name, Name}) ->
     {name, list_to_binary(Name)};
 convert_port_info({links, List}) ->
-    {links, [pid_port_fun_to_atom(Item) || Item <- List]};
+    {links, [pid_port_fun_to_binary(Item) || Item <- List]};
 convert_port_info({connected, Pid}) ->
-    {connected, pid_port_fun_to_atom(Pid)};
+    {connected, pid_port_fun_to_binary(Pid)};
 convert_port_info(Item) ->
     Item.
 
 convert_pid_info({current_function, MFA}) ->
     {current_function, tuple_to_list(MFA)};
 convert_pid_info({Key, Term}) when is_pid(Term) or is_port(Term) or is_function(Term) ->
-    {Key, pid_port_fun_to_atom(Term)};
+    {Key, pid_port_fun_to_binary(Term)};
 convert_pid_info({links, List}) ->
-    {links, [pid_port_fun_to_atom(Item) || Item <- List]};
+    {links, [pid_port_fun_to_binary(Item) || Item <- List]};
 convert_pid_info({suspending, List}) ->
-    {suspending, [pid_port_fun_to_atom(Item) || Item <- List]};
+    {suspending, [pid_port_fun_to_binary(Item) || Item <- List]};
 convert_pid_info({monitors, List}) ->
-    {monitors, [{Key, pid_port_fun_to_atom(Value)} || {Key, Value} <- List]};
+    {monitors, [{Key, pid_port_fun_to_binary(Value)} || {Key, Value} <- List]};
 convert_pid_info({monitored_by, List}) ->
-    {monitored_by, [pid_port_fun_to_atom(Item) || Item <- List]};
+    {monitored_by, [pid_port_fun_to_binary(Item) || Item <- List]};
 convert_pid_info({binary, List}) ->
     {binary, [tuple_to_list(Item) || Item <- List]};
 convert_pid_info({initial_call, MFA}) ->
@@ -284,11 +284,11 @@ convert_pid_info({initial_call, MFA}) ->
 convert_pid_info(Item) ->
     Item.
 
-pid_port_fun_to_atom(Term) when is_pid(Term) ->
-    erlang:list_to_atom(pid_to_list(Term));
-pid_port_fun_to_atom(Term) when is_port(Term) ->
-    erlang:list_to_atom(erlang:port_to_list(Term));
-pid_port_fun_to_atom(Term) when is_function(Term) ->
-    erlang:list_to_atom(erlang:fun_to_list(Term));
-pid_port_fun_to_atom(Term) ->
+pid_port_fun_to_binary(Term) when is_pid(Term) ->
+    erlang:list_to_binary(pid_to_list(Term));
+pid_port_fun_to_binary(Term) when is_port(Term) ->
+    erlang:list_to_binary(erlang:port_to_list(Term));
+pid_port_fun_to_binary(Term) when is_function(Term) ->
+    erlang:list_to_binary(erlang:fun_to_list(Term));
+pid_port_fun_to_binary(Term) ->
     Term.

@@ -30,6 +30,13 @@
                   end
           end)())).
 
+
+-define(__hut_logger_metadata,
+        #{ mfa => {?MODULE, ?FUNCTION_NAME, ?FUNCTION_ARITY}
+         , file => ?FILE
+         , line => ?LINE
+         }).
+
 %% Lager support
 
 -ifdef(HUT_LAGER).
@@ -46,7 +53,7 @@
 -define(log(__Level, __Fmt, __Args, __Opts),
         ?HUT_LAGER_SINK:__Level(__Opts, __Fmt, __Args)).
 
--else.
+-else. %% HUT_LAGER
 
 % Using plain `io:format/2`.
 
@@ -60,12 +67,11 @@
 -define(log(__Level, __Fmt, __Args, __Opts),
         ?__maybe_log(__Level, fun() -> io:format("~p: " ++ __Fmt ++ "; Opts: ~p~n", [__Level] ++ __Args ++ [__Opts]) end)).
 
--else.
+-else. %% HUT_IOFORMAT
 
 % All logging calls are passed into a custom logging callback module given by `HUT_CUSTOM_CB`.
 
 -ifdef(HUT_CUSTOM).
--ifdef(HUT_CUSTOM_CB).
 -define(log_type, "custom").
 
 -define(log(__Level, __Fmt),
@@ -75,8 +81,14 @@
 -define(log(__Level, __Fmt, __Args, __Opts),
         ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, __Opts) end)).
 
--endif.
--else.
+-ifdef(HUT_CUSTOM_SLOG).
+-define(slog(__Level, __Data, __Meta),
+        ?HUT_CUSTOM_CB:slog(__Level, __Data, maps:merge(?__hut_logger_metadata, __Meta))).
+-define(slog(__Level, __Data),
+        ?HUT_CUSTOM_CB:slog(__Level, __Data, ?__hut_logger_metadata)).
+-endif. %% HUT_CUSTOM_SLOG
+
+-else. %% HUT_CUSTOM
 
 % All logging calls are ignored.
 
@@ -87,10 +99,18 @@
 -define(log(__Level, __Fmt, __Args), true).
 -define(log(__Level, __Fmt, __Args, __Opts), true).
 
--else.
+-else. %% HUT_NOOP
 
-% If none of the above options was defined, we default to using OTP sasl's error_logger.
--define(log_type, "default").
+-ifndef(OTP_RELEASE).
+% If none of the above options were defined and OTP version is below 21, default to SASL
+-ifndef(HUT_SASL).
+-define(HUT_SASL, true).
+-endif.
+-endif. %% !OTP_RELEASE
+
+-ifdef(HUT_SASL).
+
+-define(log_type, "sasl").
 
 -define(log(__Level, __Fmt),
         ?__maybe_log(__Level, fun() -> hut:log(?log_type, __Level, __Fmt, [], []) end)).
@@ -99,11 +119,67 @@
 -define(log(__Level, __Fmt, __Args, __Opts),
         ?__maybe_log(__Level, fun() -> hut:log(?log_type, __Level, __Fmt, __Args, __Opts) end)).
 
+-else. %% HUT_SASL
+
+% On OTP21+ use logger by default
+
+-define(log_type, "logger").
+
+-define(log(__Level, __Fmt, __Args, __Opts),
+        logger:log(__Level, __Fmt ++ "; Opts ~p", __Args ++ [__Opts], ?__hut_logger_metadata)).
+-define(log(__Level, __Fmt, __Args),
+        logger:log(__Level, __Fmt, __Args, ?__hut_logger_metadata)).
+-define(log(__Level, __Fmt),
+        ?log(__Level, __Fmt, [])).
+
+% Structured report:
+-define(slog(__Level, __Data, __Meta),
+        logger:log(__Level, __Data, maps:merge(?__hut_logger_metadata, __Meta))).
+-define(slog(__Level, __Data),
+        ?slog(__Level, __Data, #{})).
+
+% Set metadata:
+-define(set_process_metadata(__Meta),
+        logger:set_process_metadata(__Meta)).
+
 % End of all actual log implementation switches.
--endif.
--endif.
--endif.
--endif.
+-endif. %% HUT_SASL
+-endif. %% HUT_NOOP
+-endif. %% HUT_CUSTOM
+-endif. %% HUT_IOFORMAT
+-endif. %% HUT_LAGER
+
+-ifndef(slog).
+%% Poor man's OTP21 `logger' structured log:
+
+-define(__hut_slog_helper(__Level, __Data, __Meta0),
+        ((fun() ->
+              try
+                  __Meta = case get(hut_process_metadata) of
+                             __Map when is_map(__Map) ->
+                                 maps:merge(__Map, __Meta0);
+                             _ ->
+                                 __Meta0
+                           end,
+                  ?log(__Level, "~p", [__Data], [__Meta])
+              catch
+                _:_ ->
+                    ok
+              end
+          end)())).
+
+-define(slog(__Level, __Data, __Meta),
+        ?__hut_slog_helper(__Level, __Data, maps:merge(?__hut_logger_metadata, __Meta))).
+
+-define(slog(__Level, __Data),
+        ?slog(__Level, __Data, #{})).
+
+-endif. %% !slog
+
+-ifndef(set_process_metadata).
+-define(set_process_metadata(__Meta),
+        put(hut_process_metadata, __Meta)).
+-endif. %% !set_process_metadata
 
 % End of log declarations
--endif.
+-endif. %% __HUT_HRL__

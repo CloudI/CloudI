@@ -67,25 +67,25 @@ get_values(#exdec{reservoir = Reservoir}) ->
 
 % internal api
 
-update(#exdec{reservoir = Reservoir, alpha = Alpha, start = Start, n = N, size = Size, seed = Seed} = Sample, Value, Timestamp) when N =< Size ->
+update(#exdec{reservoir = Reservoir, alpha = Alpha, start = Start, n = N, size = Size} = Sample, Value, Timestamp) when N =< Size ->
     % since N is =< Size we can just add the new value to the sample
 
-    {Rand, New_seed} = ?RANDOM:uniform_s(N, Seed),
+    Rand = folsom_utils:rand_uniform(N),
     Priority = priority(Alpha, Timestamp, Start, Rand),
     true = ets:insert(Reservoir, {Priority, Value}),
 
-    Sample#exdec{n = folsom_utils:get_ets_size(Reservoir), seed = New_seed};
-update(#exdec{reservoir = Reservoir, alpha = Alpha, start = Start, n = N, seed = Seed} = Sample, Value, Timestamp) ->
+    Sample#exdec{n = folsom_utils:get_ets_size(Reservoir)};
+update(#exdec{reservoir = Reservoir, alpha = Alpha, start = Start, n = N} = Sample, Value, Timestamp) ->
     % when N is not =< Size we need to check to see if the priority of
     % the new value is greater than the first (smallest) existing priority
 
-    {Rand, NewSeed} = ?RANDOM:uniform_s(N, Seed),
+    Rand = folsom_utils:rand_uniform(N),
     Priority = priority(Alpha, Timestamp, Start, Rand),
     First = ets:first(Reservoir),
 
-    update_on_priority(Sample, First, Priority, NewSeed, Value).
+    update_on_priority(Sample, First, Priority, Value).
 
-update_on_priority(#exdec{reservoir = Reservoir} = Sample, First, Priority, NewSeed, Value) when First < Priority ->
+update_on_priority(#exdec{reservoir = Reservoir} = Sample, First, Priority, Value) when First < Priority ->
     true = case ets:insert_new(Reservoir, {Priority, Value}) of
         true ->
             % priority didnt already exist, so we created it and need to delete the first one
@@ -94,8 +94,8 @@ update_on_priority(#exdec{reservoir = Reservoir} = Sample, First, Priority, NewS
             % priority existed, we dont need to do anything
             true
     end,
-    Sample#exdec{n = folsom_utils:get_ets_size(Reservoir), seed = NewSeed};
-update_on_priority(Sample, _, _, _, _) ->
+    Sample#exdec{n = folsom_utils:get_ets_size(Reservoir)};
+update_on_priority(Sample, _, _, _) ->
     Sample.
 
 % gaurd against a possible bug, T should always be =< ?HOURSECS

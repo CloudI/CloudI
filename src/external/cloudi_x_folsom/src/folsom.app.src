@@ -2,7 +2,7 @@
 {application, folsom,
  [
   {description, "Erlang based metrics system"},
-  {vsn, "0.8.7"}, %% should be updated when new tag added to repo
+  {vsn, "1.0.0"}, %% should be updated when new tag added to repo
   {modules, []},
   {registered, [folsom_meter_timer_server,
                 folsom_metrics_histogram_ets,
@@ -14,7 +14,6 @@
                  ]},
   {env, []},
   {mod, {folsom, []}},
-  {maintainers, ["Joe Williams"]},
   {licenses, ["Apache 2"]},
-  {links, [{"Github", "https://github.com/project-folsom/folsom"}]}
+  {links, [{"Github", "https://github.com/folsom-project/folsom"}]}
  ]}.

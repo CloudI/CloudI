@@ -37,7 +37,8 @@
          counter_metric/2,
          cpu_topology/0,
          c_compiler_used/0,
-	 create_delete_metrics/0
+         create_delete_metrics/0,
+         check_ets_leak/0
         ]).
 
 -define(DATA, [0, 1, 5, 10, 100, 200, 500, 750, 1000, 2000, 5000]).
@@ -130,7 +131,15 @@ populate_metrics() ->
 
     [ok = folsom_metrics:notify({<<"hugedata">>, Value}) || Value <- ?HUGEDATA],
 
-    [ok = folsom_metrics:notify({exdec, Value}) || Value <- lists:seq(1, 100000)],
+    [ok = folsom_metrics:notify({exdec, Value}) || Value <- lists:seq(1, 50000)],
+
+    %% Force a priority change in folson_sample_exdec:priority/1
+    receive
+    after 1000 ->
+            ok
+    end,
+
+    [ok = folsom_metrics:notify({exdec, Value}) || Value <- lists:seq(50000, 100000)],
 
     [ok = folsom_metrics:notify({none, Value}) || Value <- ?DATA],
 
@@ -544,3 +553,60 @@ subset_checks(List, Enabled) ->
                              proplists:get_value(K, List) /= undefined
                      end,
                      Enabled).
+
+check_ets_leak() ->
+    L = ["gauge", "meter", "spiral"],
+    [begin
+         Name = list_to_atom(X ++ "_ets_leak"),
+         Table = list_to_atom("folsom_" ++ X ++ "s"),
+         Metric = list_to_atom(X),
+         [spawn(
+            fun() ->
+                    folsom_metrics:notify(Name, 1, Metric)
+            end) || _ <- lists:seq(1, 1000)],
+         receive
+         after 100 ->
+                 ok
+         end,
+         ?assertEqual(1, length(ets:lookup(Table, Name)))
+     end || X <- L],
+
+    [spawn(
+       fun() ->
+               folsom_metrics:notify(counter_ets_leak, {inc, 1}, counter)
+       end) || _ <- lists:seq(1, 1000)],
+    receive
+    after 100 ->
+            ok
+    end,
+    ?assertEqual(1, length(ets:lookup(folsom_counters, {counter_ets_leak, 0}))),
+
+    [spawn(
+       fun() ->
+               folsom_metrics:notify(history_ets_leak, <<"hist">>, history)
+       end) || _ <- lists:seq(1, 1000)],
+    receive
+    after 100 ->
+            ok
+    end,
+    ?assertEqual(1, length(ets:lookup(folsom_histories, history_ets_leak))),
+
+    [spawn(
+       fun() ->
+               folsom_metrics:new_meter_reader(meter_reader_ets_leak)
+       end) || _ <- lists:seq(1, 1000)],
+    receive
+    after 100 ->
+            ok
+    end,
+    ?assertEqual(1, length(ets:lookup(folsom_meter_readers, meter_reader_ets_leak))),
+
+    [spawn(
+       fun() ->
+               folsom_metrics:new_duration(duration_ets_leak)
+       end) || _ <- lists:seq(1, 1000)],
+    receive
+    after 100 ->
+            ok
+    end,
+    ?assertEqual(1, length(ets:lookup(folsom_durations, duration_ets_leak))).

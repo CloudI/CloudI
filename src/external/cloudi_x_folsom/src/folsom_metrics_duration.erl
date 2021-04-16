@@ -31,18 +31,31 @@
 
 -module(folsom_metrics_duration).
 
+-behaviour(gen_server).
+
 -export([new/1,
+         new/4,
          update/2,
          get_value/1,
          get_values/1
          ]).
 
+-export([start_link/0]).
+
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3, format_status/2]).
+
+-define(SERVER, ?MODULE).
+
+-record(state, {}).
+
 -include("folsom.hrl").
 
 new(Name) ->
-    %% {Name, count, start, last}
-    Dur = {Name, 0, undefined, 0},
-    ets:insert(?DURATION_TABLE, Dur).
+    gen_server:call(?SERVER, {new, Name}).
+
+new(Name, SampleType, SampleSize, Alpha) ->
+    gen_server:call(?SERVER, {new, Name, SampleType, SampleSize, Alpha}).
 
 update(Name, timer_start) ->
     StartTime = os:timestamp(),
@@ -74,3 +87,50 @@ get_values(Name) ->
     WantedMetrics = application:get_env(folsom, enabled_metrics, ?DEFAULT_METRICS),
     Stats = bear:get_statistics_subset(Values, WantedMetrics),
     [{count, Cnt}, {last, Last} | Stats].
+
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+init([]) ->
+    process_flag(trap_exit, true),
+    {ok, #state{}}.
+
+handle_call({new, Name}, _From, State) ->
+    Reply = case ets:member(?DURATION_TABLE, Name) of
+                false ->
+                    true = folsom_metrics_histogram:new(Name),
+                    %% {Name, count, start, last}
+                    Dur = {Name, 0, undefined, 0},
+                    ets:insert(?DURATION_TABLE, Dur),
+                    ets:insert(?FOLSOM_TABLE, {Name, #metric{type = duration}});
+                true ->
+                    true
+            end,
+    {reply, Reply, State};
+handle_call({new, Name, SampleType, SampleSize, Alpha}, _From, State) ->
+    Reply = case ets:member(?DURATION_TABLE, Name) of
+                false ->
+                    true = folsom_metrics_histogram:new(Name, SampleType, SampleSize, Alpha),
+                    %% {Name, count, start, last}
+                    Dur = {Name, 0, undefined, 0},
+                    ets:insert(?DURATION_TABLE, Dur),
+                    ets:insert(?FOLSOM_TABLE, {Name, #metric{type = duration}});
+                true ->
+                    true
+            end,
+    {reply, Reply, State}.
+
+handle_cast(_Request, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+format_status(_Opt, Status) ->
+    Status.

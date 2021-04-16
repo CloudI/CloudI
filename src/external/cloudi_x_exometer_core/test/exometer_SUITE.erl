@@ -39,10 +39,12 @@
     test_history4_slide/1,
     test_history4_slotslide/1,
     test_history4_folsom/1,
+    test_re_register_probe/1,
     test_ext_predef/1,
     test_app_predef/1,
     test_function_match/1,
-    test_status/1
+    test_status/1,
+    test_slide_ignore_outdated/1
    ]).
 
 %% utility exports
@@ -65,6 +67,7 @@ all() ->
      {group, test_counter},
      {group, test_defaults},
      {group, test_histogram},
+     {group, re_register},
      {group, test_setup},
      {group, test_info}
     ].
@@ -97,7 +100,12 @@ groups() ->
        test_history1_folsom,
        test_history4_slide,
        test_history4_slotslide,
-       test_history4_folsom
+       test_history4_folsom,
+       test_slide_ignore_outdated
+      ]},
+     {re_register, [shuffle],
+      [
+       test_re_register_probe
       ]},
      {test_setup, [shuffle],
       [
@@ -393,6 +401,27 @@ test_history4_slotslide(_Config) ->
 test_history4_folsom(_Config) ->
     test_history(4, folsom, file_path("test/data/puts_time_hist4.bin")).
 
+test_re_register_probe(_Config) ->
+    K = ?LINE,
+    ok = exometer:re_register(S1 = [?MODULE, K, s, 1], spiral, []),  % re_register as new/3
+    P1 = exometer:info(S1, ref),
+    MRef = monitor(process, P1),  % in this specific case, we know P1 is a process
+    true = erlang:is_process_alive(P1),
+    ok = exometer:re_register(S1, spiral, []),
+    P2 = exometer:info(S1, ref),
+    true = (P1 =/= P2),
+    %% removal of old probe is asynchronous ...
+    %% TODO: some more sophistication in replacing the old instance
+    %% might be called for.
+    receive
+        {'DOWN', MRef, _, _, _} ->
+            ok
+    after 1000 ->
+            error(timeout)
+    end,
+    true = erlang:is_process_alive(P2),
+    ok.
+
 file_path(F) ->
     filename:join(code:lib_dir(exometer_core), F).
 
@@ -458,6 +487,36 @@ test_status(_Config) ->
      {options, Opts2},
      {ref, undefined}] = exometer:info(M1),
     ok.
+
+%% Ensure a slide ignores values which are outdated as per its configuration of
+%% time_span. This is important in cases with low update frequencies.
+test_slide_ignore_outdated(_Config) ->
+   M = [?MODULE, hist, ?LINE],
+
+   ok = exometer:new(
+          M, ad_hoc, [{module, exometer_histogram},
+                      {type, histogram},
+                      {histogram_module, exometer_slide},
+                      {time_span, 5}]),
+   % check that no entries exist
+   {ok, V1} = exometer:get_value(M),
+   0 = proplists:get_value(n, V1),
+
+   % add entry
+   ok = exometer:update(M, 1234),
+
+   % check that new entry exists
+   {ok, V2} = exometer:get_value(M),
+   1 = proplists:get_value(n, V2),
+
+   % wait
+   timer:sleep(10),
+
+   % check that entries have expired
+   {ok, V3} = exometer:get_value(M),
+   0 = proplists:get_value(n, V3),
+
+   ok.
 
 %%%===================================================================
 %%% Internal functions

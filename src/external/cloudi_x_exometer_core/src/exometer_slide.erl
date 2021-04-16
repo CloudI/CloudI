@@ -167,7 +167,8 @@ to_list(#slide{size = Sz}) when Sz == 0 ->
     [];
 to_list(#slide{size = Sz, n = N, max_n = MaxN, buf1 = Buf1, buf2 = Buf2}) ->
     Start = timestamp() - Sz,
-    take_since(Buf2, Start, n_diff(MaxN, N), reverse(Buf1)).
+    Buf1Values = take_since(Buf1, Start, n_diff(MaxN, N), []),
+    take_since(Buf2, Start, n_diff(MaxN, N), reverse(Buf1Values)).
 
 -spec foldl(timestamp(), fold_fun(), fold_acc(), #slide{}) -> fold_acc().
 %% @doc Fold over the sliding window, starting from `Timestamp'.
@@ -180,9 +181,9 @@ foldl(_Timestamp, _Fun, _Acc, #slide{size = Sz}) when Sz == 0 ->
 foldl(Timestamp, Fun, Acc, #slide{size = Sz, n = N, max_n = MaxN,
                                   buf1 = Buf1, buf2 = Buf2}) ->
     Start = Timestamp - Sz,
-    lists:foldr(
-      Fun, lists:foldl(Fun, Acc, take_since(
-                                   Buf2, Start, n_diff(MaxN,N), [])), Buf1).
+    Buf1Values = take_since(Buf1, Start, n_diff(MaxN, N), []),
+    Buf2Values = take_since(Buf2, Start, n_diff(MaxN, N), []),
+    lists:foldr(Fun, lists:foldl(Fun, Acc, Buf2Values), Buf1Values).
 
 -spec foldl(fold_fun(), fold_acc(), #slide{}) -> fold_acc().
 %% @doc Fold over all values in the sliding window.

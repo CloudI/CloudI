@@ -121,6 +121,8 @@ get_statistics_subset(Values, Items) when is_list(Values) ->
 
 get_null_statistics_subset([{percentile, Ps}|Items], Acc) ->
     get_null_statistics_subset(Items, [{percentile, [{P, 0.0} || P <- Ps]}|Acc]);
+get_null_statistics_subset([histogram|Items], Acc) ->
+    get_null_statistics_subset(Items, [{histogram, [{0, 0}]}|Acc]);
 get_null_statistics_subset([I|Items], Acc) ->
     get_null_statistics_subset(Items, [{I, 0.0}|Acc]);
 get_null_statistics_subset([], Acc) ->

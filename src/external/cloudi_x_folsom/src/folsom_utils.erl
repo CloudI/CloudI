@@ -33,7 +33,8 @@
          timestamp/0,
          get_ets_size/1,
          update_counter/3,
-         update_counter_no_exceptions/3
+         update_counter_no_exceptions/3,
+         rand_uniform/1
         ]).
 
 to_atom(Binary) when is_binary(Binary) ->
@@ -114,5 +115,26 @@ update_counter_no_exceptions(Tid, Key, Value) when is_integer(Value) ->
         _ ->
             ets:update_counter(Tid, Key, Value)
     end.
+
+-endif.
+
+
+-ifdef(use_rand).
+
+rand_uniform(N) ->
+    rand:uniform(N).
+
+-else.
+
+rand_uniform(N) ->
+    %% ensure seed is initialized
+    %% simluating new `rand' module's behaviour
+    case get(random_seed) of
+        undefined ->
+            random:seed(os:timestamp());
+        {_, _, _} ->
+            ok
+    end,
+    random:uniform(N).
 
 -endif.

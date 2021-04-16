@@ -1,28 +1,13 @@
-%% -*- erlang -*-
-{application, exometer_core,
- [
-  {description, "Code instrumentation and metrics collection package."},
-  {vsn, "1.5.7"},
-  {registered, []},
-  {applications,
-   [
-    kernel,
-    stdlib,
-    hut,
-    setup,
-    folsom,
-    parse_trans
-   ]},
-  {included_applications,
-   [
-   ]},
-  {mod, {exometer_core_app, []}},
-  {start_phases, [{start_reporters, []},
-                  {preset_defaults, []}]},
-  {env,
-   [
-   ]},
-  {maintainers, ["Magnus Feuer", "Ulf Wiger", "Tino Breddin"]},
-  {licenses, ["MPL-2.0"]},
-  {links, [{"Github", "https://github.com/Feuerlabs/exometer_core"}]}
- ]}.
+{application,exometer_core,
+             [{description,"Code instrumentation and metrics collection package."},
+              {vsn,"1.5.7"},
+              {registered,[]},
+              {applications,[kernel,stdlib,hut,setup,folsom,parse_trans]},
+              {included_applications,[]},
+              {mod,{exometer_core_app,[]}},
+              {start_phases,[{start_reporters,[]},{preset_defaults,[]}]},
+              {env,[]},
+              {maintainers,["Magnus Feuer","Ulf Wiger","Tino Breddin"]},
+              {licenses,["MPL-2.0"]},
+              {links,[{"Github",
+                       "https://github.com/Feuerlabs/exometer_core"}]}]}.

@@ -23,21 +23,27 @@
 
 -module(slide_statem_eqc).
 
--compile(export_all).
+-compile([export_all, nowarn_export_all]).
 
 -ifdef(TEST).
 -ifdef(EQC).
-
--include("folsom.hrl").
+-define(QC_MOD, eqc).
 
 -include_lib("eqc/include/eqc.hrl").
 -include_lib("eqc/include/eqc_statem.hrl").
+-else.
+-define(QC_MOD, proper).
+
+-include_lib("proper/include/proper.hrl").
+-endif.
+
+-include("folsom.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
 
-
-
+-define(NUMTESTS, 500).
 -define(QC_OUT(P),
-        eqc:on_output(fun(Str, Args) ->
+        ?QC_MOD:on_output(fun(Str, Args) ->
                               io:format(user, Str, Args) end, P)).
 
 -define(WINDOW, 60).
@@ -112,12 +118,12 @@ prop_window_test_() ->
      fun() -> ok end,
      fun(_X) -> (catch meck:unload(folsom_utils)), folsom:stop() end,
      [{"QuickCheck Test",
-       {timeout, Seconds*2, fun() -> true = eqc:quickcheck(eqc:testing_time(Seconds, ?QC_OUT(prop_window()))) end
+       {timeout, Seconds*2, fun() -> true = ?QC_MOD:quickcheck(?QC_MOD:numtests(?NUMTESTS, ?QC_OUT(prop_window()))) end
        }}]}.
 
 prop_window() ->
-    folsom:start(),
-    (catch meck:new(folsom_utils)),
+    {ok, _} = application:ensure_all_started(folsom),
+    (catch meck:new(folsom_utils, [passthrough])),
     ?FORALL(Cmds, commands(?MODULE),
             aggregate(command_names(Cmds),
             begin
@@ -125,7 +131,7 @@ prop_window() ->
                 {Actual, Expected} = case S#state.sample of
                                          undefined ->
                                              {S#state.values, []};
-                                         Sample ->
+                                         _Sample ->
                                              A = folsom_metrics:get_metric_value(S#state.name),
                                              E = [V || {K, V} <- S#state.values, K >= S#state.moment - ?WINDOW],
                                              folsom_metrics:delete_metric(S#state.name),
@@ -146,7 +152,7 @@ new_histo() ->
     {Ref, Slide}.
 
 tick(Moment) ->
-    IncrBy = trunc(random:uniform(10)),
+    IncrBy = trunc(folsom_utils:rand_uniform(10)),
     meck:expect(folsom_utils, now_epoch, fun() -> Moment + IncrBy end),
     Moment+IncrBy.
 
@@ -164,5 +170,4 @@ get_values(Sample) ->
 trim(L, Moment, Window) ->
     [{K, V} || {K, V} <- L, K >= Moment - Window].
 
--endif.
 -endif.
