@@ -4,6 +4,7 @@
 2021-04-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix epgsql protocol.hrl name for scope script
+    * Update reltool_util
 
 2021-04-17 Michael Truog   <mjtruog at protonmail dot com>
 

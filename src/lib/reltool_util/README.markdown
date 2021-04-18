@@ -19,9 +19,12 @@ sequence of operations you would want to use with the scope script are:
   1. use the `-r` replace mode to modify internal source code, 
   2. modify the internal source code manually, if necessary, 
   3. run the `scope` script normally before compilation, 
-  4. if it is necessary to return the source back to the original state, use the `-u` undo mode to remove the scoped source code and replace it with the original source code.  The `scope` script is meant to be part of a build process 
-so the dependency modifications should be automatic (if the dependencies
-are not convoluted).  
+  4. if it is necessary to return the source back to the original state, use the `-u` undo mode to remove the scoped source code and replace it with the original source code.  The `scope` script is meant to be part of a build process so the dependency modifications are automatic.
+
+For the sequence above to work properly all dependencies must have a
+unique prefix in their file names (both erl and hrl files).
+If a file name is not unique (like log.hrl or protocol.hrl), unrelated
+source code may be modified to cause bugs.
 
 Example arguments for normal operation are: `-s cloudi_x_ -p cloudi -b _original -d directory1 -d directory2`. 
 Dependencies that use `include_lib` require that the dependency directory name is 
