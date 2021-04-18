@@ -6,6 +6,7 @@
     * Add cloudi_service_http_cowboy for cowboy 2.x use based on
       cloudi_service_http_cowboy1 (and switch to using it)
     * Add cowboy, cowlib, ranch (recent versions)
+      (minimum Erlang/OTP becomes 21.0)
 
 2021-04-16 Michael Truog   <mjtruog at protonmail dot com>
 
