@@ -22,7 +22,7 @@
 
 
 -include("epgsql.hrl").
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 
 -record(batch,
         {batch :: [ [epgsql:bind_param()] ] | [{#statement{}, [epgsql:bind_param()]}],

@@ -35,7 +35,7 @@
 -type response() :: {ok, [text | binary]} | {error, epgsql:query_error()}.
 
 -include("epgsql.hrl").
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 -include("epgsql_copy.hrl").
 
 -record(copy_stdin,

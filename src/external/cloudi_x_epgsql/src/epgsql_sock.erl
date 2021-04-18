@@ -69,7 +69,7 @@
 -export_type([transport/0, pg_sock/0, error/0]).
 
 -include("epgsql.hrl").
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 -include("epgsql_replication.hrl").
 -include("epgsql_copy.hrl").
 

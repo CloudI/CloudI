@@ -20,7 +20,7 @@
                   | {error, epgsql:query_error()}.
 
 -include("epgsql.hrl").
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 
 -record(execute,
         {stmt :: #statement{},

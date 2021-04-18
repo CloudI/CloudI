@@ -27,7 +27,7 @@
       | {error, epgsql:query_error()}.
 -type response() :: response_single() | [response_single()].
 
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 
 -record(squery,
         {query :: iodata(),

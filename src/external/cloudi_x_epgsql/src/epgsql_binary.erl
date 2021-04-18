@@ -24,7 +24,7 @@
 
 -export_type([codec/0, decoder/0]).
 
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 -define(DEFAULT_NULLS, [null, undefined]).
 
 -record(codec,

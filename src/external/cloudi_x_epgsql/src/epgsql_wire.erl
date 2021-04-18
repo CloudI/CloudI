@@ -41,7 +41,7 @@
 -export_type([row_decoder/0, packet_type/0]).
 
 -include("epgsql.hrl").
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 
 -opaque row_decoder() :: {[epgsql_binary:decoder()], [epgsql:column()], epgsql_binary:codec()}.
 -type packet_type() :: byte().                 % see protocol.hrl

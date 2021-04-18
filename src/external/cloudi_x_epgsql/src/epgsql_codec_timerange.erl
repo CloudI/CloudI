@@ -17,7 +17,7 @@
 
 -export([init/2, names/0, encode/3, decode/3, decode_text/3]).
 
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 
 -export_type([data/0]).
 

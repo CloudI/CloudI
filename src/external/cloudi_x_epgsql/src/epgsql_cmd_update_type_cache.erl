@@ -8,7 +8,7 @@
         {ok, [epgsql:type_name()]}
       | {error, epgsql:query_error()}.
 
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 
 -record(upd,
         {codecs :: [{epgsql_codec:codec_mod(), Opts :: any()}],

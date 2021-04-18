@@ -14,7 +14,7 @@
                   | {error, epgsql:query_error()}.
 
 %% -include("epgsql.hrl").
--include("protocol.hrl").
+-include("epgsql_protocol.hrl").
 -include("epgsql_copy.hrl").
 
 init(_) ->
