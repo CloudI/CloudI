@@ -842,6 +842,7 @@ client_request(?MODULE_INETS, Profile, Method0,
             end,
             case ?MODULE_INETS:request(Method1, ClientRequest,
                                        [{autoredirect, false},
+                                        {version, "HTTP/1.0"},
                                         {timeout, Timeout}],
                                        [{body_format, binary}], Profile) of
                 {ok, {{_HttpVersion, StatusCode, _Reason},

@@ -3,6 +3,9 @@
 
 2021-04-17 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Set cloudi_service_http_client inets httpc use
+      to use HTTP/1.0 to avoid persistent connection problems
+      with different timeout values
     * Add cloudi_service_http_cowboy for cowboy 2.x use based on
       cloudi_service_http_cowboy1 (and switch to using it)
     * Add cowboy, cowlib, ranch (recent versions)
