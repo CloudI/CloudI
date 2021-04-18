@@ -16,6 +16,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
      -d $(top_srcdir)/lib/cloudi_service_funnel/src \
      -d $(top_srcdir)/lib/cloudi_service_http_client/src \
+     -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
      -d $(top_srcdir)/lib/cloudi_service_http_cowboy1/src \
      -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
      -d $(top_srcdir)/lib/cloudi_service_http_rest/src \
@@ -51,7 +52,9 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/varpool/test \
      -d $(top_srcdir)/external/cloudi_x_bear/src \
      -d $(top_srcdir)/external/cloudi_x_certifi/src \
+     -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy1/src \
+     -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib1/src \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
@@ -70,6 +73,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_parse_trans/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
+     -d $(top_srcdir)/external/cloudi_x_ranch/src \
      -d $(top_srcdir)/external/cloudi_x_ranch1/src \
      -d $(top_srcdir)/external/cloudi_x_setup/src \
      -d $(top_srcdir)/external/cloudi_x_ssl_verify_fun/src \
@@ -209,52 +213,54 @@ erlang-applications-scope-remove:
 dialyze: all \
          $(top_srcdir)/dialyzer.plt
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
-              -I lib/cloudi_core/include/ \
-              lib/cloudi_core/ebin/ \
-              lib/cloudi_service_api_batch/ebin/ \
-              lib/cloudi_service_api_requests/ebin/ \
-              lib/cloudi_service_cron/ebin/ \
-              lib/cloudi_service_db_mysql/ebin/ \
-              lib/cloudi_service_db_pgsql/ebin/ \
-              lib/cloudi_service_filesystem/ebin/ \
-              lib/cloudi_service_funnel/ebin/ \
-              lib/cloudi_service_http_client/ebin/ \
-              lib/cloudi_service_http_cowboy1/ebin/ \
-              lib/cloudi_service_http_elli/ebin/ \
-              lib/cloudi_service_http_rest/ebin/ \
-              lib/cloudi_service_map_reduce/ebin/ \
-              lib/cloudi_service_monitoring/ebin/ \
-              lib/cloudi_service_null/ebin/ \
-              lib/cloudi_service_oauth1/ebin/ \
-              lib/cloudi_service_queue/ebin/ \
-              lib/cloudi_service_quorum/ebin/ \
-              lib/cloudi_service_request_rate/ebin/ \
-              lib/cloudi_service_router/ebin/ \
-              lib/cloudi_service_shell/ebin/ \
-              lib/cloudi_service_tcp/ebin/ \
-              lib/cloudi_service_udp/ebin/ \
-              lib/cloudi_service_validate/ebin/ \
-              lib/cgroups/ebin/ \
-              lib/cpg/ebin/ \
-              lib/erlang_term/ebin/ \
-              lib/key2value/ebin/ \
-              lib/keys1value/ebin/ \
-              lib/pqueue/ebin/ \
-              lib/quickrand/ebin/ \
-              lib/reltool_util/ebin/ \
-              lib/supool/ebin/ \
-              lib/syslog_socket/ebin/ \
-              lib/trie/ebin/ \
-              lib/uuid/ebin/ \
-              lib/varpool/ebin/ \
-              tests/count/erlang/src/ \
-              tests/hexpi/erlang/src/ \
-              tests/http_req/erlang/src/ \
-              tests/messaging/erlang/src/ \
-              tests/msg_size/erlang/src/ \
-              tests/null/erlang/src/ \
+              -I lib/cloudi_core/include \
+              lib/cloudi_core/ebin \
+              lib/cloudi_service_api_batch/ebin \
+              lib/cloudi_service_api_requests/ebin \
+              lib/cloudi_service_cron/ebin \
+              lib/cloudi_service_db_mysql/ebin \
+              lib/cloudi_service_db_pgsql/ebin \
+              lib/cloudi_service_filesystem/ebin \
+              lib/cloudi_service_funnel/ebin \
+              lib/cloudi_service_http_client/ebin \
+              lib/cloudi_service_http_cowboy/ebin \
+              lib/cloudi_service_http_cowboy1/ebin \
+              lib/cloudi_service_http_elli/ebin \
+              lib/cloudi_service_http_rest/ebin \
+              lib/cloudi_service_map_reduce/ebin \
+              lib/cloudi_service_monitoring/ebin \
+              lib/cloudi_service_null/ebin \
+              lib/cloudi_service_oauth1/ebin \
+              lib/cloudi_service_queue/ebin \
+              lib/cloudi_service_quorum/ebin \
+              lib/cloudi_service_request_rate/ebin \
+              lib/cloudi_service_router/ebin \
+              lib/cloudi_service_shell/ebin \
+              lib/cloudi_service_tcp/ebin \
+              lib/cloudi_service_udp/ebin \
+              lib/cloudi_service_validate/ebin \
+              lib/cgroups/ebin \
+              lib/cpg/ebin \
+              lib/erlang_term/ebin \
+              lib/key2value/ebin \
+              lib/keys1value/ebin \
+              lib/pqueue/ebin \
+              lib/quickrand/ebin \
+              lib/reltool_util/ebin \
+              lib/supool/ebin \
+              lib/syslog_socket/ebin \
+              lib/trie/ebin \
+              lib/uuid/ebin \
+              lib/varpool/ebin \
+              tests/count/erlang/src \
+              tests/hexpi/erlang/src \
+              tests/http_req/erlang/src \
+              tests/messaging/erlang/src \
+              tests/msg_size/erlang/src \
+              tests/null/erlang/src \
               external/cloudi_x_bear/ebin \
-              external/cloudi_x_cowlib1/ebin \
+              external/cloudi_x_cowboy/ebin \
+              external/cloudi_x_cowlib/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
               external/cloudi_x_folsom/ebin \
@@ -265,12 +271,6 @@ dialyze: all \
               external/cloudi_x_setup/ebin
 	@echo "No Errors or Warnings Found!"
 
-# https://bugs.erlang.org/browse/ERL-1379
-#   quickrand_hash iodata_to_list/1 with -Wunderspecs exposes that
-#   the Erlang iodata() recursive type is not infinitely recursive and
-#   currently the -dialyzer attribute is unable to suppress -Wunderspecs
-#   in a module.
-#
 # -Wunknown isn't helpful due to the external dependencies not being present
 dialyze-internal: all \
                   $(top_srcdir)/dialyzer.plt
@@ -278,50 +278,51 @@ dialyze-internal: all \
               -Wunmatched_returns \
               -Wunderspecs \
               -Werror_handling \
-              -I lib/cloudi_core/include/ \
-              lib/cloudi_core/ebin/ \
-              lib/cloudi_service_api_batch/ebin/ \
-              lib/cloudi_service_api_requests/ebin/ \
-              lib/cloudi_service_cron/ebin/ \
-              lib/cloudi_service_db_mysql/ebin/ \
-              lib/cloudi_service_db_pgsql/ebin/ \
-              lib/cloudi_service_filesystem/ebin/ \
-              lib/cloudi_service_funnel/ebin/ \
-              lib/cloudi_service_http_client/ebin/ \
-              lib/cloudi_service_http_cowboy1/ebin/ \
-              lib/cloudi_service_http_elli/ebin/ \
-              lib/cloudi_service_http_rest/ebin/ \
-              lib/cloudi_service_map_reduce/ebin/ \
-              lib/cloudi_service_monitoring/ebin/ \
-              lib/cloudi_service_null/ebin/ \
-              lib/cloudi_service_oauth1/ebin/ \
-              lib/cloudi_service_queue/ebin/ \
-              lib/cloudi_service_quorum/ebin/ \
-              lib/cloudi_service_request_rate/ebin/ \
-              lib/cloudi_service_router/ebin/ \
-              lib/cloudi_service_shell/ebin/ \
-              lib/cloudi_service_tcp/ebin/ \
-              lib/cloudi_service_udp/ebin/ \
-              lib/cloudi_service_validate/ebin/ \
-              lib/cgroups/ebin/ \
-              lib/cpg/ebin/ \
-              lib/erlang_term/ebin/ \
-              lib/key2value/ebin/ \
-              lib/keys1value/ebin/ \
-              lib/pqueue/ebin/ \
-              lib/quickrand/ebin/ \
-              lib/reltool_util/ebin/ \
-              lib/supool/ebin/ \
-              lib/syslog_socket/ebin/ \
-              lib/trie/ebin/ \
-              lib/uuid/ebin/ \
-              lib/varpool/ebin/ \
-              tests/count/erlang/src/ \
-              tests/hexpi/erlang/src/ \
-              tests/http_req/erlang/src/ \
-              tests/messaging/erlang/src/ \
-              tests/msg_size/erlang/src/ \
-              tests/null/erlang/src/
+              -I lib/cloudi_core/include \
+              lib/cloudi_core/ebin \
+              lib/cloudi_service_api_batch/ebin \
+              lib/cloudi_service_api_requests/ebin \
+              lib/cloudi_service_cron/ebin \
+              lib/cloudi_service_db_mysql/ebin \
+              lib/cloudi_service_db_pgsql/ebin \
+              lib/cloudi_service_filesystem/ebin \
+              lib/cloudi_service_funnel/ebin \
+              lib/cloudi_service_http_client/ebin \
+              lib/cloudi_service_http_cowboy/ebin \
+              lib/cloudi_service_http_cowboy1/ebin \
+              lib/cloudi_service_http_elli/ebin \
+              lib/cloudi_service_http_rest/ebin \
+              lib/cloudi_service_map_reduce/ebin \
+              lib/cloudi_service_monitoring/ebin \
+              lib/cloudi_service_null/ebin \
+              lib/cloudi_service_oauth1/ebin \
+              lib/cloudi_service_queue/ebin \
+              lib/cloudi_service_quorum/ebin \
+              lib/cloudi_service_request_rate/ebin \
+              lib/cloudi_service_router/ebin \
+              lib/cloudi_service_shell/ebin \
+              lib/cloudi_service_tcp/ebin \
+              lib/cloudi_service_udp/ebin \
+              lib/cloudi_service_validate/ebin \
+              lib/cgroups/ebin \
+              lib/cpg/ebin \
+              lib/erlang_term/ebin \
+              lib/key2value/ebin \
+              lib/keys1value/ebin \
+              lib/pqueue/ebin \
+              lib/quickrand/ebin \
+              lib/reltool_util/ebin \
+              lib/supool/ebin \
+              lib/syslog_socket/ebin \
+              lib/trie/ebin \
+              lib/uuid/ebin \
+              lib/varpool/ebin \
+              tests/count/erlang/src \
+              tests/hexpi/erlang/src \
+              tests/http_req/erlang/src \
+              tests/messaging/erlang/src \
+              tests/msg_size/erlang/src \
+              tests/null/erlang/src
 	@echo "No Errors or Warnings Found!"
 
 dialyzer: dialyze

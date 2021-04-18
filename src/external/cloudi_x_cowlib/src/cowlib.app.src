@@ -1,0 +1,12 @@
+{application, cowlib, [
+	{description, "Support library for manipulating Web protocols."},
+	{vsn, "2.10.1"},
+	{modules, []},
+	{registered, []},
+	{applications, [
+		kernel,
+		stdlib,
+		crypto
+	]},
+	{env, []}
+]}.

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2013-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -113,7 +113,7 @@ handle(Req,
             end,
             if
                 QueryGetFormat =:= text_pairs ->
-                    QSVals = cloudi_x_cow1_qs:parse_qs(QSRaw),
+                    QSVals = cloudi_x_cow_qs:parse_qs(QSRaw),
                     if
                         (OutputType =:= external) orelse
                         (OutputType =:= binary) orelse (OutputType =:= list) ->

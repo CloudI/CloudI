@@ -5,13 +5,12 @@
   [{description, "Filesystem CloudI Service"},
    {vsn, "@VERSION@"},
    {modules, [
-        cloudi_service_filesystem,
-        cloudi_service_filesystem_parse
+        cloudi_service_filesystem
         ]},
    {registered, []},
    {applications, [
         cloudi_core,
-        cloudi_x_cowlib1,
+        cloudi_x_cowlib,
         cloudi_x_trie,
         stdlib,
         kernel

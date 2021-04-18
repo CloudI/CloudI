@@ -131,7 +131,7 @@ See the [Quick Start Guide](https://github.com/CloudI/CloudI/tree/master/doc#rea
 Integration points:
 
 * CloudI API (See [`src/api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/api#readme))
-* HTTP with [`cloudi_service_http_cowboy1`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy1/src/cloudi_service_http_cowboy1.erl) and [`cloudi_service_http_elli`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl)
+* HTTP with [`cloudi_service_http_cowboy`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.erl) and [`cloudi_service_http_elli`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl)
 * OAuth v1 with [`cloudi_service_oauth1`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_oauth1/src/cloudi_service_oauth1.erl)
 * TCP with [`cloudi_service_tcp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_tcp/src/cloudi_service_tcp.erl)
 * UDP with [`cloudi_service_udp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_udp/src/cloudi_service_udp.erl)

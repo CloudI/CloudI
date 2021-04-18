@@ -156,7 +156,7 @@
 -define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % see below:
         % Uses the "/get" suffix on service name patterns used for
         % subscriptions as would be used from HTTP related senders like
-        % cloudi_service_http_cowboy1.  Required for write-related
+        % cloudi_service_http_cowboy.  Required for write-related
         % functionality and reading ranges.
 -define(DEFAULT_DEBUG,                    true).
 -define(DEFAULT_DEBUG_LEVEL,             trace).
@@ -2206,9 +2206,7 @@ cache_status_1(ETag, KeyValues, MTime, InvalidTime) ->
 cache_status_2(KeyValues, MTime, InvalidTime) ->
     case cloudi_key_value:find(<<"if-modified-since">>, KeyValues) of
         {ok, DateTimeBinary} ->
-            case cloudi_service_filesystem_parse:datetime(DateTimeBinary) of
-                {error, _} ->
-                    cache_status_3(KeyValues, MTime, InvalidTime);
+            try cloudi_x_cow_date:parse_date(DateTimeBinary) of
                 DateTime
                 when (MTime > DateTime) orelse
                      ((InvalidTime /= undefined) andalso
@@ -2216,6 +2214,9 @@ cache_status_2(KeyValues, MTime, InvalidTime) ->
                     200;
                 _ ->
                     304
+            catch
+                _:_ ->
+                    cache_status_3(KeyValues, MTime, InvalidTime)
             end;
         error ->
             cache_status_3(KeyValues, MTime, InvalidTime)
@@ -2224,15 +2225,16 @@ cache_status_2(KeyValues, MTime, InvalidTime) ->
 cache_status_3(KeyValues, MTime, InvalidTime) ->
     case cloudi_key_value:find(<<"if-unmodified-since">>, KeyValues) of
         {ok, DateTimeBinary} ->
-            case cloudi_service_filesystem_parse:datetime(DateTimeBinary) of
-                {error, _} ->
-                    200;
+            try cloudi_x_cow_date:parse_date(DateTimeBinary) of
                 DateTime
                 when (MTime =< DateTime) andalso
                      ((InvalidTime =:= undefined) orelse
                       (DateTime =< InvalidTime)) ->
                     412;
                 _ ->
+                    200
+            catch
+                _:_ ->
                     200
             end;
         error ->
@@ -2310,14 +2312,15 @@ contents_ranges_read(ETag, KeyValues, {MTime, _}) ->
 contents_ranges_read_0(ETag, KeyValues, MTime) ->
     case cloudi_key_value:find(<<"range">>, KeyValues) of
         {ok, RangeData} ->
-            case cloudi_service_filesystem_parse:range(RangeData) of
-                {error, badarg} ->
-                    {400, undefined};
-                {<<"bytes">>, RangeList} ->
+            try cloudi_x_cow_http_hd:parse_range(RangeData) of
+                {bytes, RangeList} ->
                     contents_ranges_read_1(RangeList, ETag,
                                            KeyValues, MTime);
                 {_, _} ->
                     {416, undefined}
+            catch
+                _:_ ->
+                    {400, undefined}
             end;
         error ->
             {200, undefined}
@@ -2328,12 +2331,13 @@ contents_ranges_read_1(RangeList, ETag, KeyValues, MTime) ->
         {ok, ETag} ->
             {206, RangeList};
         {ok, IfRangeData} ->
-            case cloudi_service_filesystem_parse:datetime(IfRangeData) of
-                {error, _} ->
-                    {410, undefined};
+            try cloudi_x_cow_date:parse_date(IfRangeData) of
                 MTime ->
                     {206, RangeList};
                 _ ->
+                    {410, undefined}
+            catch
+                _:_ ->
                     {410, undefined}
             end;
         error ->
@@ -2341,22 +2345,19 @@ contents_ranges_read_1(RangeList, ETag, KeyValues, MTime) ->
     end.
 
 contents_ranges_append(ETag, KeyValues, {MTime, _}) ->
-    Id = case cloudi_key_value:find(<<"x-multipart-id">>,
-                                            KeyValues) of
+    Id = case cloudi_key_value:find(<<"x-multipart-id">>, KeyValues) of
         {ok, MultipartId} ->
             MultipartId;
         error ->
             undefined
     end,
-    Last = case cloudi_key_value:find(<<"x-multipart-last">>,
-                                              KeyValues) of
+    Last = case cloudi_key_value:find(<<"x-multipart-last">>, KeyValues) of
         {ok, <<"true">>} ->
             true;
         error ->
             false
     end,
-    Index = case cloudi_key_value:find(<<"x-multipart-index">>,
-                                               KeyValues) of
+    Index = case cloudi_key_value:find(<<"x-multipart-index">>, KeyValues) of
         {ok, IndexBin} ->
             erlang:binary_to_integer(IndexBin);
         error ->
@@ -2398,7 +2399,7 @@ content_range_read_part_get(Boundary,
                             ByteStart, ByteEnd, ContentLengthBin, Part) ->
     ByteStartBin = erlang:integer_to_binary(ByteStart),
     ByteEndBin = erlang:integer_to_binary(ByteEnd),
-    [cloudi_x_cow1_multipart:part(Boundary,
+    [cloudi_x_cow_multipart:part(Boundary,
                                  [{<<"content-range">>,
                                    <<(<<"bytes ">>)/binary,
                                      ByteStartBin/binary,(<<"-">>)/binary,
@@ -2438,7 +2439,7 @@ content_range_read([_ | L] = RangeList, Contents) ->
             undefined;
         true ->
             % make a multipart/byteranges response
-            cloudi_x_cow1_multipart:boundary()
+            cloudi_x_cow_multipart:boundary()
     end,
     content_range_read(RangeList, [], Boundary,
                        ContentLengthBin, ContentLength, Contents).
@@ -2449,7 +2450,7 @@ content_range_read([], [{Headers, Response}], undefined, _, _, _) ->
       {<<"content-type">>, <<"application/octet-stream">>} |
       Headers], Response};
 content_range_read([], Output, Boundary, _, _, _) ->
-    ResponseData = lists:reverse([cloudi_x_cow1_multipart:close(Boundary) |
+    ResponseData = lists:reverse([cloudi_x_cow_multipart:close(Boundary) |
                                   Output]),
     {206,
      [{<<"status">>, <<"206">>},
@@ -2494,7 +2495,7 @@ content_range_list_check([_ | L] = RangeList, Contents) ->
             undefined;
         true ->
             % make a multipart/byteranges response
-            cloudi_x_cow1_multipart:boundary()
+            cloudi_x_cow_multipart:boundary()
     end,
     content_range_list_check(RangeList, Boundary,
                              ContentLengthBin, ContentLength).

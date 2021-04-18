@@ -25,7 +25,7 @@
 %%%
 %%% @author Loïc Hoguin <essen@ninenines.eu>
 %%% @copyright 2011-2013 Loïc Hoguin
-%%% @version 2.0.1 {@date} {@time}
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_parse).
@@ -59,7 +59,7 @@ authorization_tokens_param(Data, Fun) ->
                                  Attr == <<"oauth_nonce">>;
                                  Attr == <<"oauth_consumer_key">>;
                                  Attr == <<"oauth_verifier">> ->
-                                    cloudi_x_cow1_qs:urldecode(Value);
+                                    cloudi_x_cow_qs:urldecode(Value);
                                  true ->
                                     Value
                              end,

@@ -15,6 +15,7 @@ REBAR_DIRS="\
     lib/cloudi_service_filesystem \
     lib/cloudi_service_funnel \
     lib/cloudi_service_http_client \
+    lib/cloudi_service_http_cowboy \
     lib/cloudi_service_http_cowboy1 \
     lib/cloudi_service_http_elli \
     lib/cloudi_service_http_rest \
@@ -32,7 +33,9 @@ REBAR_DIRS="\
     lib/cloudi_service_validate \
     external/cloudi_x_bear \
     external/cloudi_x_certifi \
+    external/cloudi_x_cowboy \
     external/cloudi_x_cowboy1 \
+    external/cloudi_x_cowlib \
     external/cloudi_x_cowlib1 \
     external/cloudi_x_elli \
     external/cloudi_x_emysql \
@@ -51,6 +54,7 @@ REBAR_DIRS="\
     external/cloudi_x_nodefinder \
     external/cloudi_x_parse_trans \
     external/cloudi_x_pgsql \
+    external/cloudi_x_ranch \
     external/cloudi_x_ranch1 \
     external/cloudi_x_setup \
     external/cloudi_x_ssl_verify_fun \

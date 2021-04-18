@@ -10,7 +10,7 @@
         ]},
    {applications, [
         cloudi_core,
-        cloudi_x_cowlib1,
+        cloudi_x_cowlib,
         cloudi_x_jsx,
         crypto,
         public_key,

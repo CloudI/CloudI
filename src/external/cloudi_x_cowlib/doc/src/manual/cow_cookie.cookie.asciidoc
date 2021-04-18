@@ -1,0 +1,45 @@
+= cow_cookie:cookie(3)
+
+== Name
+
+cow_cookie:cookie - Generate a cookie header
+
+== Description
+
+[source,erlang]
+----
+cookie(Cookies) -> iolist()
+
+Cookies :: [{Name :: iodata(), Value :: iodata()}]
+----
+
+Generate a cookie header.
+
+== Arguments
+
+Cookies::
+
+A list of pairs of cookie name and value.
+
+== Return value
+
+An iolist with the generated cookie header value.
+
+== Changelog
+
+* *2.9*: Function introduced.
+
+== Examples
+
+.Generate a cookie header
+[source,erlang]
+----
+Cookie = cow_cookie:cookie([{<<"sessionid">>, ID}]).
+----
+
+== See also
+
+link:man:cow_cookie(3)[cow_cookie(3)],
+link:man:cow_cookie:parse_cookie(3)[cow_cookie:parse_cookie(3)],
+link:man:cow_cookie:parse_set_cookie(3)[cow_cookie:parse_set_cookie(3)],
+link:man:cow_cookie:setcookie(3)[cow_cookie:setcookie(3)]

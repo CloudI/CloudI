@@ -824,6 +824,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_funnel/src/cloudi_service_funnel.app.src
     lib/cloudi_service_http_client/rebar.config
     lib/cloudi_service_http_client/src/cloudi_service_http_client.app.src
+    lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src
     lib/cloudi_service_http_cowboy1/src/cloudi_service_http_cowboy1.app.src
     lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src
     lib/cloudi_service_http_rest/src/cloudi_service_http_rest.app.src

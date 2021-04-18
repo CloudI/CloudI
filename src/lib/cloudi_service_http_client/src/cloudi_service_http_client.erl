@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2014-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -711,7 +711,7 @@ headers_external_incoming(<<>>) ->
 headers_external_incoming([] = ResponseInfo) ->
     ResponseInfo;
 headers_external_incoming([{K, V} | _] = ResponseInfo) ->
-    % K/V possibly from cloudi_service_http_cowboy1 HTTP request headers
+    % K/V possibly from cloudi_service_http_cowboy HTTP request headers
     true = is_binary(K),
     true = is_binary(V),
     ResponseInfo;
@@ -731,7 +731,7 @@ headers_request(RequestInfo, internal) ->
         [] ->
             RequestInfo;
         [{K, V} | _] ->
-            % K/V possibly from cloudi_service_http_cowboy1 HTTP request headers
+            % K/V possibly from cloudi_service_http_cowboy HTTP request headers
             true = is_binary(K),
             true = is_binary(V),
             RequestInfo
@@ -753,7 +753,7 @@ headers_request_filter(Headers0) ->
         {<<"host">>,                     undefined},
         {<<"url-path">>,                 undefined},
         % removed parameters
-        % (possible if coming from cloudi_service_http_cowboy1)
+        % (possible if coming from cloudi_service_http_cowboy)
         {<<"peer">>,                     undefined},
         {<<"peer-port">>,                undefined},
         {<<"source-address">>,           undefined},
