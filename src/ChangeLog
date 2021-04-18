@@ -3,6 +3,7 @@
 
 2021-04-17 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Simplify cloudi_core_i_logger use of syslog_socket
     * Set cloudi_service_http_client inets httpc use
       to use HTTP/1.0 to avoid persistent connection problems
       with different timeout values

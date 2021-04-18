@@ -656,18 +656,9 @@ init([#config_logging{file = FilePath,
                logger_node = node(),
                logger_self = self()},
     {SyslogResult,
-     #state{syslog_level = SyslogLevel} = StateNext} = case SyslogConfig of
-        undefined ->
-            {ok, State};
-        #config_logging_syslog{level = SyslogLevel0} ->
-            case syslog_open(SyslogConfig) of
-                {ok, Syslog} ->
-                    {ok, State#state{syslog = Syslog,
-                                     syslog_level = SyslogLevel0}};
-                {error, _} = Error ->
-                    {Error, State}
-            end
-    end,
+     #state{syslog_level = SyslogLevel} = StateNext} = syslog_open(SyslogConfig,
+                                                                   false,
+                                                                   State),
     Level = log_level([MainLevel, SyslogLevel, FormattersLevel]),
     Destination = if
         NodeLogger == node(); NodeLogger =:= undefined ->
@@ -1205,22 +1196,7 @@ log_config_syslog_set(SyslogConfig,
     end,
     SwitchF = fun(StateSwitch) ->
         ok = syslog_close(SyslogOld),
-        case SyslogConfig of
-            undefined ->
-                {ok, StateSwitch#state{syslog = undefined,
-                                       syslog_level = undefined}};
-            #config_logging_syslog{} ->
-                case syslog_open(SyslogConfig) of
-                    {ok, SyslogNew} ->
-                        {ok, StateSwitch#state{syslog = SyslogNew,
-                                               syslog_level = SyslogLevelNew}};
-                    {error, Reason} ->
-                        ?LOG_T0_ERROR("syslog error: ~tp", [Reason],
-                                      StateSwitch#state{
-                                          syslog = undefined,
-                                          syslog_level = undefined})
-                end
-        end
+        syslog_open(SyslogConfig, true, StateSwitch)
     end,
     if
         SyslogLevelNew /= SyslogLevelOld ->
@@ -2085,14 +2061,19 @@ stdout_close(StdoutPort) when is_port(StdoutPort) ->
     _ = (catch erlang:port_close(StdoutPort)),
     ok.
 
+syslog_open(undefined, _, State) ->
+    {ok, State#state{syslog = undefined,
+                     syslog_level = undefined}};
 syslog_open(#config_logging_syslog{identity = SyslogIdentity,
                                    facility = SyslogFacility,
+                                   level = SyslogLevel,
                                    transport = SyslogTransport,
                                    transport_options = SyslogTransportOptions,
                                    protocol = SyslogProtocol,
                                    path = SyslogPath,
                                    host = SyslogHost,
-                                   port = SyslogPort}) ->
+                                   port = SyslogPort},
+            LogError, State) ->
     Options = [{app_name, SyslogIdentity},
                {facility, SyslogFacility},
                {transport, SyslogTransport},
@@ -2103,7 +2084,20 @@ syslog_open(#config_logging_syslog{identity = SyslogIdentity,
                {host, SyslogHost},
                {port, SyslogPort},
                {timeout, 5000}],
-    cloudi_x_syslog_socket:start_monitor(Options).
+    case cloudi_x_syslog_socket:start_monitor(Options) of
+        {ok, Syslog} ->
+            {ok, State#state{syslog = Syslog,
+                             syslog_level = SyslogLevel}};
+        {error, Reason} = Error ->
+            if
+                LogError =:= true ->
+                    ?LOG_T0_ERROR("syslog error: ~tp", [Reason],
+                                  State#state{syslog = undefined,
+                                              syslog_level = undefined});
+                LogError =:= false ->
+                    {Error, State}
+            end
+    end.
 
 syslog_close(undefined) ->
     ok;
