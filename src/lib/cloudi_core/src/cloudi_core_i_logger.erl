@@ -1499,7 +1499,7 @@ log_message_external(ModeInterface, Process,
             MetaData = metadata_get(),
             LogMessage0 = if
                 is_list(Format), Args =:= undefined ->
-                    Format;
+                    unicode:characters_to_binary(Format);
                 true ->
                     log_message_safe(Format, Args)
             end,

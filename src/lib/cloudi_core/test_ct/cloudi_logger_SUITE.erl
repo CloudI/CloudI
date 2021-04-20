@@ -84,6 +84,25 @@ init_per_suite(Config) ->
     Config.
 
 end_per_suite(_Config) ->
+    ok = receive Invalid -> Invalid after 0 -> ok end,
+    {ok, LoggingStatus} = cloudi_service_api:logging_status(infinity),
+    Defaults = [{file_sync_fail_count, "0"},
+                {file_sync_fail_types, []},
+                {file_write_fail_count, "0"},
+                {file_write_fail_types, []},
+                {file_read_fail_count, "0"},
+                {file_read_fail_types, []}],
+    [SyncFail, SyncFailTypes,
+     WriteFail, WriteFailTypes,
+     ReadFail, ReadFailTypes |
+     _] = cloudi_proplists:take_values(Defaults, LoggingStatus),
+    "0" = SyncFail,
+    [] = SyncFailTypes,
+    "0" = WriteFail,
+    [] = WriteFailTypes,
+    "0" = ReadFail,
+    [] = ReadFailTypes,
+
     ok = cloudi_x_reltool_util:application_stop(cloudi_core),
     ok.
 
@@ -110,16 +129,19 @@ t_cloudi_logger_basic_1(_Config) ->
     ok = set_aspect_log_after(),
     ?LOG_INFO("~ts", [?LOG_MESSAGE1]),
     ?LOG_INFO(?LOG_MESSAGE1, []),
-    ok = get_log_message(2, unicode:characters_to_binary(?LOG_MESSAGE1)),
     ?LOG_INFO(?LOG_MESSAGE1, undefined),
-    ok = get_log_message(1, ?LOG_MESSAGE1),
+    ?LOG_METADATA_SET(#{metadata => map_format}),
+    ?LOG_INFO_SYNC(?LOG_MESSAGE1, undefined),
+    ok = get_log_message(4, unicode:characters_to_binary(?LOG_MESSAGE1)),
     ok.
 
 t_cloudi_logger_lager_1(_Config) ->
     ok = set_aspect_log_after(),
     cloudi_logger_lager:log(info, undefined, ?LOG_MESSAGE1),
-    cloudi_logger_lager:log(info, undefined, ?LOG_MESSAGE1, []),
+    cloudi_logger_lager:log(info, [{metadata, lager_format}],
+                            ?LOG_MESSAGE1, []),
     lager:info(?LOG_MESSAGE1),
+    ?LOG_METADATA_SET([]),
     lager:info(?LOG_MESSAGE1, []),
     lager:info([{}], ?LOG_MESSAGE1),
     lager:info([{}], ?LOG_MESSAGE1, []),
@@ -136,9 +158,8 @@ t_cloudi_logger_hut_1(_Config) ->
     ok = set_aspect_log_after(),
     ?log(info, "~ts", [?LOG_MESSAGE1]),
     ?log(info, ?LOG_MESSAGE1, []),
-    ok = get_log_message(2, unicode:characters_to_binary(?LOG_MESSAGE1)),
     ?slog(info, ?LOG_MESSAGE1),
-    ok = get_log_message(1, ?LOG_MESSAGE1),
+    ok = get_log_message(3, unicode:characters_to_binary(?LOG_MESSAGE1)),
     ok.
 -endif.
 

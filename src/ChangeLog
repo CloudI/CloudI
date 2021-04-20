@@ -9,6 +9,8 @@
     * Add ct tests for cloudi_logger_lager and cloudi_logger_hut
     * Add remaining unicode logger output
       (metadata pretty-print and formatter errors)
+    * Fix cloudi_logger usage with Args == undefined
+      when Format is not a string in utf8
     * Add SSL check to cloudi_service_http_cowboy1
 
 2021-04-18 Michael Truog   <mjtruog at protonmail dot com>
