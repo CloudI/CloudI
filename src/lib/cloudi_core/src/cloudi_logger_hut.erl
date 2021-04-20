@@ -69,7 +69,7 @@ log(Level, Fmt, Args, Opts0) ->
             end
     end,
     {FunctionName, FunctionArity,
-     _} = case lists:keytake(function_name, 1, Opts3) of
+     OptsN} = case lists:keytake(function_name, 1, Opts3) of
         false ->
             {undefined, undefined, Opts3};
         {value, {function_name, FunctionNameValue}, Opts4} ->
@@ -80,6 +80,7 @@ log(Level, Fmt, Args, Opts0) ->
                     {FunctionNameValue, FunctionArityValue, Opts5}
             end
     end,
+    ok = cloudi_core_i_logger:metadata_set(maps:from_list(OptsN)),
     log_output(log_level(Level), Module, Line,
                FunctionName, FunctionArity, Fmt, Args).
 
@@ -112,15 +113,14 @@ slog(Level, Data, Meta0) ->
         error ->
             {0, Meta2}
     end,
-    Meta5 = maps:remove(file, Meta4),
-    {Format,
-     MetaN} = case Data of
+    MetaN = maps:remove(file, Meta4),
+    Format = case Data of
         [{_, _} | _] = Report ->
-            {"", maps:merge(Meta5, maps:from_list(Report))};
+            cloudi_string:format("~tp", [Report]);
         Report when is_map(Report) ->
-            {"", maps:merge(Meta5, Report)};
+            cloudi_string:format("~tp", [Report]);
         FormatValue when is_list(FormatValue) ->
-            {FormatValue, Meta5}
+            FormatValue
     end,
     ok = cloudi_core_i_logger:metadata_set(MetaN),
     log_output(log_level(Level), Module, Line,
