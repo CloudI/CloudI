@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2012-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy1).
@@ -195,6 +195,13 @@
         service :: pid(),
         handler_state :: #cowboy1_state{}
     }).
+
+-ifdef(OTP_RELEASE).
+% able to use -if/-elif here
+-if(?OTP_RELEASE >= 24).
+-define(ERLANG_OTP_VERSION_24_FEATURES, true).
+-endif.
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -504,6 +511,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end,
     {ok, ListenerPid} = if
         is_list(SSL) ->
+            false = ranch1_ssl_broken(),
             {value,
              {certfile, CertFile}, SSLOpts} = lists:keytake(certfile, 1, SSL),
             [] = cloudi_proplists:delete_all([cacertfile,
@@ -594,16 +602,20 @@ cloudi_service_terminate(_Reason, _Timeout, undefined) ->
     ok;
 cloudi_service_terminate(_Reason, _Timeout,
                          #state{service = Service}) ->
-    try cloudi_x_cowboy1:stop_listener(Service)
-    catch
-        exit:{noproc, _} ->
-            ?LOG_WARN("ranch noproc", [])
-    end,
+    _ = (catch cloudi_x_cowboy1:stop_listener(Service)),
     ok.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+ranch1_ssl_broken() ->
+    true.
+-else.
+ranch1_ssl_broken() ->
+    false.
+-endif.
 
 cowboy1_dispatch(HandlerState) ->
     cloudi_x_cowboy1_router:compile([

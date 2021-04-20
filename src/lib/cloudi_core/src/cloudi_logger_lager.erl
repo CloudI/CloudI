@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2017-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger_lager).
@@ -108,18 +108,9 @@ log(Level, Unknown, Format) ->
 
 log(Level, MetaData, Format, Args) when is_list(MetaData) ->
     ok = cloudi_core_i_logger:metadata_set(MetaData),
-    log(Level, undefined, Format, Args);
+    log_output(log_level(Level), Format, Args);
 log(Level, _, Format, Args) ->
-    case log_level(Level) of
-        undefined ->
-            cloudi_core_i_logger_interface:error('LAGER(invalid_level)', 0,
-                                                 undefined, undefined,
-                                                 Format, Args);
-        LogLevel ->
-            cloudi_core_i_logger_interface:LogLevel('LAGER', 0,
-                                                    undefined, undefined,
-                                                    Format, Args)
-    end.
+    log_output(log_level(Level), Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -131,7 +122,12 @@ log(Level, _, Format, Args) ->
     list({atom(), any()}).
 
 md() ->
-    cloudi_core_i_logger:metadata_get().
+    case cloudi_core_i_logger:metadata_get() of
+        L when is_list(L) ->
+            L;
+        _ ->
+            []
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -166,25 +162,28 @@ parse_transform(Forms, _CompileOptions) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-log_level(Level) ->
-    % consistent with
-    % cloudi_core_i_logger:lager_severity_output/1,
-    % cloudi_core_i_logger:lager_severity_input/1 and
-    % cloudi_core_i_configuration:logging_formatter_level/1
-    if
-        Level =:= critical; Level =:= alert; Level =:= emergency ->
-            fatal;
-        Level =:= error ->
-            error;
-        Level =:= warning; Level =:= notice ->
-            warn;
-        Level =:= info ->
-            info;
-        Level =:= debug ->
-            debug;
-        true ->
-            undefined
-    end.
+% log level consistent with
+% cloudi_core_i_logger:lager_severity_output/1,
+% cloudi_core_i_logger:lager_severity_input/1 and
+% cloudi_core_i_configuration:logging_formatter_level/1
+log_level(critical) -> fatal;
+log_level(alert) -> fatal;
+log_level(emergency) -> fatal;
+log_level(error) -> error;
+log_level(warning) -> warn;
+log_level(notice) -> warn;
+log_level(info) -> info;
+log_level(debug) -> debug;
+log_level(_) -> undefined.
+
+log_output(undefined, Format, Args) ->
+    cloudi_core_i_logger_interface:error('LAGER(invalid_level)', 0,
+                                         undefined, undefined,
+                                         Format, Args);
+log_output(LogLevel, Format, Args) ->
+    cloudi_core_i_logger_interface:LogLevel('LAGER', 0,
+                                            undefined, undefined,
+                                            Format, Args).
 
 forms_process([{eof, _} = EOF], L, _) ->
     lists:reverse([EOF | L]);

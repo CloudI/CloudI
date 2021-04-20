@@ -224,7 +224,6 @@ dialyze: all \
               lib/cloudi_service_funnel/ebin \
               lib/cloudi_service_http_client/ebin \
               lib/cloudi_service_http_cowboy/ebin \
-              lib/cloudi_service_http_cowboy1/ebin \
               lib/cloudi_service_http_elli/ebin \
               lib/cloudi_service_http_rest/ebin \
               lib/cloudi_service_map_reduce/ebin \
@@ -289,7 +288,6 @@ dialyze-internal: all \
               lib/cloudi_service_funnel/ebin \
               lib/cloudi_service_http_client/ebin \
               lib/cloudi_service_http_cowboy/ebin \
-              lib/cloudi_service_http_cowboy1/ebin \
               lib/cloudi_service_http_elli/ebin \
               lib/cloudi_service_http_rest/ebin \
               lib/cloudi_service_map_reduce/ebin \

@@ -83,6 +83,7 @@
  [{d, 'ERLANG_OTP_VERSION_@ERLANG_OTP_VER_MAJOR@'},
   {d, 'CLOUDI_LOGGER'},
   {d, 'HUT_CUSTOM'},
+  {d, 'HUT_CUSTOM_SLOG'},
   {d, 'HUT_CUSTOM_CB', 'cloudi_logger_hut'},
   {i, "@abs_top_srcdir@/lib"},
   {i, "@abs_top_srcdir@/external"},

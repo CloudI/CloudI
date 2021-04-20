@@ -959,7 +959,7 @@
          Line :: pos_integer(),
          Function :: atom() | undefined,
          Arity :: arity() | undefined,
-         MetaData :: list({atom(), any()}),
+         MetaData :: list({atom(), any()}) | #{},
          LogMessage :: iodata()) ->
         ok).
 -type aspect_log_before() ::

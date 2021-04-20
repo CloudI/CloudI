@@ -88,6 +88,7 @@
 -define(SERVICE_UPTIME_PDICT_KEY,  cloudi_service_uptime).
 -define(SERVICE_FILE_PDICT_KEY,    cloudi_service_file).
 -define(LOGGER_FLOODING_PDICT_KEY, cloudi_logger). % all logging processes
+-define(LOGGER_METADATA_PDICT_KEY, cloudi_logger_metadata).
 
 % create the locally registered name for a cpg scope
 % (in a way that does not cause conflict with custom cpg scopes)

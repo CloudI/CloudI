@@ -180,6 +180,8 @@
             :: list(file:posix() | badarg | terminated)
     }).
 
+-define(LAGER_MD_KEY, '__lager_metadata'). % from lager module
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -477,27 +479,40 @@ status_reset(Timeout) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Get lager-compatible metadata.===
+%% ===Get metadata.===
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec metadata_get() ->
-    list({atom(), any()}).
+    list({atom(), any()}) | #{}.
 
 metadata_get() ->
-    lager_metadata_get().
+    case erlang:get(?LOGGER_METADATA_PDICT_KEY) of
+        ?LAGER_MD_KEY ->
+            lager_metadata_get();
+        undefined ->
+            [];
+        Map when is_map(Map) ->
+            Map
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Set lager-compatible metadata.===
+%% ===Set metadata.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec metadata_set(list({atom(), any()})) ->
+-spec metadata_set(list({atom(), any()}) | #{}) ->
     ok.
 
-metadata_set(L) ->
-    lager_metadata_set(L).
+metadata_set(L)
+    when is_list(L) ->
+    erlang:put(?LOGGER_METADATA_PDICT_KEY, ?LAGER_MD_KEY),
+    lager_metadata_set(L);
+metadata_set(Map)
+    when is_map(Map) ->
+    erlang:put(?LOGGER_METADATA_PDICT_KEY, Map),
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -540,11 +555,11 @@ format(Msg, _Config, _) ->
                 {node, undefined},
                 {pid, undefined}],
     [Function, Module, Line, Node, PidStr |
-     ExtraMetaData] = cloudi_proplists:take_values(Defaults, MetaData),
+     MetaDataNew] = cloudi_proplists:take_values(Defaults, MetaData),
     LogMessage = Message,
     format_line(Level, Timestamp, Node, PidStr,
                 Module, Line, Function, undefined,
-                ExtraMetaData, LogMessage).
+                MetaDataNew, LogMessage).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1302,10 +1317,10 @@ format_line(Level, Timestamp, Node, Pid,
     end,
     NodeBin = erlang:atom_to_binary(Node, utf8),
     MetaDataStr = if
-        MetaData == [] ->
+        MetaData == []; map_size(MetaData) == 0 ->
             "";
         true ->
-            io_lib:format("~p~n", [MetaData])
+            io_lib:format("~tp~n", [MetaData])
     end,
     [timestamp_iso8601(Timestamp), $\s, log_level_to_string(Level), $\s,
      $(,
@@ -1373,7 +1388,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ErrorMessage = cloudi_string:
-                           format_to_binary("formatter(~p) ~p ~p~n~p",
+                           format_to_binary("formatter(~tp) ~tp ~tp~n~tp",
                                             [Formatter, ErrorType, Error,
                                              ErrorStackTrace]),
             [format_line(Level, Timestamp, Node, Pid,
@@ -1409,7 +1424,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
                         MetaData, LogMessage);
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ErrorMessage = cloudi_string:
-                           format_to_binary("output(~p) ~p ~p~n~p",
+                           format_to_binary("output(~tp) ~tp ~tp~n~tp",
                                             [Output, ErrorType, Error,
                                              ErrorStackTrace]),
             [format_line(Level, Timestamp, Node, Pid,
@@ -1669,7 +1684,7 @@ log_message_safe(Format, Args) ->
     try log_message(Format, Args)
     catch
         error:badarg ->
-            cloudi_string:format_to_binary("INVALID LOG INPUT: ~p ~p",
+            cloudi_string:format_to_binary("INVALID LOG INPUT: ~tp ~tp",
                                            [Format, Args])
     end.
 
@@ -2222,9 +2237,6 @@ accum([{Value, F} | L], State) ->
 %%%  was developed by Basho Technologies)
 %%%------------------------------------------------------------------------
 
-% from lager module
--define(LAGER_MD_KEY, '__lager_metadata').
-
 % from lager:md/0
 -spec lager_metadata_get() -> list({atom(), any()}).
 lager_metadata_get() ->
@@ -2309,7 +2321,7 @@ lager_severity_input(debug) -> debug.
 -record(lager_msg,
     {
         destinations :: list(),
-        metadata :: list({atom(), any()}),
+        metadata :: list({any(), any()}),
         severity :: debug | emergency | error | info | warning,
         datetime :: {string(), string()},
         timestamp :: erlang:timestamp(),
@@ -2324,7 +2336,7 @@ lager_severity_input(debug) -> debug.
                 Line :: non_neg_integer(),
                 Function :: atom(),
                 Arity :: non_neg_integer() | undefined,
-                MetaData :: list({atom(), any()}),
+                MetaData :: list({atom(), any()}) | #{},
                 LogMessage :: iolist()) ->
     #lager_msg{}.
 
@@ -2334,15 +2346,21 @@ lager_msg(Level, Timestamp, Node, Pid,
           MetaData0, LogMessage) ->
     Destinations = [], % not using TraceFilters
     MetaData1 = if
-        Function =:= undefined ->
+        is_list(MetaData0) ->
             MetaData0;
+        is_map(MetaData0) ->
+            maps:to_list(MetaData0)
+    end,
+    MetaData2 = if
+        Function =:= undefined ->
+            MetaData1;
         true ->
-            [{function, Function} | MetaData0]
+            [{function, Function} | MetaData1]
     end,
     MetaDataN = [{module, Module},
                  {line, Line},
                  {node, Node},
-                 {pid, erlang:pid_to_list(Pid)} | MetaData1],
+                 {pid, erlang:pid_to_list(Pid)} | MetaData2],
     Severity = lager_severity_output(Level),
     DateTime = lager_datetime_format(lager_datetime(Timestamp)),
     Message = if
