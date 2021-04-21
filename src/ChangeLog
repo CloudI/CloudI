@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-04-21 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_map_reduce retry_delay by processing
+      the delay asynchronously
+
 2021-04-20 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add hackney support to cloudi_service_http_client

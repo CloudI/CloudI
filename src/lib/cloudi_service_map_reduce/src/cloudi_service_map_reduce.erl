@@ -367,14 +367,16 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
                            #state{map_requests = MapRequests} = State,
                            Dispatcher) ->
     case maps:take(TransId, MapRequests) of
-        {#map_send{send_args = [_ | SendArgs],
-                   retry_count = RetryCount},
-         MapRequestsNew} ->
-            map_resend([Dispatcher | SendArgs], RetryCount,
-                       State#state{map_requests = MapRequestsNew});
+        {MapRequest, MapRequestsNew} ->
+            map_retry(MapRequest,
+                      State#state{map_requests = MapRequestsNew},
+                      Dispatcher);
         error ->
             map_info(Request, State, Dispatcher)
     end;
+cloudi_service_handle_info({cloudi_service_map_reduce_retry, MapRequest},
+                           State, Dispatcher) ->
+    map_resend(MapRequest, State, Dispatcher);
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,
                                                 timeout = Timeout,
@@ -524,15 +526,24 @@ request(resume,
             {reply, {error, already_resumed}, State}
     end.
 
-map_resend(SendArgs, RetryCount,
+map_retry(MapRequest, State, Dispatcher) ->
+    case retry(MapRequest, State) of
+        true ->
+            {noreply, State};
+        false ->
+            map_resend(MapRequest, State, Dispatcher)
+    end.
+
+map_resend(#map_send{send_args = [_ | SendArgsTail],
+                     retry_count = RetryCount},
            #state{map_reduce_module = MapReduceModule,
                   map_reduce_state = MapReduceState,
-                  map_requests = MapRequests} = State) ->
-    RetryCountNew = retry(SendArgs, RetryCount, State),
+                  map_requests = MapRequests} = State, Dispatcher) ->
+    SendArgs = [Dispatcher | SendArgsTail],
     case MapReduceModule:
          cloudi_service_map_reduce_resend(SendArgs, MapReduceState) of
         {ok, SendArgsNew, MapReduceStateNew} ->
-            case map_send_request(SendArgsNew, RetryCountNew, MapRequests) of
+            case map_send_request(SendArgsNew, RetryCount, MapRequests) of
                 {ok, MapRequestsNew} ->
                     {noreply,
                      State#state{map_reduce_state = MapReduceStateNew,
@@ -616,61 +627,67 @@ map_check_done(#state{map_requests = MapRequests} = State) ->
             {noreply, State}
     end.
 
-retry([_Dispatcher, _Name, _Request,
-       TimeoutMax], RetryCount,
-      #state{retry = Retry,
+retry(#map_send{send_args = [_Dispatcher, _Name, _Request,
+                             TimeoutMax],
+                retry_count = RetryCount} = MapRequest,
+      #state{service = Service,
+             retry = Retry,
              retry_delay = RetryDelay,
              timeout_max = TimeoutMax}) ->
     if
         RetryCount < Retry ->
-            ok = retry_delay(RetryDelay),
-            RetryCount + 1;
+            retry_delay(RetryDelay, Service, MapRequest);
         true ->
             erlang:exit(retry_max)
     end;
-retry([_Dispatcher, _Name, _Request,
-       TimeoutMax, _PatternPid], RetryCount,
-      #state{retry = Retry,
+retry(#map_send{send_args = [_Dispatcher, _Name, _Request,
+                             TimeoutMax, _PatternPid],
+                retry_count = RetryCount} = MapRequest,
+      #state{service = Service,
+             retry = Retry,
              retry_delay = RetryDelay,
              timeout_max = TimeoutMax}) ->
     if
         RetryCount < Retry ->
-            ok = retry_delay(RetryDelay),
-            RetryCount + 1;
+            retry_delay(RetryDelay, Service, MapRequest);
         true ->
             erlang:exit(retry_max)
     end;
-retry([_Dispatcher, _Name, _RequestInfo, _Request,
-       TimeoutMax, _Priority], RetryCount,
-      #state{retry = Retry,
+retry(#map_send{send_args = [_Dispatcher, _Name, _RequestInfo, _Request,
+                             TimeoutMax, _Priority],
+                retry_count = RetryCount} = MapRequest,
+      #state{service = Service,
+             retry = Retry,
              retry_delay = RetryDelay,
              timeout_max = TimeoutMax}) ->
     if
         RetryCount < Retry ->
-            ok = retry_delay(RetryDelay),
-            RetryCount + 1;
+            retry_delay(RetryDelay, Service, MapRequest);
         true ->
             erlang:exit(retry_max)
     end;
-retry([_Dispatcher, _Name, _RequestInfo, _Request,
-       TimeoutMax, _Priority, _PatternPid], RetryCount,
-      #state{retry = Retry,
+retry(#map_send{send_args = [_Dispatcher, _Name, _RequestInfo, _Request,
+                             TimeoutMax, _Priority, _PatternPid],
+                retry_count = RetryCount} = MapRequest,
+      #state{service = Service,
+             retry = Retry,
              retry_delay = RetryDelay,
              timeout_max = TimeoutMax}) ->
     if
         RetryCount < Retry ->
-            ok = retry_delay(RetryDelay),
-            RetryCount + 1;
+            retry_delay(RetryDelay, Service, MapRequest);
         true ->
             erlang:exit(retry_max)
     end;
-retry(_, RetryCount, _) ->
-    RetryCount.
+retry(_, _) ->
+    false.
 
-retry_delay(0) ->
-    ok;
-retry_delay(RetryDelay) ->
-    receive after RetryDelay -> ok end.
+retry_delay(RetryDelay, Service,
+            #map_send{retry_count = RetryCount} = MapRequest) ->
+    MapRequestNew = MapRequest#map_send{retry_count = RetryCount + 1},
+    _ = erlang:send_after(RetryDelay, Service,
+                          {cloudi_service_map_reduce_retry, MapRequestNew}),
+    true.
 
 hours_elapsed(ElapsedSeconds) ->
     erlang:round((ElapsedSeconds / (60 * 60)) * 10) / 10.
