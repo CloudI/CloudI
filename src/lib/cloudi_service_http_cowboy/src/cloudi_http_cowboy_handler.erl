@@ -57,6 +57,7 @@
 -record(websocket_state,
     {
         % for service requests entering CloudI
+        path :: string(),
         websocket_connect_trans_id = undefined
             :: undefined | cloudi_service:trans_id(),
         name_incoming :: string(),
@@ -116,8 +117,110 @@ terminate(_Reason, _Req,
 %%% Callback functions from cloudi_x_cowboy_websocket
 %%%------------------------------------------------------------------------
 
-websocket_init(#cowboy_state{timeout_websocket = TimeoutWebSocket} = State) ->
-    {[{set_options, #{idle_timeout => TimeoutWebSocket}}], State}.
+websocket_init(#cowboy_state{
+                   scope = Scope,
+                   prefix = Prefix,
+                   timeout_websocket = TimeoutWebSocket,
+                   output_type = OutputType,
+                   websocket_connect = WebSocketConnect,
+                   websocket_ping = WebSocketPing,
+                   websocket_name_unique = WebSocketNameUnique,
+                   websocket_subscriptions = WebSocketSubscriptions,
+                   use_websockets = true,
+                   websocket_state = WebSocketState} = State) ->
+    #websocket_state{path = Path,
+                     request_info = HeadersIncoming0} = WebSocketState,
+    % can not turn-off the /websocket suffix, since it would otherwise
+    % cause a conflict with service requests coming from HTTP into CloudI
+    % when UseMethodSuffix == false
+    NameWebSocket = Path ++ "/websocket",
+    % service requests are only received if they relate to
+    % the service's prefix
+    SubscribeWebSocket = lists:prefix(Prefix, NameWebSocket),
+    HeadersIncomingN = if
+        SubscribeWebSocket =:= true ->
+            [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
+             HeadersIncoming0];
+        SubscribeWebSocket =:= false ->
+            HeadersIncoming0
+    end,
+    RequestInfo = if
+        (OutputType =:= external) orelse (OutputType =:= binary) ->
+            headers_external_incoming(HeadersIncomingN);
+        (OutputType =:= internal) orelse (OutputType =:= list) ->
+            HeadersIncomingN
+    end,
+    WebSocketPingStatus = if
+        WebSocketPing =:= undefined ->
+            undefined;
+        is_integer(WebSocketPing) ->
+            erlang:send_after(WebSocketPing, self(),
+                              {websocket_ping, WebSocketPing}),
+            received
+    end,
+    if
+        SubscribeWebSocket =:= true ->
+            % initiate an asynchronous close if the websocket must be unique
+            OldConnectionMonitors = if
+                WebSocketNameUnique =:= true ->
+                    case cloudi_x_cpg:get_members(Scope, NameWebSocket,
+                                                  infinity) of
+                        {ok, _, OldConnections} ->
+                            lists:map(fun(OldConnection) ->
+                                cloudi_service_http_cowboy:close(OldConnection),
+                                erlang:monitor(process, OldConnection)
+                            end, OldConnections);
+                        {error, _} ->
+                            []
+                    end;
+                WebSocketNameUnique =:= false ->
+                    []
+            end,
+            % service requests are only received if they relate to
+            % the service's prefix
+            ok = cloudi_x_cpg:join(Scope, NameWebSocket, self(), infinity),
+            % block on the websocket close if the connection must be unique
+            if
+                WebSocketNameUnique =:= true ->
+                    lists:foreach(fun(OldConnectionMonitor) ->
+                        receive
+                            {'DOWN', OldConnectionMonitor, process, _, _} ->
+                                ok
+                        end
+                    end, OldConnectionMonitors);
+                WebSocketNameUnique =:= false ->
+                    ok
+            end,
+            if
+                WebSocketSubscriptions =:= undefined ->
+                    ok;
+                true ->
+                    % match websocket_subscriptions to determine if
+                    % more subscriptions should occur, possibly
+                    % using parameters in a pattern template
+                    % for the subscription
+                    case cloudi_x_trie:find_match2(Path,
+                                                   WebSocketSubscriptions) of
+                        error ->
+                            ok;
+                        {ok, Pattern, Functions} ->
+                            Parameters = cloudi_service_name:
+                                         parse(Path, Pattern),
+                            websocket_subscriptions(Functions, Parameters,
+                                                    Scope)
+                    end
+            end;
+        SubscribeWebSocket =:= false ->
+            ok
+    end,
+    WebSocketStateNew = WebSocketState#websocket_state{
+                            request_info = RequestInfo},
+    {[{set_options, #{idle_timeout => TimeoutWebSocket}}],
+     websocket_connect_check(WebSocketConnect,
+                             State#cowboy_state{
+                                 websocket_ping = WebSocketPingStatus,
+                                 websocket_subscriptions = undefined,
+                                 websocket_state = WebSocketStateNew})}.
 
 websocket_handle({ping, _Payload}, State) ->
     % cowboy automatically responds with pong
@@ -491,15 +594,8 @@ websocket_info(Info,
 
 upgrade_to_websocket(Req,
                      #cowboy_state{
-                         scope = Scope,
-                         prefix = Prefix,
-                         output_type = OutputType,
                          set_x_forwarded_for = SetXForwardedFor,
-                         websocket_connect = WebSocketConnect,
-                         websocket_ping = WebSocketPing,
                          websocket_protocol = WebSocketProtocol,
-                         websocket_name_unique = WebSocketNameUnique,
-                         websocket_subscriptions = WebSocketSubscriptions,
                          use_websockets = true,
                          use_host_prefix = UseHostPrefix,
                          use_client_ip_prefix = UseClientIpPrefix,
@@ -521,54 +617,26 @@ upgrade_to_websocket(Req,
         Method =:= <<"GET">> ->
             NameIncoming ++ "/get"
     end,
-    % can not turn-off the /websocket suffix, since it would otherwise
-    % cause a conflict with service requests coming from HTTP into CloudI
-    % when UseMethodSuffix == false
     PathRawStr = erlang:binary_to_list(PathRaw),
-    NameWebSocket = PathRawStr ++ "/websocket",
-    % service requests are only received if they relate to
-    % the service's prefix
-    SubscribeWebSocket = lists:prefix(Prefix, NameWebSocket),
-    HeadersIncoming1 = if
-        SubscribeWebSocket =:= true ->
-            [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
-             HeadersIncoming0];
-        SubscribeWebSocket =:= false ->
-            HeadersIncoming0
-    end,
     PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
     PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
     PeerPort = erlang:integer_to_binary(ClientPort),
-    HeadersIncoming2 = [{<<"peer">>, PeerShort},
+    HeadersIncoming1 = [{<<"peer">>, PeerShort},
                         {<<"peer-port">>, PeerPort},
                         {<<"source-address">>, PeerLong},
                         {<<"source-port">>, PeerPort},
-                        {<<"url-path">>, PathRaw} | HeadersIncoming1],
+                        {<<"url-path">>, PathRaw} | HeadersIncoming0],
     HeadersIncomingN = if
         SetXForwardedFor =:= true ->
             case lists:keyfind(<<"x-forwarded-for">>, 1, HeadersIncoming0) of
                 false ->
-                    [{<<"x-forwarded-for">>, PeerShort} | HeadersIncoming2];
+                    [{<<"x-forwarded-for">>, PeerShort} | HeadersIncoming1];
                 _ ->
-                    HeadersIncoming2
+                    HeadersIncoming1
                     
             end;
         SetXForwardedFor =:= false ->
-            HeadersIncoming2
-    end,
-    RequestInfo = if
-        (OutputType =:= external) orelse (OutputType =:= binary) ->
-            headers_external_incoming(HeadersIncomingN);
-        (OutputType =:= internal) orelse (OutputType =:= list) ->
-            HeadersIncomingN
-    end,
-    WebSocketPingStatus = if
-        WebSocketPing =:= undefined ->
-            undefined;
-        is_integer(WebSocketPing) ->
-            erlang:send_after(WebSocketPing, self(),
-                              {websocket_ping, WebSocketPing}),
-            received
+            HeadersIncoming1
     end,
     ResponseLookup = if
         WebSocketProtocol /= undefined ->
@@ -588,73 +656,15 @@ upgrade_to_websocket(Req,
         true ->
             undefined
     end,
-    if
-        SubscribeWebSocket =:= true ->
-            % initiate an asynchronous close if the websocket must be unique
-            OldConnectionMonitors = if
-                WebSocketNameUnique =:= true ->
-                    case cloudi_x_cpg:get_members(Scope, NameWebSocket,
-                                                  infinity) of
-                        {ok, _, OldConnections} ->
-                            lists:map(fun(OldConnection) ->
-                                cloudi_service_http_cowboy:close(OldConnection),
-                                erlang:monitor(process, OldConnection)
-                            end, OldConnections);
-                        {error, _} ->
-                            []
-                    end;
-                WebSocketNameUnique =:= false ->
-                    []
-            end,
-            % service requests are only received if they relate to
-            % the service's prefix
-            ok = cloudi_x_cpg:join(Scope, NameWebSocket, self(), infinity),
-            % block on the websocket close if the connection must be unique
-            if
-                WebSocketNameUnique =:= true ->
-                    lists:foreach(fun(OldConnectionMonitor) ->
-                        receive
-                            {'DOWN', OldConnectionMonitor, process, _, _} ->
-                                ok
-                        end
-                    end, OldConnectionMonitors);
-                WebSocketNameUnique =:= false ->
-                    ok
-            end,
-            if
-                WebSocketSubscriptions =:= undefined ->
-                    ok;
-                true ->
-                    % match websocket_subscriptions to determine if
-                    % more subscriptions should occur, possibly
-                    % using parameters in a pattern template
-                    % for the subscription
-                    case cloudi_x_trie:find_match2(PathRawStr,
-                                                   WebSocketSubscriptions) of
-                        error ->
-                            ok;
-                        {ok, Pattern, Functions} ->
-                            Parameters = cloudi_service_name:
-                                         parse(PathRawStr, Pattern),
-                            websocket_subscriptions(Functions, Parameters,
-                                                    Scope)
-                    end
-            end;
-        SubscribeWebSocket =:= false ->
-            ok
-    end,
     {cloudi_x_cowboy_websocket, Req,
-     websocket_connect_check(WebSocketConnect,
-                             State#cowboy_state{
-                                 websocket_ping = WebSocketPingStatus,
-                                 websocket_subscriptions = undefined,
-                                 websocket_state = #websocket_state{
-                                     name_incoming = NameIncoming,
-                                     name_outgoing = NameOutgoing,
-                                     request_info = RequestInfo,
-                                     response_lookup = ResponseLookup,
-                                     recv_timeouts = RecvTimeouts,
-                                     queued = Queued}})}.
+     State#cowboy_state{websocket_state = #websocket_state{
+                            path = PathRawStr,
+                            name_incoming = NameIncoming,
+                            name_outgoing = NameOutgoing,
+                            request_info = HeadersIncomingN,
+                            response_lookup = ResponseLookup,
+                            recv_timeouts = RecvTimeouts,
+                            queued = Queued}}}.
 
 header_accept_check(Headers, ContentTypesAccepted) ->
     case lists:keyfind(<<"accept">>, 1, Headers) of

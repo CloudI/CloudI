@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-04-20 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add hackney support to cloudi_service_http_client
+    * Change cloudi_service_http_client response header keys
+      to be sorted in lowercase (in ResponseInfo)
+    * Fixes for cloudi_service_http_cowboy websocket use
+
 2021-04-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add support for map logger metadata alongside the

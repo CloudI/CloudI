@@ -9,6 +9,7 @@
         ]},
    {registered, []},
    {applications, [
+        cloudi_x_hackney,
         cloudi_core,
         cloudi_x_uuid,
         cloudi_x_trie,

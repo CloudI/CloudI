@@ -55,7 +55,7 @@
 -define(DEFAULT_PORT,                              8080).
 -define(DEFAULT_BACKLOG,                            128).
 -define(DEFAULT_NODELAY,                           true).
--define(DEFAULT_RECV_TIMEOUT,                      5000). % milliseconds
+-define(DEFAULT_RECV_TIMEOUT,                     60000). % milliseconds
 -define(DEFAULT_BODY_TIMEOUT,                     15000). % milliseconds
 -define(DEFAULT_BODY_LENGTH_READ,               8000000).
 -define(DEFAULT_MULTIPART_HEADER_TIMEOUT,          5000). % milliseconds

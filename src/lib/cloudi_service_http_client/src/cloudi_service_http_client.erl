@@ -83,6 +83,7 @@
 
 % supported clients
 -define(MODULE_INETS, httpc). % Erlang/OTP inets HTTP client
+-define(MODULE_HACKNEY, cloudi_x_hackney).
 
 -define(CLIENT_DEBUG_START(Level),
     if
@@ -110,7 +111,7 @@
 
 -record(state,
     {
-        module :: ?MODULE_INETS,
+        module :: ?MODULE_INETS | ?MODULE_HACKNEY,
         profile,
         input_type :: external | internal,
         debug_level :: off | trace | debug | info | warn | error | fatal,
@@ -651,7 +652,17 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             end,
             {?MODULE_INETS,
              ["head", "get", "put", "post", "trace", "options", "delete"],
-             Profile1}
+             Profile1};
+        Client =:= hackney ->
+            Pool = if
+                Profile0 =:= undefined ->
+                    default;
+                true ->
+                    erlang:list_to_atom(Profile0)
+            end,
+            {?MODULE_HACKNEY,
+             ["head", "get", "put", "post", "trace", "options", "delete"],
+             Pool}
     end,
     false = cloudi_service_name:pattern(Prefix),
     [cloudi_service:subscribe(Dispatcher, [$/ | Method]) || Method <- Methods],
@@ -786,44 +797,29 @@ header_content_type(Headers) ->
             cloudi_string:beforel($;, Value, input)
     end.
 
-url_string({HostName, <<"80">>}, URL) ->
+url_string({HostName, <<"80">>}, URLPath) ->
     "http://" ++ erlang:binary_to_list(HostName) ++
-    erlang:binary_to_list(URL);
-url_string({HostName, <<"443">>}, URL) ->
+    erlang:binary_to_list(URLPath);
+url_string({HostName, <<"443">>}, URLPath) ->
     "https://" ++ erlang:binary_to_list(HostName) ++
-    erlang:binary_to_list(URL);
-url_string({HostName, Port}, URL) ->
+    erlang:binary_to_list(URLPath);
+url_string({HostName, Port}, URLPath) ->
     "http://" ++ erlang:binary_to_list(HostName) ++
     ":" ++ erlang:binary_to_list(Port) ++
-    erlang:binary_to_list(URL).
+    erlang:binary_to_list(URLPath).
 
 client_request(?MODULE_INETS, Profile, Method0,
                HeadersIncoming0, Request, Timeout,
                ContentTypeLookup) ->
-    Method1 = if
-        Method0 == "HEAD" ->
-            head;
-        Method0 == "GET" ->
-            get;
-        Method0 == "PUT" ->
-            put;
-        Method0 == "POST" ->
-            post;
-        Method0 == "TRACE" ->
-            trace;
-        Method0 == "OPTIONS" ->
-            options;
-        Method0 == "DELETE" ->
-            delete
-    end,
     case headers_request_filter(HeadersIncoming0) of
-        {ok, Host, URLPath, HeadersIncoming1} ->
+        {ok, Host, URLPath, HeadersIncomingN} ->
+            MethodN = method_atom(Method0),
             URL = url_string(headers_request_filter_host(Host), URLPath),
             RequestHeaders = [{erlang:binary_to_list(Kin),
                                erlang:binary_to_list(Vin)} ||
-                              {Kin, Vin} <- HeadersIncoming1],
+                              {Kin, Vin} <- HeadersIncomingN],
             ClientRequest = if
-                Method1 =:= get ->
+                MethodN =:= get ->
                     {URL, RequestHeaders};
                 true ->
                     ContentTypeN = case header_content_type(RequestHeaders) of
@@ -840,9 +836,8 @@ client_request(?MODULE_INETS, Profile, Method0,
                     end,
                     {URL, RequestHeaders, ContentTypeN, Request}
             end,
-            case ?MODULE_INETS:request(Method1, ClientRequest,
+            case ?MODULE_INETS:request(MethodN, ClientRequest,
                                        [{autoredirect, false},
-                                        {version, "HTTP/1.0"},
                                         {timeout, Timeout}],
                                        [{body_format, binary}], Profile) of
                 {ok, {{_HttpVersion, StatusCode, _Reason},
@@ -853,13 +848,57 @@ client_request(?MODULE_INETS, Profile, Method0,
                     HeadersOutgoing1 = [{<<"status">>,
                                          erlang:integer_to_binary(StatusCode)} |
                                         HeadersOutgoing0],
-                    {StatusCode, HeadersOutgoing1, Response};
+                    HeadersOutgoingN = lists:keysort(1, HeadersOutgoing1),
+                    {StatusCode, HeadersOutgoingN, Response};
+                {error, _} = Error ->
+                    {undefined, <<>>, Error}
+            end;
+        {error, _} = Error ->
+            {undefined, <<>>, Error}
+    end;
+client_request(?MODULE_HACKNEY, Profile, Method0,
+               HeadersIncoming0, Request, Timeout,
+               _ContentTypeLookup) ->
+    case headers_request_filter(HeadersIncoming0) of
+        {ok, Host, URLPath, HeadersIncomingN} ->
+            MethodN = method_atom(Method0),
+            URL = url_string(headers_request_filter_host(Host), URLPath),
+            RequestHeaders = HeadersIncomingN,
+            RequestBody = if
+                MethodN =:= get ->
+                    <<>>;
+                true ->
+                    Request
+            end,
+            case ?MODULE_HACKNEY:request(MethodN, URL,
+                                         RequestHeaders, RequestBody,
+                                         [with_body,
+                                          {connect_timeout, Timeout},
+                                          {recv_timeout, Timeout},
+                                          {pool, Profile}]) of
+                {ok, StatusCode, ResponseHeaders, Response} ->
+                    HeadersOutgoing0 = [{cloudi_string:lowercase(Kout),
+                                         Vout} ||
+                                        {Kout, Vout} <- ResponseHeaders],
+                    HeadersOutgoing1 = [{<<"status">>,
+                                         erlang:integer_to_binary(StatusCode)} |
+                                        HeadersOutgoing0],
+                    HeadersOutgoingN = lists:keysort(1, HeadersOutgoing1),
+                    {StatusCode, HeadersOutgoingN, Response};
                 {error, _} = Error ->
                     {undefined, <<>>, Error}
             end;
         {error, _} = Error ->
             {undefined, <<>>, Error}
     end.
+
+method_atom("HEAD") -> head;
+method_atom("GET") -> get;
+method_atom("PUT") -> put;
+method_atom("POST") -> post;
+method_atom("TRACE") -> trace;
+method_atom("OPTIONS") -> options;
+method_atom("DELETE") -> delete.
 
 result({{ok, {error, _} = Error}, NewAgent}) ->
     {Error, NewAgent};
