@@ -104,10 +104,8 @@ end_per_testcase(_TestCase, Config) ->
 t_cowboy1_client_basic_1(Config) ->
     cowboy_client_basic_1(Config).
 
-t_cowboy2_client_basic_1(_Config) ->
-    %XXX cowboy2 update
-    %cowboy_client_basic_1(Config).
-    ok.
+t_cowboy2_client_basic_1(Config) ->
+    cowboy_client_basic_1(Config).
 
 t_elli_client_basic_1(Config) ->
     elli_client_basic_1(Config).

@@ -7,6 +7,7 @@
     * Change cloudi_service_http_client response header keys
       to be sorted in lowercase (in ResponseInfo)
     * Fixes for cloudi_service_http_cowboy websocket use
+    * Fix cloudi_service_http_cowboy connection reuse config
 
 2021-04-19 Michael Truog   <mjtruog at protonmail dot com>
 

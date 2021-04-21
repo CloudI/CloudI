@@ -506,7 +506,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                         {certfile, CertFile}
                     ] ++ NewSSLOpts,
                     max_connections => MaxConnections,
-                    connection_type => worker,
+                    connection_type => supervisor,
                     num_acceptors => 10
                 },
                 #{
@@ -534,7 +534,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                         {nodelay, NoDelay}
                     ],
                     max_connections => MaxConnections,
-                    connection_type => worker,
+                    connection_type => supervisor,
                     num_acceptors => 10
                 },
                 #{
