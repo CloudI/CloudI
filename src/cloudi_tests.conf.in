@@ -269,7 +269,8 @@
         "script-src 'unsafe-inline' 'unsafe-eval' 'self'; "
         "style-src 'unsafe-inline' 'unsafe-eval' 'self'; "
         "object-src 'none'; "
-        "worker-src 'none'"},
+        "worker-src 'none'; "
+        "connect-src 'self' ws:"},
        {set_x_content_type_options, true},
        {set_x_xss_protection, true}]},
      {timeout_sync, 30000}],
