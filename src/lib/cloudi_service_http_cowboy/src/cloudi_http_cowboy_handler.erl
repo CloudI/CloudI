@@ -1395,14 +1395,19 @@ websocket_disconnect_request(OutputType)
     when OutputType =:= list ->
     "DISCONNECT".
 
+websocket_disconnect_request_info_reason(Reason)
+    when is_atom(Reason) ->
+    erlang:atom_to_binary(Reason, utf8);
+websocket_disconnect_request_info_reason({ReasonType, ReasonDescription}) ->
+    erlang:iolist_to_binary([erlang:atom_to_binary(ReasonType, utf8), <<",">>,
+                             erlang:atom_to_binary(ReasonDescription, utf8)]);
 websocket_disconnect_request_info_reason({remote, CloseCode, CloseBinary})
     when is_integer(CloseCode) ->
     erlang:iolist_to_binary([<<"remote,">>,
                              erlang:integer_to_binary(CloseCode), <<",">>,
                              CloseBinary]);
-websocket_disconnect_request_info_reason({ReasonType, ReasonDescription}) ->
-    erlang:iolist_to_binary([erlang:atom_to_binary(ReasonType, utf8), <<",">>,
-                             erlang:atom_to_binary(ReasonDescription, utf8)]).
+websocket_disconnect_request_info_reason({crash, _, _}) ->
+    <<"crash">>.
 
 websocket_disconnect_request_info(Reason, RequestInfo, OutputType)
     when OutputType =:= external; OutputType =:= binary ->

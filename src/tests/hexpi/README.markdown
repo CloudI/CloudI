@@ -7,9 +7,10 @@ Erlang CloudI service (`cloudi_service_test_hexpi`).
 `cloudi_service_map_reduce` behaviour to manage the map-reduce input/output
 of the iterative algorithm.
 
-The C++ CloudI service contains the iterative algorithm for calculating
-hexadecimal digits of PI (the Bailey–Borwein–Plouffe formula).
-`cloudi_service_test_hexpi` will adjust the number of digits requested
+The C++ CloudI service contains source code for calculating
+hexadecimal digits of PI (implementing the Bailey–Borwein–Plouffe formula)
+which is able to calculate separate segments of PI concurrently.
+`cloudi_service_test_hexpi` adjusts the number of digits requested
 based on the amount of time previous service requests took for their
 calculations.
 

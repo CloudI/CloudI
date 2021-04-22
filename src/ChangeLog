@@ -4,6 +4,7 @@
 2021-04-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_http_cowboy websocket_ping argument
+    * Fix cloudi_service_http_cowboy websocket_disconnect arguments
 
 2021-04-21 Michael Truog   <mjtruog at protonmail dot com>
 
@@ -12,7 +13,7 @@
     * Change cloudi_service_http_cowboy RequestInfo header keys to sorted order
     * Fix cloudi_service_map_reduce retry_delay by processing
       the delay asynchronously
-    * Fix integration tests configuration content-security-policy 
+    * Fix integration tests configuration content-security-policy
       for using websockets
 
 2021-04-20 Michael Truog   <mjtruog at protonmail dot com>
