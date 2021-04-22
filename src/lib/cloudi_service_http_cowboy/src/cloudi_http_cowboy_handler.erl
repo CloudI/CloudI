@@ -581,7 +581,7 @@ websocket_info({websocket_ping, WebSocketPing},
         WebSocketPingStatus =:= received ->
             erlang:send_after(WebSocketPing, self(),
                               {websocket_ping, WebSocketPing}),
-            {[{ping, <<>>}],
+            {[{ping, <<0>>}],
              State#cowboy_state{websocket_ping = undefined}}
     end;
 
