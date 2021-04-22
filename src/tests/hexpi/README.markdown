@@ -24,8 +24,8 @@ using the `cloudi_service_filesystem` Erlang service in hexpi.txt
 Python example:
 
     >>> hexpi = '3.243f6a8885a3'
-    >>> pi = int(hexpi[0]) + sum(
-            [int(c, 16) / (16.0 ** i) for i, c in enumerate(hexpi[2:], start=1)]
-        )
+    >>> pi = int(hexpi[0], 16) + sum([
+            int(c, 16) / (16.0 ** i) for i, c in enumerate(hexpi[2:], start=1)
+        ])
     >>> import math
-    >>> math.pi == round(pi, 15)
+    >>> math.pi == pi

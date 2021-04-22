@@ -3,14 +3,19 @@
 
 2021-04-21 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Change cloudi_service_http_cowboy headers manipulation to use
+      maps while keeping the same service request/response info handling
+    * Change cloudi_service_http_cowboy RequestInfo header keys to sorted order
     * Fix cloudi_service_map_reduce retry_delay by processing
       the delay asynchronously
 
 2021-04-20 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add hackney support to cloudi_service_http_client
-    * Change cloudi_service_http_client response header keys
-      to be sorted in lowercase (in ResponseInfo)
+    * Change cloudi_service_http_client ResponseInfo header keys
+      to be sorted in lowercase
+    * Change cloudi_service_http_client inets httpc use
+      back to using HTTP/1.1
     * Fixes for cloudi_service_http_cowboy websocket use
     * Fix cloudi_service_http_cowboy connection reuse config
 
@@ -28,7 +33,7 @@
 
 2021-04-18 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Change required Erlang/OTP to >= 21.0
+    * Change the required Erlang/OTP version to be >= 21.0
     * Fix epgsql protocol.hrl name for scope script
     * Update reltool_util
 

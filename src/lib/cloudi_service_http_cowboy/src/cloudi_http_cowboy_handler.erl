@@ -57,15 +57,21 @@
 -record(websocket_state,
     {
         % for service requests entering CloudI
-        path :: string(),
+        path
+            :: string(),
         websocket_connect_trans_id = undefined
             :: undefined | cloudi_service:trans_id(),
-        name_incoming :: string(),
-        name_outgoing :: cloudi_service:service_name(),
-        request_info :: list({binary(), binary()}) | binary(),
+        name_incoming
+            :: string(),
+        name_outgoing
+            :: cloudi_service:service_name(),
+        request_info
+            :: #{binary() := binary()} | binary() | list({binary(), binary()}),
         % for a service request exiting CloudI
-        response_pending = false :: boolean(),
-        response_timer = undefined :: undefined | reference(),
+        response_pending = false
+            :: boolean(),
+        response_timer = undefined
+            :: undefined | reference(),
         request_pending = undefined
             :: undefined | cloudi:message_service_request(),
         response_lookup
@@ -139,16 +145,16 @@ websocket_init(#cowboy_state{
     SubscribeWebSocket = lists:prefix(Prefix, NameWebSocket),
     HeadersIncomingN = if
         SubscribeWebSocket =:= true ->
-            [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
-             HeadersIncoming0];
+            HeadersIncoming0#{
+                <<"service-name">> => erlang:list_to_binary(NameWebSocket)};
         SubscribeWebSocket =:= false ->
             HeadersIncoming0
     end,
     RequestInfo = if
         (OutputType =:= external) orelse (OutputType =:= binary) ->
-            headers_external_incoming(HeadersIncomingN);
+            headers_list_external_incoming(headers_to_list(HeadersIncomingN));
         (OutputType =:= internal) orelse (OutputType =:= list) ->
-            HeadersIncomingN
+            headers_to_list(HeadersIncomingN)
     end,
     WebSocketPingStatus = if
         WebSocketPing =:= undefined ->
@@ -601,7 +607,7 @@ upgrade_to_websocket(Req,
                          use_client_ip_prefix = UseClientIpPrefix,
                          use_method_suffix = UseMethodSuffix} = State) ->
     Method = cloudi_x_cowboy_req:method(Req),
-    HeadersIncoming0 = maps:to_list(cloudi_x_cowboy_req:headers(Req)),
+    HeadersIncoming0 = cloudi_x_cowboy_req:headers(Req),
     PathRaw = cloudi_x_cowboy_req:path(Req),
     {ClientIpAddr, ClientPort} = Client = cloudi_x_cowboy_req:peer(Req),
     NameIncoming = service_name_incoming(UseClientIpPrefix,
@@ -621,23 +627,19 @@ upgrade_to_websocket(Req,
     PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
     PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
     PeerPort = erlang:integer_to_binary(ClientPort),
-    HeadersIncoming1 = [{<<"peer">>, PeerShort},
-                        {<<"peer-port">>, PeerPort},
-                        {<<"source-address">>, PeerLong},
-                        {<<"source-port">>, PeerPort},
-                        {<<"url-path">>, PathRaw} | HeadersIncoming0],
-    HeadersIncomingN = if
+    HeadersIncoming1 = if
         SetXForwardedFor =:= true ->
-            case lists:keyfind(<<"x-forwarded-for">>, 1, HeadersIncoming0) of
-                false ->
-                    [{<<"x-forwarded-for">>, PeerShort} | HeadersIncoming1];
-                _ ->
-                    HeadersIncoming1
-                    
-            end;
+            header_set_if_not(<<"x-forwarded-for">>, PeerShort,
+                              HeadersIncoming0);
         SetXForwardedFor =:= false ->
-            HeadersIncoming1
+            HeadersIncoming0
     end,
+    HeadersIncomingN = HeadersIncoming1#{
+                           <<"peer">> => PeerShort,
+                           <<"peer-port">> => PeerPort,
+                           <<"source-address">> => PeerLong,
+                           <<"source-port">> => PeerPort,
+                           <<"url-path">> => PathRaw},
     ResponseLookup = if
         WebSocketProtocol /= undefined ->
             #{};
@@ -667,10 +669,10 @@ upgrade_to_websocket(Req,
                             queued = Queued}}}.
 
 header_accept_check(Headers, ContentTypesAccepted) ->
-    case lists:keyfind(<<"accept">>, 1, Headers) of
-        false ->
+    case maps:find(<<"accept">>, Headers) of
+        error ->
             true;
-        {<<"accept">>, Value} ->
+        {ok, Value} ->
             case binary:match(Value, ContentTypesAccepted) of
                 nomatch ->
                     false;
@@ -680,36 +682,34 @@ header_accept_check(Headers, ContentTypesAccepted) ->
     end.
 
 header_content_type(Headers) ->
-    case lists:keyfind(<<"content-type">>, 1, Headers) of
-        false ->
+    case maps:find(<<"content-type">>, Headers) of
+        error ->
             <<>>;
-        {<<"content-type">>, Value} ->
+        {ok, Value} ->
             hd(binary:split(Value, <<";">>))
     end.
 
+headers_to_list(Headers) ->
+    maps:fold(fun(Key, Value, HeadersList) ->
+        lists:ukeymerge(1, HeadersList, [{Key, Value}])
+    end, [], Headers).
+
 % format for external services, http headers passed as key-value pairs
-headers_external_incoming(L) ->
-    cloudi_request_info:key_value_new(L, text_pairs).
+headers_list_external_incoming(HeadersList) ->
+    cloudi_request_info:key_value_new(HeadersList, text_pairs).
 
 headers_external_outgoing(<<>>) ->
-    [];
-headers_external_outgoing([] = ResponseInfo) ->
-    ResponseInfo;
-headers_external_outgoing([{_, _} | _] = ResponseInfo) ->
-    % assumes key/value within tuple are iodata()
-    % (cowboy can error if this is not true)
-    ResponseInfo;
+    #{};
+headers_external_outgoing([]) ->
+    #{};
 headers_external_outgoing(ResponseInfo)
-    when is_binary(ResponseInfo) ->
-    cloudi_response_info:key_value_parse(ResponseInfo, list).
+    when is_binary(ResponseInfo); is_list(ResponseInfo) ->
+    cloudi_response_info:key_value_parse(ResponseInfo).
 
 header_set_if_not(Key, Value, Headers) ->
-    case lists:keyfind(Key, 1, Headers) of
-        {_, _} ->
-            Headers;
-        false ->
-            [{Key, Value} | Headers]
-    end.
+    maps:update_with(Key, fun(ValueOld) ->
+        ValueOld
+    end, Value, Headers).
 
 get_query_string_external(QsVals) ->
     cloudi_request_info:key_value_new(QsVals, text_pairs).
@@ -777,14 +777,13 @@ handle(Req0,
            use_method_suffix = UseMethodSuffix} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     MethodHTTP = cloudi_x_cowboy_req:method(Req0),
-    HeadersIncoming0 = maps:to_list(cloudi_x_cowboy_req:headers(Req0)),
+    HeadersIncoming0 = cloudi_x_cowboy_req:headers(Req0),
     Method = if
         UseXMethodOverride =:= true ->
-            case lists:keyfind(<<"x-http-method-override">>, 1,
-                               HeadersIncoming0) of
-                {_, MethodOverride} ->
+            case maps:find(<<"x-http-method-override">>, HeadersIncoming0) of
+                {ok, MethodOverride} ->
                     MethodOverride;
-                false ->
+                error ->
                     MethodHTTP
             end;
         UseXMethodOverride =:= false ->
@@ -859,29 +858,6 @@ handle(Req0,
                     NameIncoming ++ [$/ |
                         cloudi_string:lowercase(erlang:binary_to_list(Method))]
             end,
-            PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-            PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
-            PeerPort = erlang:integer_to_binary(ClientPort),
-            HeadersIncoming1 = [{<<"peer">>, PeerShort},
-                                {<<"peer-port">>, PeerPort},
-                                {<<"source-address">>, PeerLong},
-                                {<<"source-port">>, PeerPort},
-                                {<<"url-path">>, PathRaw} |
-                                HeadersIncoming0],
-            HeadersIncomingN = if
-                SetXForwardedFor =:= true ->
-                    case lists:keyfind(<<"x-forwarded-for">>, 1,
-                                       HeadersIncoming0) of
-                        false ->
-                            [{<<"x-forwarded-for">>, PeerShort} |
-                             HeadersIncoming1];
-                        _ ->
-                            HeadersIncoming1
-                            
-                    end;
-                SetXForwardedFor =:= false ->
-                    HeadersIncoming1
-            end,
             Body = if
                 MethodHTTP =:= <<"GET">> ->
                     % only the query string is provided as the
@@ -904,6 +880,22 @@ handle(Req0,
                             'normal'
                     end
             end,
+            PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
+            PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
+            PeerPort = erlang:integer_to_binary(ClientPort),
+            HeadersIncoming1 = if
+                SetXForwardedFor =:= true ->
+                    header_set_if_not(<<"x-forwarded-for">>, PeerShort,
+                                      HeadersIncoming0);
+                SetXForwardedFor =:= false ->
+                    HeadersIncoming0
+            end,
+            HeadersIncomingN = HeadersIncoming1#{
+                                   <<"peer">> => PeerShort,
+                                   <<"peer-port">> => PeerPort,
+                                   <<"source-address">> => PeerLong,
+                                   <<"source-port">> => PeerPort,
+                                   <<"url-path">> => PathRaw},
             case handle_request(NameOutgoing, HeadersIncomingN,
                                 Body, Req0, State) of
                 {{cowboy_response, HeadersOutgoing, Response},
@@ -929,7 +921,7 @@ handle(Req0,
                             % currently not providing a list of valid methods
                             % (a different HTTP status code is a better
                             %  choice, since this service name may not exist)
-                            HeadersOutgoing = maps:from_list([{<<"allow">>, <<"">>}]),
+                            HeadersOutgoing = #{<<"allow">> => <<"">>},
                             cloudi_x_cowboy_req:reply(HttpCode,
                                                       HeadersOutgoing,
                                                       Req1);
@@ -993,7 +985,7 @@ handle_request(Name, Headers, 'multipart', ReqN,
             PartBodyOpts = #{length => LengthPartBodyRead,
                              timeout => TimeoutPartBody},
             MultipartId = erlang:list_to_binary(erlang:pid_to_list(Self)),
-            handle_request_multipart(Name, lists:keysort(1, Headers),
+            handle_request_multipart(Name, Headers,
                                      Destination, Self,
                                      PartHeaderOpts, PartBodyOpts,
                                      MultipartId, ReqN, State);
@@ -1007,9 +999,9 @@ handle_request(Name, Headers, Body, ReqN,
                    output_type = OutputType} = State) ->
     RequestInfo = if
         (OutputType =:= external) orelse (OutputType =:= binary) ->
-            headers_external_incoming(Headers);
+            headers_list_external_incoming(headers_to_list(Headers));
         (OutputType =:= internal) orelse (OutputType =:= list) ->
-            Headers
+            headers_to_list(Headers)
     end,
     Request = if
         (OutputType =:= external) orelse (OutputType =:= internal) orelse
@@ -1033,7 +1025,7 @@ handle_request_multipart(Name, Headers,
     case cloudi_x_cowboy_req:read_part(Req0, PartHeaderOpts) of
         {ok, HeadersPart, ReqN} ->
             handle_request_multipart([], 0, Name, Headers,
-                                     maps:to_list(HeadersPart),
+                                     HeadersPart,
                                      Destination, Self,
                                      PartHeaderOpts, PartBodyOpts,
                                      MultipartId, ReqN, State);
@@ -1062,10 +1054,7 @@ handle_request_multipart(TransIdList, I, Name, Headers, HeadersPart,
                                      MultipartId, ReqN, StateNew)
     end.
 
-headers_merge(HeadersPart, Headers) ->
-    lists:keymerge(1, lists:keysort(1, HeadersPart), Headers).
-
-handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
+handle_request_multipart_send(PartBodyList, I, Name, Headers0, HeadersPart,
                               Destination, Self, PartHeaderOpts, PartBodyOpts,
                               MultipartId, Req0,
                               #cowboy_state{
@@ -1081,11 +1070,11 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
                     erlang:iolist_to_binary(lists:reverse([PartBodyChunkLast |
                                                            PartBodyList]))
             end,
-            {HeadersPartNextN,
+            {HeadersPartNext,
              ReqN} = case cloudi_x_cowboy_req:read_part(Req1,
                                                         PartHeaderOpts) of
-                {ok, HeadersPartNext0, Req2} ->
-                    {maps:to_list(HeadersPartNext0), Req2};
+                {ok, HeadersPartNextValue, Req2} ->
+                    {HeadersPartNextValue, Req2};
                 {done, Req2} ->
                     {undefined, Req2}
             end,
@@ -1094,28 +1083,28 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
             % information to handle the sequence concurrently
             % (use multipart_destination_lock (defaults to true) if you need
             %  the same destination used for each part)
-            HeadersPart1 = headers_merge(HeadersPart0, Headers),
-            HeadersPartN = if
-                HeadersPartNextN =:= undefined ->
-                    [% socket pid as a string
-                     {<<"x-multipart-id">>, MultipartId},
-                     % 0-based index
-                     {<<"x-multipart-index">>, erlang:integer_to_binary(I)},
-                     % yes, this is the last part
-                     {<<"x-multipart-last">>, <<"true">>} |
-                     HeadersPart1];
+            Headers1 = maps:merge(Headers0, HeadersPart),
+            HeadersN = if
+                HeadersPartNext =:= undefined ->
+                    Headers1#{
+                        % socket pid as a string
+                        <<"x-multipart-id">> => MultipartId,
+                        % 0-based index
+                        <<"x-multipart-index">> => erlang:integer_to_binary(I),
+                        % yes, this is the last part
+                        <<"x-multipart-last">> => <<"true">>};
                 true ->
-                    [% socket pid as a string
-                     {<<"x-multipart-id">>, MultipartId},
-                     % 0-based index
-                     {<<"x-multipart-index">>, erlang:integer_to_binary(I)} |
-                     HeadersPart1]
+                    Headers1#{
+                        % socket pid as a string
+                        <<"x-multipart-id">> => MultipartId,
+                        % 0-based index
+                        <<"x-multipart-index">> => erlang:integer_to_binary(I)}
             end,
             RequestInfo = if
                 (OutputType =:= external) orelse (OutputType =:= binary) ->
-                    headers_external_incoming(HeadersPartN);
+                    headers_list_external_incoming(headers_to_list(HeadersN));
                 (OutputType =:= internal) orelse (OutputType =:= list) ->
-                    HeadersPartN
+                    headers_to_list(HeadersN)
             end,
             Request = if
                 (OutputType =:= external) orelse
@@ -1128,10 +1117,10 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
             SendResult = send_async_minimal(Dispatcher, Name,
                                             RequestInfo, Request,
                                             TimeoutAsync, Destination, Self),
-            {SendResult, HeadersPartNextN, ReqN, State};
+            {SendResult, HeadersPartNext, ReqN, State};
         {more, PartBodyChunk, ReqN} ->
             handle_request_multipart_send([PartBodyChunk | PartBodyList],
-                                          I, Name, Headers, HeadersPart0,
+                                          I, Name, Headers0, HeadersPart,
                                           Destination, Self,
                                           PartHeaderOpts, PartBodyOpts,
                                           MultipartId, ReqN, State)
@@ -1148,10 +1137,10 @@ handle_request_multipart_receive_results([{ResponseInfo, Response, _} |
                                          SuccessList, ErrorList,
                                          Req, State) ->
     HeadersOutgoing = headers_external_outgoing(ResponseInfo),
-    Status = case lists:keyfind(<<"status">>, 1, HeadersOutgoing) of
-        {_, V} ->
+    Status = case maps:find(<<"status">>, HeadersOutgoing) of
+        {ok, V} ->
             erlang:binary_to_integer(hd(binary:split(V, <<" ">>)));
-        false ->
+        error ->
             200
     end,
     if
@@ -1199,25 +1188,25 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
          is_list(Response)) ->
             erlang:iolist_to_binary(Response)
     end,
-    {HttpCode, HeadersOutgoing2} = case lists:keytake(<<"status">>, 1,
-                                                      HeadersOutgoing0) of
-        false ->
+    {HttpCode,
+     HeadersOutgoing2} = case maps:take(<<"status">>, HeadersOutgoing0) of
+        error ->
             {200, HeadersOutgoing0};
-        {value, {_, Status}, HeadersOutgoing1}
+        {Status, HeadersOutgoing1}
             when is_binary(Status) ->
             {erlang:binary_to_integer(hd(binary:split(Status, <<" ">>))),
              HeadersOutgoing1}
     end,
     HeadersOutgoing3 = if
-        HeadersOutgoing2 =/= [] ->
+        map_size(HeadersOutgoing2) > 0 ->
             HeadersOutgoing2;
         ContentTypeForced =/= undefined ->
-            [{<<"content-type">>, ContentTypeForced}];
+           #{<<"content-type">> => ContentTypeForced};
         true ->
             Extension = filename:extension(NameIncoming),
             if
                 Extension == [] ->
-                    [{<<"content-type">>, <<"text/html">>}];
+                    #{<<"content-type">> => <<"text/html">>};
                 true ->
                     {AttachmentGuess,
                      ContentType} = case cloudi_response_info:
@@ -1231,23 +1220,23 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
                     if
                         AttachmentGuess =:= attachment,
                         HttpCode >= 200, HttpCode < 300, HttpCode /= 204 ->
-                            [{<<"content-disposition">>,
-                              ["attachment; filename=\"",
-                               filename:basename(NameIncoming), "\""]},
-                             {<<"content-type">>, ContentType}];
+                            ContentDisposition = erlang:iolist_to_binary(
+                                ["attachment; filename=\"",
+                                 filename:basename(NameIncoming), "\""]),
+                            #{<<"content-disposition">> => ContentDisposition,
+                              <<"content-type">> => ContentType};
                         true ->
-                            [{<<"content-type">>, ContentType}]
+                            #{<<"content-type">> => ContentType}
                     end
             end
     end,
     {ContentTypeHTML,
-     ContentTypeSet} = case lists:keyfind(<<"content-type">>, 1,
-                                          HeadersOutgoing3) of
-        {_,  <<"text/html", _/binary>>} ->
+     ContentTypeSet} = case maps:find(<<"content-type">>, HeadersOutgoing3) of
+        {ok, <<"text/html", _/binary>>} ->
             {true, true};
-        {_,  <<_/binary>>} ->
+        {ok, <<_/binary>>} ->
             {false, true};
-        false ->
+        error ->
             {false, false}
     end,
     HeadersOutgoing4 = if
@@ -1292,9 +1281,8 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
         ContentTypeHTML =:= false ->
             HeadersOutgoing4
     end,
-    ResponseHeadersOutgoing = maps:from_list(HeadersOutgoingN),
     ReqN = cloudi_x_cowboy_req:reply(HttpCode,
-                                     ResponseHeadersOutgoing,
+                                     HeadersOutgoingN,
                                      ResponseBinary,
                                      Req0),
     {HttpCode, ReqN}.
@@ -1331,12 +1319,12 @@ websocket_terminate_check([]) ->
     false;
 websocket_terminate_check(ResponseInfo) ->
     HeadersOutgoing = headers_external_outgoing(ResponseInfo),
-    case lists:keyfind(<<"connection">>, 1, HeadersOutgoing) of
-        {<<"connection">>, <<"close">>} ->
+    case maps:find(<<"connection">>, HeadersOutgoing) of
+        {ok, <<"close">>} ->
             true;
-        {<<"connection">>, _} ->
+        {ok, _} ->
             false;
-        false ->
+        error ->
             false
     end.
 
@@ -1409,22 +1397,25 @@ websocket_disconnect_request(OutputType)
 
 websocket_disconnect_request_info_reason({remote, CloseCode, CloseBinary})
     when is_integer(CloseCode) ->
-    [<<"remote,">>,
-     erlang:integer_to_binary(CloseCode), <<",">>,
-     CloseBinary];
+    erlang:iolist_to_binary([<<"remote,">>,
+                             erlang:integer_to_binary(CloseCode), <<",">>,
+                             CloseBinary]);
 websocket_disconnect_request_info_reason({ReasonType, ReasonDescription}) ->
-    [erlang:atom_to_binary(ReasonType, utf8), <<",">>,
-     erlang:atom_to_binary(ReasonDescription, utf8)].
+    erlang:iolist_to_binary([erlang:atom_to_binary(ReasonType, utf8), <<",">>,
+                             erlang:atom_to_binary(ReasonDescription, utf8)]).
 
 websocket_disconnect_request_info(Reason, RequestInfo, OutputType)
     when OutputType =:= external; OutputType =:= binary ->
-    erlang:iolist_to_binary([<<"disconnection">>, 0,
-                             websocket_disconnect_request_info_reason(Reason),
-                             0, RequestInfo]);
+    KeyValues0 = headers_external_outgoing(RequestInfo),
+    KeyValuesN = KeyValues0#{<<"disconnection">> =>
+                             websocket_disconnect_request_info_reason(Reason)},
+    headers_list_external_incoming(headers_to_list(KeyValuesN));
 websocket_disconnect_request_info(Reason, RequestInfo, OutputType)
     when OutputType =:= internal; OutputType =:= list ->
-    [{<<"disconnection">>,
-      websocket_disconnect_request_info_reason(Reason)} | RequestInfo].
+    lists:ukeymerge(1,
+                    [{<<"disconnection">>,
+                      websocket_disconnect_request_info_reason(Reason)}],
+                    RequestInfo).
 
 websocket_disconnect_check(undefined, _, _) ->
     ok;
