@@ -9,10 +9,9 @@ of the iterative algorithm.
 
 The C++ CloudI service contains source code for calculating
 hexadecimal digits of PI (implementing the Bailey–Borwein–Plouffe formula)
-which is able to calculate separate segments of PI concurrently.
+which is able to determine separate segments of PI digits concurrently.
 `cloudi_service_test_hexpi` adjusts the number of digits requested
-based on the amount of time previous service requests took for their
-calculations.
+based on the amount of time previous service request responses took.
 
 When the hexpi C++ CloudI service and Erlang CloudI service are ran together
 with the other integration tests, each segment of PI in hexadecimal is stored
@@ -24,9 +23,9 @@ using the `cloudi_service_filesystem` Erlang service in hexpi.txt
 
 Python example:
 
-    >>> hexpi = '3.243f6a8885a3'
-    >>> pi = int(hexpi[0], 16) + sum([
-            int(c, 16) / (16.0 ** i) for i, c in enumerate(hexpi[2:], start=1)
-        ])
-    >>> import math
-    >>> math.pi == pi
+    hexpi = '3.243f6a8885a3'
+    pi = int(hexpi[0], 16) + sum([
+        int(c, 16) / (16.0 ** i) for i, c in enumerate(hexpi[2:], start=1)
+    ])
+    import math
+    math.pi == pi
