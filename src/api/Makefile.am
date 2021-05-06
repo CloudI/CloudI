@@ -1,6 +1,9 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
+if ATS2_SUPPORT
+    ATS2_SUBDIR = ats/v2
+endif
 if C_SUPPORT
     C_SUBDIR = c
 endif
@@ -31,7 +34,8 @@ endif
 if RUBY_SUPPORT
     RUBY_SUBDIR = ruby
 endif
-SUBDIRS = $(C_SUBDIR) erlang $(GO_SUBDIR) $(HASKELL_SUBDIR) \
+SUBDIRS = $(C_SUBDIR) \
+          $(ATS2_SUBDIR) erlang $(GO_SUBDIR) $(HASKELL_SUBDIR) \
           $(JAVA_SUBDIR) $(JAVASCRIPT_SUBDIR) \
           $(OCAML_SUBDIR) \
           $(PERL_SUBDIR) $(PHP_SUBDIR) \

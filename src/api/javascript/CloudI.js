@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -91,7 +91,7 @@ if (Erlang.nodejs_version_after('10.0.0',true)) {
             //
             // Until the exception handling of the domain module is
             // provided by a different module (like async_hooks) or
-            // exceptions (throw/try/catch) are removed from Javascript,
+            // exceptions (throw/try/catch) are removed from JavaScript,
             // the use of the domain module needs to remain
             // (to remain consistent with other CloudI API implementations).
             // The stderr runtime deprecation information is ignored

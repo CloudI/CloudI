@@ -1,6 +1,9 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
+if ATS2_SUPPORT
+    ATS2_SUBDIR = ats/v2
+endif
 if C_SUPPORT
     C_SUBDIR = c
 endif
@@ -34,7 +37,7 @@ endif
 if RUBY_SUPPORT
     RUBY_INSTALL_HOOK = ruby-install
 endif
-SUBDIRS = $(C_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
+SUBDIRS = $(ATS2_SUBDIR) $(C_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
           $(JAVA_SUBDIR) $(OCAML_SUBDIR) erlang
 DIST_SUBDIRS = $(SUBDIRS)
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count"

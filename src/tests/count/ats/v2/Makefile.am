@@ -1,0 +1,14 @@
+#-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
+# ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
+
+instdir = "$(cloudi_prefix)/tests/count"
+inst_PROGRAMS = count_ats2
+CLEANFILES = main_dats.c
+count_ats2_SOURCES = main_dats.c
+count_ats2_CFLAGS = $(ATS2_CFLAGS)
+count_ats2_LDADD = $(top_builddir)/api/ats/v2/libcloudi_ats2.la -lstdc++
+
+%_dats.c: %.dats
+	PATSHOME=$(PATSHOME) $(ATS2CC) $(ATS2CFLAGS) \
+                         -IIATS $(top_srcdir)/api/ats/v2/ -ccats $<
+

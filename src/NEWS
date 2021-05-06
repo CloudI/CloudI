@@ -97,7 +97,7 @@ September 16, 2018
     cloudi_service_router as a better alternative
   * cloudi_crdt had small additions and an important bugfix
   * Added JSON support to cloudi_service_api_requests
-  * Fixed Javascript CloudI API service termination (no delay now)
+  * Fixed JavaScript CloudI API service termination (no delay now)
   * Added support in Python, Python/C and Java CloudI APIs for
     non-member (static) functions (passed to the subscribe function)
   * Erlang/OTP 21.x compatibility
@@ -121,7 +121,7 @@ February 27, 2018
     retry if the pattern_pid() was not provided explicitly
   * The file_size_limit argument was added to cloudi_service_queue
     with the default value of 128MB
-  * Javascript CloudI API had a busy-wait bug causing excessive CPU
+  * JavaScript CloudI API had a busy-wait bug causing excessive CPU
     consumption which has been fixed
   * Java 9 support was added
   * OCaml >= 4.06 support was fixed by including num as a
@@ -356,7 +356,7 @@ December 23, 2015
     globally unique transaction ids
   * The CloudI logging output now has an entry for the function/arity info
     which is captured in Elixir and can be provided in Erlang (until EEP45)
-  * Javascript CloudI API now works properly with node.js version > 0.12.1
+  * JavaScript CloudI API now works properly with node.js version > 0.12.1
   * Loadtests were ran (https://cloudi.org/faq.html#5_LoadTesting)
   * Bugs were fixed and other improvements were added
     (see the ChangeLog for more detail)

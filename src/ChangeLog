@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-05-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the beginnings of an ATS2/Postiats CloudI API implementation
+    * Fix capitalization for mentions of JavaScript
+
 2021-04-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_http_cowboy websocket_ping argument
@@ -767,7 +772,7 @@
 
     * Fix Python 3.8 compatibility
     * Fix Haskell GHC 8.10.1 compatibility
-    * Fix Javascript node.js v10 Buffer warning in messaging integration test
+    * Fix JavaScript node.js v10 Buffer warning in messaging integration test
 
 2020-05-06 Michael Truog   <mjtruog at protonmail dot com>
 
@@ -792,7 +797,7 @@
     * Simplify the Erlang messaging integration test
       by combining the 4 sequence modules into 1
     * Add an iteration counter to the messaging integration tests in
-      C++, Java, Javascript, Perl, PHP, Python, Ruby
+      C++, Java, JavaScript, Perl, PHP, Python, Ruby
 
 2020-04-22 Michael Truog   <mjtruog at protonmail dot com>
 
@@ -931,7 +936,7 @@
 
 2020-02-10 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Fix Javascript CloudI API deprecation warning output
+    * Fix JavaScript CloudI API deprecation warning output
       (DEP0005 node.js Buffer() is deprecated)
 
 2020-02-05 Michael Truog   <mjtruog at protonmail dot com>
@@ -950,7 +955,7 @@
 2020-01-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve termination handling in the
-      C/C++/Go/Haskell/Java/Javascript/OCaml/Perl/PHP/Python/Ruby CloudI APIs
+      C/C++/Go/Haskell/Java/JavaScript/OCaml/Perl/PHP/Python/Ruby CloudI APIs
       (all terminate if the wrong return type is used
        with error output)
     * Improve external service termination by ensuring the SIGKILL
@@ -1183,7 +1188,7 @@
 2019-09-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Ignore the DEP0097 runtime deprecation in the
-      Javascript CloudI API due to required domain module use
+      JavaScript CloudI API due to required domain module use
       (prevents stderr output logged as ERROR that is not an error)
     * Add Cabal package version check for testing GHC 8.8.1
     * Update Haskell CloudI API dependencies to work with
@@ -1208,7 +1213,7 @@
     * Add OCaml 4.08.0 compatibility
     * Update the Erlang binary term format encoding implementations
       to support Erlang/OTP 23 with the programming languages
-      Go, Haskell, Java, Javascript, OCaml, Perl, PHP, Python and Ruby
+      Go, Haskell, Java, JavaScript, OCaml, Perl, PHP, Python and Ruby
     * Update uuid
 
 2019-04-05 Michael Truog   <mjtruog at protonmail dot com>
@@ -1269,7 +1274,7 @@
 2019-01-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the CloudI API function shutdown to all external service
-      programming languages (C/C++, Go, Haskell, Java, Javascript,
+      programming languages (C/C++, Go, Haskell, Java, JavaScript,
       OCaml, Perl, PHP, Python, Ruby) to allow external services
       a way to have a successful shutdown without using the
       CloudI Service API services_remove
@@ -1556,8 +1561,8 @@
 
 2018-07-07 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Fix Javascript CloudI API termination by closing its socket
-    * Fix Javascript CloudI API version check for compatibility
+    * Fix JavaScript CloudI API termination by closing its socket
+    * Fix JavaScript CloudI API version check for compatibility
 
 2018-07-06 Michael Truog   <mjtruog at protonmail dot com>
 
@@ -1948,7 +1953,7 @@
 2018-01-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Update the Erlang Binary Term Format for
-      Go/Javascript/Perl/PHP/Python/Ruby to encode
+      Go/JavaScript/Perl/PHP/Python/Ruby to encode
       nil/undefined/undef/NULL/None as an undefined Erlang atom
 
 2018-01-06 Michael Truog   <mjtruog at gmail dot com>
@@ -1960,7 +1965,7 @@
 
 2018-01-05 Michael Truog   <mjtruog at gmail dot com>
 
-    * Fix Javascript CloudI API to no longer have a busy-wait
+    * Fix JavaScript CloudI API to no longer have a busy-wait
       problem when blocking on poll
 
 2018-01-04 Michael Truog   <mjtruog at gmail dot com>
@@ -2169,7 +2174,7 @@
     * Service configuration option request_timeout_adjustment was modified to
       use Erlang monotonic time so timeout adjustments are not impacted by any
       OS time changes
-    * Javascript CloudI API now properly handles the request_timeout_adjustment
+    * JavaScript CloudI API now properly handles the request_timeout_adjustment
       service configuration option for service request responses
     * cloudi_service_http_client, cloudi_service_http_cowboy,
       cloudi_service_http_elli now use Erlang monotonic time when reporting
@@ -2569,8 +2574,8 @@
 2017-02-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the messaging integration test in Go
-    * Remove extra nextTick calls within the Javascript CloudI API
-    * Fix a possible buffer underrun in the Javascript CloudI API
+    * Remove extra nextTick calls within the JavaScript CloudI API
+    * Fix a possible buffer underrun in the JavaScript CloudI API
     * The "command" variable in service request handlers within the
       integration tests that are external services has been changed to be
       "request_type" which is more consistent with other source code and
@@ -2593,9 +2598,9 @@
 2017-02-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Updates to the Erlang binary term format encoding used in the
-      CloudI API implementations for Javascript, Perl, PHP, Python, Ruby
+      CloudI API implementations for JavaScript, Perl, PHP, Python, Ruby
         * Bounds checking was added and variable names were improved
-        * Javascript encoding of an object as a map was fixed
+        * JavaScript encoding of an object as a map was fixed
     * The beginnings of a Go CloudI API has been added,
       but is not yet usable (will allow integration tests to be added)
 
@@ -3269,7 +3274,7 @@
 
 2015-12-22 Michael Truog   <mjtruog at gmail dot com>
 
-    * Fix the Javascript CloudI API for using
+    * Fix the JavaScript CloudI API for using
       node.js versions greater than v0.12.1
     * Add 1.5.1 request_rate test results
 

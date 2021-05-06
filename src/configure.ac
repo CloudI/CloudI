@@ -70,6 +70,21 @@ AC_SUBST(cloudi_logdir)
 AC_SUBST(cloudi_confdir)
 AC_SUBST(cloudi_bindir)
 
+AC_MSG_CHECKING([if the ATS2       CloudI API is enabled])
+AC_ARG_ENABLE([ats2-support],
+    [AS_HELP_STRING([--enable-ats2-support],
+                    [Enable the ATS2 CloudI API
+                     @<:@default=no@:>@ ])],
+    [
+    if test "x$enableval" = "xyes"; then
+        ats2_support="true"
+    elif test "x$enableval" = "xno"; then
+        ats2_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-ats2-support])
+    fi
+    ], [ats2_support="false"])
+AC_MSG_RESULT([$ats2_support])
 AC_MSG_CHECKING([if the C          CloudI API is enabled])
 AC_ARG_ENABLE([c-support],
     [AS_HELP_STRING([--enable-c-support],
@@ -84,6 +99,13 @@ AC_ARG_ENABLE([c-support],
         AC_MSG_ERROR([bad value "$enableval" for --enable-c-support])
     fi
     ], [c_support="true"])
+if test "x$ats2_support" = "xtrue" ; then
+    if test "x$c_support" = "xfalse" ; then
+        AC_MSG_RESULT([failed])
+        AC_MSG_ERROR(
+            [--disable-c-support requires --disable-ats2-support])
+    fi
+fi
 AC_MSG_RESULT([$c_support])
 AC_MSG_CHECKING([if the C++        CloudI API is enabled])
 AC_ARG_ENABLE([cxx-support],
@@ -324,7 +346,7 @@ if test "x$want_integration_tests_ran" = "xyes" -a \
 else
     if test "x$want_integration_tests_ran" = "xyes" ; then
         AC_MSG_ERROR([--with-integration-tests-ran=yes requires
-                      C/C++/Java/Javascript/Perl/PHP/Python/Python-C/Ruby
+                      C/C++/Java/JavaScript/Perl/PHP/Python/Python-C/Ruby
                       programming languages are enabled])
     fi
     integration_tests_ran="false"
@@ -456,9 +478,63 @@ AX_BOOST_VERSION()
 AC_SUBST(CXX_DEPENDENCIES_VERSIONS,
          ["boost_$ax_cv_cxx_boost_version"])
 
+# ATS2 CloudI API support
+if test "x$ats2_support" = "xtrue" ; then
+AC_ARG_VAR([PATSHOME],[ATS2/Postiats installation path])
+AC_ARG_VAR([ATS2CC],[ATS2/Postiats patscc executable])
+AC_ARG_VAR([ATS2OPT],[ATS2/Postiats patsopt executable])
+if test "x$PATSHOME" = "x"; then
+    if test "x$ATS2CC" = "x"; then
+        ATS2CC="patscc"
+    fi
+    if test "x$ATS2OPT" = "x"; then
+        ATS2OPT="patsopt"
+    fi
+else
+    if test "x$ATS2CC" = "x"; then
+        ATS2CC="$PATSHOME/bin/patscc"
+    fi
+    if test "x$ATS2OPT" = "x"; then
+        ATS2OPT="$PATSHOME/bin/patsopt"
+    fi
+fi
+AC_PATH_PROGS([ATS2CC],[$ATS2CC])
+if test "x$ATS2CC" = "x"; then
+    AC_MSG_ERROR([patscc not found])
+fi
+AC_PATH_PROGS([ATS2OPT],[$ATS2OPT])
+if test "x$ATS2OPT" = "x"; then
+    AC_MSG_ERROR([patsopt not found])
+fi
+if test "x$PATSHOME" = "x"; then
+    AC_MSG_CHECKING([for ATS2/Postiats PATSHOME])
+    PATSHOME=`$ATS2OPT -h | sed -e '1s/^Usage: \([[^ ]]*\) .*/\1/' -e '1s/\/bin\/patsopt$//' -e '1q'`
+    if test "x$PATSHOME" = "x"; then
+        AC_MSG_ERROR([ATS2/Postiats PATSHOME not found])
+    fi
+    AC_MSG_RESULT($PATSHOME)
+    if test ! -d "$PATSHOME"; then
+        AC_MSG_ERROR([ATS2/Postiats PATSHOME is invalid])
+    fi
+fi
+AC_SUBST(PATSHOME)
+ATS2_CFLAGS="-fexceptions -DATS_MEMALLOC_LIBC -D_XOPEN_SOURCE -I${PATSHOME} -I${PATSHOME}/ccomp/runtime"
+AC_SUBST(ATS2_CFLAGS)
+ATS2_LDFLAGS="-L${PATSHOME}/ccomp/atslib/lib"
+AC_SUBST(ATS2_LDFLAGS)
+ATS2_LIB="-latslib"
+AC_SUBST(ATS2_LIB)
+AC_SUBST(CONFIG_TESTS_ATS2_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_ats2\"}, {dest_refresh, none}, {options, [{nice, 10}]}]],"])
+#AC_SUBST(CONFIG_TESTS_ATS2_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_ats2\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+#AC_SUBST(CONFIG_TESTS_ATS2_MESSAGING, ["[[{prefix, \"/tests/messaging/ats2/\"}, {file_path, \"$cloudi_prefix/tests/messaging/messaging_ats2\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{dispatcher_pid_options, [{priority, low}]}, {nice, 15}, {scope, cloudi_service_test_messaging_ats2}]}]],"])
+#AC_SUBST(CONFIG_TESTS_ATS2_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$cloudi_prefix/tests/msg_size/msg_size_ats2\"}, {options, [{request_timeout_adjustment, true}, {aspects_init_after, [{cloudi_service_test_msg_size, aspect_init}]}, {aspects_request_before, [{cloudi_service_test_msg_size, aspect_request}]}, {aspects_terminate_before, [{cloudi_service_test_msg_size, aspect_terminate}]}, {scope, cloudi_service_test_msg_size}, {nice, 15}]}]],"])
+#AC_SUBST(CONFIG_TESTS_ATS2_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$cloudi_prefix/tests/null/null_ats2\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$cloudi_prefix/tests/null/null_ats2\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+fi
+AM_CONDITIONAL([ATS2_SUPPORT], [test "x$ats2_support" = "xtrue"])
+
 # C/C++ CloudI API support
 if test "x$c_support" = "xtrue" -o "x$cxx_support" = "xtrue" -o \
-        "x$python_c_support" = "xtrue" ; then
+        "x$ats2_support" = "xtrue" -o "x$python_c_support" = "xtrue" ; then
 AX_CLOCK_GETTIME
 AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
     [AC_MSG_ERROR([boost::exception not found])], ,
@@ -556,7 +632,7 @@ AX_CHECK_RQRD_CLASS(java.util.concurrent.ExecutorService, ,
 fi
 AM_CONDITIONAL([JAVA_SUPPORT], [test "x$java_support" = "xtrue"])
 
-# Javascript/node.js CloudI API support
+# JavaScript/node.js CloudI API support
 if test "x$javascript_support" = "xtrue" ; then
 AC_ARG_VAR([NODE],[node executable])
 AC_PATH_PROGS([NODE],[nodejs node])
@@ -846,6 +922,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
     lib/syslog_socket/rebar.config
     api/Makefile
+    api/ats/v2/Makefile
     api/c/Makefile
     api/erlang/Makefile
     api/go/Makefile
@@ -875,6 +952,7 @@ AC_CONFIG_FILES([
     service_api/python/jsonrpclib/Makefile
     tests/Makefile
     tests/count/Makefile
+    tests/count/ats/v2/Makefile
     tests/count/c/Makefile
     tests/count/erlang/Makefile
     tests/count/erlang/src/Makefile

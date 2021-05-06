@@ -376,6 +376,7 @@
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300,
         [{nice, 15}]},
+@CONFIG_TESTS_ATS2_COUNT@
 @CONFIG_TESTS_GO_COUNT@
 @CONFIG_TESTS_HASKELL_COUNT@
 @CONFIG_TESTS_OCAML_COUNT@

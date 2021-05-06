@@ -16,14 +16,14 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `Go >= 1.6`
 * `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
 * `Java`
-* `Javascript/node.js >= 0.12.18`
+* `JavaScript/node.js >= 0.12.18`
 * `OCaml >= 4.03.0`
 * `Perl >= 5.10 (with Compress::Zlib)`
 * `PHP >= 5.3.6`
 * `Python >= 2.7.0`
 * `Ruby >= 1.9.0`
 
-C/C++, Go, Haskell, Java, Javascript, OCaml, Perl, PHP, Python, and Ruby
+C/C++, Go, Haskell, Java, JavaScript, OCaml, Perl, PHP, Python, and Ruby
 all have an implementation of the CloudI API that is completely done in that
 programming language (to avoid extra complexity).
 Python does have a Python with C integration CloudI API that is the
@@ -86,7 +86,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/java/org/cloudi/tests/messaging/Task.java)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/java/org/cloudi/tests/null_/Task.java)
 
-#### [Javascript](https://cloudi.org/faq.html#6_JavaScript)
+#### [JavaScript](https://cloudi.org/faq.html#6_JavaScript)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.js)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js)
