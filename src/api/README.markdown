@@ -12,14 +12,14 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `C`
 * `C++`
 * `Elixir`
-* `Erlang >= 19.3`
-* `Go >= 1.6`
+* `Erlang >= 21.0`
+* `Go >= 1.11`
 * `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
 * `Java`
 * `JavaScript/node.js >= 0.12.18`
 * `OCaml >= 4.03.0`
 * `Perl >= 5.10 (with Compress::Zlib)`
-* `PHP >= 5.3.6`
+* `PHP >= 7.0`
 * `Python >= 2.7.0`
 * `Ruby >= 1.9.0`
 

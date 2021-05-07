@@ -73,8 +73,9 @@ typedef struct cloudi_instance_t
 %}
 
 typedef c_instance = $extype"cloudi_instance_t"
-absvtype instance_vtype(s:t@ype+) = ptr
-vtypedef instance(s:t@ype) = instance_vtype(s)
+absvtype instance_vtype(s:vt@ype+) = ptr
+vtypedef instance(s:vt@ype) = instance_vtype(s)
+vtypedef stateptr(s:vt@ype) = aPtr1(s)
 datavtype
 result (a:vt@ype+) =
   | Ok (a) of (a)
@@ -102,11 +103,15 @@ c_callback =
      ptr,
      ptr) -> void
 
-(* XXX check usage *)
 datavtype
 response_ptr =
-  | String of (string)
-  | Ptr of (ptr, uint32)
+  | String of (string)   (* string literal/constant *)
+  | Ptr of (ptr, uint32) (* ptr to be freed *)
+
+fn
+Strptr
+    (str: Strptr1): response_ptr
+
 datavtype
 response =
   | Response of (response_ptr)
@@ -116,10 +121,12 @@ response =
   | Null of ()
   | NullError of (string)
 vtypedef Response = response
+
+exception Terminate of ()
 exception FatalError of ()
 
 typedef
-callback (s:t@ype) =
+callback (s:vt@ype) =
     (request_type,
      string,
      string,
@@ -132,10 +139,10 @@ callback (s:t@ype) =
      ptr,
      ptr,
      uint,
-     s,
+     !stateptr(s),
      !instance(s)) -> Response
 
-fn{s:t@ype}
+fn {s:vt@ype}
 callback_attach
     (callback: callback(s),
      request_type: request_type,
@@ -150,31 +157,34 @@ callback_attach
      trans_id: ptr,
      pid: ptr,
      pid_size: uint32,
-     state: ptr,
+     c_state: ptr,
      c_api: ptr): void
 
 fn
 thread_count(): uint
 
-fn
-new {s:t@ype}{l:agz}
-    (state_pfgc: !s @ l |
-     thread_index: uint,
-     state_p: ptr(l),
+fn {s:vt@ype}
+new
+    (thread_index: uint,
+     state_value: s,
      terminate_return_value: bool): Result(instance(s))
 
-fn
-destroy {s:t@ype}
+fn {s:vt@ype}
+destroy
+    (api: instance(s)): s
+
+fn {s:vt@ype}
+destroy2void
     (api: instance(s)): void
 
 fn
-subscribe {s:t@ype}
+subscribe {s:vt@ype}
     (api: !instance(s),
      suffix: string,
-     f: c_callback): Result(bool)
+     f: c_callback): Result(unit)
 
 fn
-poll {s:t@ype}
+poll {s:vt@ype}
     (api: !instance(s),
      timeout: int): Result(bool)
 

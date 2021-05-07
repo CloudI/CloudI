@@ -25,10 +25,9 @@
  *)
 #include "share/atspre_define.hats"
 #include "share/atspre_staload.hats"
-#include "{$PATSPRE}/lmacrodef.hats"
 #include "cloudi.hats"
 
-typedef state_type = int
+vtypedef state_type = int
 
 fn
 request_ats
@@ -44,14 +43,13 @@ request_ats
      trans_id: ptr,
      pid: ptr,
      pid_size: uint,
-     state: state_type,
+     state: !$CLOUDI.stateptr(state_type),
      api: !$CLOUDI.instance(state_type)): $CLOUDI.response = let
-    (* XXX switch to using state_pfgc/state_p via cptr(a,p) or some other way
-    val () = !state :=+ 1
-    *)
-    val () = println!("count == ", state, " ats2")
+    val state_value: int = aptr_get_elt<int>(state) + 1
+    val () = println!("count == ", state_value, " ats2")
+    val () = aptr_set_elt(state, state_value)
 in
-    $CLOUDI.Null()
+    $CLOUDI.Response($CLOUDI.Strptr(g0int2string_int(state_value)))
 end
 
 fn
@@ -68,21 +66,21 @@ request_
      trans_id: ptr,
      pid: ptr,
      pid_size: uint32,
-     state: ptr,
+     c_state: ptr,
      c_api: ptr): void = 
     $CLOUDI.callback_attach(request_ats,
                             request_type, name, pattern,
                             request_info, request_info_size,
                             request, request_size,
                             timeout, priority, trans_id,
-                            pid, pid_size, state, c_api)
+                            pid, pid_size, c_state, c_api)
 
 fn
 task
     (thread_index: uint): void = let
-    var state: int = 0
+    var state_value: int = 0
 in
-    case+ $CLOUDI.new(view@state | thread_index, addr@state, true) of
+    case+ $CLOUDI.new(thread_index, state_value, true) of
       | ~$CLOUDI.Ok(api) => let
         val () = case+ $CLOUDI.subscribe(api, "ats2/get", request_) of
           | ~$CLOUDI.Ok(_) =>
@@ -94,9 +92,10 @@ in
             println!("terminate count ats2")
           | ~$CLOUDI.Error(status) =>
             fprintln!(stderr_ref, "error ", status)
-        in
-            $CLOUDI.destroy(api)
-        end
+        val () = $CLOUDI.destroy2void(api)
+    in
+        ()
+    end
       | ~$CLOUDI.Error(status) =>
         fprintln!(stderr_ref, "error ", status)
 end
