@@ -79,7 +79,7 @@ vtypedef stateptr(s:vt@ype) = aPtr1(s)
 datavtype
 result (a:vt@ype+) =
   | Ok (a) of (a)
-  | Error (a) of (int)
+  | Error (a) of (intGt(0))
 vtypedef Result (a:vt@ype) = result(a)
 
 #define ASYNC 1
@@ -182,6 +182,16 @@ subscribe {s:vt@ype}
     (api: !instance(s),
      suffix: string,
      f: c_callback): Result(unit)
+
+fn
+subscribe_count {s:vt@ype}
+    (api: !instance(s),
+     suffix: string): Result(uint)
+
+fn
+unsubscribe {s:vt@ype}
+    (api: !instance(s),
+     suffix: string): Result(unit)
 
 fn
 poll {s:vt@ype}
