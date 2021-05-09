@@ -76,6 +76,10 @@ typedef c_instance = $extype"cloudi_instance_t"
 absvtype instance_vtype(s:vt@ype+) = ptr
 vtypedef instance(s:vt@ype) = instance_vtype(s)
 vtypedef stateptr(s:vt@ype) = aPtr1(s)
+
+absvtype threads_vtype = ptr
+vtypedef threads = threads_vtype
+
 datavtype
 result (a:vt@ype+) =
   | Ok (a) of (a)
@@ -161,7 +165,7 @@ callback_attach
      c_api: ptr): void
 
 fn
-thread_count(): uint
+thread_count(): uintGt(0)
 
 fn {s:vt@ype}
 new
@@ -197,4 +201,13 @@ fn
 poll {s:vt@ype}
     (api: !instance(s),
      timeout: int): Result(bool)
+
+fn
+threads_create
+    (thread_count: uintGt(0),
+     f: (uint) -> void): threads
+
+fn
+threads_wait
+    (threads: threads): void
 

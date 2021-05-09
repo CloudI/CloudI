@@ -524,7 +524,7 @@ ATS2_LDFLAGS="-L${PATSHOME}/ccomp/atslib/lib"
 AC_SUBST(ATS2_LDFLAGS)
 ATS2_LIB="-latslib"
 AC_SUBST(ATS2_LIB)
-AC_SUBST(CONFIG_TESTS_ATS2_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_ats2\"}, {dest_refresh, none}, {options, [{nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_ATS2_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_ats2\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
 #AC_SUBST(CONFIG_TESTS_ATS2_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_ats2\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
 #AC_SUBST(CONFIG_TESTS_ATS2_MESSAGING, ["[[{prefix, \"/tests/messaging/ats2/\"}, {file_path, \"$cloudi_prefix/tests/messaging/messaging_ats2\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{dispatcher_pid_options, [{priority, low}]}, {nice, 15}, {scope, cloudi_service_test_messaging_ats2}]}]],"])
 #AC_SUBST(CONFIG_TESTS_ATS2_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$cloudi_prefix/tests/msg_size/msg_size_ats2\"}, {options, [{request_timeout_adjustment, true}, {aspects_init_after, [{cloudi_service_test_msg_size, aspect_init}]}, {aspects_request_before, [{cloudi_service_test_msg_size, aspect_request}]}, {aspects_terminate_before, [{cloudi_service_test_msg_size, aspect_terminate}]}, {scope, cloudi_service_test_msg_size}, {nice, 15}]}]],"])

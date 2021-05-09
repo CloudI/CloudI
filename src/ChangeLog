@@ -4,6 +4,7 @@
 2021-05-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the ATS CloudI API
+    * Add threads helper functions to the ATS CloudI API
 
 2021-05-06 Michael Truog   <mjtruog at protonmail dot com>
 

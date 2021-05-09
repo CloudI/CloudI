@@ -28,8 +28,12 @@
 #include "share/atspre_staload.hats"
 staload CLOUDI = "cloudi.sats"
 staload UNSAFE = "prelude/SATS/unsafe.sats"
+staload ATHREAD = "libats/SATS/athread.sats"
+staload _(*ATHREAD*) = "libats/DATS/athread.dats"
+staload _(*ATHREAD*) = "libats/DATS/athread_posix.dats"
 
 %{^
+#include <pthread.h> /* due to athread_posix.dats */
 enum
 {
     cloudi_success                             =   0,
@@ -174,7 +178,7 @@ c_destroy: {l1:agz}{l2:addr}
      ptr(l1)) -> ptr(l2) = "ext#cloudi_destroy"
 extern fn
 c_initialize_thread_count: {l1:agz}
-    (!uint @ l1 |
+    (!uintGt(0) @ l1 |
      ptr(l1)) -> intGte(0) = "ext#cloudi_initialize_thread_count"
 extern fn
 c_subscribe: {l1:agz}
@@ -315,6 +319,17 @@ instance_(s:vt@ype) = {l1,l2:agz} INSTANCE of (@{
 , terminate_return_value = bool
 })
 assume $CLOUDI.instance_vtype(s:vt@ype) = instance_(s)
+
+(* support for threads usage with the ATS CloudI API
+ *)
+datavtype
+threads_ = {l0,l1:agz} THREADS of (@{
+  thread_count = uintGt(0)
+, running = intGte(0)
+, mutex = $ATHREAD.mutex_vt(l0)
+, condvar = $ATHREAD.condvar_vt(l1)
+})
+assume $CLOUDI.threads_vtype = threads_
 
 fn
 instance_c_ptr {s:vt@ype}
@@ -625,7 +640,7 @@ end
 
 implement
 $CLOUDI.thread_count() = let
-    var count: uint with count_pfgc = i2u(0)
+    var count: uintGt(0) with count_pfgc = i2u(1)
     val status = c_initialize_thread_count(count_pfgc | addr@count)
     val () = assertloc(status = 0)
 in
@@ -710,3 +725,108 @@ in
         $CLOUDI.Error(status)
 end
 
+fn
+threads_new
+    (thread_count: uintGt(0)): $CLOUDI.threads = let
+    val mutex: $ATHREAD.mutex1 = $ATHREAD.mutex_create_exn()
+    val condvar: $ATHREAD.condvar1 = $ATHREAD.condvar_create_exn()
+in
+    THREADS(@{
+        thread_count = thread_count,
+        running = 0,
+        mutex = $ATHREAD.unsafe_mutex_t2vt(mutex),
+        condvar = $ATHREAD.unsafe_condvar_t2vt(condvar)})
+end
+
+fn
+thread
+    (threads: $CLOUDI.threads,
+     thread_index: uint,
+     f: (uint) -> void): void = let
+    val () = f(thread_index)
+    val @THREADS(t) = threads
+    val mutex = $ATHREAD.unsafe_mutex_vt2t(t.mutex)
+    val condvar = $ATHREAD.unsafe_condvar_vt2t(t.condvar)
+    val (lock | ()) = $ATHREAD.mutex_lock(mutex)
+    val running = t.running
+    val () = if (running >= 1) then
+            t.running := running + ~1
+        else
+            assertloc(false)
+    prval () = fold@(threads)
+    prval () = $UNSAFE.cast2void(threads)
+    val () = $ATHREAD.condvar_signal(condvar)
+    val () = $ATHREAD.mutex_unlock(lock | mutex)
+in
+    ()
+end
+
+fun
+threads_add
+    (threads: !$CLOUDI.threads,
+     f: (uint) -> void): void = let
+    val @THREADS(t) = threads
+    val mutex = $ATHREAD.unsafe_mutex_vt2t(t.mutex)
+    val (lock | ()) = $ATHREAD.mutex_lock(mutex)
+    val thread_index: uint = i2u(t.running)
+    val () = t.running := t.running + 1
+    val done: bool = t.thread_count = t.running
+    val () = $ATHREAD.mutex_unlock(lock | mutex)
+    prval () = fold@(threads)
+    val threads_ref = $UNSAFE.castvwtp1{$CLOUDI.threads}(threads)
+    val _ = $ATHREAD.athread_create_cloptr_exn(
+        llam() => thread(threads_ref, thread_index, f))
+in
+    if (done) then
+        ()
+    else
+        threads_add(threads, f)
+end
+
+fun
+threads_remove
+    (threads: !$CLOUDI.threads): void = let
+    val @THREADS(t) = threads
+    val mutex = $ATHREAD.unsafe_mutex_vt2t(t.mutex)
+    val condvar = $ATHREAD.unsafe_condvar_vt2t(t.condvar)
+    val (lock | ()) = $ATHREAD.mutex_lock(mutex)
+    val done: bool = if (t.running > 0) then let
+            val () = $ATHREAD.condvar_wait(lock | condvar, mutex)
+        in
+            t.running = 0
+        end
+        else
+            true
+    val () = $ATHREAD.mutex_unlock(lock | mutex)
+    prval () = fold@(threads)
+in
+    if (done) then
+        ()
+    else
+        threads_remove(threads)
+end
+
+fn
+threads_destroy
+    (threads: $CLOUDI.threads): void = let
+    val ~THREADS(@{mutex = mutex, condvar = condvar, ...}) = threads
+    val () = $ATHREAD.mutex_vt_destroy(mutex)
+    val () = $ATHREAD.condvar_vt_destroy(condvar)
+in
+    ()
+end
+
+implement
+$CLOUDI.threads_create(thread_count, f) = let
+    val threads = threads_new(thread_count)
+    val () = threads_add(threads, f)
+in
+    threads
+end
+
+implement
+$CLOUDI.threads_wait(threads) = let
+    val () = threads_remove(threads)
+in
+    threads_destroy(threads)
+end

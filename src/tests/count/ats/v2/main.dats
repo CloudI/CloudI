@@ -102,8 +102,8 @@ end
 
 implement main0 () = let
     val thread_count = $CLOUDI.thread_count()
-    val () = assertloc(thread_count = 1)
+    val threads = $CLOUDI.threads_create(thread_count, task)
 in
-    (* XXX add thread usage *)
-    task(i2u(0))
+    $CLOUDI.threads_wait(threads)
 end
+
