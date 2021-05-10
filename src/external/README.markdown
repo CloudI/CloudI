@@ -373,8 +373,8 @@ M4 `m4/ax_boost_base.m4, m4/ax_boost_system.m4, m4/ax_boost_thread.m4, m4/ax_com
 `autoconf m4 macros for c++ and boost detection`
 
 - `https://git.savannah.gnu.org/cgit/autoconf-archive.git/tree/`
-- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
-- `Sat Oct 27 17:49:52 PDT 2018`
+- `commit ec34d9b7a8f8dd29ca794cc7acd183c9fd01f53d`
+- `Mon May 10 19:21:06 UTC 2021`
 - `MIT-like`
 
 M4 `m4/ax_compiler_vendor.m4`
@@ -382,8 +382,8 @@ M4 `m4/ax_compiler_vendor.m4`
 `autoconf m4 macro for c++ compiler vendor detection`
 
 - `https://git.savannah.gnu.org/cgit/autoconf-archive.git/tree/`
-- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
-- `Sat Oct 27 17:49:52 PDT 2018`
+- `commit ec34d9b7a8f8dd29ca794cc7acd183c9fd01f53d`
+- `Mon May 10 19:21:06 UTC 2021`
 - `GPL` (build-time dependency only)
 
 M4 `m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4`
@@ -430,6 +430,15 @@ M4 `m4/ax_prog_ruby_version.m4, m4/ax_compare_version.m4`
 - `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
 - `Sat Oct 27 17:49:52 PDT 2018`
 - `MIT-like`
+
+M4 `m4/ax_pthread.m4`
+---------------------
+`autoconf m4 macro for POSIX threads detection`
+
+- `https://git.savannah.gnu.org/cgit/autoconf-archive.git/tree/`
+- `commit ec34d9b7a8f8dd29ca794cc7acd183c9fd01f53d`
+- `Mon May 10 19:21:06 UTC 2021`
+- `GPL` (build-time dependency only)
 
 M4 `m4/ax_recursive_eval.m4`
 -----------------------------

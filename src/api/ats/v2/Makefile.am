@@ -8,9 +8,9 @@ inst_LTLIBRARIES = libcloudi_ats2.la
 
 CLEANFILES = cloudi_sats.c cloudi_dats.c
 libcloudi_ats2_la_SOURCES = cloudi_sats.c cloudi_dats.c
-libcloudi_ats2_la_CFLAGS = $(ATS2_CFLAGS) $(CFLAGS)
+libcloudi_ats2_la_CFLAGS = $(ATS2_CFLAGS) $(PTHREAD_CFLAGS) $(CFLAGS)
 libcloudi_ats2_la_LDFLAGS = $(ATS2_LDFLAGS) -shared \
-                            -no-undefined -module -avoid-version \
+                            -no-undefined -avoid-version \
                             -weak libcloudi.la \
                             -L$(ERLANG_LIB_DIR_erl_interface)/lib/ 
 # libtool requires linking in the object files, since the library
@@ -18,7 +18,7 @@ libcloudi_ats2_la_LDFLAGS = $(ATS2_LDFLAGS) -shared \
 libcloudi_ats2_la_LIBADD = ../../c/libcloudi_la-cloudi.lo \
                            ../../c/libcloudi_la-assert.lo \
                            ../../c/libcloudi_la-timer.lo \
-                           $(ATS2_LIB) \
+                           $(ATS2_LIB) $(PTHREAD_LIBS) \
                            -lei $(RT_LIB) $(BACKTRACE_LIB) -lstdc++
 
 %_sats.c: %.sats

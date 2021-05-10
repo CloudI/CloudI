@@ -797,8 +797,8 @@ threads_remove
         end
         else
             true
-    val () = $ATHREAD.mutex_unlock(lock | mutex)
     prval () = fold@(threads)
+    val () = $ATHREAD.mutex_unlock(lock | mutex)
 in
     if (done) then
         ()

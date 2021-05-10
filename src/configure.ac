@@ -32,6 +32,7 @@ AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([1.10 no-define no-dependencies foreign])
 LT_PREREQ([2.4.2])
 LT_INIT()
@@ -56,6 +57,7 @@ AC_LANG_POP([C++])
 AC_SUBST(CXX_COMPILER_VENDOR_VERSION,
          ["$ax_cv_cxx_compiler_vendor $ax_cv_cxx_compiler_version"])
 AM_CONDITIONAL([CXX_CLANG], [test "x$ax_cv_cxx_compiler_vendor" = "xclang"])
+AX_PTHREAD([pthread="true"])
 
 # now in autoconf 2.69
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
@@ -480,6 +482,9 @@ AC_SUBST(CXX_DEPENDENCIES_VERSIONS,
 
 # ATS2 CloudI API support
 if test "x$ats2_support" = "xtrue" ; then
+if test "x$pthread" = "x"; then
+    AC_MSG_ERROR([--enable-ats2-support requires POSIX threads])
+fi
 AC_ARG_VAR([PATSHOME],[ATS2/Postiats installation path])
 AC_ARG_VAR([ATS2CC],[ATS2/Postiats patscc executable])
 AC_ARG_VAR([ATS2OPT],[ATS2/Postiats patsopt executable])
