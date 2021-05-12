@@ -34,6 +34,7 @@ staload _(*ATHREAD*) = "libats/DATS/athread_posix.dats"
 
 %{^
 #include <pthread.h> /* due to athread_posix.dats */
+
 enum
 {
     cloudi_success                             =   0,
@@ -88,30 +89,35 @@ void c_set_c_state(void * c_api, void * state)
 {
     ((cloudi_instance_t *)c_api)->state = state;
 }
-/*
-#define cloudi_get_response(api)               ((api)->response)
-#define cloudi_get_response_size(api)          ((api)->response_size)
-#define cloudi_get_response_info(api)          ((api)->response_info)
-#define cloudi_get_response_info_size(api)     ((api)->response_info_size)
-#define cloudi_get_trans_id_count(api)         ((api)->trans_id_count)
-#define cloudi_get_trans_id(api, i)            (&((api)->trans_id[i * 16]))
-*/
-uint32_t c_get_subscribe_count(void * c_api)
-{
-    return ((cloudi_instance_t *)c_api)->subscribe_count;
+
+#define C_GET_FUNCTION(T, NAME)                                               \
+T c_get_##NAME(void * c_api)                                                  \
+{                                                                             \
+    return ((cloudi_instance_t *)c_api)->NAME;                                \
 }
-/*
-#define cloudi_get_process_index(api)          ((api)->process_index)
-#define cloudi_get_process_count(api)          ((api)->process_count)
-#define cloudi_get_process_count_max(api)      ((api)->process_count_max)
-#define cloudi_get_process_count_min(api)      ((api)->process_count_min)
-#define cloudi_get_prefix(api)                 ((api)->prefix)
-#define cloudi_get_timeout_initialize(api)     ((api)->timeout_initialize)
-#define cloudi_get_timeout_async(api)          ((api)->timeout_async)
-#define cloudi_get_timeout_sync(api)           ((api)->timeout_sync)
-#define cloudi_get_timeout_terminate(api)      ((api)->timeout_terminate)
-#define cloudi_get_priority_default(api)       ((api)->priority_default)
-*/
+
+C_GET_FUNCTION(void *,   response)
+C_GET_FUNCTION(uint32_t, response_size)
+C_GET_FUNCTION(void *,   response_info)
+C_GET_FUNCTION(uint32_t, response_info_size)
+C_GET_FUNCTION(uint32_t, trans_id_count)
+
+char * c_get_trans_id(void * c_api, unsigned int i)
+{
+    return &(((cloudi_instance_t *)c_api)->trans_id[i * 16]);
+}
+
+C_GET_FUNCTION(uint32_t, subscribe_count)
+C_GET_FUNCTION(uint32_t, process_index)
+C_GET_FUNCTION(uint32_t, process_count)
+C_GET_FUNCTION(uint32_t, process_count_max)
+C_GET_FUNCTION(uint32_t, process_count_min)
+C_GET_FUNCTION(void *,   prefix)
+C_GET_FUNCTION(uint32_t, timeout_initialize)
+C_GET_FUNCTION(uint32_t, timeout_async)
+C_GET_FUNCTION(uint32_t, timeout_sync)
+C_GET_FUNCTION(uint32_t, timeout_terminate)
+C_GET_FUNCTION(int8_t,   priority_default)
 %}
 macdef c_int_success = 0
 macdef c_int_terminate = $extval(int, "cloudi_terminate")
@@ -137,45 +143,96 @@ state_p_destroy {l:agz}
 extern fn
 callback_name
     (c_api: ptr,
-     r: $CLOUDI.response_ptr): ptr
+     r: $CLOUDI.memory_ptr): ptr
 extern fn
 callback_request_info
     (c_api: ptr,
-     r: $CLOUDI.response_ptr,
+     r: $CLOUDI.memory_ptr,
      size: &uint32): ptr
 extern fn
 callback_request
     (c_api: ptr,
-     r: $CLOUDI.response_ptr,
+     r: $CLOUDI.memory_ptr,
      size: &uint32): ptr
 extern fn
 callback_response_info
     (c_api: ptr,
-     r: $CLOUDI.response_ptr,
+     r: $CLOUDI.memory_ptr,
      size: &uint32): ptr
 extern fn
 callback_response
     (c_api: ptr,
-     r: $CLOUDI.response_ptr,
+     r: $CLOUDI.memory_ptr,
      size: &uint32): ptr
 
 (* C CloudI API functions
  *)
 extern fn
-c_set_c_state:
+c_set_c_state: {l1:agz}
     (ptr,
-     ptr) -> void = "ext#"
+     ptr(l1)) -> void = "ext#"
+extern fn
+c_get_response:
+    (ptr) -> [l1:agz] ptr(l1) = "ext#"
+extern fn
+c_get_response_size:
+    (ptr) -> uint32 = "ext#"
+extern fn
+c_get_response_info:
+    (ptr) -> [l1:agz] ptr(l1) = "ext#"
+extern fn
+c_get_response_info_size:
+    (ptr) -> uint32 = "ext#"
+extern fn
+c_get_trans_id_count:
+    (ptr) -> uint32 = "ext#"
+extern fn
+c_get_trans_id:
+    (ptr,
+     uint) -> [l1:agz] ptr(l1) = "ext#"
 extern fn
 c_get_subscribe_count:
     (ptr) -> uint32 = "ext#"
 extern fn
+c_get_process_index:
+    (ptr) -> uint32 = "ext#"
+extern fn
+c_get_process_count:
+    (ptr) -> uintGt(0) = "ext#"
+extern fn
+c_get_process_count_max:
+    (ptr) -> uintGt(0) = "ext#"
+extern fn
+c_get_process_count_min:
+    (ptr) -> uintGt(0) = "ext#"
+extern fn
+c_get_prefix:
+    (ptr) -> [l1:agz] ptr(l1) = "ext#"
+extern fn
+c_get_timeout_initialize:
+    (ptr) -> uintBtwe(101, 4294967195) = "ext#"
+extern fn
+c_get_timeout_async:
+    (ptr) -> uintBtwe(499, 4294967295) = "ext#"
+extern fn
+c_get_timeout_sync:
+    (ptr) -> uintBtwe(499, 4294967295) = "ext#"
+extern fn
+c_get_timeout_terminate:
+    (ptr) -> uintBtwe(10, 60000) = "ext#"
+extern fn
+c_get_priority_default:
+    (ptr) -> int8 = "ext#"
+extern fn
 c_initialize: {l1:agz}{l2:addr}
     (!$CLOUDI.c_instance? @ l1 >> $CLOUDI.c_instance @ l1 |
-     ptr(l1), uint, ptr(l2)) -> intGte(0) = "ext#cloudi_initialize"
+     ptr(l1),
+     uint,
+     ptr(l2)) -> intGte(0) = "ext#cloudi_initialize"
 extern fn
-c_destroy: {l1:agz}{l2:addr}
+c_destroy: {l1:agz}
     (!$CLOUDI.c_instance @ l1 |
-     ptr(l1)) -> ptr(l2) = "ext#cloudi_destroy"
+     ptr(l1)) -> [l2:addr] ptr(l2) = "ext#cloudi_destroy"
 extern fn
 c_initialize_thread_count: {l1:agz}
     (!uintGt(0) @ l1 |
@@ -287,10 +344,9 @@ c_poll:
     (ptr,
      int) -> intGte(0) = "ext#cloudi_poll"
 extern fn
-c_shutdown: {l1:agz}
-    (!char @ l1 |
-     ptr,
-     ptr(l1)) -> intGte(0) = "ext#cloudi_shutdown"
+c_shutdown:
+    (ptr,
+     ptr) -> intGte(0) = "ext#cloudi_shutdown"
 extern fn
 c_free_name:
     (ptr) -> void = "ext#cloudi_free_name"
@@ -323,11 +379,11 @@ assume $CLOUDI.instance_vtype(s:vt@ype) = instance_(s)
 (* support for threads usage with the ATS CloudI API
  *)
 datavtype
-threads_ = {l0,l1:agz} THREADS of (@{
+threads_ = {l1,l2:agz} THREADS of (@{
   thread_count = uintGt(0)
 , running = intGte(0)
-, mutex = $ATHREAD.mutex_vt(l0)
-, condvar = $ATHREAD.condvar_vt(l1)
+, mutex = $ATHREAD.mutex_vt(l1)
+, condvar = $ATHREAD.condvar_vt(l2)
 })
 assume $CLOUDI.threads_vtype = threads_
 
@@ -401,7 +457,7 @@ end
 fn
 callback_pattern
     (c_api: ptr,
-     r: $CLOUDI.response_ptr): ptr =
+     r: $CLOUDI.memory_ptr): ptr =
 case+ r of
   | ~$CLOUDI.String(str) =>
     string2ptr(str)
@@ -484,6 +540,9 @@ in
     p
 end
 
+implement
+$CLOUDI.trans_id_null = string2ptr("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0")
+
 implement {s}
 $CLOUDI.callback_attach
     (callback,
@@ -503,19 +562,23 @@ $CLOUDI.callback_attach
      c_api) = let
     val name_ats: string = $UNSAFE.castvwtp0{string}(name)
     val pattern_ats: string = $UNSAFE.castvwtp0{string}(pattern)
+    val request_info_ats: Ptr1 = $UNSAFE.castvwtp0{Ptr1}(request_info)
     val request_info_size_ats = g0uint2uint_uint32_uint(request_info_size)
+    val request_ats: Ptr1 = $UNSAFE.castvwtp0{Ptr1}(request)
     val request_size_ats = g0uint2uint_uint32_uint(request_size)
     val timeout_ats = g0uint2uint_uint32_uint(timeout)
     val priority_ats = g0int2int_int8_int(priority)
+    val trans_id_ats = $CLOUDI.TransId($UNSAFE.castvwtp0{Ptr1}(trans_id))
     val pid_size_ats = g0uint2uint_uint32_uint(pid_size)
+    val pid_ats: Ptr1 = $UNSAFE.castvwtp0{Ptr1}(pid)
     val api = $UNSAFE.castvwtp1{$CLOUDI.instance(s)}(c_state)
     val INSTANCE(@{state_p = state_p, ...}) = api
     val state = $UNSAFE.castvwtp1{$CLOUDI.stateptr(s)}(state_p)
     val response_ats = try callback(request_type, name_ats, pattern_ats,
-                                    request_info, request_info_size_ats,
-                                    request, request_size_ats,
-                                    timeout_ats, priority_ats, trans_id,
-                                    pid, pid_size_ats,
+                                    request_info_ats, request_info_size_ats,
+                                    request_ats, request_size_ats,
+                                    timeout_ats, priority_ats, trans_id_ats,
+                                    pid_ats, pid_size_ats,
                                     state, api) with
       | ~$CLOUDI.Terminate() =>
         $CLOUDI.Null()
@@ -526,10 +589,11 @@ $CLOUDI.callback_attach
     end
       | e:exn => let
         val () = fprintln!(stderr_ref, $mylocation)
-        prval () = $UNSAFE.cast2void(e)
+        prval () = __vfree_exn(e)
     in
         $CLOUDI.Null()
     end
+    prval () = $UNSAFE.cast2void(trans_id_ats)
     prval () = $UNSAFE.cast2void(api)
     prval () = $UNSAFE.cast2void(state)
 in
@@ -658,7 +722,7 @@ in
             c_ptr = (c_pfgc, c_pfat | c_api),
             state_p = state_p,
             terminate_return_value = terminate_return_value})
-        val () = c_set_c_state(c_api, $UNSAFE.castvwtp1{ptr}(api))
+        val () = c_set_c_state(c_api, $UNSAFE.castvwtp1{Ptr1}(api))
     in
         $CLOUDI.Ok(api)
     end
@@ -713,6 +777,76 @@ in
 end
 
 implement
+$CLOUDI.process_index(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    u32_u(c_get_process_index(c_api))
+end
+
+implement
+$CLOUDI.process_count(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_process_count(c_api)
+end
+
+implement
+$CLOUDI.process_count_max(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_process_count_max(c_api)
+end
+
+implement
+$CLOUDI.process_count_min(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_process_count_min(c_api)
+end
+
+implement
+$CLOUDI.prefix_(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    $UNSAFE.castvwtp0{string}(c_get_prefix(c_api))
+end
+
+implement
+$CLOUDI.timeout_initialize(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_timeout_initialize(c_api)
+end
+
+implement
+$CLOUDI.timeout_async(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_timeout_async(c_api)
+end
+
+implement
+$CLOUDI.timeout_sync(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_timeout_sync(c_api)
+end
+
+implement
+$CLOUDI.timeout_terminate(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_timeout_terminate(c_api)
+end
+
+implement
+$CLOUDI.priority_default(api) = let
+    val c_api = instance_c_ptr(api)
+in
+    c_get_priority_default(c_api)
+end
+
+implement
 $CLOUDI.poll(api, timeout) = let
     val c_api = instance_c_ptr(api)
     val status = c_poll(c_api, timeout)
@@ -723,6 +857,18 @@ in
         $CLOUDI.Ok(false)
     else
         $CLOUDI.Error(status)
+end
+
+implement
+$CLOUDI.shutdown(api, reason) = let
+    val c_api = instance_c_ptr(api)
+    val reason_p = case+ reason of
+        | Some(s) =>
+            string2ptr(s)
+        | None() =>
+            the_null_ptr
+in
+    result_value<unit>(unit(), c_shutdown(c_api, reason_p), api)
 end
 
 fn

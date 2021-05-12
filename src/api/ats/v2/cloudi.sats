@@ -71,8 +71,8 @@ typedef struct cloudi_instance_t
 } cloudi_instance_t;
 #endif /* CLOUDI_H */
 %}
-
 typedef c_instance = $extype"cloudi_instance_t"
+
 absvtype instance_vtype(s:vt@ype+) = ptr
 vtypedef instance(s:vt@ype) = instance_vtype(s)
 vtypedef stateptr(s:vt@ype) = aPtr1(s)
@@ -108,20 +108,23 @@ c_callback =
      ptr) -> void
 
 datavtype
-response_ptr =
-  | String of (string)   (* string literal/constant *)
-  | Ptr of (ptr, uint32) (* ptr to be freed *)
+trans_id_ptr = TransId of (Ptr1)
+
+datavtype
+memory_ptr =
+  | String of (string)    (* string literal/constant *)
+  | Ptr of (Ptr1, uint32) (* ptr to be freed *)
 
 fn
 Strptr
-    (str: Strptr1): response_ptr
+    (str: Strptr1): memory_ptr
 
 datavtype
 response =
-  | Response of (response_ptr)
-  | ResponseInfo of (response_ptr, response_ptr)
-  | Forward of (response_ptr, response_ptr, response_ptr)
-  | Forward_ of (response_ptr, response_ptr, response_ptr, uint, int)
+  | Response of (memory_ptr)
+  | ResponseInfo of (memory_ptr, memory_ptr)
+  | Forward of (memory_ptr, memory_ptr, memory_ptr)
+  | Forward_ of (memory_ptr, memory_ptr, memory_ptr, uint, int)
   | Null of ()
   | NullError of (string)
 vtypedef Response = response
@@ -134,17 +137,19 @@ callback (s:vt@ype) =
     (request_type,
      string,
      string,
-     ptr,
+     Ptr1,
      uint,
-     ptr,
+     Ptr1,
      uint,
      uint,
      int,
-     ptr,
-     ptr,
+     !trans_id_ptr,
+     Ptr1,
      uint,
      !stateptr(s),
      !instance(s)) -> Response
+
+val trans_id_null: Ptr1
 
 fn {s:vt@ype}
 callback_attach
@@ -197,10 +202,161 @@ unsubscribe {s:vt@ype}
     (api: !instance(s),
      suffix: string): Result(unit)
 
+(*
+fn
+mcast_async {s:vt@ype}
+    (api: !instance(s),
+     timeout: Option(uint),
+     request_info: Option(memory_ptr),
+     priority: Option(int8),
+     request: memory_ptr): Result(list(trans_id_ptr))
+
+fn
+forward_async
+    (api: !instance(s),
+     request_type: request_type,
+     name: string,
+     request_info: memory_ptr,
+     request: memory_ptr,
+     timeout: uint,
+     priority: int,
+     trans_id: ptr,
+     pid: ptr,
+     pid_size: uint): void
+
+fn
+forward_sync
+    (api: !instance(s),
+     request_type: request_type,
+     name: string,
+     request_info: memory_ptr,
+     request: memory_ptr,
+     timeout: uint,
+     priority: int,
+     trans_id: ptr,
+     pid: ptr,
+     pid_size: uint): void
+
+fn
+forward_
+    (api: !instance(s),
+     request_type: request_type,
+     name: string,
+     request_info: memory_ptr,
+     request: memory_ptr,
+     timeout: uint,
+     priority: int,
+     trans_id: ptr,
+     pid: ptr,
+     pid_size: uint): void
+
+fn
+return_async
+    (api: !instance(s),
+     request_type: request_type,
+     name: string,
+     pattern: string,
+     response_info: memory_ptr,
+     response: memory_ptr,
+     timeout: uint,
+     trans_id: ptr,
+     pid: ptr,
+     pid_size: uint): void
+
+fn
+return_sync
+    (api: !instance(s),
+     request_type: request_type,
+     name: string,
+     pattern: string,
+     response_info: memory_ptr,
+     response: memory_ptr,
+     timeout: uint,
+     trans_id: ptr,
+     pid: ptr,
+     pid_size: uint): void
+
+fn
+return_
+    (api: !instance(s),
+     request_type: request_type,
+     name: string,
+     pattern: string,
+     response_info: memory_ptr,
+     response: memory_ptr,
+     timeout: uint,
+     trans_id: ptr,
+     pid: ptr,
+     pid_size: uint): void
+
+fn
+recv_async {s:vt@ype}
+    (api: !instance(s),
+     timeout: Option(uint),
+     trans_id: Option(string),
+     consume: Option(bool)): Result(@(memory_ptr, memory_ptr, trans_id_ptr))
+*)
+
+fn
+process_index {s:vt@ype}
+    (api: !instance(s)): uint
+
+fn
+process_count {s:vt@ype}
+    (api: !instance(s)): uintGt(0)
+
+fn
+process_count_max {s:vt@ype}
+    (api: !instance(s)): uintGt(0)
+
+fn
+process_count_min {s:vt@ype}
+    (api: !instance(s)): uintGt(0)
+
+fn
+prefix_ {s:vt@ype}
+    (api: !instance(s)): string
+
+fn
+timeout_initialize {s:vt@ype}
+    (api: !instance(s)): uintBtwe(101, 4294967195)
+
+fn
+timeout_async {s:vt@ype}
+    (api: !instance(s)): uintBtwe(499, 4294967295)
+
+fn
+timeout_sync {s:vt@ype}
+    (api: !instance(s)): uintBtwe(499, 4294967295)
+
+fn
+timeout_terminate {s:vt@ype}
+    (api: !instance(s)): uintBtwe(10, 60000)
+
+fn
+priority_default {s:vt@ype}
+    (api: !instance(s)): int8
+
 fn
 poll {s:vt@ype}
     (api: !instance(s),
      timeout: int): Result(bool)
+
+fn
+shutdown {s:vt@ype}
+    (api: !instance(s),
+     reason: Option(string)): Result(unit)
+
+(*
+fn
+info_key_value_parse
+    (info: string): hashtbl(string, List1(string))
+
+fn
+info_key_value_new
+    (pairs: hashtbl(string, List1(string)),
+     response: Option(bool)): string
+*)
 
 fn
 threads_create

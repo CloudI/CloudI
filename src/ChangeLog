@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-05-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the ATS CloudI API
+
 2021-05-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Use m4/ax_pthread.m4 for ATS CloudI API autoconf checks
