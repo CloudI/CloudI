@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-05-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the ATS CloudI API
+    * Add C/C++ CloudI API comment
+
 2021-05-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the ATS CloudI API

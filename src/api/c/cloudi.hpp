@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -732,6 +732,7 @@ class API
                                                uint32_t & info_size,
                                                bool response);
 
+        // return/forward automatic delete/free
         void free_with_delete() const;
         void free_name() const;
         void free_pattern() const;

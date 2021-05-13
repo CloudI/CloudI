@@ -53,27 +53,27 @@ in
 end
 
 fn
-request_
+request
     (request_type: $CLOUDI.request_type,
-     name: ptr,
-     pattern: ptr,
-     request_info: ptr,
-     request_info_size: uint32,
-     request: ptr,
-     request_size: uint32,
-     timeout: uint32,
-     priority: int8,
-     trans_id: ptr,
-     pid: ptr,
-     pid_size: uint32,
-     c_state: ptr,
-     c_api: ptr): void = 
+     name_c: ptr,
+     pattern_c: ptr,
+     request_info_c: ptr,
+     request_info_size_c: uint32,
+     request_c: ptr,
+     request_size_c: uint32,
+     timeout_c: uint32,
+     priority_c: int8,
+     trans_id_c: ptr,
+     pid_c: ptr,
+     pid_size_c: uint32,
+     state_c: ptr,
+     api_c: ptr): void = 
     $CLOUDI.callback_attach(request_ats,
-                            request_type, name, pattern,
-                            request_info, request_info_size,
-                            request, request_size,
-                            timeout, priority, trans_id,
-                            pid, pid_size, c_state, c_api)
+                            request_type, name_c, pattern_c,
+                            request_info_c, request_info_size_c,
+                            request_c, request_size_c,
+                            timeout_c, priority_c, trans_id_c,
+                            pid_c, pid_size_c, state_c, api_c)
 
 fn
 task
@@ -82,7 +82,7 @@ task
 in
     case+ $CLOUDI.new(thread_index, state_value, true) of
       | ~$CLOUDI.Ok(api) => let
-        val () = case+ $CLOUDI.subscribe(api, "ats2/get", request_) of
+        val () = case+ $CLOUDI.subscribe(api, "ats2/get", request) of
           | ~$CLOUDI.Ok(_) =>
             ()
           | ~$CLOUDI.Error(status) =>

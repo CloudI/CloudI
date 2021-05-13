@@ -108,23 +108,25 @@ c_callback =
      ptr) -> void
 
 datavtype
-trans_id_ptr = TransId of (Ptr1)
+trans_id_ptr = TransId of (Ptr1) (* read-only ptr *)
 
 datavtype
-memory_ptr =
-  | String of (string)    (* string literal/constant *)
-  | Ptr of (Ptr1, uint32) (* ptr to be freed *)
+memory_ptr = Ptr of (Ptr1, uint32) (* read-only ptr *)
+datavtype
+memory_free_ptr =
+  | String of (string)        (* string literal/constant (not freed) *)
+  | PtrFree of (Ptr1, uint32) (* ptr to be freed *)
 
 fn
 Strptr
-    (str: Strptr1): memory_ptr
+    (str: Strptr1): memory_free_ptr
 
 datavtype
 response =
-  | Response of (memory_ptr)
-  | ResponseInfo of (memory_ptr, memory_ptr)
-  | Forward of (memory_ptr, memory_ptr, memory_ptr)
-  | Forward_ of (memory_ptr, memory_ptr, memory_ptr, uint, int)
+  | Response of (memory_free_ptr)
+  | ResponseInfo of (memory_free_ptr, memory_free_ptr)
+  | Forward of (memory_free_ptr, memory_free_ptr, memory_free_ptr)
+  | Forward_ of (memory_free_ptr, memory_free_ptr, memory_free_ptr, uint, int)
   | Null of ()
   | NullError of (string)
 vtypedef Response = response
@@ -155,19 +157,19 @@ fn {s:vt@ype}
 callback_attach
     (callback: callback(s),
      request_type: request_type,
-     name: ptr,
-     pattern: ptr,
-     request_info: ptr,
-     request_info_size: uint32,
-     request: ptr,
-     request_size: uint32,
-     timeout: uint32,
-     priority: int8,
-     trans_id: ptr,
-     pid: ptr,
-     pid_size: uint32,
-     c_state: ptr,
-     c_api: ptr): void
+     name_c: ptr,
+     pattern_c: ptr,
+     request_info_c: ptr,
+     request_info_size_c: uint32,
+     request_c: ptr,
+     request_size_c: uint32,
+     timeout_c: uint32,
+     priority_c: int8,
+     trans_id_c: ptr,
+     pid_c: ptr,
+     pid_size_c: uint32,
+     state_c: ptr,
+     api_c: ptr): void
 
 fn
 thread_count(): uintGt(0)
@@ -202,98 +204,115 @@ unsubscribe {s:vt@ype}
     (api: !instance(s),
      suffix: string): Result(unit)
 
+fn
+send_async {s:vt@ype}
+    (api: !instance(s),
+     name: string,
+     request: memory_ptr,
+     timeout_opt: Option(uint),
+     request_info_opt: Option_vt(memory_ptr),
+     priority_opt: Option(int)): Result(trans_id_ptr)
+
 (*
+fn
+send_sync {s:vt@ype}
+    (api: !instance(s),
+     name: string,
+     request: memory_ptr,
+     timeout: Option(uint),
+     request_info: Option_vt(memory_ptr),
+     priority: Option(int)): Result(@(memory_ptr, memory_ptr, trans_id_ptr))
+
 fn
 mcast_async {s:vt@ype}
     (api: !instance(s),
+     name: string,
+     request: memory_ptr,
      timeout: Option(uint),
-     request_info: Option(memory_ptr),
-     priority: Option(int8),
-     request: memory_ptr): Result(list(trans_id_ptr))
+     request_info: Option_vt(memory_ptr),
+     priority: Option(int)): Result(array(trans_id_ptr))
+*)
 
 fn
-forward_async
+forward_async {s:vt@ype}
     (api: !instance(s),
-     request_type: request_type,
-     name: string,
-     request_info: memory_ptr,
-     request: memory_ptr,
+     name: memory_free_ptr,
+     request_info: memory_free_ptr,
+     request: memory_free_ptr,
      timeout: uint,
      priority: int,
-     trans_id: ptr,
-     pid: ptr,
+     trans_id: trans_id_ptr,
+     pid: Ptr1,
      pid_size: uint): void
 
 fn
-forward_sync
+forward_sync {s:vt@ype}
     (api: !instance(s),
-     request_type: request_type,
-     name: string,
-     request_info: memory_ptr,
-     request: memory_ptr,
+     name: memory_free_ptr,
+     request_info: memory_free_ptr,
+     request: memory_free_ptr,
      timeout: uint,
      priority: int,
-     trans_id: ptr,
-     pid: ptr,
+     trans_id: trans_id_ptr,
+     pid: Ptr1,
      pid_size: uint): void
 
 fn
-forward_
+forward_ {s:vt@ype}
     (api: !instance(s),
      request_type: request_type,
-     name: string,
-     request_info: memory_ptr,
-     request: memory_ptr,
+     name: memory_free_ptr,
+     request_info: memory_free_ptr,
+     request: memory_free_ptr,
      timeout: uint,
      priority: int,
-     trans_id: ptr,
-     pid: ptr,
+     trans_id: trans_id_ptr,
+     pid: Ptr1,
      pid_size: uint): void
 
 fn
-return_async
+return_async {s:vt@ype}
+    (api: !instance(s),
+     name: string,
+     pattern: string,
+     response_info: memory_free_ptr,
+     response: memory_free_ptr,
+     timeout: uint,
+     trans_id: trans_id_ptr,
+     pid: Ptr1,
+     pid_size: uint): void
+
+fn
+return_sync {s:vt@ype}
+    (api: !instance(s),
+     name: string,
+     pattern: string,
+     response_info: memory_free_ptr,
+     response: memory_free_ptr,
+     timeout: uint,
+     trans_id: trans_id_ptr,
+     pid: Ptr1,
+     pid_size: uint): void
+
+fn
+return_ {s:vt@ype}
     (api: !instance(s),
      request_type: request_type,
      name: string,
      pattern: string,
-     response_info: memory_ptr,
-     response: memory_ptr,
+     response_info: memory_free_ptr,
+     response: memory_free_ptr,
      timeout: uint,
-     trans_id: ptr,
-     pid: ptr,
+     trans_id: trans_id_ptr,
+     pid: Ptr1,
      pid_size: uint): void
 
-fn
-return_sync
-    (api: !instance(s),
-     request_type: request_type,
-     name: string,
-     pattern: string,
-     response_info: memory_ptr,
-     response: memory_ptr,
-     timeout: uint,
-     trans_id: ptr,
-     pid: ptr,
-     pid_size: uint): void
-
-fn
-return_
-    (api: !instance(s),
-     request_type: request_type,
-     name: string,
-     pattern: string,
-     response_info: memory_ptr,
-     response: memory_ptr,
-     timeout: uint,
-     trans_id: ptr,
-     pid: ptr,
-     pid_size: uint): void
-
+(*
 fn
 recv_async {s:vt@ype}
     (api: !instance(s),
      timeout: Option(uint),
-     trans_id: Option(string),
+     trans_id: Option_vt(trans_id_ptr),
      consume: Option(bool)): Result(@(memory_ptr, memory_ptr, trans_id_ptr))
 *)
 

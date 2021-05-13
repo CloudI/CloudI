@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -271,6 +271,7 @@ char const * cloudi_info_key_value_new(char const ** pairs,
                                        uint32_t * info_size,
                                        int response);
 
+/* return/forward automatic free */
 void cloudi_free_name(cloudi_instance_t * api);
 void cloudi_free_pattern(cloudi_instance_t * api);
 void cloudi_free_request_info(cloudi_instance_t * api);
