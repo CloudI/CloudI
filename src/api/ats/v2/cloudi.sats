@@ -112,21 +112,39 @@ trans_id_ptr = TransId of (Ptr1) (* read-only ptr *)
 
 datavtype
 memory_ptr = Ptr of (Ptr1, uint32) (* read-only ptr *)
+
+fn
+string2read
+    (str: string): memory_ptr
+
 datavtype
 memory_free_ptr =
-  | String of (string)        (* string literal/constant (not freed) *)
+  | StringLiteral of (string) (* not freed *)
   | PtrFree of (Ptr1, uint32) (* ptr to be freed *)
 
 fn
-Strptr
+strptr2free
     (str: Strptr1): memory_free_ptr
+fn
+strnptr2free {l:agz}{n:nat}
+    (str: strnptr(l, n)): memory_free_ptr
+
+typedef timeout_initialize = uintBtwe(101, 4294967195)
+typedef timeout_async = uintBtwe(499, 4294967295)
+typedef timeout_sync = uintBtwe(499, 4294967295)
+typedef timeout_terminate = uintBtwe(10, 60000)
+typedef timeout = uintBtwe(0, 4294967295)
+#define PRIORITY_HIGH ~128
+#define PRIORITY_LOW 127
+typedef priority = intBtwe(PRIORITY_HIGH, PRIORITY_LOW)
 
 datavtype
 response =
   | Response of (memory_free_ptr)
   | ResponseInfo of (memory_free_ptr, memory_free_ptr)
   | Forward of (memory_free_ptr, memory_free_ptr, memory_free_ptr)
-  | Forward_ of (memory_free_ptr, memory_free_ptr, memory_free_ptr, uint, int)
+  | Forward_ of (memory_free_ptr, memory_free_ptr, memory_free_ptr,
+                 timeout, priority)
   | Null of ()
   | NullError of (string)
 vtypedef Response = response
@@ -139,15 +157,12 @@ callback (s:vt@ype) =
     (request_type,
      string,
      string,
-     Ptr1,
-     uint,
-     Ptr1,
-     uint,
-     uint,
-     int,
+     !memory_ptr,
+     !memory_ptr,
+     timeout,
+     priority,
      !trans_id_ptr,
-     Ptr1,
-     uint,
+     !memory_ptr,
      !stateptr(s),
      !instance(s)) -> Response
 
@@ -209,28 +224,30 @@ send_async {s:vt@ype}
     (api: !instance(s),
      name: string,
      request: memory_ptr,
-     timeout_opt: Option(uint),
+     timeout_opt: Option(timeout),
      request_info_opt: Option_vt(memory_ptr),
-     priority_opt: Option(int)): Result(trans_id_ptr)
+     priority_opt: Option(priority)): Result(trans_id_ptr)
 
-(*
 fn
 send_sync {s:vt@ype}
     (api: !instance(s),
      name: string,
      request: memory_ptr,
-     timeout: Option(uint),
-     request_info: Option_vt(memory_ptr),
-     priority: Option(int)): Result(@(memory_ptr, memory_ptr, trans_id_ptr))
+     timeout_opt: Option(timeout),
+     request_info_opt: Option_vt(memory_ptr),
+     priority_opt: Option(priority)): Result(@(memory_ptr,
+                                               memory_ptr,
+                                               trans_id_ptr))
 
+(*
 fn
 mcast_async {s:vt@ype}
     (api: !instance(s),
      name: string,
      request: memory_ptr,
-     timeout: Option(uint),
+     timeout: Option(timeout),
      request_info: Option_vt(memory_ptr),
-     priority: Option(int)): Result(array(trans_id_ptr))
+     priority: Option(priority)): Result(array(trans_id_ptr))
 *)
 
 fn
@@ -239,11 +256,10 @@ forward_async {s:vt@ype}
      name: memory_free_ptr,
      request_info: memory_free_ptr,
      request: memory_free_ptr,
-     timeout: uint,
-     priority: int,
+     timeout: timeout,
+     priority: priority,
      trans_id: trans_id_ptr,
-     pid: Ptr1,
-     pid_size: uint): void
+     source: memory_ptr): void
 
 fn
 forward_sync {s:vt@ype}
@@ -251,11 +267,10 @@ forward_sync {s:vt@ype}
      name: memory_free_ptr,
      request_info: memory_free_ptr,
      request: memory_free_ptr,
-     timeout: uint,
-     priority: int,
+     timeout: timeout,
+     priority: priority,
      trans_id: trans_id_ptr,
-     pid: Ptr1,
-     pid_size: uint): void
+     source: memory_ptr): void
 
 fn
 forward_ {s:vt@ype}
@@ -264,11 +279,10 @@ forward_ {s:vt@ype}
      name: memory_free_ptr,
      request_info: memory_free_ptr,
      request: memory_free_ptr,
-     timeout: uint,
-     priority: int,
+     timeout: timeout,
+     priority: priority,
      trans_id: trans_id_ptr,
-     pid: Ptr1,
-     pid_size: uint): void
+     source: memory_ptr): void
 
 fn
 return_async {s:vt@ype}
@@ -277,10 +291,9 @@ return_async {s:vt@ype}
      pattern: string,
      response_info: memory_free_ptr,
      response: memory_free_ptr,
-     timeout: uint,
+     timeout: timeout,
      trans_id: trans_id_ptr,
-     pid: Ptr1,
-     pid_size: uint): void
+     source: memory_ptr): void
 
 fn
 return_sync {s:vt@ype}
@@ -289,10 +302,9 @@ return_sync {s:vt@ype}
      pattern: string,
      response_info: memory_free_ptr,
      response: memory_free_ptr,
-     timeout: uint,
+     timeout: timeout,
      trans_id: trans_id_ptr,
-     pid: Ptr1,
-     pid_size: uint): void
+     source: memory_ptr): void
 
 fn
 return_ {s:vt@ype}
@@ -302,16 +314,15 @@ return_ {s:vt@ype}
      pattern: string,
      response_info: memory_free_ptr,
      response: memory_free_ptr,
-     timeout: uint,
+     timeout: timeout,
      trans_id: trans_id_ptr,
-     pid: Ptr1,
-     pid_size: uint): void
+     source: memory_ptr): void
 
 (*
 fn
 recv_async {s:vt@ype}
     (api: !instance(s),
-     timeout: Option(uint),
+     timeout: Option(timeout),
      trans_id: Option_vt(trans_id_ptr),
      consume: Option(bool)): Result(@(memory_ptr, memory_ptr, trans_id_ptr))
 *)
@@ -338,23 +349,23 @@ prefix_ {s:vt@ype}
 
 fn
 timeout_initialize {s:vt@ype}
-    (api: !instance(s)): uintBtwe(101, 4294967195)
+    (api: !instance(s)): timeout_initialize
 
 fn
 timeout_async {s:vt@ype}
-    (api: !instance(s)): uintBtwe(499, 4294967295)
+    (api: !instance(s)): timeout_async
 
 fn
 timeout_sync {s:vt@ype}
-    (api: !instance(s)): uintBtwe(499, 4294967295)
+    (api: !instance(s)): timeout_sync
 
 fn
 timeout_terminate {s:vt@ype}
-    (api: !instance(s)): uintBtwe(10, 60000)
+    (api: !instance(s)): timeout_terminate
 
 fn
 priority_default {s:vt@ype}
-    (api: !instance(s)): int8
+    (api: !instance(s)): priority
 
 fn
 poll {s:vt@ype}

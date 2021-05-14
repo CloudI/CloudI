@@ -34,6 +34,7 @@ staload _(*ATHREAD*) = "libats/DATS/athread_posix.dats"
 
 %{^
 #include <pthread.h> /* due to athread_posix.dats */
+#include <time.h> /* c_threads_yield */
 
 enum
 {
@@ -85,6 +86,12 @@ enum
     cloudi_error_poll_unknown                  = 112
 };
 
+void c_threads_yield()
+{
+    struct timespec delay = {0, 1000};
+    nanosleep(&delay, NULL);
+}
+
 void c_set_c_state(void * api_c, void * state)
 {
     ((cloudi_instance_t *)api_c)->state = state;
@@ -127,7 +134,9 @@ extern castfn sz_u32(x: size_t): uint32
 extern castfn ssz_u32(x: ssize_t): uint32
 extern castfn u_u32(x: uint): uint32
 extern castfn u32_u(x: uint32): uint
+extern castfn u32_timeout(x: uint32): $CLOUDI.timeout
 extern castfn i_u32(x: int): uint32
+extern castfn i8_priority(x: int8): $CLOUDI.priority
 extern castfn i_i8(x: int): int8
 
 (* functions called in templates are required to be external (global)
@@ -143,30 +152,33 @@ state_p_destroy {l:agz}
 extern fn
 callback_name
     (api_c: ptr,
-     name: $CLOUDI.memory_free_ptr): ptr
+     name: $CLOUDI.memory_free_ptr): Ptr1
 extern fn
 callback_request_info
     (api_c: ptr,
      request_info: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): ptr
+     size_c: &uint32): Ptr1
 extern fn
 callback_request
     (api_c: ptr,
      request: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): ptr
+     size_c: &uint32): Ptr1
 extern fn
 callback_response_info
     (api_c: ptr,
      response_info: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): ptr
+     size_c: &uint32): Ptr1
 extern fn
 callback_response
     (api_c: ptr,
      response: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): ptr
+     size_c: &uint32): Ptr1
 
-(* C CloudI API functions
+(* C CloudI API related functions
  *)
+extern fn
+c_threads_yield:
+    () -> void = "ext#"
 extern fn
 c_set_c_state: {l1:agz}
     (ptr,
@@ -210,16 +222,16 @@ c_get_prefix:
     (ptr) -> [l1:agz] ptr(l1) = "ext#"
 extern fn
 c_get_timeout_initialize:
-    (ptr) -> uintBtwe(101, 4294967195) = "ext#"
+    (ptr) -> $CLOUDI.timeout_initialize = "ext#"
 extern fn
 c_get_timeout_async:
-    (ptr) -> uintBtwe(499, 4294967295) = "ext#"
+    (ptr) -> $CLOUDI.timeout_async = "ext#"
 extern fn
 c_get_timeout_sync:
-    (ptr) -> uintBtwe(499, 4294967295) = "ext#"
+    (ptr) -> $CLOUDI.timeout_sync = "ext#"
 extern fn
 c_get_timeout_terminate:
-    (ptr) -> uintBtwe(10, 60000) = "ext#"
+    (ptr) -> $CLOUDI.timeout_terminate = "ext#"
 extern fn
 c_get_priority_default:
     (ptr) -> int8 = "ext#"
@@ -281,84 +293,84 @@ c_mcast_async_: {l1,l2,l3:agz}
      uint32,
      int8) -> intGte(0) = "ext#cloudi_mcast_async_"
 extern fn
-c_forward:
+c_forward: {l1,l2,l3,l4,l5:agz}
     (ptr,
      int,
-     ptr,
-     ptr,
+     ptr(l1),
+     ptr(l2),
      uint32,
-     ptr,
+     ptr(l3),
      uint32,
      uint32,
      int8,
-     ptr,
-     ptr,
+     ptr(l4),
+     ptr(l5),
      uint32) -> intGte(0) = "ext#cloudi_forward"
 extern fn
-c_forward_async:
+c_forward_async: {l1,l2,l3,l4,l5:agz}
     (ptr,
-     ptr,
-     ptr,
+     ptr(l1),
+     ptr(l2),
      uint32,
-     ptr,
+     ptr(l3),
      uint32,
      uint32,
      int8,
-     ptr,
-     ptr,
+     ptr(l4),
+     ptr(l5),
      uint32) -> intGte(0) = "ext#cloudi_forward_async"
 extern fn
-c_forward_sync:
+c_forward_sync: {l1,l2,l3,l4,l5:agz}
     (ptr,
-     ptr,
-     ptr,
+     ptr(l1),
+     ptr(l2),
      uint32,
-     ptr,
+     ptr(l3),
      uint32,
      uint32,
      int8,
-     ptr,
-     ptr,
+     ptr(l4),
+     ptr(l5),
      uint32) -> intGte(0) = "ext#cloudi_forward_sync"
 extern fn
-c_return:
+c_return: {l1,l2,l3,l4,l5,l6:agz}
     (ptr,
      int,
-     ptr,
-     ptr,
-     ptr,
+     ptr(l1),
+     ptr(l2),
+     ptr(l3),
      uint32,
-     ptr,
+     ptr(l4),
      uint32,
      uint32,
-     ptr,
-     ptr,
+     ptr(l5),
+     ptr(l6),
      uint32) -> intGte(0) = "ext#cloudi_return"
 extern fn
-c_return_async:
+c_return_async: {l1,l2,l3,l4,l5,l6:agz}
     (ptr,
-     ptr,
-     ptr,
-     ptr,
+     ptr(l1),
+     ptr(l2),
+     ptr(l3),
      uint32,
-     ptr,
+     ptr(l4),
      uint32,
      uint32,
-     ptr,
-     ptr,
+     ptr(l5),
+     ptr(l6),
      uint32) -> intGte(0) = "ext#cloudi_return_async"
 extern fn
-c_return_sync:
+c_return_sync: {l1,l2,l3,l4,l5,l6:agz}
     (ptr,
-     ptr,
-     ptr,
-     ptr,
+     ptr(l1),
+     ptr(l2),
+     ptr(l3),
      uint32,
-     ptr,
+     ptr(l4),
      uint32,
      uint32,
-     ptr,
-     ptr,
+     ptr(l5),
+     ptr(l6),
      uint32) -> intGte(0) = "ext#cloudi_return_sync"
 extern fn
 c_recv_async: {l1:agz}
@@ -415,14 +427,6 @@ threads_ = {l1,l2:agz} THREADS of (@{
 })
 assume $CLOUDI.threads_vtype = threads_
 
-fn
-api_c_get {s:vt@ype}
-    (api: !$CLOUDI.instance(s)): ptr = let
-    val INSTANCE(@{api_c_ptr = (_, _ | api_c), ...}) = api
-in
-    api_c
-end
-
 implement {s}
 state_p_new
     (state_value) = let
@@ -443,10 +447,29 @@ state_p_destroy {l}
 }
 
 implement
-$CLOUDI.Strptr
+$CLOUDI.string2read
+    (str) = let
+    val size: uint32 = sz_u32(string_length(str))
+    val p: Ptr1 = string2ptr(str)
+in
+    $CLOUDI.Ptr(p, size)
+end
+
+implement
+$CLOUDI.strptr2free
     (str) = let
     val size: uint32 = ssz_u32(strptr_length(str))
-    val p: ptr = strptr2ptr(str)
+    val p: Ptr1 = strptr2ptr(str)
+    prval () = $UNSAFE.cast2void(str)
+in
+    $CLOUDI.PtrFree(p, size)
+end
+
+implement
+$CLOUDI.strnptr2free
+    (str) = let
+    val size: uint32 = ssz_u32(strnptr_length(str))
+    val p: Ptr1 = strnptr2ptr(str)
     prval () = $UNSAFE.cast2void(str)
 in
     $CLOUDI.PtrFree(p, size)
@@ -457,7 +480,7 @@ callback_name
     (api_c,
      name) =
 case+ name of
-  | ~$CLOUDI.String(s) =>
+  | ~$CLOUDI.StringLiteral(s) =>
     string2ptr(s)
   | ~$CLOUDI.PtrFree(name_c, _) => let
     val () = c_free_name(api_c)
@@ -471,8 +494,8 @@ callback_request_info
      request_info,
      size_c) =
 case+ request_info of
-  | ~$CLOUDI.String(s) => let
-    val () = size_c := sz_u32(string0_length(s))
+  | ~$CLOUDI.StringLiteral(s) => let
+    val () = size_c := sz_u32(string_length(s))
 in
     string2ptr(s)
 end
@@ -489,8 +512,8 @@ callback_request
      request,
      size_c) =
 case+ request of
-  | ~$CLOUDI.String(s) => let
-    val () = size_c := sz_u32(string0_length(s))
+  | ~$CLOUDI.StringLiteral(s) => let
+    val () = size_c := sz_u32(string_length(s))
 in
     string2ptr(s)
 end
@@ -507,8 +530,8 @@ callback_response_info
      response_info,
      size_c) =
 case+ response_info of
-  | ~$CLOUDI.String(s) => let
-    val () = size_c := sz_u32(string0_length(s))
+  | ~$CLOUDI.StringLiteral(s) => let
+    val () = size_c := sz_u32(string_length(s))
 in
     string2ptr(s)
 end
@@ -525,8 +548,8 @@ callback_response
      response,
      size_c) =
 case+ response of
-  | ~$CLOUDI.String(s) => let
-    val () = size_c := sz_u32(string0_length(s))
+  | ~$CLOUDI.StringLiteral(s) => let
+    val () = size_c := sz_u32(string_length(s))
 in
     string2ptr(s)
 end
@@ -535,6 +558,14 @@ end
     val () = size_c := size
 in
     response_c
+end
+
+fn
+api_c_get {s:vt@ype}
+    (api: !$CLOUDI.instance(s)): ptr = let
+    val INSTANCE(@{api_c_ptr = (_, _ | api_c), ...}) = api
+in
+    api_c
 end
 
 fn
@@ -589,23 +620,23 @@ $CLOUDI.callback_attach
      api_c) = let
     val name: string = $UNSAFE.castvwtp0{string}(name_c)
     val pattern: string = $UNSAFE.castvwtp0{string}(pattern_c)
-    val request_info: Ptr1 = $UNSAFE.castvwtp0{Ptr1}(request_info_c)
-    val request_info_size = g0uint2uint_uint32_uint(request_info_size_c)
-    val request: Ptr1 = $UNSAFE.castvwtp0{Ptr1}(request_c)
-    val request_size = g0uint2uint_uint32_uint(request_size_c)
-    val timeout = g0uint2uint_uint32_uint(timeout_c)
-    val priority = g0int2int_int8_int(priority_c)
-    val trans_id = $CLOUDI.TransId($UNSAFE.castvwtp0{Ptr1}(trans_id_c))
+    val request_info = $CLOUDI.Ptr($UNSAFE.castvwtp0{Ptr1}(request_info_c),
+                                   request_info_size_c)
+    val request = $CLOUDI.Ptr($UNSAFE.castvwtp0{Ptr1}(request_c),
+                              request_size_c)
+    val timeout = u32_timeout(timeout_c)
+    val priority = i8_priority(priority_c)
+    val trans_id = $UNSAFE.castvwtp0{Ptr1}(trans_id_c)
+    val trans_id_ptr = $CLOUDI.TransId(trans_id)
     val pid: Ptr1 = $UNSAFE.castvwtp0{Ptr1}(pid_c)
-    val pid_size = g0uint2uint_uint32_uint(pid_size_c)
+    val source = $CLOUDI.Ptr(pid, pid_size_c)
     val api = $UNSAFE.castvwtp1{$CLOUDI.instance(s)}(state_c)
     val INSTANCE(@{state_p = state_p, ...}) = api
     val state = $UNSAFE.castvwtp1{$CLOUDI.stateptr(s)}(state_p)
     val callback_result = try callback(request_type, name, pattern,
-                                       request_info, request_info_size,
-                                       request, request_size,
-                                       timeout, priority, trans_id,
-                                       pid, pid_size, state, api) with
+                                       request_info, request,
+                                       timeout, priority, trans_id_ptr,
+                                       source, state, api) with
       | ~$CLOUDI.Terminate() =>
         $CLOUDI.Null()
       | ~$CLOUDI.FatalError() => let
@@ -619,7 +650,10 @@ $CLOUDI.callback_attach
     in
         $CLOUDI.Null()
     end
-    prval () = $UNSAFE.cast2void(trans_id)
+    val ~$CLOUDI.Ptr(_, _) = request_info
+    val ~$CLOUDI.Ptr(_, _) = request
+    val ~$CLOUDI.TransId(_) = trans_id_ptr
+    val ~$CLOUDI.Ptr(_, _) = source
     prval () = $UNSAFE.cast2void(state)
     prval () = $UNSAFE.cast2void(api)
 in
@@ -627,16 +661,17 @@ in
       | ~$CLOUDI.Response(response) => let
         var response_info_size_c: uint32 = i_u32(0)
         val response_info_c = callback_response_info(api_c,
-                                                     $CLOUDI.String(""),
+                                                     $CLOUDI.StringLiteral(""),
                                                      response_info_size_c)
         var response_size_c: uint32 = i_u32(0)
         val response_c = callback_response(api_c,
                                            response,
                                            response_size_c)
-        val status = c_return(api_c, request_type, name_c, pattern_c,
+        val status = c_return(api_c, request_type,
+                              string2ptr(name), string2ptr(pattern),
                               response_info_c, response_info_size_c,
                               response_c, response_size_c,
-                              timeout_c, trans_id_c, pid_c, pid_size_c)
+                              timeout_c, trans_id, pid, pid_size_c)
     in
         assertloc(status = 0)
     end
@@ -649,10 +684,11 @@ in
         val response_c = callback_response(api_c,
                                            response,
                                            response_size_c)
-        val status = c_return(api_c, request_type, name_c, pattern_c,
+        val status = c_return(api_c, request_type,
+                              string2ptr(name), string2ptr(pattern),
                               response_info_c, response_info_size_c,
                               response_c, response_size_c,
-                              timeout_c, trans_id_c, pid_c, pid_size_c)
+                              timeout_c, trans_id, pid, pid_size_c)
     in
         assertloc(status = 0)
     end
@@ -670,7 +706,7 @@ in
                                request_info_new_c, request_info_size_new_c,
                                request_new_c, request_size_new_c,
                                timeout_c, priority_c,
-                               trans_id_c, pid_c, pid_size_c)
+                               trans_id, pid, pid_size_c)
     in
         assertloc(status = 0)
     end
@@ -689,23 +725,24 @@ in
                                request_info_new_c, request_info_size_new_c,
                                request_new_c, request_size_new_c,
                                u_u32(timeout_new), i_i8(priority_new),
-                               trans_id_c, pid_c, pid_size_c)
+                               trans_id, pid, pid_size_c)
     in
         assertloc(status = 0)
     end
       | ~$CLOUDI.Null() => let
         var response_info_size_c: uint32 = i_u32(0)
         val response_info_c = callback_response_info(api_c,
-                                                     $CLOUDI.String(""),
+                                                     $CLOUDI.StringLiteral(""),
                                                      response_info_size_c)
         var response_size_c: uint32 = i_u32(0)
         val response_c = callback_response(api_c,
-                                           $CLOUDI.String(""),
+                                           $CLOUDI.StringLiteral(""),
                                            response_size_c)
-        val status = c_return(api_c, request_type, name_c, pattern_c,
+        val status = c_return(api_c, request_type,
+                              string2ptr(name), string2ptr(pattern),
                               response_info_c, response_info_size_c,
                               response_c, response_size_c,
-                              timeout_c, trans_id_c, pid_c, pid_size_c)
+                              timeout_c, trans_id, pid, pid_size_c)
     in
         assertloc(status = 0)
     end
@@ -713,16 +750,17 @@ in
         val () = fprintln!(stderr_ref, error)
         var response_info_size_c: uint32 = i_u32(0)
         val response_info_c = callback_response_info(api_c,
-                                                     $CLOUDI.String(""),
+                                                     $CLOUDI.StringLiteral(""),
                                                      response_info_size_c)
         var response_size_c: uint32 = i_u32(0)
         val response_c = callback_response(api_c,
-                                           $CLOUDI.String(""),
+                                           $CLOUDI.StringLiteral(""),
                                            response_size_c)
-        val status = c_return(api_c, request_type, name_c, pattern_c,
+        val status = c_return(api_c, request_type,
+                              string2ptr(name), string2ptr(pattern),
                               response_info_c, response_info_size_c,
                               response_c, response_size_c,
-                              timeout_c, trans_id_c, pid_c, pid_size_c)
+                              timeout_c, trans_id, pid, pid_size_c)
     in
         assertloc(status = 0)
     end
@@ -811,7 +849,7 @@ $CLOUDI.send_async(api, name, request,
       | Some(timeout_value) =>
         u_u32(timeout_value)
       | None() =>
-        u_u32(c_get_timeout_sync(api_c))
+        u_u32(c_get_timeout_async(api_c))
     val request_info = optional_binary_argument(request_info_opt)
     val priority_c = case+ priority_opt of
       | Some(priority_value) =>
@@ -833,9 +871,43 @@ in
 end
 
 implement
+$CLOUDI.send_sync(api, name, request,
+                  timeout_opt, request_info_opt, priority_opt) = let
+    val api_c = api_c_get(api)
+    val name_c = string2ptr(name)
+    val timeout_c = case+ timeout_opt of
+      | Some(timeout_value) =>
+        u_u32(timeout_value)
+      | None() =>
+        u_u32(c_get_timeout_sync(api_c))
+    val request_info = optional_binary_argument(request_info_opt)
+    val priority_c = case+ priority_opt of
+      | Some(priority_value) =>
+        i_i8(priority_value)
+      | None() =>
+        c_get_priority_default(api_c)
+    val ~$CLOUDI.Ptr(request_info_c, request_info_size_c) = request_info
+    val ~$CLOUDI.Ptr(request_c, request_size_c) = request
+    val status = c_send_sync_(api_c, name_c,
+                              request_info_c, request_info_size_c,
+                              request_c, request_size_c,
+                              timeout_c, priority_c)
+in
+    case+ result_value_unit(status, api) of
+      | ~$CLOUDI.Ok(_) =>
+        $CLOUDI.Ok(@($CLOUDI.Ptr(c_get_response_info(api_c),
+                                 c_get_response_info_size(api_c)),
+                     $CLOUDI.Ptr(c_get_response(api_c),
+                                 c_get_response_size(api_c)),
+                     $CLOUDI.TransId(c_get_trans_id(api_c, i2u(0)))))
+      | ~$CLOUDI.Error(status_error) =>
+        $CLOUDI.Error(status_error)
+end
+
+implement
 $CLOUDI.forward_async(api, name,
                       request_info, request,
-                      timeout, priority, trans_id, pid, pid_size) = let
+                      timeout, priority, trans_id, source) = let
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
@@ -849,12 +921,12 @@ $CLOUDI.forward_async(api, name,
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
     val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val pid_size_c = u_u32(pid_size)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
     val status = c_forward_async(api_c, name_c,
                                  request_info_c, request_info_size_c,
                                  request_c, request_size_c,
                                  timeout_c, priority_c,
-                                 trans_id_c, pid, pid_size_c)
+                                 trans_id_c, pid_c, pid_size_c)
 in
     assertloc(status = 0)
 end
@@ -862,7 +934,7 @@ end
 implement
 $CLOUDI.forward_sync(api, name,
                      request_info, request,
-                     timeout, priority, trans_id, pid, pid_size) = let
+                     timeout, priority, trans_id, source) = let
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
@@ -876,12 +948,12 @@ $CLOUDI.forward_sync(api, name,
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
     val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val pid_size_c = u_u32(pid_size)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
     val status = c_forward_sync(api_c, name_c,
                                 request_info_c, request_info_size_c,
                                 request_c, request_size_c,
                                 timeout_c, priority_c,
-                                trans_id_c, pid, pid_size_c)
+                                trans_id_c, pid_c, pid_size_c)
 in
     assertloc(status = 0)
 end
@@ -889,7 +961,7 @@ end
 implement
 $CLOUDI.forward_(api, request_type, name,
                  request_info, request,
-                 timeout, priority, trans_id, pid, pid_size) = let
+                 timeout, priority, trans_id, source) = let
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
@@ -903,12 +975,12 @@ $CLOUDI.forward_(api, request_type, name,
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
     val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val pid_size_c = u_u32(pid_size)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
     val status = c_forward(api_c, request_type, name_c,
                            request_info_c, request_info_size_c,
                            request_c, request_size_c,
                            timeout_c, priority_c,
-                           trans_id_c, pid, pid_size_c)
+                           trans_id_c, pid_c, pid_size_c)
 in
     assertloc(status = 0)
 end
@@ -916,7 +988,7 @@ end
 implement
 $CLOUDI.return_async(api, name, pattern,
                      response_info, response,
-                     timeout, trans_id, pid, pid_size) = let
+                     timeout, trans_id, source) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
@@ -930,11 +1002,11 @@ $CLOUDI.return_async(api, name, pattern,
                                        response_size_c)
     val timeout_c = u_u32(timeout)
     val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val pid_size_c = u_u32(pid_size)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
     val status = c_return_async(api_c, name_c, pattern_c,
                                 response_info_c, response_info_size_c,
                                 response_c, response_size_c,
-                                timeout_c, trans_id_c, pid, pid_size_c)
+                                timeout_c, trans_id_c, pid_c, pid_size_c)
 in
     assertloc(status = 0)
 end
@@ -942,7 +1014,7 @@ end
 implement
 $CLOUDI.return_sync(api, name, pattern,
                     response_info, response,
-                    timeout, trans_id, pid, pid_size) = let
+                    timeout, trans_id, source) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
@@ -956,11 +1028,11 @@ $CLOUDI.return_sync(api, name, pattern,
                                        response_size_c)
     val timeout_c = u_u32(timeout)
     val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val pid_size_c = u_u32(pid_size)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
     val status = c_return_sync(api_c, name_c, pattern_c,
                                response_info_c, response_info_size_c,
                                response_c, response_size_c,
-                               timeout_c, trans_id_c, pid, pid_size_c)
+                               timeout_c, trans_id_c, pid_c, pid_size_c)
 in
     assertloc(status = 0)
 end
@@ -968,7 +1040,7 @@ end
 implement
 $CLOUDI.return_(api, request_type, name, pattern,
                 response_info, response,
-                timeout, trans_id, pid, pid_size) = let
+                timeout, trans_id, source) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
@@ -982,11 +1054,11 @@ $CLOUDI.return_(api, request_type, name, pattern,
                                        response_size_c)
     val timeout_c = u_u32(timeout)
     val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val pid_size_c = u_u32(pid_size)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
     val status = c_return(api_c, request_type, name_c, pattern_c,
                           response_info_c, response_info_size_c,
                           response_c, response_size_c,
-                          timeout_c, trans_id_c, pid, pid_size_c)
+                          timeout_c, trans_id_c, pid_c, pid_size_c)
 in
     assertloc(status = 0)
 end
@@ -1058,7 +1130,7 @@ implement
 $CLOUDI.priority_default(api) = let
     val api_c = api_c_get(api)
 in
-    c_get_priority_default(api_c)
+    i8_priority(c_get_priority_default(api_c))
 end
 
 implement
@@ -1188,6 +1260,10 @@ end
 implement
 $CLOUDI.threads_wait(threads) = let
     val () = threads_remove(threads)
+    val () = threads_destroy(threads)
 in
-    threads_destroy(threads)
+    (* yield to ensure thread memory is freed and not seen by valgrind
+     * ($ATHREAD only provides detached pthreads)
+     *)
+    c_threads_yield()
 end

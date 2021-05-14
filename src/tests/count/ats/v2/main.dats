@@ -34,22 +34,19 @@ request_ats
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
-     request_info: Ptr1,
-     request_info_size: uint,
-     request: Ptr1,
-     request_size: uint,
-     timeout: uint,
-     priority: int,
+     request_info: !$CLOUDI.memory_ptr,
+     request: !$CLOUDI.memory_ptr,
+     timeout: $CLOUDI.timeout,
+     priority: $CLOUDI.priority,
      trans_id: !$CLOUDI.trans_id_ptr,
-     pid: Ptr1,
-     pid_size: uint,
+     source: !$CLOUDI.memory_ptr,
      state: !$CLOUDI.stateptr(state_type),
      api: !$CLOUDI.instance(state_type)): $CLOUDI.response = let
     val state_value: int = aptr_get_elt<int>(state) + 1
     val () = println!("count == ", state_value, " ats2")
     val () = aptr_set_elt(state, state_value)
 in
-    $CLOUDI.Response($CLOUDI.Strptr(g0int2string_int(state_value)))
+    $CLOUDI.Response($CLOUDI.strptr2free(g0int2string_int(state_value)))
 end
 
 fn
