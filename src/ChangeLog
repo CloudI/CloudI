@@ -7,6 +7,7 @@
         * All functions/types are present now
         * count integration test exists in ATS
     * Update cowboy, cowlib, ranch
+    * Add Erlang/OTP 24.0 support to cloudi_service_router
 
 2021-05-13 Michael Truog   <mjtruog at protonmail dot com>
 

@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2018-2021 Michael Truog
+%%% @version 2.0.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router_ssh_client).
@@ -89,6 +89,13 @@
 -define(TIMEOUT_DELTA, 100). % milliseconds
 -define(TIMEOUT_SEND_MIN, 100). % milliseconds (>= FORWARD_DELTA)
 -define(TIMEOUT_RECONNECT_MIN, 5000). % milliseconds
+
+-ifdef(OTP_RELEASE).
+% able to use -if/-elif here
+-if(?OTP_RELEASE >= 24).
+-define(ERLANG_OTP_VERSION_24_FEATURES, true).
+-endif.
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -221,6 +228,18 @@ new(Options, Environment, SSH)
                             SystemDir :: string()) ->
     boolean().
 
+-ifdef(ERLANG_OTP_VERSION_24_FEATURES).
+silently_accept_hosts(_PeerName, FingerPrint, SystemDir) ->
+    KeyFileName = filename:join(SystemDir, "ssh_host_rsa_key.pub"),
+    case filelib:is_file(KeyFileName) of
+        true ->
+            {ok, KeyData} = file:read_file(KeyFileName),
+            [{Key, _}] = ssh_file:decode(KeyData, public_key),
+            ssh:hostkey_fingerprint(Key) == FingerPrint;
+        false ->
+            false
+    end.
+-else.
 silently_accept_hosts(_PeerName, FingerPrint, SystemDir) ->
     KeyFileName = filename:join(SystemDir, "ssh_host_rsa_key.pub"),
     case filelib:is_file(KeyFileName) of
@@ -231,6 +250,7 @@ silently_accept_hosts(_PeerName, FingerPrint, SystemDir) ->
         false ->
             false
     end.
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
