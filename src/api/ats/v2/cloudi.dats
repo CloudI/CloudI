@@ -1,3 +1,6 @@
+(*-*-Mode:ats;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+  ex: set ft=ats fenc=utf-8 sts=4 ts=4 sw=4 et nomod: *)
+
 (*
 
   MIT License
@@ -133,7 +136,6 @@ macdef c_int_timeout = $extval(int, "cloudi_timeout")
 extern castfn sz_u32(x: size_t): uint32
 extern castfn ssz_u32(x: ssize_t): uint32
 extern castfn u_u32(x: uint): uint32
-extern castfn u32_u(x: uint32): uint
 extern castfn u32_timeout(x: uint32): $CLOUDI.timeout
 extern castfn i_u32(x: int): uint32
 extern castfn i8_priority(x: int8): $CLOUDI.priority
@@ -197,17 +199,17 @@ c_get_response_info_size:
     (ptr) -> uint32 = "ext#"
 extern fn
 c_get_trans_id_count:
-    (ptr) -> uint32 = "ext#"
+    (ptr) -> uintGt(0) = "ext#"
 extern fn
 c_get_trans_id:
     (ptr,
      uint) -> [l1:agz] ptr(l1) = "ext#"
 extern fn
 c_get_subscribe_count:
-    (ptr) -> uint32 = "ext#"
+    (ptr) -> uintGte(0) = "ext#"
 extern fn
 c_get_process_index:
-    (ptr) -> uint32 = "ext#"
+    (ptr) -> uintGte(0) = "ext#"
 extern fn
 c_get_process_count:
     (ptr) -> uintGt(0) = "ext#"
@@ -373,10 +375,9 @@ c_return_sync: {l1,l2,l3,l4,l5,l6:agz}
      ptr(l6),
      uint32) -> intGte(0) = "ext#cloudi_return_sync"
 extern fn
-c_recv_async: {l1:agz}
-    (!char @ l1 |
-     ptr,
-     uint,
+c_recv_async: {l1:agez}
+    (ptr,
+     uint32,
      ptr(l1),
      int) -> intGte(0) = "ext#cloudi_recv_async"
 extern fn
@@ -569,12 +570,20 @@ in
 end
 
 fn
-optional_binary_argument
+optional_request_info
     (opt: Option_vt($CLOUDI.memory_ptr)): $CLOUDI.memory_ptr = case+ opt of
   | Some_vt(_) =>
     option_vt_unsome(opt)
   | ~None_vt() =>
     $CLOUDI.Ptr(string2ptr(""), i_u32(0))
+
+fn
+optional_trans_id
+    (opt: Option_vt($CLOUDI.trans_id_ptr)): $CLOUDI.trans_id_ptr = case+ opt of
+  | Some_vt(_) =>
+    option_vt_unsome(opt)
+  | ~None_vt() =>
+    $CLOUDI.TransId($CLOUDI.trans_id_null)
 
 fn {a:t@ype}
 result_value {s:vt@ype}
@@ -650,8 +659,6 @@ $CLOUDI.callback_attach
     in
         $CLOUDI.Null()
     end
-    val ~$CLOUDI.Ptr(_, _) = request_info
-    val ~$CLOUDI.Ptr(_, _) = request
     val ~$CLOUDI.TransId(_) = trans_id_ptr
     val ~$CLOUDI.Ptr(_, _) = source
     prval () = $UNSAFE.cast2void(state)
@@ -776,7 +783,10 @@ in
 end
 
 implement {s}
-$CLOUDI.new(thread_index, state_value, terminate_return_value) = let
+$CLOUDI.new
+    (thread_index,
+     state_value,
+     terminate_return_value) = let
     val (api_c_pfgc, api_c_pfat | api_c) = ptr_alloc<$CLOUDI.c_instance>()
     val status = c_initialize(api_c_pfgc | api_c, thread_index, the_null_ptr)
 in
@@ -799,7 +809,8 @@ in
 end
 
 implement {s}
-$CLOUDI.destroy(api) = let
+$CLOUDI.destroy
+    (api) = let
     val ~INSTANCE(@{
         api_c_ptr = (api_c_pfgc, api_c_pfat | api_c),
         state_p = state_p, ...}) = api
@@ -810,7 +821,8 @@ in
 end
 
 implement {s}
-$CLOUDI.destroy2void(api) = let
+$CLOUDI.destroy2void
+    (api) = let
     val state_value: s = $CLOUDI.destroy<s>(api)
     prval () = $UNSAFE.cast2void(state_value)
 in
@@ -818,31 +830,43 @@ in
 end
 
 implement
-$CLOUDI.subscribe(api, suffix, f) = let
+$CLOUDI.subscribe
+    (api,
+     suffix,
+     f) = let
     val api_c = api_c_get(api)
 in
     result_value_unit(c_subscribe(api_c, string2ptr(suffix), f), api)
 end
 
 implement
-$CLOUDI.subscribe_count(api, suffix) = let
+$CLOUDI.subscribe_count
+    (api,
+     suffix) = let
     val api_c = api_c_get(api)
     val status = c_subscribe_count(api_c, string2ptr(suffix))
-    val value = u32_u(c_get_subscribe_count(api_c))
+    val value = c_get_subscribe_count(api_c)
 in
     result_value<uint>(value, status, api)
 end
 
 implement
-$CLOUDI.unsubscribe(api, suffix) = let
+$CLOUDI.unsubscribe
+    (api,
+     suffix) = let
     val api_c = api_c_get(api)
 in
     result_value_unit(c_unsubscribe(api_c, string2ptr(suffix)), api)
 end
 
 implement
-$CLOUDI.send_async(api, name, request,
-                   timeout_opt, request_info_opt, priority_opt) = let
+$CLOUDI.send_async
+    (api,
+     name,
+     request,
+     timeout_opt,
+     request_info_opt,
+     priority_opt) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val timeout_c = case+ timeout_opt of
@@ -850,7 +874,7 @@ $CLOUDI.send_async(api, name, request,
         u_u32(timeout_value)
       | None() =>
         u_u32(c_get_timeout_async(api_c))
-    val request_info = optional_binary_argument(request_info_opt)
+    val request_info = optional_request_info(request_info_opt)
     val priority_c = case+ priority_opt of
       | Some(priority_value) =>
         i_i8(priority_value)
@@ -871,8 +895,13 @@ in
 end
 
 implement
-$CLOUDI.send_sync(api, name, request,
-                  timeout_opt, request_info_opt, priority_opt) = let
+$CLOUDI.send_sync
+    (api,
+     name,
+     request,
+     timeout_opt,
+     request_info_opt,
+     priority_opt) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val timeout_c = case+ timeout_opt of
@@ -880,7 +909,7 @@ $CLOUDI.send_sync(api, name, request,
         u_u32(timeout_value)
       | None() =>
         u_u32(c_get_timeout_sync(api_c))
-    val request_info = optional_binary_argument(request_info_opt)
+    val request_info = optional_request_info(request_info_opt)
     val priority_c = case+ priority_opt of
       | Some(priority_value) =>
         i_i8(priority_value)
@@ -905,9 +934,57 @@ in
 end
 
 implement
-$CLOUDI.forward_async(api, name,
-                      request_info, request,
-                      timeout, priority, trans_id, source) = let
+$CLOUDI.mcast_async
+    (api,
+     name,
+     request,
+     timeout_opt,
+     request_info_opt,
+     priority_opt) = let
+    val api_c = api_c_get(api)
+    val name_c = string2ptr(name)
+    val timeout_c = case+ timeout_opt of
+      | Some(timeout_value) =>
+        u_u32(timeout_value)
+      | None() =>
+        u_u32(c_get_timeout_async(api_c))
+    val request_info = optional_request_info(request_info_opt)
+    val priority_c = case+ priority_opt of
+      | Some(priority_value) =>
+        i_i8(priority_value)
+      | None() =>
+        c_get_priority_default(api_c)
+    val ~$CLOUDI.Ptr(request_info_c, request_info_size_c) = request_info
+    val ~$CLOUDI.Ptr(request_c, request_size_c) = request
+    val status = c_mcast_async_(api_c, name_c,
+                                request_info_c, request_info_size_c,
+                                request_c, request_size_c,
+                                timeout_c, priority_c)
+in
+    case+ result_value_unit(status, api) of
+      | ~$CLOUDI.Ok(_) => let
+        implement array_initize$init<$CLOUDI.trans_id_ptr>(i, x) =
+            x := $CLOUDI.TransId(c_get_trans_id(api_c, sz2u(i)))
+        val size = u2sz(c_get_trans_id_count(api_c))
+        val trans_ids = arrayptr_make_uninitized<$CLOUDI.trans_id_ptr>(size)
+        val () = arrayptr_initize<$CLOUDI.trans_id_ptr>(trans_ids, size)
+    in
+        $CLOUDI.Ok(@(trans_ids, size))
+    end
+      | ~$CLOUDI.Error(status_error) =>
+        $CLOUDI.Error(status_error)
+end
+
+implement
+$CLOUDI.forward_async
+    (api,
+     name,
+     request_info,
+     request,
+     timeout,
+     priority,
+     trans_id,
+     source) = let
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
@@ -920,8 +997,10 @@ $CLOUDI.forward_async(api, name,
                                      request_size_c)
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
-    val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
+    val ~$CLOUDI.TransId(trans_id_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_forward_async(api_c, name_c,
                                  request_info_c, request_info_size_c,
                                  request_c, request_size_c,
@@ -932,9 +1011,15 @@ in
 end
 
 implement
-$CLOUDI.forward_sync(api, name,
-                     request_info, request,
-                     timeout, priority, trans_id, source) = let
+$CLOUDI.forward_sync
+    (api,
+     name,
+     request_info,
+     request,
+     timeout,
+     priority,
+     trans_id,
+     source) = let
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
@@ -947,8 +1032,10 @@ $CLOUDI.forward_sync(api, name,
                                      request_size_c)
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
-    val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
+    val ~$CLOUDI.TransId(trans_id_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_forward_sync(api_c, name_c,
                                 request_info_c, request_info_size_c,
                                 request_c, request_size_c,
@@ -959,9 +1046,16 @@ in
 end
 
 implement
-$CLOUDI.forward_(api, request_type, name,
-                 request_info, request,
-                 timeout, priority, trans_id, source) = let
+$CLOUDI.forward
+    (api,
+     request_type,
+     name,
+     request_info,
+     request,
+     timeout,
+     priority,
+     trans_id,
+     source) = let
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
@@ -974,8 +1068,10 @@ $CLOUDI.forward_(api, request_type, name,
                                      request_size_c)
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
-    val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
+    val ~$CLOUDI.TransId(trans_id_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_forward(api_c, request_type, name_c,
                            request_info_c, request_info_size_c,
                            request_c, request_size_c,
@@ -986,9 +1082,15 @@ in
 end
 
 implement
-$CLOUDI.return_async(api, name, pattern,
-                     response_info, response,
-                     timeout, trans_id, source) = let
+$CLOUDI.return_async
+    (api,
+     name,
+     pattern,
+     response_info,
+     response,
+     timeout,
+     trans_id,
+     source) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
@@ -1001,8 +1103,10 @@ $CLOUDI.return_async(api, name, pattern,
                                        response,
                                        response_size_c)
     val timeout_c = u_u32(timeout)
-    val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
+    val ~$CLOUDI.TransId(trans_id_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_return_async(api_c, name_c, pattern_c,
                                 response_info_c, response_info_size_c,
                                 response_c, response_size_c,
@@ -1012,9 +1116,15 @@ in
 end
 
 implement
-$CLOUDI.return_sync(api, name, pattern,
-                    response_info, response,
-                    timeout, trans_id, source) = let
+$CLOUDI.return_sync
+    (api,
+     name,
+     pattern,
+     response_info,
+     response,
+     timeout,
+     trans_id,
+     source) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
@@ -1027,8 +1137,10 @@ $CLOUDI.return_sync(api, name, pattern,
                                        response,
                                        response_size_c)
     val timeout_c = u_u32(timeout)
-    val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
+    val ~$CLOUDI.TransId(trans_id_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_return_sync(api_c, name_c, pattern_c,
                                response_info_c, response_info_size_c,
                                response_c, response_size_c,
@@ -1038,9 +1150,16 @@ in
 end
 
 implement
-$CLOUDI.return_(api, request_type, name, pattern,
-                response_info, response,
-                timeout, trans_id, source) = let
+$CLOUDI.return
+    (api,
+     request_type,
+     name,
+     pattern,
+     response_info,
+     response,
+     timeout,
+     trans_id,
+     source) = let
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
@@ -1053,8 +1172,10 @@ $CLOUDI.return_(api, request_type, name, pattern,
                                        response,
                                        response_size_c)
     val timeout_c = u_u32(timeout)
-    val ~$CLOUDI.TransId(trans_id_c) = trans_id
-    val ~$CLOUDI.Ptr(pid_c, pid_size_c) = source
+    val ~$CLOUDI.TransId(trans_id_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
+    val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
+        $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_return(api_c, request_type, name_c, pattern_c,
                           response_info_c, response_info_size_c,
                           response_c, response_size_c,
@@ -1064,77 +1185,121 @@ in
 end
 
 implement
-$CLOUDI.process_index(api) = let
+$CLOUDI.recv_async
+    (api,
+     timeout_opt,
+     trans_id_opt,
+     consume_opt) = let
     val api_c = api_c_get(api)
+    val timeout_c = case+ timeout_opt of
+      | Some(timeout_value) =>
+        u_u32(timeout_value)
+      | None() =>
+        u_u32(c_get_timeout_sync(api_c))
+    val trans_id = optional_trans_id(trans_id_opt)
+    val consume_c = case+ consume_opt of
+      | Some(consume_value) =>
+        bool2int(consume_value)
+      | None() =>
+        bool2int(true)
+    val ~$CLOUDI.TransId(trans_id_c) = trans_id
+    val status = c_recv_async(api_c, timeout_c, trans_id_c, consume_c)
 in
-    u32_u(c_get_process_index(api_c))
+    case+ result_value_unit(status, api) of
+      | ~$CLOUDI.Ok(_) =>
+        $CLOUDI.Ok(@($CLOUDI.Ptr(c_get_response_info(api_c),
+                                 c_get_response_info_size(api_c)),
+                     $CLOUDI.Ptr(c_get_response(api_c),
+                                 c_get_response_size(api_c)),
+                     $CLOUDI.TransId(c_get_trans_id(api_c, i2u(0)))))
+      | ~$CLOUDI.Error(status_error) =>
+        $CLOUDI.Error(status_error)
 end
 
 implement
-$CLOUDI.process_count(api) = let
+$CLOUDI.process_index
+    (api) = let
+    val api_c = api_c_get(api)
+in
+    c_get_process_index(api_c)
+end
+
+implement
+$CLOUDI.process_count
+    (api) = let
     val api_c = api_c_get(api)
 in
     c_get_process_count(api_c)
 end
 
 implement
-$CLOUDI.process_count_max(api) = let
+$CLOUDI.process_count_max
+    (api) = let
     val api_c = api_c_get(api)
 in
     c_get_process_count_max(api_c)
 end
 
 implement
-$CLOUDI.process_count_min(api) = let
+$CLOUDI.process_count_min
+    (api) = let
     val api_c = api_c_get(api)
 in
     c_get_process_count_min(api_c)
 end
 
 implement
-$CLOUDI.prefix_(api) = let
+$CLOUDI.prefix_
+    (api) = let
     val api_c = api_c_get(api)
 in
     $UNSAFE.castvwtp0{string}(c_get_prefix(api_c))
 end
 
 implement
-$CLOUDI.timeout_initialize(api) = let
+$CLOUDI.timeout_initialize
+    (api) = let
     val api_c = api_c_get(api)
 in
     c_get_timeout_initialize(api_c)
 end
 
 implement
-$CLOUDI.timeout_async(api) = let
+$CLOUDI.timeout_async
+    (api) = let
     val api_c = api_c_get(api)
 in
     c_get_timeout_async(api_c)
 end
 
 implement
-$CLOUDI.timeout_sync(api) = let
+$CLOUDI.timeout_sync
+    (api) = let
     val api_c = api_c_get(api)
 in
     c_get_timeout_sync(api_c)
 end
 
 implement
-$CLOUDI.timeout_terminate(api) = let
+$CLOUDI.timeout_terminate
+    (api) = let
     val api_c = api_c_get(api)
 in
     c_get_timeout_terminate(api_c)
 end
 
 implement
-$CLOUDI.priority_default(api) = let
+$CLOUDI.priority_default
+    (api) = let
     val api_c = api_c_get(api)
 in
     i8_priority(c_get_priority_default(api_c))
 end
 
 implement
-$CLOUDI.poll(api, timeout) = let
+$CLOUDI.poll
+    (api,
+     timeout) = let
     val api_c = api_c_get(api)
     val status = c_poll(api_c, timeout)
 in
@@ -1147,7 +1312,9 @@ in
 end
 
 implement
-$CLOUDI.shutdown(api, reason) = let
+$CLOUDI.shutdown
+    (api,
+     reason) = let
     val api_c = api_c_get(api)
     val reason_c = case+ reason of
       | Some(s) =>
@@ -1250,7 +1417,9 @@ in
 end
 
 implement
-$CLOUDI.threads_create(thread_count, f) = let
+$CLOUDI.threads_create
+    (thread_count,
+     f) = let
     val threads = threads_new(thread_count)
     val () = threads_add(threads, f)
 in
@@ -1258,7 +1427,8 @@ in
 end
 
 implement
-$CLOUDI.threads_wait(threads) = let
+$CLOUDI.threads_wait
+    (threads) = let
     val () = threads_remove(threads)
     val () = threads_destroy(threads)
 in

@@ -1,3 +1,6 @@
+(*-*-Mode:ats;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+  ex: set ft=ats fenc=utf-8 sts=4 ts=4 sw=4 et nomod: *)
+
 (*
 
   MIT License
@@ -34,19 +37,28 @@ request_ats
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
-     request_info: !$CLOUDI.memory_ptr,
-     request: !$CLOUDI.memory_ptr,
+     request_info: $CLOUDI.memory_ptr,
+     request: $CLOUDI.memory_ptr,
      timeout: $CLOUDI.timeout,
      priority: $CLOUDI.priority,
      trans_id: !$CLOUDI.trans_id_ptr,
      source: !$CLOUDI.memory_ptr,
      state: !$CLOUDI.stateptr(state_type),
      api: !$CLOUDI.instance(state_type)): $CLOUDI.response = let
+    val ~$CLOUDI.Ptr(_, _) = request_info
+    val ~$CLOUDI.Ptr(_, _) = request
     val state_value: int = aptr_get_elt<int>(state) + 1
     val () = println!("count == ", state_value, " ats2")
     val () = aptr_set_elt(state, state_value)
+    val response = $CLOUDI.strptr2free(g0int2string_int(state_value))
+    val () = $CLOUDI.return(api, request_type, name, pattern,
+                            $CLOUDI.StringLiteral(""), response,
+                            timeout, trans_id, source)
 in
-    $CLOUDI.Response($CLOUDI.strptr2free(g0int2string_int(state_value)))
+    (* simpler than using the $CLOUDI.return function
+    $CLOUDI.Response(response)
+    *)
+    $CLOUDI.NullError("execution never gets here")
 end
 
 fn

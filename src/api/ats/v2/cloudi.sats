@@ -1,3 +1,6 @@
+(*-*-Mode:ats;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+  ex: set ft=ats fenc=utf-8 sts=4 ts=4 sw=4 et nomod: *)
+
 (*
 
   MIT License
@@ -157,8 +160,8 @@ callback (s:vt@ype) =
     (request_type,
      string,
      string,
-     !memory_ptr,
-     !memory_ptr,
+     memory_ptr,
+     memory_ptr,
      timeout,
      priority,
      !trans_id_ptr,
@@ -239,16 +242,16 @@ send_sync {s:vt@ype}
                                                memory_ptr,
                                                trans_id_ptr))
 
-(*
 fn
 mcast_async {s:vt@ype}
     (api: !instance(s),
      name: string,
      request: memory_ptr,
-     timeout: Option(timeout),
-     request_info: Option_vt(memory_ptr),
-     priority: Option(priority)): Result(array(trans_id_ptr))
-*)
+     timeout_opt: Option(timeout),
+     request_info_opt: Option_vt(memory_ptr),
+     priority_opt: Option(priority)): [l:addr][n:int]
+                                      Result(@(arrayptr(trans_id_ptr, l, n),
+                                               size_t(n)))
 
 fn
 forward_async {s:vt@ype}
@@ -258,8 +261,8 @@ forward_async {s:vt@ype}
      request: memory_free_ptr,
      timeout: timeout,
      priority: priority,
-     trans_id: trans_id_ptr,
-     source: memory_ptr): void
+     trans_id: !trans_id_ptr,
+     source: !memory_ptr): void
 
 fn
 forward_sync {s:vt@ype}
@@ -269,11 +272,11 @@ forward_sync {s:vt@ype}
      request: memory_free_ptr,
      timeout: timeout,
      priority: priority,
-     trans_id: trans_id_ptr,
-     source: memory_ptr): void
+     trans_id: !trans_id_ptr,
+     source: !memory_ptr): void
 
 fn
-forward_ {s:vt@ype}
+forward {s:vt@ype}
     (api: !instance(s),
      request_type: request_type,
      name: memory_free_ptr,
@@ -281,8 +284,8 @@ forward_ {s:vt@ype}
      request: memory_free_ptr,
      timeout: timeout,
      priority: priority,
-     trans_id: trans_id_ptr,
-     source: memory_ptr): void
+     trans_id: !trans_id_ptr,
+     source: !memory_ptr): void
 
 fn
 return_async {s:vt@ype}
@@ -292,8 +295,8 @@ return_async {s:vt@ype}
      response_info: memory_free_ptr,
      response: memory_free_ptr,
      timeout: timeout,
-     trans_id: trans_id_ptr,
-     source: memory_ptr): void
+     trans_id: !trans_id_ptr,
+     source: !memory_ptr): void
 
 fn
 return_sync {s:vt@ype}
@@ -303,11 +306,11 @@ return_sync {s:vt@ype}
      response_info: memory_free_ptr,
      response: memory_free_ptr,
      timeout: timeout,
-     trans_id: trans_id_ptr,
-     source: memory_ptr): void
+     trans_id: !trans_id_ptr,
+     source: !memory_ptr): void
 
 fn
-return_ {s:vt@ype}
+return {s:vt@ype}
     (api: !instance(s),
      request_type: request_type,
      name: string,
@@ -315,17 +318,17 @@ return_ {s:vt@ype}
      response_info: memory_free_ptr,
      response: memory_free_ptr,
      timeout: timeout,
-     trans_id: trans_id_ptr,
-     source: memory_ptr): void
+     trans_id: !trans_id_ptr,
+     source: !memory_ptr): void
 
-(*
 fn
 recv_async {s:vt@ype}
     (api: !instance(s),
-     timeout: Option(timeout),
-     trans_id: Option_vt(trans_id_ptr),
-     consume: Option(bool)): Result(@(memory_ptr, memory_ptr, trans_id_ptr))
-*)
+     timeout_opt: Option(timeout),
+     trans_id_opt: Option_vt(trans_id_ptr),
+     consume_opt: Option(bool)): Result(@(memory_ptr,
+                                          memory_ptr,
+                                          trans_id_ptr))
 
 fn
 process_index {s:vt@ype}
