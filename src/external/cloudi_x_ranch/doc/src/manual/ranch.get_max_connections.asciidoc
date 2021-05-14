@@ -2,7 +2,7 @@
 
 == Name
 
-ranch:get_max_connections - Get the max number of connections per connection supervisor
+ranch:get_max_connections - Get the max number of connections
 
 == Description
 
@@ -12,7 +12,7 @@ get_max_connections(Ref :: ranch:ref())
     -> MaxConns :: ranch:max_conns()
 ----
 
-Get the max number of connections per connection supervisor.
+Get the max number of connections.
 
 == Arguments
 
@@ -22,16 +22,11 @@ The listener name.
 
 == Return value
 
-The maximum number of connections per connection supervisor
-is returned.
-
-== Changelog
-
-* *2.0*: The maximum number of connections is now per connection supervisor.
+The maximum number of connections is returned.
 
 == Examples
 
-.Get the max number of connections per connection supervisor
+.Get the max number of connections
 [source,erlang]
 ----
 MaxConns = ranch:get_max_connections(example).

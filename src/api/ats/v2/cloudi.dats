@@ -888,8 +888,11 @@ $CLOUDI.send_async
                                timeout_c, priority_c)
 in
     case+ result_value_unit(status, api) of
-      | ~$CLOUDI.Ok(_) =>
+      | ~$CLOUDI.Ok(_) => let
+        val () = assertloc(c_get_trans_id_count(api_c) = i2u(1))
+    in
         $CLOUDI.Ok($CLOUDI.TransId(c_get_trans_id(api_c, i2u(0))))
+    end
       | ~$CLOUDI.Error(status_error) =>
         $CLOUDI.Error(status_error)
 end
@@ -923,12 +926,15 @@ $CLOUDI.send_sync
                               timeout_c, priority_c)
 in
     case+ result_value_unit(status, api) of
-      | ~$CLOUDI.Ok(_) =>
+      | ~$CLOUDI.Ok(_) => let
+        val () = assertloc(c_get_trans_id_count(api_c) = i2u(1))
+    in
         $CLOUDI.Ok(@($CLOUDI.Ptr(c_get_response_info(api_c),
                                  c_get_response_info_size(api_c)),
                      $CLOUDI.Ptr(c_get_response(api_c),
                                  c_get_response_size(api_c)),
                      $CLOUDI.TransId(c_get_trans_id(api_c, i2u(0)))))
+    end
       | ~$CLOUDI.Error(status_error) =>
         $CLOUDI.Error(status_error)
 end
@@ -1206,12 +1212,15 @@ $CLOUDI.recv_async
     val status = c_recv_async(api_c, timeout_c, trans_id_c, consume_c)
 in
     case+ result_value_unit(status, api) of
-      | ~$CLOUDI.Ok(_) =>
+      | ~$CLOUDI.Ok(_) => let
+        val () = assertloc(c_get_trans_id_count(api_c) = i2u(1))
+    in
         $CLOUDI.Ok(@($CLOUDI.Ptr(c_get_response_info(api_c),
                                  c_get_response_info_size(api_c)),
                      $CLOUDI.Ptr(c_get_response(api_c),
                                  c_get_response_size(api_c)),
                      $CLOUDI.TransId(c_get_trans_id(api_c, i2u(0)))))
+    end
       | ~$CLOUDI.Error(status_error) =>
         $CLOUDI.Error(status_error)
 end

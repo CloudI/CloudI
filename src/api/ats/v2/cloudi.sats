@@ -129,7 +129,7 @@ fn
 strptr2free
     (str: Strptr1): memory_free_ptr
 fn
-strnptr2free {l:agz}{n:nat}
+strnptr2free {l:agz}{n:int}
     (str: strnptr(l, n)): memory_free_ptr
 
 typedef timeout_initialize = uintBtwe(101, 4294967195)

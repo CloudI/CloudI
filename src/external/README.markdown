@@ -60,8 +60,8 @@ Erlang `cowboy`
 `Erlang HTTP Server`
 
 - `https://github.com/ninenines/cowboy`
-- `commit 8795233c57f1f472781a22ffbf186ce38cc5b049`
-- `Sat Apr 17 03:11:57 UTC 2021`
+- `commit 04ca4c5d31a92d4d3de087bbd7d6021dc4a6d409 (2.9.0)`
+- `Fri May 14 19:17:48 UTC 2021`
 - `MIT`
 
 Erlang `cowboy1`
@@ -78,8 +78,8 @@ Erlang `cowlib`
 `cowboy Protocols`
 
 - `https://github.com/ninenines/cowlib`
-- `commit 9df1a2399870a7944a1847fe2becf1738f747dce`
-- `Sat Apr 17 03:11:57 UTC 2021`
+- `commit e9448e5628c8c1d9083223ff973af8de31a566d1 (2.11.0)`
+- `Fri May 14 19:17:48 UTC 2021`
 - `MIT`
 
 Erlang `cowlib1`
@@ -258,8 +258,8 @@ Erlang `ranch`
 `Erlang Socket acceptor pool for TCP protocols`
 
 - `https://github.com/ninenines/ranch`
-- `commit a882739222df0ad73ab0cab24ae620e05f1b5827 (2.0.0)`
-- `Sat Apr 17 03:11:57 UTC 2021`
+- `commit a692f44567034dacf5efcaa24a24183788594eb7 (1.8.0)`
+- `Fri May 14 19:17:48 UTC 2021`
 - `MIT`
 
 Erlang `ranch1`

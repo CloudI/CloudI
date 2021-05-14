@@ -1,6 +1,6 @@
 {application, cowboy, [
 	{description, "Small, fast, modern HTTP server."},
-	{vsn, "2.8.0"},
+	{vsn, "2.9.0"},
 	{modules, []},
 	{registered, [cowboy_sup, cowboy_clock]},
 	{applications, [

@@ -1,10 +1,10 @@
 -module(active_echo_protocol).
 -behaviour(ranch_protocol).
 
--export([start_link/3]).
+-export([start_link/4]).
 -export([init/3]).
 
-start_link(Ref, Transport, Opts) ->
+start_link(Ref, _Socket, Transport, Opts) ->
 	Pid = spawn_link(?MODULE, init, [Ref, Transport, Opts]),
 	{ok, Pid}.
 
@@ -13,7 +13,7 @@ init(Ref, Transport, _Opts = []) ->
 	loop(Socket, Transport).
 
 loop(Socket, Transport) ->
-	{OK, Closed, Error, _Passive} = Transport:messages(),
+	{OK, Closed, Error} = Transport:messages(),
 	Transport:setopts(Socket, [{active, once}]),
 	receive
 		{OK, Socket, Data} ->

@@ -1,4 +1,4 @@
-%% Copyright (c) 2013-2020, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2013-2018, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -33,10 +33,11 @@ brutal_kill(_) ->
 		ranch_tcp, #{shutdown => brutal_kill},
 		echo_protocol, []),
 	Port = ranch:get_port(Name),
-	ok = do_connect_and_ping(Port),
+	{ok, _} = gen_tcp:connect("localhost", Port, []),
+	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSupSup, _, _} = lists:keyfind(ranch_conns_sup_sup, 1, ListenerSupChildren),
-	[Pid] = do_get_conn_pids(ConnsSupSup),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
 	ok = ranch:stop_listener(Name),
 	receive after 100 -> ok end,
@@ -52,10 +53,11 @@ infinity(_) ->
 		ranch_tcp, #{shutdown => infinity},
 		echo_protocol, []),
 	Port = ranch:get_port(Name),
-	ok = do_connect_and_ping(Port),
+	{ok, _} = gen_tcp:connect("localhost", Port, []),
+	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSupSup, _, _} = lists:keyfind(ranch_conns_sup_sup, 1, ListenerSupChildren),
-	[Pid] = do_get_conn_pids(ConnsSupSup),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
 	ok = ranch:stop_listener(Name),
 	receive after 100 -> ok end,
@@ -73,10 +75,11 @@ infinity_trap_exit(_) ->
 		ranch_tcp, #{shutdown => infinity},
 		trap_exit_protocol, []),
 	Port = ranch:get_port(Name),
-	ok = do_connect_and_ping(Port),
+	{ok, _} = gen_tcp:connect("localhost", Port, []),
+	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSupSup, _, _} = lists:keyfind(ranch_conns_sup_sup, 1, ListenerSupChildren),
-	[Pid] = do_get_conn_pids(ConnsSupSup),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
 	%% This call will block infinitely.
 	SpawnPid = spawn(fun() -> ok = ranch:stop_listener(Name) end),
@@ -101,10 +104,11 @@ timeout(_) ->
 		ranch_tcp, #{shutdown => 500},
 		echo_protocol, []),
 	Port = ranch:get_port(Name),
-	ok = do_connect_and_ping(Port),
+	{ok, _} = gen_tcp:connect("localhost", Port, []),
+	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSupSup, _, _} = lists:keyfind(ranch_conns_sup_sup, 1, ListenerSupChildren),
-	[Pid] = do_get_conn_pids(ConnsSupSup),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
 	ok = ranch:stop_listener(Name),
 	receive after 100 -> ok end,
@@ -122,10 +126,11 @@ timeout_trap_exit(_) ->
 		ranch_tcp, #{shutdown => 500},
 		trap_exit_protocol, []),
 	Port = ranch:get_port(Name),
-	ok = do_connect_and_ping(Port),
+	{ok, _} = gen_tcp:connect("localhost", Port, []),
+	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSupSup, _, _} = lists:keyfind(ranch_conns_sup_sup, 1, ListenerSupChildren),
-	[Pid] = do_get_conn_pids(ConnsSupSup),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
 	%% This call will block for the duration of the shutdown.
 	SpawnPid = spawn(fun() -> ok = ranch:stop_listener(Name) end),
@@ -141,17 +146,4 @@ timeout_trap_exit(_) ->
 	false = is_process_alive(Pid),
 	false = is_process_alive(ListenerSup),
 	false = is_process_alive(SpawnPid),
-	ok.
-
-do_get_conn_pids(ConnsSupSup) ->
-	ConnsSups = [ConnsSup ||
-		 {_, ConnsSup, _, _} <- supervisor:which_children(ConnsSupSup)],
-	ConnChildren = lists:flatten(
-		[supervisor:which_children(ConnsSup) || ConnsSup <- ConnsSups]),
-	[ConnPid || {_, ConnPid, _, _} <- ConnChildren].
-
-do_connect_and_ping(Port) ->
-	{ok, Conn} = gen_tcp:connect("localhost", Port, [binary, {active, false}, {packet, raw}]),
-	ok = gen_tcp:send(Conn, <<"PING">>),
-	{ok, <<"PING">>} = gen_tcp:recv(Conn, 4, 1000),
 	ok.

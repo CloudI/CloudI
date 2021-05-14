@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2020, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2018, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -14,32 +14,24 @@
 
 -module(ranch_acceptor).
 
--export([start_link/5]).
--export([init/4]).
--export([loop/5]).
+-export([start_link/4]).
+-export([loop/4]).
 
--spec start_link(ranch:ref(), pos_integer(), inet:socket(), module(), module())
+-spec start_link(inet:socket(), module(), module(), pid())
 	-> {ok, pid()}.
-start_link(Ref, AcceptorId, LSocket, Transport, Logger) ->
-	ConnsSup = ranch_server:get_connections_sup(Ref, AcceptorId),
-	Pid = spawn_link(?MODULE, init, [LSocket, Transport, Logger, ConnsSup]),
+start_link(LSocket, Transport, Logger, ConnsSup) ->
+	Pid = spawn_link(?MODULE, loop, [LSocket, Transport, Logger, ConnsSup]),
 	{ok, Pid}.
 
--spec init(inet:socket(), module(), module(), pid()) -> no_return().
-init(LSocket, Transport, Logger, ConnsSup) ->
-	MonitorRef = monitor(process, ConnsSup),
-	loop(LSocket, Transport, Logger, ConnsSup, MonitorRef).
-
--spec loop(inet:socket(), module(), module(), pid(), reference()) -> no_return().
-loop(LSocket, Transport, Logger, ConnsSup, MonitorRef) ->
+-spec loop(inet:socket(), module(), module(), pid()) -> no_return().
+loop(LSocket, Transport, Logger, ConnsSup) ->
 	_ = case Transport:accept(LSocket, infinity) of
 		{ok, CSocket} ->
 			case Transport:controlling_process(CSocket, ConnsSup) of
 				ok ->
 					%% This call will not return until process has been started
 					%% AND we are below the maximum number of connections.
-					ranch_conns_sup:start_protocol(ConnsSup, MonitorRef,
-						CSocket);
+					ranch_conns_sup:start_protocol(ConnsSup, CSocket);
 				{error, _} ->
 					Transport:close(CSocket)
 			end;
@@ -59,7 +51,7 @@ loop(LSocket, Transport, Logger, ConnsSup, MonitorRef) ->
 			ok
 	end,
 	flush(Logger),
-	?MODULE:loop(LSocket, Transport, Logger, ConnsSup, MonitorRef).
+	?MODULE:loop(LSocket, Transport, Logger, ConnsSup).
 
 flush(Logger) ->
 	receive Msg ->

@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2020, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2018, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -22,27 +22,20 @@
 	-> {ok, pid()}.
 start_link(Ref, Transport, TransOpts, Protocol, ProtoOpts) ->
 	MaxConns = maps:get(max_connections, TransOpts, 1024),
-	Logger = maps:get(logger, TransOpts, logger),
 	ranch_server:set_new_listener_opts(Ref, MaxConns, TransOpts, ProtoOpts,
 		[Ref, Transport, TransOpts, Protocol, ProtoOpts]),
 	supervisor:start_link(?MODULE, {
-		Ref, Transport, Protocol, Logger
+		Ref, Transport, Protocol
 	}).
 
--spec init({ranch:ref(), module(), module(), module()})
-	-> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
-init({Ref, Transport, Protocol, Logger}) ->
+init({Ref, Transport, Protocol}) ->
 	ok = ranch_server:set_listener_sup(Ref, self()),
 	ChildSpecs = [
-		#{
-			id => ranch_conns_sup_sup,
-			start => {ranch_conns_sup_sup, start_link, [Ref, Transport, Protocol, Logger]},
-			type => supervisor
-		},
-		#{
-			id => ranch_acceptors_sup,
-			start => {ranch_acceptors_sup, start_link, [Ref, Transport, Logger]},
-			type => supervisor
-		}
+		{ranch_conns_sup, {ranch_conns_sup, start_link,
+				[Ref, Transport, Protocol]},
+			permanent, infinity, supervisor, [ranch_conns_sup]},
+		{ranch_acceptors_sup, {ranch_acceptors_sup, start_link,
+				[Ref, Transport]},
+			permanent, infinity, supervisor, [ranch_acceptors_sup]}
 	],
-	{ok, {#{strategy => rest_for_one}, ChildSpecs}}.
+	{ok, {{rest_for_one, 1, 5}, ChildSpecs}}.

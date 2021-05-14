@@ -80,17 +80,9 @@ Get one or more statistic options for the socket.
 [source,erlang]
 ----
 handshake(Socket0  :: socket(),
+          SockOpts :: any(),
           Timeout  :: timeout())
-    -> {ok, Socket :: socket()}
-     | {ok, Socket :: socket(), Info :: any()}
-     | {error, any()}
-
-handshake(Socket0  :: socket(),
-          SockOpts :: opts(),
-          Timeout  :: timeout())
-    -> {ok, Socket :: socket()}
-     | {ok, Socket :: socket(), Info :: any()}
-     | {error, any()}
+    -> {ok, Socket}
 ----
 
 Perform the transport-level handshake.
@@ -100,61 +92,20 @@ before performing any socket operation. It allows
 transports that require extra initialization to perform
 their task and return a socket that is ready to use.
 
-If the handshake is completed by this call, the function will
-return `{ok, Socket}`. However, some transports (notably,
-`ranch_ssl` if `{handshake, hello}` is specified in the socket
-options) may pause the handshake at a certain point and return
-`{ok, Socket, Info}` instead, in order to allow for
-additional decisions to be made before resuming the handshake
-with `handshake_continue/3` or cancelling it with
-`handshake_cancel/1`.
-
 This function may also be used to upgrade a connection
 from a transport to another depending on the capabilities
 of the transports. For example a `ranch_tcp` socket may
 be upgraded to a `ranch_ssl` one using this function.
 
-=== handshake_continue
-
-[source,erlang]
-----
-handshake_continue(Socket0  :: socket(),
-                   Timeout  :: timeout())
-    -> {ok, Socket :: socket()}
-     | {error, any()}
-
-handshake_continue(Socket0  :: socket(),
-                   SockOpts :: opts(),
-                   Timeout  :: timeout())
-    -> {ok, Socket :: socket()}
-     | {error, any()}
-----
-
-Resume the paused transport-level handshake and return a socket
-that is ready to use.
-
-This function will be called by connection processes
-to resume a paused handshake.
-
-=== handshake_cancel
-
-[source,erlang]
-----
-handshake_cancel(Socket :: socket()) -> ok
-----
-
-Cancel the paused transport-level handshake.
-
 === listen
 
 [source,erlang]
 ----
-listen(TransportOpts :: ranch:transport_opts(any()))
+listen(SockOpts :: any())
     -> {ok, LSocket :: socket()} | {error, atom()}
 ----
 
-Create a socket that listens on the port given in the
-socket options.
+Create a socket that listens on the given port.
 
 The port may not be specified or may be set to 0, which
 means a random available port number will be chosen.
@@ -164,10 +115,9 @@ means a random available port number will be chosen.
 [source,erlang]
 ----
 messages()
-    -> {OK      :: atom(),
-        Closed  :: atom(),
-        Error   :: atom(),
-        Passive :: atom()}
+    -> {OK     :: atom(),
+        Closed :: atom(),
+        Error  :: atom()}
 ----
 
 Return the tuple keys for the messages sent by the socket.
@@ -187,15 +137,11 @@ Return the name of the transport.
 ----
 peername(Socket :: socket())
     -> {ok, {inet:ip_address(), inet:port_number()}}
-     | {local, binary()} | {error, atom()}.
+     | {error, atom()}.
 ----
 
 Return the address and port number for the other end of
 the connection.
-
-For UNIX Domain sockets the return value will be
-`{local, PeerSocket}`, with `PeerSocket` typically
-an empty binary.
 
 === recv
 
@@ -303,9 +249,6 @@ sockname(Socket :: socket())
 Return the address and port number for the local end
 of the connection.
 
-For UNIX Domain sockets the return value will be
-`{local, SocketFile}`.
-
 == Exports
 
 The following function can be used when implementing
@@ -341,10 +284,6 @@ The exact type will vary depending on the transport module.
 
 == Changelog
 
-* *2.0*: The callback `listen/1` has changed to accept a map of
-         transport options instead of socket options.
-* *2.0*: The callback `messages/0` return value was updated to
-         include the passive message for `{active, N}`.
 * *1.6*: The `socket()` type was added for documentation purposes.
 * *1.6*: The type of the sendfile filename was extended.
 

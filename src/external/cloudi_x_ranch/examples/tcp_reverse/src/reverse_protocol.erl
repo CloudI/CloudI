@@ -5,7 +5,7 @@
 -behaviour(ranch_protocol).
 
 %% API.
--export([start_link/3]).
+-export([start_link/4]).
 
 %% gen_statem.
 -export([callback_mode/0]).
@@ -14,13 +14,13 @@
 -export([terminate/3]).
 -export([code_change/4]).
 
--define(TIMEOUT, 60000).
+-define(TIMEOUT, 5000).
 
 -record(state, {socket, transport}).
 
 %% API.
 
-start_link(Ref, Transport, Opts) ->
+start_link(Ref, _Socket, Transport, Opts) ->
 	{ok, proc_lib:spawn_link(?MODULE, init, [{Ref, Transport, Opts}])}.
 
 %% gen_statem.

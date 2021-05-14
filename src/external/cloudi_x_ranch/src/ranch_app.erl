@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2020, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2018, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -19,14 +19,10 @@
 -export([stop/1]).
 -export([profile_output/0]).
 
--spec start(application:start_type(), term()) -> {ok, pid()} | {error, term()}.
 start(_, _) ->
 	_ = consider_profiling(),
-	ranch_server = ets:new(ranch_server, [
-		ordered_set, public, named_table]),
 	ranch_sup:start_link().
 
--spec stop(term()) -> ok.
 stop(_) ->
 	ok.
 

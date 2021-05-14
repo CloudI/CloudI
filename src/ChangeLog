@@ -6,6 +6,7 @@
     * Improve the ATS CloudI API
         * All functions/types are present now
         * count integration test exists in ATS
+    * Update cowboy, cowlib, ranch
 
 2021-05-13 Michael Truog   <mjtruog at protonmail dot com>
 

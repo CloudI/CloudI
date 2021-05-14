@@ -8,13 +8,12 @@ ranch:handshake - Perform the transport handshake
 
 [source,erlang]
 ----
-handshake(Ref)       -> {ok, Socket} | {continue, Info}
-handshake(Ref, Opts) -> {ok, Socket} | {continue, Info}
+handshake(Ref)       -> handshake(Ref, [])
+handshake(Ref, Opts) -> {ok, Socket}
 
 Ref    :: ranch:ref()
 Opts   :: any()
 Socket :: any()
-Info   :: any()
 ----
 
 Perform the transport handshake.
@@ -24,6 +23,11 @@ to retrieve the socket for the connection. Ranch performs the
 handshake necessary to give control of the socket to this
 process and also does the transport handshake, for example
 setting up the TLS connection.
+
+Currently the socket can be obtained from a
+`Protocol:start_link/4` argument and as a return value
+from `ranch:handshake/1,2`. In Ranch 2.0 the socket will
+only be available from `ranch:handshake/1,2`.
 
 == Arguments
 
@@ -39,23 +43,12 @@ Allowed options depend on the transport module.
 
 == Return value
 
-An `ok` tuple is returned containing the socket for the connection
-by default.
-
-Depending on configuration, a `continue` tuple can otherwise
-be returned when the handshake operation is paused. It contains
-data provided by the transport that can be used to inform further
-decisions before resuming the handshake, for example to provide
-new transport options. The handshake can be resumed using
-link:man:ranch:handshake_continue(3)[ranch:handshake_continue(3)]
-or canceled using
-link:man:ranch:handshake_cancel(3)[ranch:handshake_cancel(3)].
+An `ok` tuple is returned containing the socket for the connection.
 
 This function will trigger an exception when an error occurs.
 
 == Changelog
 
-* *2.0*: The `continue` tuple can now be returned.
 * *1.6*: Function introduced. Replaces `ranch:accept_ack/1`.
 
 == Examples
@@ -63,7 +56,7 @@ This function will trigger an exception when an error occurs.
 .Initialize the connection process
 [source,erlang]
 ----
-start_link(Ref, Transport, Opts) ->
+start_link(Ref, _, Transport, Opts) ->
     Pid = proc_lib:spawn_link(?MODULE, init,
         [Ref, Transport, Opts]),
     {ok, Pid}.
@@ -77,8 +70,6 @@ init(Ref, Transport, Opts) ->
 == See also
 
 link:man:ranch:start_listener(3)[ranch:start_listener(3)],
-link:man:ranch:handshake_continue(3)[ranch:handshake_continue(3)],
-link:man:ranch:handshake_cancel(3)[ranch:handshake_cancel(3)],
 link:man:ranch:recv_proxy_header(3)[ranch:recv_proxy_header(3)],
 link:man:ranch:remove_connection(3)[ranch:remove_connection(3)],
 link:man:ranch(3)[ranch(3)]
