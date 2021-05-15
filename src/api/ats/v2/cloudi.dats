@@ -133,13 +133,34 @@ macdef c_int_success = 0
 macdef c_int_terminate = $extval(int, "cloudi_terminate")
 macdef c_int_timeout = $extval(int, "cloudi_timeout")
 
-extern castfn sz_u32(x: size_t): uint32
-extern castfn ssz_u32(x: ssize_t): uint32
-extern castfn u_u32(x: uint): uint32
-extern castfn u32_timeout(x: uint32): $CLOUDI.timeout
-extern castfn i_u32(x: int): uint32
-extern castfn i8_priority(x: int8): $CLOUDI.priority
-extern castfn i_i8(x: int): int8
+extern castfn
+sz_u32
+    (x: size_t):<fun0>
+    uint32
+extern castfn
+ssz_u32
+    (x: ssize_t):<fun0>
+    uint32
+extern castfn
+u_u32
+    (x: uint):<fun0>
+    uint32
+extern castfn
+u32_timeout
+    (x: uint32):<fun0>
+    $CLOUDI.timeout
+extern castfn
+i_u32
+    (x: int):<fun0>
+    uint32
+extern castfn
+i8_priority
+    (x: int8):<fun0>
+    $CLOUDI.priority
+extern castfn
+i_i8
+    (x: int):<fun0>
+    int8
 
 (* functions called in templates are required to be external (global)
  * (https://github.com/githwxi/ATS-Postiats/issues/180#issuecomment-363285569)
@@ -147,123 +168,155 @@ extern castfn i_i8(x: int): int8
  *)
 extern fn {s:vt@ype}
 state_p_new
-    (state_value: s): Ptr1
+    (state_value: s):<!wrt>
+    Ptr1
 extern fn {s:vt@ype}
 state_p_destroy {l:agz}
-    (state_p: ptr(l)): s
+    (state_p: ptr(l)):<!wrt>
+    s
 extern fn
 callback_name
     (api_c: ptr,
-     name: $CLOUDI.memory_free_ptr): Ptr1
+     name: $CLOUDI.memory_free_ptr):<!wrt>
+    Ptr1
 extern fn
 callback_request_info
     (api_c: ptr,
      request_info: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): Ptr1
+     size_c: &uint32):<!ref,!wrt>
+    Ptr1
 extern fn
 callback_request
     (api_c: ptr,
      request: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): Ptr1
+     size_c: &uint32):<!ref,!wrt>
+    Ptr1
 extern fn
 callback_response_info
     (api_c: ptr,
      response_info: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): Ptr1
+     size_c: &uint32):<!ref,!wrt>
+    Ptr1
 extern fn
 callback_response
     (api_c: ptr,
      response: $CLOUDI.memory_free_ptr,
-     size_c: &uint32): Ptr1
+     size_c: &uint32):<!ref,!wrt>
+    Ptr1
 
 (* C CloudI API related functions
  *)
 extern fn
 c_threads_yield:
-    () -> void = "ext#"
+    () -<fun0>
+    void = "ext#"
 extern fn
 c_set_c_state: {l1:agz}
     (ptr,
-     ptr(l1)) -> void = "ext#"
+     ptr(l1)) -<fun,!wrt>
+    void = "ext#"
 extern fn
 c_get_response:
-    (ptr) -> [l1:agz] ptr(l1) = "ext#"
+    (ptr) -<fun0>
+    [l1:agz] ptr(l1) = "ext#"
 extern fn
 c_get_response_size:
-    (ptr) -> uint32 = "ext#"
+    (ptr) -<fun0>
+    uint32 = "ext#"
 extern fn
 c_get_response_info:
-    (ptr) -> [l1:agz] ptr(l1) = "ext#"
+    (ptr) -<fun0>
+    [l1:agz] ptr(l1) = "ext#"
 extern fn
 c_get_response_info_size:
-    (ptr) -> uint32 = "ext#"
+    (ptr) -<fun0>
+    uint32 = "ext#"
 extern fn
 c_get_trans_id_count:
-    (ptr) -> uintGt(0) = "ext#"
+    (ptr) -<fun0>
+    uintGt(0) = "ext#"
 extern fn
 c_get_trans_id:
     (ptr,
-     uint) -> [l1:agz] ptr(l1) = "ext#"
+     uint) -<fun0>
+    [l1:agz] ptr(l1) = "ext#"
 extern fn
 c_get_subscribe_count:
-    (ptr) -> uintGte(0) = "ext#"
+    (ptr) -<fun0>
+    uintGte(0) = "ext#"
 extern fn
 c_get_process_index:
-    (ptr) -> uintGte(0) = "ext#"
+    (ptr) -<fun0>
+    uintGte(0) = "ext#"
 extern fn
 c_get_process_count:
-    (ptr) -> uintGt(0) = "ext#"
+    (ptr) -<fun0>
+    uintGt(0) = "ext#"
 extern fn
 c_get_process_count_max:
-    (ptr) -> uintGt(0) = "ext#"
+    (ptr) -<fun0>
+    uintGt(0) = "ext#"
 extern fn
 c_get_process_count_min:
-    (ptr) -> uintGt(0) = "ext#"
+    (ptr) -<fun0>
+    uintGt(0) = "ext#"
 extern fn
 c_get_prefix:
-    (ptr) -> [l1:agz] ptr(l1) = "ext#"
+    (ptr) -<fun0>
+    [l1:agz] ptr(l1) = "ext#"
 extern fn
 c_get_timeout_initialize:
-    (ptr) -> $CLOUDI.timeout_initialize = "ext#"
+    (ptr) -<fun0>
+    $CLOUDI.timeout_initialize = "ext#"
 extern fn
 c_get_timeout_async:
-    (ptr) -> $CLOUDI.timeout_async = "ext#"
+    (ptr) -<fun0>
+    $CLOUDI.timeout_async = "ext#"
 extern fn
 c_get_timeout_sync:
-    (ptr) -> $CLOUDI.timeout_sync = "ext#"
+    (ptr) -<fun0>
+    $CLOUDI.timeout_sync = "ext#"
 extern fn
 c_get_timeout_terminate:
-    (ptr) -> $CLOUDI.timeout_terminate = "ext#"
+    (ptr) -<fun0>
+    $CLOUDI.timeout_terminate = "ext#"
 extern fn
 c_get_priority_default:
-    (ptr) -> int8 = "ext#"
+    (ptr) -<fun0>
+    int8 = "ext#"
 extern fn
 c_initialize: {l1:agz}{l2:addr}
     (!$CLOUDI.c_instance? @ l1 >> $CLOUDI.c_instance @ l1 |
      ptr(l1),
      uint,
-     ptr(l2)) -> intGte(0) = "ext#cloudi_initialize"
+     ptr(l2)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize"
 extern fn
 c_destroy: {l1:agz}
     (!$CLOUDI.c_instance @ l1 |
-     ptr(l1)) -> [l2:addr] ptr(l2) = "ext#cloudi_destroy"
+     ptr(l1)) -<fun,!wrt>
+    [l2:addr] ptr(l2) = "ext#cloudi_destroy"
 extern fn
 c_initialize_thread_count: {l1:agz}
     (!uintGt(0) @ l1 |
-     ptr(l1)) -> intGte(0) = "ext#cloudi_initialize_thread_count"
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_thread_count"
 extern fn
 c_subscribe: {l1:agz}
     (ptr,
      ptr(l1),
-     $CLOUDI.c_callback) -> intGte(0) = "ext#cloudi_subscribe"
+     $CLOUDI.c_callback) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_subscribe"
 extern fn
 c_subscribe_count: {l1:agz}
     (ptr,
-     ptr(l1)) -> intGte(0) = "ext#cloudi_subscribe_count"
+     ptr(l1)) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_subscribe_count"
 extern fn
 c_unsubscribe: {l1:agz}
     (ptr,
-     ptr(l1)) -> intGte(0) = "ext#cloudi_unsubscribe"
+     ptr(l1)) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_unsubscribe"
 extern fn
 c_send_async_: {l1,l2,l3:agz}
     (ptr,
@@ -273,7 +326,8 @@ c_send_async_: {l1,l2,l3:agz}
      ptr(l3),
      uint32,
      uint32,
-     int8) -> intGte(0) = "ext#cloudi_send_async_"
+     int8) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_send_async_"
 extern fn
 c_send_sync_: {l1,l2,l3:agz}
     (ptr,
@@ -283,7 +337,8 @@ c_send_sync_: {l1,l2,l3:agz}
      ptr(l3),
      uint32,
      uint32,
-     int8) -> intGte(0) = "ext#cloudi_send_sync_"
+     int8) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_send_sync_"
 extern fn
 c_mcast_async_: {l1,l2,l3:agz}
     (ptr,
@@ -293,7 +348,8 @@ c_mcast_async_: {l1,l2,l3:agz}
      ptr(l3),
      uint32,
      uint32,
-     int8) -> intGte(0) = "ext#cloudi_mcast_async_"
+     int8) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_mcast_async_"
 extern fn
 c_forward: {l1,l2,l3,l4,l5:agz}
     (ptr,
@@ -307,7 +363,8 @@ c_forward: {l1,l2,l3,l4,l5:agz}
      int8,
      ptr(l4),
      ptr(l5),
-     uint32) -> intGte(0) = "ext#cloudi_forward"
+     uint32) -<fun,!exn,!wrt>
+    intGte(0) = "ext#cloudi_forward"
 extern fn
 c_forward_async: {l1,l2,l3,l4,l5:agz}
     (ptr,
@@ -320,7 +377,8 @@ c_forward_async: {l1,l2,l3,l4,l5:agz}
      int8,
      ptr(l4),
      ptr(l5),
-     uint32) -> intGte(0) = "ext#cloudi_forward_async"
+     uint32) -<fun,!exn,!wrt>
+    intGte(0) = "ext#cloudi_forward_async"
 extern fn
 c_forward_sync: {l1,l2,l3,l4,l5:agz}
     (ptr,
@@ -333,7 +391,8 @@ c_forward_sync: {l1,l2,l3,l4,l5:agz}
      int8,
      ptr(l4),
      ptr(l5),
-     uint32) -> intGte(0) = "ext#cloudi_forward_sync"
+     uint32) -<fun,!exn,!wrt>
+    intGte(0) = "ext#cloudi_forward_sync"
 extern fn
 c_return: {l1,l2,l3,l4,l5,l6:agz}
     (ptr,
@@ -347,7 +406,8 @@ c_return: {l1,l2,l3,l4,l5,l6:agz}
      uint32,
      ptr(l5),
      ptr(l6),
-     uint32) -> intGte(0) = "ext#cloudi_return"
+     uint32) -<fun,!exn,!wrt>
+    intGte(0) = "ext#cloudi_return"
 extern fn
 c_return_async: {l1,l2,l3,l4,l5,l6:agz}
     (ptr,
@@ -360,7 +420,8 @@ c_return_async: {l1,l2,l3,l4,l5,l6:agz}
      uint32,
      ptr(l5),
      ptr(l6),
-     uint32) -> intGte(0) = "ext#cloudi_return_async"
+     uint32) -<fun,!exn,!wrt>
+    intGte(0) = "ext#cloudi_return_async"
 extern fn
 c_return_sync: {l1,l2,l3,l4,l5,l6:agz}
     (ptr,
@@ -373,39 +434,49 @@ c_return_sync: {l1,l2,l3,l4,l5,l6:agz}
      uint32,
      ptr(l5),
      ptr(l6),
-     uint32) -> intGte(0) = "ext#cloudi_return_sync"
+     uint32) -<fun,!exn,!wrt>
+    intGte(0) = "ext#cloudi_return_sync"
 extern fn
 c_recv_async: {l1:agez}
     (ptr,
      uint32,
      ptr(l1),
-     int) -> intGte(0) = "ext#cloudi_recv_async"
+     int) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_recv_async"
 extern fn
 c_poll:
     (ptr,
-     int) -> intGte(0) = "ext#cloudi_poll"
+     int) -<fun,!ntm,!ref,!wrt>
+    intGte(0) = "ext#cloudi_poll"
 extern fn
 c_shutdown:
     (ptr,
-     ptr) -> intGte(0) = "ext#cloudi_shutdown"
+     ptr) -<fun,!ref,!wrt>
+    intGte(0) = "ext#cloudi_shutdown"
 extern fn
 c_free_name:
-    (ptr) -> void = "ext#cloudi_free_name"
+    (ptr) -<fun,!wrt>
+    void = "ext#cloudi_free_name"
 extern fn
 c_free_pattern:
-    (ptr) -> void = "ext#cloudi_free_pattern"
+    (ptr) -<fun,!wrt>
+    void = "ext#cloudi_free_pattern"
 extern fn
 c_free_request_info:
-    (ptr) -> void = "ext#cloudi_free_request_info"
+    (ptr) -<fun,!wrt>
+    void = "ext#cloudi_free_request_info"
 extern fn
 c_free_request:
-    (ptr) -> void = "ext#cloudi_free_request"
+    (ptr) -<fun,!wrt>
+    void = "ext#cloudi_free_request"
 extern fn
 c_free_response_info:
-    (ptr) -> void = "ext#cloudi_free_response_info"
+    (ptr) -<fun,!wrt>
+    void = "ext#cloudi_free_response_info"
 extern fn
 c_free_response:
-    (ptr) -> void = "ext#cloudi_free_response"
+    (ptr) -<fun,!wrt>
+    void = "ext#cloudi_free_response"
 
 (* ATS CloudI API type
  *)
@@ -563,7 +634,8 @@ end
 
 fn
 api_c_get {s:vt@ype}
-    (api: !$CLOUDI.instance(s)): ptr = let
+    (api: !$CLOUDI.instance(s)):<fun0>
+    ptr = let
     val INSTANCE(@{api_c_ptr = (_, _ | api_c), ...}) = api
 in
     api_c
@@ -571,7 +643,8 @@ end
 
 fn
 optional_request_info
-    (opt: Option_vt($CLOUDI.memory_ptr)): $CLOUDI.memory_ptr = case+ opt of
+    (opt: Option_vt($CLOUDI.memory_ptr)):<!wrt>
+    $CLOUDI.memory_ptr = case+ opt of
   | Some_vt(_) =>
     option_vt_unsome(opt)
   | ~None_vt() =>
@@ -579,7 +652,8 @@ optional_request_info
 
 fn
 optional_trans_id
-    (opt: Option_vt($CLOUDI.trans_id_ptr)): $CLOUDI.trans_id_ptr = case+ opt of
+    (opt: Option_vt($CLOUDI.trans_id_ptr)):<!wrt>
+    $CLOUDI.trans_id_ptr = case+ opt of
   | Some_vt(_) =>
     option_vt_unsome(opt)
   | ~None_vt() =>
@@ -589,7 +663,8 @@ fn {a:t@ype}
 result_value {s:vt@ype}
     (value: a,
      status: intGte(0),
-     api: !$CLOUDI.instance(s)): $CLOUDI.Result(a) =
+     api: !$CLOUDI.instance(s)):<!exn>
+    $CLOUDI.Result(a) =
 if (status = c_int_success) then
     $CLOUDI.Ok(value)
 else let
@@ -604,7 +679,8 @@ end
 fn
 result_value_unit {s:vt@ype}
     (status: intGte(0),
-     api: !$CLOUDI.instance(s)): $CLOUDI.Result(unit) =
+     api: !$CLOUDI.instance(s)):<!exn>
+    $CLOUDI.Result(unit) =
     result_value<unit>(unit(), status, api)
 
 implement
@@ -776,7 +852,8 @@ end
 implement
 $CLOUDI.thread_count() = let
     var count: uintGt(0) with count_pfgc = i2u(1)
-    val status = c_initialize_thread_count(count_pfgc | addr@count)
+    val status = $effmask_wrt(
+        c_initialize_thread_count(count_pfgc | addr@count))
     val () = assertloc(status = 0)
 in
     count
@@ -973,7 +1050,8 @@ in
             x := $CLOUDI.TransId(c_get_trans_id(api_c, sz2u(i)))
         val size = u2sz(c_get_trans_id_count(api_c))
         val trans_ids = arrayptr_make_uninitized<$CLOUDI.trans_id_ptr>(size)
-        val () = arrayptr_initize<$CLOUDI.trans_id_ptr>(trans_ids, size)
+        val () = $effmask_all(
+            arrayptr_initize<$CLOUDI.trans_id_ptr>(trans_ids, size))
     in
         $CLOUDI.Ok(@(trans_ids, size))
     end
@@ -994,13 +1072,11 @@ $CLOUDI.forward_async
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
-    val request_info_c = callback_request_info(api_c,
-                                               request_info,
-                                               request_info_size_c)
+    val request_info_c = $effmask_ref(
+        callback_request_info(api_c, request_info, request_info_size_c))
     var request_size_c: uint32 = i_u32(0)
-    val request_c = callback_request(api_c,
-                                     request,
-                                     request_size_c)
+    val request_c = $effmask_ref(
+        callback_request(api_c, request, request_size_c))
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
     val ~$CLOUDI.TransId(trans_id_c) =
@@ -1029,13 +1105,11 @@ $CLOUDI.forward_sync
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
-    val request_info_c = callback_request_info(api_c,
-                                               request_info,
-                                               request_info_size_c)
+    val request_info_c = $effmask_ref(
+        callback_request_info(api_c, request_info, request_info_size_c))
     var request_size_c: uint32 = i_u32(0)
-    val request_c = callback_request(api_c,
-                                     request,
-                                     request_size_c)
+    val request_c = $effmask_ref(
+        callback_request(api_c, request, request_size_c))
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
     val ~$CLOUDI.TransId(trans_id_c) =
@@ -1065,13 +1139,11 @@ $CLOUDI.forward
     val api_c = api_c_get(api)
     val name_c = callback_name(api_c, name)
     var request_info_size_c: uint32 = i_u32(0)
-    val request_info_c = callback_request_info(api_c,
-                                               request_info,
-                                               request_info_size_c)
+    val request_info_c = $effmask_ref(
+        callback_request_info(api_c, request_info, request_info_size_c))
     var request_size_c: uint32 = i_u32(0)
-    val request_c = callback_request(api_c,
-                                     request,
-                                     request_size_c)
+    val request_c = $effmask_ref(
+        callback_request(api_c, request, request_size_c))
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
     val ~$CLOUDI.TransId(trans_id_c) =
@@ -1101,13 +1173,11 @@ $CLOUDI.return_async
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
     var response_info_size_c: uint32 = i_u32(0)
-    val response_info_c = callback_response_info(api_c,
-                                                 response_info,
-                                                 response_info_size_c)
+    val response_info_c = $effmask_ref(
+        callback_response_info(api_c, response_info, response_info_size_c))
     var response_size_c: uint32 = i_u32(0)
-    val response_c = callback_response(api_c,
-                                       response,
-                                       response_size_c)
+    val response_c = $effmask_ref(
+        callback_response(api_c, response, response_size_c))
     val timeout_c = u_u32(timeout)
     val ~$CLOUDI.TransId(trans_id_c) =
         $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
@@ -1135,13 +1205,11 @@ $CLOUDI.return_sync
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
     var response_info_size_c: uint32 = i_u32(0)
-    val response_info_c = callback_response_info(api_c,
-                                                 response_info,
-                                                 response_info_size_c)
+    val response_info_c = $effmask_ref(
+        callback_response_info(api_c, response_info, response_info_size_c))
     var response_size_c: uint32 = i_u32(0)
-    val response_c = callback_response(api_c,
-                                       response,
-                                       response_size_c)
+    val response_c = $effmask_ref(
+        callback_response(api_c, response, response_size_c))
     val timeout_c = u_u32(timeout)
     val ~$CLOUDI.TransId(trans_id_c) =
         $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
@@ -1170,13 +1238,11 @@ $CLOUDI.return
     val name_c = string2ptr(name)
     val pattern_c = string2ptr(pattern)
     var response_info_size_c: uint32 = i_u32(0)
-    val response_info_c = callback_response_info(api_c,
-                                                 response_info,
-                                                 response_info_size_c)
+    val response_info_c = $effmask_ref(
+        callback_response_info(api_c, response_info, response_info_size_c))
     var response_size_c: uint32 = i_u32(0)
-    val response_c = callback_response(api_c,
-                                       response,
-                                       response_size_c)
+    val response_c = $effmask_ref(
+        callback_response(api_c, response, response_size_c))
     val timeout_c = u_u32(timeout)
     val ~$CLOUDI.TransId(trans_id_c) =
         $UNSAFE.castvwtp1{$CLOUDI.trans_id_ptr}(trans_id)
@@ -1336,7 +1402,8 @@ end
 
 fn
 threads_new
-    (thread_count: uintGt(0)): $CLOUDI.threads = let
+    (thread_count: uintGt(0)):
+    $CLOUDI.threads = let
     val mutex: $ATHREAD.mutex1 = $ATHREAD.mutex_create_exn()
     val condvar: $ATHREAD.condvar1 = $ATHREAD.condvar_create_exn()
 in
@@ -1351,7 +1418,8 @@ fn
 thread
     (threads: $CLOUDI.threads,
      thread_index: uint,
-     f: (uint) -> void): void = let
+     f: (uint) -<fun1> void):
+    void = let
     val () = f(thread_index)
     val @THREADS(t) = threads
     val mutex = $ATHREAD.unsafe_mutex_vt2t(t.mutex)
@@ -1373,7 +1441,8 @@ end
 fun
 threads_add
     (threads: !$CLOUDI.threads,
-     f: (uint) -> void): void = let
+     f: (uint) -<fun1> void):
+    void = let
     val @THREADS(t) = threads
     val mutex = $ATHREAD.unsafe_mutex_vt2t(t.mutex)
     val (lock | ()) = $ATHREAD.mutex_lock(mutex)
@@ -1394,7 +1463,8 @@ end
 
 fun
 threads_remove
-    (threads: !$CLOUDI.threads): void = let
+    (threads: !$CLOUDI.threads):
+    void = let
     val @THREADS(t) = threads
     val mutex = $ATHREAD.unsafe_mutex_vt2t(t.mutex)
     val condvar = $ATHREAD.unsafe_condvar_vt2t(t.condvar)
@@ -1417,7 +1487,8 @@ end
 
 fn
 threads_destroy
-    (threads: $CLOUDI.threads): void = let
+    (threads: $CLOUDI.threads):
+    void = let
     val ~THREADS(@{mutex = mutex, condvar = condvar, ...}) = threads
     val () = $ATHREAD.mutex_vt_destroy(mutex)
     val () = $ATHREAD.condvar_vt_destroy(condvar)
@@ -1429,8 +1500,8 @@ implement
 $CLOUDI.threads_create
     (thread_count,
      f) = let
-    val threads = threads_new(thread_count)
-    val () = threads_add(threads, f)
+    val threads = $effmask_all(threads_new(thread_count))
+    val () = $effmask_all(threads_add(threads, f))
 in
     threads
 end
@@ -1438,8 +1509,8 @@ end
 implement
 $CLOUDI.threads_wait
     (threads) = let
-    val () = threads_remove(threads)
-    val () = threads_destroy(threads)
+    val () = $effmask_all(threads_remove(threads))
+    val () = $effmask_all(threads_destroy(threads))
 in
     (* yield to ensure thread memory is freed and not seen by valgrind
      * ($ATHREAD only provides detached pthreads)

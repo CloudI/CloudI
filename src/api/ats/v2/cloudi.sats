@@ -108,7 +108,8 @@ c_callback =
      ptr,
      uint32,
      ptr,
-     ptr) -> void
+     ptr) -<fun1>
+    void
 
 datavtype
 trans_id_ptr = TransId of (Ptr1) (* read-only ptr *)
@@ -167,9 +168,26 @@ callback (s:vt@ype) =
      !trans_id_ptr,
      !memory_ptr,
      !stateptr(s),
-     !instance(s)) -> Response
+     !instance(s)) -<fun1>
+    Response
 
 val trans_id_null: Ptr1
+
+datavtype
+pair_ptr = Pair of (Ptr1, Ptr1) (* read-only ptr *)
+
+(*
+
+   function effect tags:
+   !ntm - possibly non-terminating (divergent)
+   !exn - may raise an exception (partial functions)
+   !ref - write to memory not owned (no proof)
+          (includes file descriptors, not reentrant)
+   !wrt - write (includes alloc/free) to memory owned (reentrant)
+   fun0 - mathematical purity (no side-effects)
+   fun1 - may have all possible side-effects (default)
+
+ *)
 
 fn {s:vt@ype}
 callback_attach
@@ -187,40 +205,48 @@ callback_attach
      pid_c: ptr,
      pid_size_c: uint32,
      state_c: ptr,
-     api_c: ptr): void
+     api_c: ptr):<fun1>
+    void
 
 fn
-thread_count(): uintGt(0)
+thread_count():<!exn>
+    uintGt(0)
 
 fn {s:vt@ype}
 new
     (thread_index: uint,
      state_value: s,
-     terminate_return_value: bool): Result(instance(s))
+     terminate_return_value: bool):<!ref,!wrt>
+    Result(instance(s))
 
 fn {s:vt@ype}
 destroy
-    (api: instance(s)): s
+    (api: instance(s)):<!ref,!wrt>
+    s
 
 fn {s:vt@ype}
 destroy2void
-    (api: instance(s)): void
+    (api: instance(s)):<!ref,!wrt>
+    void
 
 fn
 subscribe {s:vt@ype}
     (api: !instance(s),
      suffix: string,
-     f: c_callback): Result(unit)
+     f: c_callback):<!exn,!ref,!wrt>
+    Result(unit)
 
 fn
 subscribe_count {s:vt@ype}
     (api: !instance(s),
-     suffix: string): Result(uint)
+     suffix: string):<!exn,!ref,!wrt>
+    Result(uint)
 
 fn
 unsubscribe {s:vt@ype}
     (api: !instance(s),
-     suffix: string): Result(unit)
+     suffix: string):<!exn,!ref,!wrt>
+    Result(unit)
 
 fn
 send_async {s:vt@ype}
@@ -229,7 +255,8 @@ send_async {s:vt@ype}
      request: memory_ptr,
      timeout_opt: Option(timeout),
      request_info_opt: Option_vt(memory_ptr),
-     priority_opt: Option(priority)): Result(trans_id_ptr)
+     priority_opt: Option(priority)):<!exn,!ref,!wrt>
+    Result(trans_id_ptr)
 
 fn
 send_sync {s:vt@ype}
@@ -238,9 +265,8 @@ send_sync {s:vt@ype}
      request: memory_ptr,
      timeout_opt: Option(timeout),
      request_info_opt: Option_vt(memory_ptr),
-     priority_opt: Option(priority)): Result(@(memory_ptr,
-                                               memory_ptr,
-                                               trans_id_ptr))
+     priority_opt: Option(priority)):<!exn,!ref,!wrt>
+    Result(@(memory_ptr, memory_ptr, trans_id_ptr))
 
 fn
 mcast_async {s:vt@ype}
@@ -249,9 +275,9 @@ mcast_async {s:vt@ype}
      request: memory_ptr,
      timeout_opt: Option(timeout),
      request_info_opt: Option_vt(memory_ptr),
-     priority_opt: Option(priority)): [l:addr][n:int]
-                                      Result(@(arrayptr(trans_id_ptr, l, n),
-                                               size_t(n)))
+     priority_opt: Option(priority)):<!exn,!ref,!wrt>
+    [l:addr][n:int]
+    Result(@(arrayptr(trans_id_ptr, l, n), size_t(n)))
 
 fn
 forward_async {s:vt@ype}
@@ -262,7 +288,8 @@ forward_async {s:vt@ype}
      timeout: timeout,
      priority: priority,
      trans_id: !trans_id_ptr,
-     source: !memory_ptr): void
+     source: !memory_ptr):<!exn,!wrt>
+    void
 
 fn
 forward_sync {s:vt@ype}
@@ -273,7 +300,8 @@ forward_sync {s:vt@ype}
      timeout: timeout,
      priority: priority,
      trans_id: !trans_id_ptr,
-     source: !memory_ptr): void
+     source: !memory_ptr):<!exn,!wrt>
+    void
 
 fn
 forward {s:vt@ype}
@@ -285,7 +313,8 @@ forward {s:vt@ype}
      timeout: timeout,
      priority: priority,
      trans_id: !trans_id_ptr,
-     source: !memory_ptr): void
+     source: !memory_ptr):<!exn,!wrt>
+    void
 
 fn
 return_async {s:vt@ype}
@@ -296,7 +325,8 @@ return_async {s:vt@ype}
      response: memory_free_ptr,
      timeout: timeout,
      trans_id: !trans_id_ptr,
-     source: !memory_ptr): void
+     source: !memory_ptr):<!exn,!wrt>
+    void
 
 fn
 return_sync {s:vt@ype}
@@ -307,7 +337,8 @@ return_sync {s:vt@ype}
      response: memory_free_ptr,
      timeout: timeout,
      trans_id: !trans_id_ptr,
-     source: !memory_ptr): void
+     source: !memory_ptr):<!exn,!wrt>
+    void
 
 fn
 return {s:vt@ype}
@@ -319,84 +350,102 @@ return {s:vt@ype}
      response: memory_free_ptr,
      timeout: timeout,
      trans_id: !trans_id_ptr,
-     source: !memory_ptr): void
+     source: !memory_ptr):<!exn,!wrt>
+    void
 
 fn
 recv_async {s:vt@ype}
     (api: !instance(s),
      timeout_opt: Option(timeout),
      trans_id_opt: Option_vt(trans_id_ptr),
-     consume_opt: Option(bool)): Result(@(memory_ptr,
-                                          memory_ptr,
-                                          trans_id_ptr))
+     consume_opt: Option(bool)):<!exn,!ref,!wrt>
+    Result(@(memory_ptr, memory_ptr, trans_id_ptr))
 
 fn
 process_index {s:vt@ype}
-    (api: !instance(s)): uint
+    (api: !instance(s)):<fun0>
+    uint
 
 fn
 process_count {s:vt@ype}
-    (api: !instance(s)): uintGt(0)
+    (api: !instance(s)):<fun0>
+    uintGt(0)
 
 fn
 process_count_max {s:vt@ype}
-    (api: !instance(s)): uintGt(0)
+    (api: !instance(s)):<fun0>
+    uintGt(0)
 
 fn
 process_count_min {s:vt@ype}
-    (api: !instance(s)): uintGt(0)
+    (api: !instance(s)):<fun0>
+    uintGt(0)
 
 fn
 prefix_ {s:vt@ype}
-    (api: !instance(s)): string
+    (api: !instance(s)):<fun0>
+    string
 
 fn
 timeout_initialize {s:vt@ype}
-    (api: !instance(s)): timeout_initialize
+    (api: !instance(s)):<fun0>
+    timeout_initialize
 
 fn
 timeout_async {s:vt@ype}
-    (api: !instance(s)): timeout_async
+    (api: !instance(s)):<fun0>
+    timeout_async
 
 fn
 timeout_sync {s:vt@ype}
-    (api: !instance(s)): timeout_sync
+    (api: !instance(s)):<fun0>
+    timeout_sync
 
 fn
 timeout_terminate {s:vt@ype}
-    (api: !instance(s)): timeout_terminate
+    (api: !instance(s)):<fun0>
+    timeout_terminate
 
 fn
 priority_default {s:vt@ype}
-    (api: !instance(s)): priority
+    (api: !instance(s)):<fun0>
+    priority
 
 fn
 poll {s:vt@ype}
     (api: !instance(s),
-     timeout: int): Result(bool)
+     timeout: int):<!ntm,!ref,!wrt>
+    Result(bool)
 
 fn
 shutdown {s:vt@ype}
     (api: !instance(s),
-     reason: Option(string)): Result(unit)
+     reason: Option(string)):<!exn,!ref,!wrt>
+    Result(unit)
 
 (*
 fn
 info_key_value_parse
-    (info: string): hashtbl(string, List1(string))
+    (info: memory_ptr):<!wrt>
+    [l:addr][n:int]
+    Result(@(arrayptr(pair_ptr, l, n), size_t(n)))
 
 fn
-info_key_value_new
-    (pairs: hashtbl(string, List1(string)),
-     response: Option(bool)): string
+info_key_value_new {l:addr}{n:int}
+    (pairs: arrayptr(pair_ptr, l, n),
+     size: size_t(n),
+     response: Option(bool)):<!wrt>
+    strptr
 *)
 
 fn
 threads_create
     (thread_count: uintGt(0),
-     f: (uint) -> void): threads
+     f: (uint) -<fun1> void):<!ref,!wrt>
+    threads
 
 fn
 threads_wait
-    (threads: threads): void
+    (threads: threads):<!ntm,!ref,!wrt>
+    void
 
