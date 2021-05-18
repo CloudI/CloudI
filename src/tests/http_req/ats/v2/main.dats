@@ -47,19 +47,53 @@ request_ats
      api: !$CLOUDI.instance(state_type)):
     $CLOUDI.response = let
     val ~$CLOUDI.Ptr(_, _) = request_info
-    val ~$CLOUDI.Ptr(_, _) = request
-    val state_value: int = aptr_get_elt<int>(state) + 1
-    val () = println!("count == ", state_value, " ats2")
-    val () = aptr_set_elt(state, state_value)
-    val response = $CLOUDI.strptr2free(g0int2string(state_value))
-    val () = $CLOUDI.return(api, request_type, name, pattern,
-                            $CLOUDI.StringLiteral(""), response,
-                            timeout, trans_id, source)
+    val @(http_qs, http_qs_size) = $CLOUDI.info_key_value_parse(request)
+    val () = assertloc(http_qs_size >= 2)
+    val key = "value"
+    var value = stropt_none()
+    implement
+    array_iforeach$cont<string><stropt>
+        (i,
+         x,
+         env) = if (stropt_is_some(env)) then let
+        val _ = stropt_unsome(env)
+        val () = env := stropt0_some(x)
+    in
+        false
+    end
+    else
+        true
+    implement
+    array_iforeach$fwork<string><stropt>
+        (i,
+         x,
+         env) = if (i % i2sz(2) = i2sz(0) && key = x) then
+        env := stropt0_some("")
+    else
+        ()
+    val _ = arrayptr_iforeach_env<string><stropt>(http_qs, http_qs_size, value)
+    val xml = if (stropt_is_some(value)) then let
+        val xml_before = "<http_test><value>"
+        val xml_after = "</value></http_test>"
+        val value_str: string = stropt_unsome(value)
+        val value_int: int = g0string2int(value_str)
+        val value_str_parsed = g0int2string(value_int)
+        val value_parsed = (value_str_parsed = value_str)
+        val () = strptr_free(value_str_parsed)
+    in
+        if (value_parsed) then
+            strnptr2stropt(strptr2strnptr(string0_append3(xml_before,
+                                                          value_str,
+                                                          xml_after)))
+        else
+            stropt_none()
+    end
+    else
+        stropt_none()
+    val () = arrayptr_free(http_qs)
 in
-    (* simpler than using the $CLOUDI.return function
-    $CLOUDI.Response(response)
-    *)
-    $CLOUDI.NullError("execution never gets here")
+    $CLOUDI.Response($CLOUDI.stropt2free(xml,
+        "<http_test><error>no value specified</error></http_test>"))
 end
 
 fn
@@ -94,14 +128,26 @@ task
 in
     case+ $CLOUDI.new(thread_index, state_value, true) of
       | ~$CLOUDI.Ok(api) => let
-        val () = case+ $CLOUDI.subscribe(api, "ats2/get", request) of
+        val uint_0 = i2u(0)
+        val () = case+ $CLOUDI.subscribe_count(api, "ats2.xml/get") of
+          | ~$CLOUDI.Ok(uint_0) =>
+            ()
+          | ~$CLOUDI.Error(status) =>
+            assertloc(status = 0)
+        val () = case+ $CLOUDI.subscribe(api, "ats2.xml/get", request) of
           | ~$CLOUDI.Ok(_) =>
+            ()
+          | ~$CLOUDI.Error(status) =>
+            assertloc(status = 0)
+        val uint_1 = i2u(1)
+        val () = case+ $CLOUDI.subscribe_count(api, "ats2.xml/get") of
+          | ~$CLOUDI.Ok(uint_1) =>
             ()
           | ~$CLOUDI.Error(status) =>
             assertloc(status = 0)
         val () = case+ $CLOUDI.poll(api, ~1) of
           | ~$CLOUDI.Ok(_) =>
-            println!("terminate count ats2")
+            println!("terminate http_req ats2")
           | ~$CLOUDI.Error(status) =>
             fprintln!(stderr_ref, "error ", status)
         val () = $CLOUDI.destroy2void(api)

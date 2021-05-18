@@ -146,6 +146,10 @@ u_u32
     (x: uint):<fun0>
     uint32
 extern castfn
+u32_u
+    (x: uint32):<fun0>
+    uint
+extern castfn
 u32_timeout
     (x: uint32):<fun0>
     $CLOUDI.timeout
@@ -528,6 +532,19 @@ in
 end
 
 implement
+$CLOUDI.stropt2free
+    (str,
+     default) = if (stropt_is_some(str)) then let
+    val str_n: [n:nat] string(n) = stropt_unsome(str)
+    val size: uint32 = sz_u32(string1_length(str_n))
+    val p: Ptr1 = string2ptr(str_n)
+in
+    $CLOUDI.PtrFree(p, size)
+end
+else
+    $CLOUDI.StringLiteral(default)
+
+implement
 $CLOUDI.strptr2free
     (str) = let
     val size: uint32 = ssz_u32(strptr_length(str))
@@ -664,7 +681,7 @@ result_value {s:vt@ype}
     (value: a,
      status: intGte(0),
      api: !$CLOUDI.instance(s)):<!exn>
-    $CLOUDI.Result(a) =
+    $CLOUDI.result(a) =
 if (status = c_int_success) then
     $CLOUDI.Ok(value)
 else let
@@ -680,7 +697,7 @@ fn
 result_value_unit {s:vt@ype}
     (status: intGte(0),
      api: !$CLOUDI.instance(s)):<!exn>
-    $CLOUDI.Result(unit) =
+    $CLOUDI.result(unit) =
     result_value<unit>(unit(), status, api)
 
 implement
@@ -705,15 +722,15 @@ $CLOUDI.callback_attach
      api_c) = let
     val name: string = $UNSAFE.castvwtp0{string}(name_c)
     val pattern: string = $UNSAFE.castvwtp0{string}(pattern_c)
-    val request_info = $CLOUDI.Ptr($UNSAFE.castvwtp0{Ptr1}(request_info_c),
+    val request_info = $CLOUDI.Ptr($UNSAFE.cast2Ptr1(request_info_c),
                                    request_info_size_c)
-    val request = $CLOUDI.Ptr($UNSAFE.castvwtp0{Ptr1}(request_c),
+    val request = $CLOUDI.Ptr($UNSAFE.cast2Ptr1(request_c),
                               request_size_c)
     val timeout = u32_timeout(timeout_c)
     val priority = i8_priority(priority_c)
-    val trans_id = $UNSAFE.castvwtp0{Ptr1}(trans_id_c)
+    val trans_id = $UNSAFE.cast2Ptr1(trans_id_c)
     val trans_id_ptr = $CLOUDI.TransId(trans_id)
-    val pid: Ptr1 = $UNSAFE.castvwtp0{Ptr1}(pid_c)
+    val pid: Ptr1 = $UNSAFE.cast2Ptr1(pid_c)
     val source = $CLOUDI.Ptr(pid, pid_size_c)
     val api = $UNSAFE.castvwtp1{$CLOUDI.instance(s)}(state_c)
     val INSTANCE(@{state_p = state_p, ...}) = api
@@ -1046,7 +1063,10 @@ $CLOUDI.mcast_async
 in
     case+ result_value_unit(status, api) of
       | ~$CLOUDI.Ok(_) => let
-        implement array_initize$init<$CLOUDI.trans_id_ptr>(i, x) =
+        implement
+        array_initize$init<$CLOUDI.trans_id_ptr>
+            (i,
+             x) =
             x := $CLOUDI.TransId(c_get_trans_id(api_c, sz2u(i)))
         val size = u2sz(c_get_trans_id_count(api_c))
         val trans_ids = arrayptr_make_uninitized<$CLOUDI.trans_id_ptr>(size)
@@ -1399,6 +1419,104 @@ $CLOUDI.shutdown
 in
     result_value_unit(c_shutdown(api_c, reason_c), api)
 end
+
+fn
+text_pairs_parse
+    (info: $CLOUDI.memory_ptr):<!wrt>
+    [l:addr][n:int]
+    @(arrayptr(string, l, n), size_t(n)) = let
+    val ~$CLOUDI.Ptr(text_p, text_size) = info
+in
+    if (text_size > i_u32(1)) then let
+        val text_size_pred = pred(u32_u(text_size))
+        fun
+        segment_count
+            (count: size_t,
+             p: Ptr1,
+             i: uint):
+            [n:int]
+            size_t(n) = if (i < text_size_pred) then let
+            val p_next = $UNSAFE.cast2Ptr1(ptr1_succ<char>(p))
+            val i_next = i + i2u(1)
+            val store_next = g0uint_iseqz_uint8($UNSAFE.ptr1_get<uint8>(p))
+            val count_next = if (store_next || (i = i2u(0))) then
+                count + i2sz(1)
+            else
+                count
+        in
+            segment_count(count_next, p_next, i_next)
+        end
+        else
+            g1ofg0(count)
+        fun
+        segment_store
+            (pairs_p: ptr,
+             p: Ptr1,
+             i: uint):
+            void = if (i < text_size_pred) then let
+            val p_next = $UNSAFE.cast2Ptr1(ptr1_succ<char>(p))
+            val i_next = i + i2u(1)
+            val store_next = g0uint_iseqz_uint8($UNSAFE.ptr1_get<uint8>(p))
+            fn
+            segment_store_text
+                (pairs_p_incr: ptr,
+                 segment: ptr):
+                ptr = let
+                val () = $UNSAFE.ptr0_set<ptr>(pairs_p_incr, segment)
+            in
+                $UNSAFE.cast2ptr(ptr_succ<ptr>(pairs_p_incr))
+            end
+            val pairs_p_next = if (store_next) then
+                segment_store_text(pairs_p, $UNSAFE.castvwtp1{ptr}(p_next))
+            else if (i = i2u(0)) then
+                segment_store_text(pairs_p, $UNSAFE.castvwtp1{ptr}(p))
+            else
+                pairs_p
+        in
+            segment_store(pairs_p_next, p_next, i_next)
+        end
+        else
+            ()
+        val size = $effmask_all(segment_count(i2sz(1), text_p, i2u(0)))
+        val pairs = arrayptr_make_elt<string>(size, "")
+        val () = $effmask_all(segment_store(ptrcast(pairs), text_p, i2u(0)))
+    in
+        @(pairs, size)
+    end
+    else let
+        val size = i2sz(2)
+        val pairs = arrayptr_make_elt<string>(size, "")
+    in
+        @(pairs, size)
+    end
+end
+
+implement
+$CLOUDI.info_key_value_parse
+    (info) = text_pairs_parse(info)
+
+fn
+text_pairs_new {l:addr}{n:int}
+    (pairs: arrayptr(string, l, n),
+     size: size_t(n),
+     response_opt: Option(bool)):<!wrt>
+    $CLOUDI.memory_free_ptr = let
+    val response_format = case+ response_opt of
+      | Some(response_value) =>
+        response_value
+      | None() =>
+        true
+    val () = arrayptr_free(pairs)
+    val () = $effmask_all(assertloc(false)) // XXX not yet implemented
+in
+    $CLOUDI.StringLiteral("")
+end
+
+implement
+$CLOUDI.info_key_value_new
+    (pairs,
+     size,
+     response_opt) = text_pairs_new(pairs, size, response_opt)
 
 fn
 threads_new

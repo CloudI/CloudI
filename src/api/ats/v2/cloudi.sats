@@ -87,7 +87,6 @@ datavtype
 result (a:vt@ype+) =
   | Ok (a) of (a)
   | Error (a) of (intGt(0))
-vtypedef Result (a:vt@ype) = result(a)
 
 #define ASYNC 1
 #define SYNC ~1
@@ -127,6 +126,10 @@ memory_free_ptr =
   | PtrFree of (Ptr1, uint32) (* ptr to be freed *)
 
 fn
+stropt2free
+    (str: Stropt0,
+     default: string): memory_free_ptr
+fn
 strptr2free
     (str: Strptr1): memory_free_ptr
 fn
@@ -151,7 +154,6 @@ response =
                  timeout, priority)
   | Null of ()
   | NullError of (string)
-vtypedef Response = response
 
 exception Terminate of ()
 exception FatalError of ()
@@ -169,12 +171,9 @@ callback (s:vt@ype) =
      !memory_ptr,
      !stateptr(s),
      !instance(s)) -<fun1>
-    Response
+    response
 
 val trans_id_null: Ptr1
-
-datavtype
-pair_ptr = Pair of (Ptr1, Ptr1) (* read-only ptr *)
 
 (*
 
@@ -217,7 +216,7 @@ new
     (thread_index: uint,
      state_value: s,
      terminate_return_value: bool):<!ref,!wrt>
-    Result(instance(s))
+    result(instance(s))
 
 fn {s:vt@ype}
 destroy
@@ -234,19 +233,19 @@ subscribe {s:vt@ype}
     (api: !instance(s),
      suffix: string,
      f: c_callback):<!exn,!ref,!wrt>
-    Result(unit)
+    result(unit)
 
 fn
 subscribe_count {s:vt@ype}
     (api: !instance(s),
      suffix: string):<!exn,!ref,!wrt>
-    Result(uint)
+    result(uint)
 
 fn
 unsubscribe {s:vt@ype}
     (api: !instance(s),
      suffix: string):<!exn,!ref,!wrt>
-    Result(unit)
+    result(unit)
 
 fn
 send_async {s:vt@ype}
@@ -256,7 +255,7 @@ send_async {s:vt@ype}
      timeout_opt: Option(timeout),
      request_info_opt: Option_vt(memory_ptr),
      priority_opt: Option(priority)):<!exn,!ref,!wrt>
-    Result(trans_id_ptr)
+    result(trans_id_ptr)
 
 fn
 send_sync {s:vt@ype}
@@ -266,7 +265,7 @@ send_sync {s:vt@ype}
      timeout_opt: Option(timeout),
      request_info_opt: Option_vt(memory_ptr),
      priority_opt: Option(priority)):<!exn,!ref,!wrt>
-    Result(@(memory_ptr, memory_ptr, trans_id_ptr))
+    result(@(memory_ptr, memory_ptr, trans_id_ptr))
 
 fn
 mcast_async {s:vt@ype}
@@ -277,7 +276,7 @@ mcast_async {s:vt@ype}
      request_info_opt: Option_vt(memory_ptr),
      priority_opt: Option(priority)):<!exn,!ref,!wrt>
     [l:addr][n:int]
-    Result(@(arrayptr(trans_id_ptr, l, n), size_t(n)))
+    result(@(arrayptr(trans_id_ptr, l, n), size_t(n)))
 
 fn
 forward_async {s:vt@ype}
@@ -359,7 +358,7 @@ recv_async {s:vt@ype}
      timeout_opt: Option(timeout),
      trans_id_opt: Option_vt(trans_id_ptr),
      consume_opt: Option(bool)):<!exn,!ref,!wrt>
-    Result(@(memory_ptr, memory_ptr, trans_id_ptr))
+    result(@(memory_ptr, memory_ptr, trans_id_ptr))
 
 fn
 process_index {s:vt@ype}
@@ -415,28 +414,26 @@ fn
 poll {s:vt@ype}
     (api: !instance(s),
      timeout: int):<!ntm,!ref,!wrt>
-    Result(bool)
+    result(bool)
 
 fn
 shutdown {s:vt@ype}
     (api: !instance(s),
      reason: Option(string)):<!exn,!ref,!wrt>
-    Result(unit)
+    result(unit)
 
-(*
 fn
 info_key_value_parse
     (info: memory_ptr):<!wrt>
     [l:addr][n:int]
-    Result(@(arrayptr(pair_ptr, l, n), size_t(n)))
+    @(arrayptr(string, l, n), size_t(n))
 
 fn
 info_key_value_new {l:addr}{n:int}
-    (pairs: arrayptr(pair_ptr, l, n),
+    (pairs: arrayptr(string, l, n),
      size: size_t(n),
-     response: Option(bool)):<!wrt>
-    strptr
-*)
+     response_opt: Option(bool)):<!wrt>
+    memory_free_ptr
 
 fn
 threads_create

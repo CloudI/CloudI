@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-05-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the info_key_value_parse function to the ATS CloudI API
+    * Add the http_req integration test in ATS
+
 2021-05-15 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the ATS CloudI API function effects
