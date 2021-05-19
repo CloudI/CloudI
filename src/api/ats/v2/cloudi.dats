@@ -37,7 +37,8 @@ staload _(*ATHREAD*) = "libats/DATS/athread_posix.dats"
 
 %{^
 #include <pthread.h> /* due to athread_posix.dats */
-#include <time.h> /* c_threads_yield */
+#include <time.h>    /* c_threads_yield */
+#include <string.h>  /* c_memcpy */
 
 enum
 {
@@ -146,9 +147,9 @@ u_u32
     (x: uint):<fun0>
     uint32
 extern castfn
-u32_u
+u32_sz
     (x: uint32):<fun0>
-    uint
+    size_t
 extern castfn
 u32_timeout
     (x: uint32):<fun0>
@@ -481,6 +482,14 @@ extern fn
 c_free_response:
     (ptr) -<fun,!wrt>
     void = "ext#cloudi_free_response"
+(* Standard C functions
+ *)
+extern fn
+c_memcpy
+    (destination: ptr,
+     source: ptr,
+     size: size_t):<!wrt>
+    ptr = "mac#memcpy"
 
 (* ATS CloudI API type
  *)
@@ -964,15 +973,15 @@ $CLOUDI.send_async
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val timeout_c = case+ timeout_opt of
-      | Some(timeout_value) =>
+      | ~Some_vt(timeout_value) =>
         u_u32(timeout_value)
-      | None() =>
+      | ~None_vt() =>
         u_u32(c_get_timeout_async(api_c))
     val request_info = optional_request_info(request_info_opt)
     val priority_c = case+ priority_opt of
-      | Some(priority_value) =>
+      | ~Some_vt(priority_value) =>
         i_i8(priority_value)
-      | None() =>
+      | ~None_vt() =>
         c_get_priority_default(api_c)
     val ~$CLOUDI.Ptr(request_info_c, request_info_size_c) = request_info
     val ~$CLOUDI.Ptr(request_c, request_size_c) = request
@@ -1002,15 +1011,15 @@ $CLOUDI.send_sync
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val timeout_c = case+ timeout_opt of
-      | Some(timeout_value) =>
+      | ~Some_vt(timeout_value) =>
         u_u32(timeout_value)
-      | None() =>
+      | ~None_vt() =>
         u_u32(c_get_timeout_sync(api_c))
     val request_info = optional_request_info(request_info_opt)
     val priority_c = case+ priority_opt of
-      | Some(priority_value) =>
+      | ~Some_vt(priority_value) =>
         i_i8(priority_value)
-      | None() =>
+      | ~None_vt() =>
         c_get_priority_default(api_c)
     val ~$CLOUDI.Ptr(request_info_c, request_info_size_c) = request_info
     val ~$CLOUDI.Ptr(request_c, request_size_c) = request
@@ -1044,15 +1053,15 @@ $CLOUDI.mcast_async
     val api_c = api_c_get(api)
     val name_c = string2ptr(name)
     val timeout_c = case+ timeout_opt of
-      | Some(timeout_value) =>
+      | ~Some_vt(timeout_value) =>
         u_u32(timeout_value)
-      | None() =>
+      | ~None_vt() =>
         u_u32(c_get_timeout_async(api_c))
     val request_info = optional_request_info(request_info_opt)
     val priority_c = case+ priority_opt of
-      | Some(priority_value) =>
+      | ~Some_vt(priority_value) =>
         i_i8(priority_value)
-      | None() =>
+      | ~None_vt() =>
         c_get_priority_default(api_c)
     val ~$CLOUDI.Ptr(request_info_c, request_info_size_c) = request_info
     val ~$CLOUDI.Ptr(request_c, request_size_c) = request
@@ -1284,15 +1293,15 @@ $CLOUDI.recv_async
      consume_opt) = let
     val api_c = api_c_get(api)
     val timeout_c = case+ timeout_opt of
-      | Some(timeout_value) =>
+      | ~Some_vt(timeout_value) =>
         u_u32(timeout_value)
-      | None() =>
+      | ~None_vt() =>
         u_u32(c_get_timeout_sync(api_c))
     val trans_id = optional_trans_id(trans_id_opt)
     val consume_c = case+ consume_opt of
-      | Some(consume_value) =>
+      | ~Some_vt(consume_value) =>
         bool2int(consume_value)
-      | None() =>
+      | ~None_vt() =>
         bool2int(true)
     val ~$CLOUDI.TransId(trans_id_c) = trans_id
     val status = c_recv_async(api_c, timeout_c, trans_id_c, consume_c)
@@ -1412,9 +1421,9 @@ $CLOUDI.shutdown
      reason) = let
     val api_c = api_c_get(api)
     val reason_c = case+ reason of
-      | Some(s) =>
+      | ~Some_vt(s) =>
         string2ptr(s)
-      | None() =>
+      | ~None_vt() =>
         the_null_ptr
 in
     result_value_unit(c_shutdown(api_c, reason_c), api)
@@ -1428,39 +1437,41 @@ text_pairs_parse
     val ~$CLOUDI.Ptr(text_p, text_size) = info
 in
     if (text_size > i_u32(1)) then let
-        val text_size_pred = pred(u32_u(text_size))
+        val text_size_pred = g1ofg0(pred(u32_sz(text_size)))
         fun
-        segment_count
+        segment_count {i,ni:nat | i <= ni} .<i>.
             (count: size_t,
              p: Ptr1,
-             i: uint):
+             p_i: size_t(i),
+             p_n: size_t(ni)):<!wrt>
             [n:int]
-            size_t(n) = if (i < text_size_pred) then let
+            size_t(n) = if (p_i > 0) then let
             val p_next = $UNSAFE.cast2Ptr1(ptr1_succ<char>(p))
-            val i_next = i + i2u(1)
+            val p_i_next = p_i - i2sz(1)
             val store_next = g0uint_iseqz_uint8($UNSAFE.ptr1_get<uint8>(p))
-            val count_next = if (store_next || (i = i2u(0))) then
+            val count_next = if (store_next || (p_i = p_n)) then
                 count + i2sz(1)
             else
                 count
         in
-            segment_count(count_next, p_next, i_next)
+            segment_count(count_next, p_next, p_i_next, p_n)
         end
         else
             g1ofg0(count)
         fun
-        segment_store
+        segment_store {i,ni:nat | i <= ni} .<i>.
             (pairs_p: ptr,
              p: Ptr1,
-             i: uint):
-            void = if (i < text_size_pred) then let
+             p_i: size_t(i),
+             p_n: size_t(ni)):<!wrt>
+            void = if (p_i > 0) then let
             val p_next = $UNSAFE.cast2Ptr1(ptr1_succ<char>(p))
-            val i_next = i + i2u(1)
+            val p_i_next = p_i - i2sz(1)
             val store_next = g0uint_iseqz_uint8($UNSAFE.ptr1_get<uint8>(p))
             fn
             segment_store_text
                 (pairs_p_incr: ptr,
-                 segment: ptr):
+                 segment: ptr):<!wrt>
                 ptr = let
                 val () = $UNSAFE.ptr0_set<ptr>(pairs_p_incr, segment)
             in
@@ -1468,18 +1479,20 @@ in
             end
             val pairs_p_next = if (store_next) then
                 segment_store_text(pairs_p, $UNSAFE.castvwtp1{ptr}(p_next))
-            else if (i = i2u(0)) then
+            else if (p_i = p_n) then
                 segment_store_text(pairs_p, $UNSAFE.castvwtp1{ptr}(p))
             else
                 pairs_p
         in
-            segment_store(pairs_p_next, p_next, i_next)
+            segment_store(pairs_p_next, p_next, p_i_next, p_n)
         end
         else
             ()
-        val size = $effmask_all(segment_count(i2sz(1), text_p, i2u(0)))
+        val size = segment_count(i2sz(1), text_p,
+                                 text_size_pred, text_size_pred)
         val pairs = arrayptr_make_elt<string>(size, "")
-        val () = $effmask_all(segment_store(ptrcast(pairs), text_p, i2u(0)))
+        val () = segment_store(ptrcast(pairs), text_p,
+                               text_size_pred, text_size_pred)
     in
         @(pairs, size)
     end
@@ -1499,17 +1512,67 @@ fn
 text_pairs_new {l:addr}{n:int}
     (pairs: arrayptr(string, l, n),
      size: size_t(n),
-     response_opt: Option(bool)):<!wrt>
+     response_opt: Option_vt(bool)):<!wrt>
     $CLOUDI.memory_free_ptr = let
     val response_format = case+ response_opt of
-      | Some(response_value) =>
+      | ~Some_vt(response_value) =>
         response_value
-      | None() =>
+      | ~None_vt() =>
         true
-    val () = arrayptr_free(pairs)
-    val () = $effmask_all(assertloc(false)) // XXX not yet implemented
 in
-    $CLOUDI.StringLiteral("")
+    if (size > i2sz(0)) then let
+        fun text_size_total {i,ni:nat | i <= ni} .<i>.
+            (total: size_t,
+             p: ptr,
+             p_i: size_t(i),
+             p_n: size_t(ni)):<!wrt>
+            [nt:int]
+            size_t(nt) = if (p_i > 0) then let
+            val s = $UNSAFE.ptr0_get<string>(p)
+            val s_size: size_t = string_length(s) + i2sz(1)
+            val p_next = $UNSAFE.cast2ptr(ptr_succ<string>(p))
+        in
+            text_size_total(total + s_size, p_next, p_i - i2sz(1), p_n)
+        end
+        else
+            g1ofg0(total)
+        val text_size = text_size_total(i2sz(0), ptrcast(pairs), size, size)
+        val (_, _ | text_p) = malloc_gc(text_size)
+        fun text_store {i,ni:nat | i <= ni} .<i>.
+            (p_destination: Ptr1,
+             p_source: ptr,
+             p_i: size_t(i),
+             p_n: size_t(ni)):<!wrt>
+            void = if (p_i > 0) then let
+            val s = $UNSAFE.ptr0_get<string>(p_source)
+            val s_size: size_t = string_length(s) + i2sz(1)
+            val _ = c_memcpy(p_destination, string2ptr(s), s_size)
+            val p_destination_next = $UNSAFE.cast2Ptr1(
+                add_ptr_bsz(p_destination, s_size))
+            val p_source_next = $UNSAFE.cast2ptr(ptr_succ<string>(p_source))
+        in
+            text_store(p_destination_next, p_source_next, p_i - i2sz(1), p_n)
+        end
+        else
+            ()
+        val () = text_store(text_p, ptrcast(pairs), size, size)
+        val () = arrayptr_free(pairs)
+    in
+        $CLOUDI.PtrFree(text_p, sz_u32(text_size))
+    end
+    else let
+        val () = arrayptr_free(pairs)
+    in
+        if (response_format) then let
+            val text_str = string0_copy("")
+            val text_ptr: Ptr1 = strptr2ptr(text_str)
+            prval () = $UNSAFE.cast2void(text_str)
+        in
+            $CLOUDI.PtrFree(text_ptr, i_u32(1))
+        end
+        else
+            $CLOUDI.StringLiteral("")
+    end
 end
 
 implement
@@ -1517,6 +1580,72 @@ $CLOUDI.info_key_value_new
     (pairs,
      size,
      response_opt) = text_pairs_new(pairs, size, response_opt)
+
+implement
+$CLOUDI.info_key_value_new1
+    (response_opt,
+     key0,
+     value0) = let
+    val size = i2sz(2)
+    val pairs = arrayptr_make_uninitized<string>(size)
+    implement
+    array_initize$init<string>
+        (i,
+         x) = case- sz2i(i) of
+      | 0 => x := key0
+      | 1 => x := value0
+    val () = $effmask_all(arrayptr_initize<string>(pairs, size))
+in
+    text_pairs_new(pairs, size, response_opt)
+end
+
+implement
+$CLOUDI.info_key_value_new2
+    (response_opt,
+     key0,
+     value0,
+     key1,
+     value1) = let
+    val size = i2sz(4)
+    val pairs = arrayptr_make_uninitized<string>(size)
+    implement
+    array_initize$init<string>
+        (i,
+         x) = case- sz2i(i) of
+      | 0 => x := key0
+      | 1 => x := value0
+      | 2 => x := key1
+      | 3 => x := value1
+    val () = $effmask_all(arrayptr_initize<string>(pairs, size))
+in
+    text_pairs_new(pairs, size, response_opt)
+end
+
+implement
+$CLOUDI.info_key_value_new3
+    (response_opt,
+     key0,
+     value0,
+     key1,
+     value1,
+     key2,
+     value2) = let
+    val size = i2sz(6)
+    val pairs = arrayptr_make_uninitized<string>(size)
+    implement
+    array_initize$init<string>
+        (i,
+         x) = case- sz2i(i) of
+      | 0 => x := key0
+      | 1 => x := value0
+      | 2 => x := key1
+      | 3 => x := value1
+      | 4 => x := key2
+      | 5 => x := value2
+    val () = $effmask_all(arrayptr_initize<string>(pairs, size))
+in
+    text_pairs_new(pairs, size, response_opt)
+end
 
 fn
 threads_new

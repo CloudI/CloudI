@@ -133,7 +133,7 @@ fn
 strptr2free
     (str: Strptr1): memory_free_ptr
 fn
-strnptr2free {l:agz}{n:int}
+strnptr2free {l:agz}{n:nat}
     (str: strnptr(l, n)): memory_free_ptr
 
 typedef timeout_initialize = uintBtwe(101, 4294967195)
@@ -252,9 +252,9 @@ send_async {s:vt@ype}
     (api: !instance(s),
      name: string,
      request: memory_ptr,
-     timeout_opt: Option(timeout),
+     timeout_opt: Option_vt(timeout),
      request_info_opt: Option_vt(memory_ptr),
-     priority_opt: Option(priority)):<!exn,!ref,!wrt>
+     priority_opt: Option_vt(priority)):<!exn,!ref,!wrt>
     result(trans_id_ptr)
 
 fn
@@ -262,9 +262,9 @@ send_sync {s:vt@ype}
     (api: !instance(s),
      name: string,
      request: memory_ptr,
-     timeout_opt: Option(timeout),
+     timeout_opt: Option_vt(timeout),
      request_info_opt: Option_vt(memory_ptr),
-     priority_opt: Option(priority)):<!exn,!ref,!wrt>
+     priority_opt: Option_vt(priority)):<!exn,!ref,!wrt>
     result(@(memory_ptr, memory_ptr, trans_id_ptr))
 
 fn
@@ -272,9 +272,9 @@ mcast_async {s:vt@ype}
     (api: !instance(s),
      name: string,
      request: memory_ptr,
-     timeout_opt: Option(timeout),
+     timeout_opt: Option_vt(timeout),
      request_info_opt: Option_vt(memory_ptr),
-     priority_opt: Option(priority)):<!exn,!ref,!wrt>
+     priority_opt: Option_vt(priority)):<!exn,!ref,!wrt>
     [l:addr][n:int]
     result(@(arrayptr(trans_id_ptr, l, n), size_t(n)))
 
@@ -355,9 +355,9 @@ return {s:vt@ype}
 fn
 recv_async {s:vt@ype}
     (api: !instance(s),
-     timeout_opt: Option(timeout),
+     timeout_opt: Option_vt(timeout),
      trans_id_opt: Option_vt(trans_id_ptr),
-     consume_opt: Option(bool)):<!exn,!ref,!wrt>
+     consume_opt: Option_vt(bool)):<!exn,!ref,!wrt>
     result(@(memory_ptr, memory_ptr, trans_id_ptr))
 
 fn
@@ -419,7 +419,7 @@ poll {s:vt@ype}
 fn
 shutdown {s:vt@ype}
     (api: !instance(s),
-     reason: Option(string)):<!exn,!ref,!wrt>
+     reason: Option_vt(string)):<!exn,!ref,!wrt>
     result(unit)
 
 fn
@@ -432,7 +432,34 @@ fn
 info_key_value_new {l:addr}{n:int}
     (pairs: arrayptr(string, l, n),
      size: size_t(n),
-     response_opt: Option(bool)):<!wrt>
+     response_opt: Option_vt(bool)):<!wrt>
+    memory_free_ptr
+
+fn
+info_key_value_new1
+    (response_opt: Option_vt(bool),
+     key0: string,
+     value0: string):<!wrt>
+    memory_free_ptr
+
+fn
+info_key_value_new2
+    (response_opt: Option_vt(bool),
+     key0: string,
+     value0: string,
+     key1: string,
+     value1: string):<!wrt>
+    memory_free_ptr
+
+fn
+info_key_value_new3
+    (response_opt: Option_vt(bool),
+     key0: string,
+     value0: string,
+     key1: string,
+     value1: string,
+     key2: string,
+     value2: string):<!wrt>
     memory_free_ptr
 
 fn

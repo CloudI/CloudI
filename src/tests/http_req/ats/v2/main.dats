@@ -82,17 +82,17 @@ request_ats
         val () = strptr_free(value_str_parsed)
     in
         if (value_parsed) then
-            strnptr2stropt(strptr2strnptr(string0_append3(xml_before,
-                                                          value_str,
-                                                          xml_after)))
+            strptr2stropt(string0_append3(xml_before, value_str, xml_after))
         else
             stropt_none()
     end
     else
         stropt_none()
     val () = arrayptr_free(http_qs)
+    val response_info = $CLOUDI.info_key_value_new1(Some_vt(true),
+        "content-type", "text/xml; charset=utf-8")
 in
-    $CLOUDI.Response($CLOUDI.stropt2free(xml,
+    $CLOUDI.ResponseInfo(response_info, $CLOUDI.stropt2free(xml,
         "<http_test><error>no value specified</error></http_test>"))
 end
 
@@ -112,7 +112,7 @@ request
      pid_size_c: uint32,
      state_c: ptr,
      api_c: ptr):
-    void = 
+    void =
     $CLOUDI.callback_attach(request_ats,
                             request_type, name_c, pattern_c,
                             request_info_c, request_info_size_c,

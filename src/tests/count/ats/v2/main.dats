@@ -78,7 +78,7 @@ request
      pid_size_c: uint32,
      state_c: ptr,
      api_c: ptr):
-    void = 
+    void =
     $CLOUDI.callback_attach(request_ats,
                             request_type, name_c, pattern_c,
                             request_info_c, request_info_size_c,
