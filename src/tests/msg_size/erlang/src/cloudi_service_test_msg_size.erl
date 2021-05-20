@@ -55,7 +55,7 @@
         ["cxx", "java", "javascript", "perl",
          "php", "python", "python_c", "ruby"]).
 -define(SUFFIXES_OPTIONAL,
-        ["go", "haskell", "ocaml"]).
+        ["ats2", "go", "haskell", "ocaml"]).
 
 -record(state,
     {

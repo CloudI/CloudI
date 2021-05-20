@@ -114,7 +114,7 @@ datavtype
 trans_id_ptr = TransId of (Ptr1) (* read-only ptr *)
 
 datavtype
-memory_ptr = Ptr of (Ptr1, uint32) (* read-only ptr *)
+memory_ptr = Ptr of (Ptr1, uint32)
 
 fn
 string2read
@@ -125,6 +125,9 @@ memory_free_ptr =
   | StringLiteral of (string) (* not freed *)
   | PtrFree of (Ptr1, uint32) (* ptr to be freed *)
 
+fn
+memory2free
+    (ptr: memory_ptr): memory_free_ptr
 fn
 stropt2free
     (str: Stropt0,
@@ -437,15 +440,13 @@ info_key_value_new {l:addr}{n:int}
 
 fn
 info_key_value_new1
-    (response_opt: Option_vt(bool),
-     key0: string,
+    (key0: string,
      value0: string):<!wrt>
     memory_free_ptr
 
 fn
 info_key_value_new2
-    (response_opt: Option_vt(bool),
-     key0: string,
+    (key0: string,
      value0: string,
      key1: string,
      value1: string):<!wrt>
@@ -453,8 +454,7 @@ info_key_value_new2
 
 fn
 info_key_value_new3
-    (response_opt: Option_vt(bool),
-     key0: string,
+    (key0: string,
      value0: string,
      key1: string,
      value1: string,

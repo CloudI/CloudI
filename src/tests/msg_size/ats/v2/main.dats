@@ -29,8 +29,11 @@
 #include "share/atspre_define.hats"
 #include "share/atspre_staload.hats"
 #include "cloudi.hats"
+staload UNSAFE = "prelude/SATS/unsafe.sats"
 
-vtypedef state_type = int
+vtypedef state_type = unit
+
+#define DESTINATION "/tests/msg_size/erlang"
 
 fn
 request_ats
@@ -46,54 +49,20 @@ request_ats
      state: !$CLOUDI.stateptr(state_type),
      api: !$CLOUDI.instance(state_type)):
     $CLOUDI.response = let
-    val ~$CLOUDI.Ptr(_, _) = request_info
-    val @(http_qs, http_qs_size) = $CLOUDI.info_key_value_parse(request)
-    val () = assertloc(http_qs_size >= 2)
-    val key = "value"
-    var value = stropt_none()
-    implement
-    array_iforeach$cont<string><stropt>
-        (i,
-         x,
-         env) = if (stropt_is_some(env)) then let
-        val _ = stropt_unsome(env)
-        val () = env := stropt0_some(x)
-    in
-        false
-    end
+    val request_info_next = $CLOUDI.memory2free(request_info)
+    val $CLOUDI.Ptr(p, size) = request
+    var i: uint = $UNSAFE.ptr1_get<uint>(p)
+    val () = if (i = i2u(1073741823)) then
+        i := i2u(0)
     else
-        true
-    implement
-    array_iforeach$fwork<string><stropt>
-        (i,
-         x,
-         env) = if (i % i2sz(2) = i2sz(0) && key = x) then
-        env := stropt0_some("")
-    else
-        ()
-    val _ = arrayptr_iforeach_env<string><stropt>(http_qs, http_qs_size, value)
-    val xml = if (stropt_is_some(value)) then let
-        val xml_before = "<http_test><value>"
-        val xml_after = "</value></http_test>"
-        val value_str: string = stropt_unsome(value)
-        val value_int: int = g0string2int(value_str)
-        val value_str_parsed = g0int2string(value_int)
-        val value_parsed = (value_str_parsed = value_str)
-        val () = strptr_free(value_str_parsed)
-    in
-        if (value_parsed) then
-            strptr2stropt(string0_append3(xml_before, value_str, xml_after))
-        else
-            stropt_none()
-    end
-    else
-        stropt_none()
-    val () = arrayptr_free(http_qs)
-    val response_info = $CLOUDI.info_key_value_new1(
-        "content-type", "text/xml; charset=utf-8")
+        i := i + i2u(1)
+    val () = println!("forward #", i, " ats2 to ", DESTINATION,
+                      " (with timeout ", timeout, " ms)")
+    val () = $UNSAFE.ptr1_set<uint>(p, i)
+    val request_next = $CLOUDI.memory2free(request)
 in
-    $CLOUDI.ResponseInfo(response_info, $CLOUDI.stropt2free(xml,
-        "<http_test><error>no value specified</error></http_test>"))
+    $CLOUDI.Forward($CLOUDI.StringLiteral(DESTINATION),
+                    request_info_next, request_next)
 end
 
 fn
@@ -124,30 +93,18 @@ fn
 task
     (thread_index: uint):
     void = let
-    var state_value: int = 0
+    var state_value: unit = unit()
 in
     case+ $CLOUDI.new(thread_index, state_value, true) of
       | ~$CLOUDI.Ok(api) => let
-        val uint_0 = i2u(0)
-        val () = case+ $CLOUDI.subscribe_count(api, "ats2.xml/get") of
-          | ~$CLOUDI.Ok(uint_0) =>
-            ()
-          | ~$CLOUDI.Error(status) =>
-            assertloc(status = 0)
-        val () = case+ $CLOUDI.subscribe(api, "ats2.xml/get", request) of
+        val () = case+ $CLOUDI.subscribe(api, "ats2", request) of
           | ~$CLOUDI.Ok(_) =>
-            ()
-          | ~$CLOUDI.Error(status) =>
-            assertloc(status = 0)
-        val uint_1 = i2u(1)
-        val () = case+ $CLOUDI.subscribe_count(api, "ats2.xml/get") of
-          | ~$CLOUDI.Ok(uint_1) =>
             ()
           | ~$CLOUDI.Error(status) =>
             assertloc(status = 0)
         val () = case+ $CLOUDI.poll(api, ~1) of
           | ~$CLOUDI.Ok(_) =>
-            println!("terminate http_req ats2")
+            println!("terminate msg_size ats2")
           | ~$CLOUDI.Error(status) =>
             fprintln!(stderr_ref, "error ", status)
         val () = $CLOUDI.destroy2void(api)

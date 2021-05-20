@@ -541,6 +541,17 @@ in
 end
 
 implement
+$CLOUDI.memory2free
+    (ptr) = let
+    val ~$CLOUDI.Ptr(p, size) = ptr
+    val size_copy = g1ofg0(u32_sz(size))
+    val (_, _ | p_copy) = malloc_gc(size_copy)
+    val _ = c_memcpy(p_copy, p, size_copy)
+in
+    $CLOUDI.PtrFree(p_copy, size)
+end
+
+implement
 $CLOUDI.stropt2free
     (str,
      default) = if (stropt_is_some(str)) then let
@@ -1530,7 +1541,7 @@ in
             size_t(nt) = if (p_i > 0) then let
             val s = $UNSAFE.ptr0_get<string>(p)
             val s_size: size_t = string_length(s) + i2sz(1)
-            val p_next = $UNSAFE.cast2ptr(ptr_succ<string>(p))
+            val p_next = ptr_succ<string>(p)
         in
             text_size_total(total + s_size, p_next, p_i - i2sz(1), p_n)
         end
@@ -1545,11 +1556,10 @@ in
              p_n: size_t(ni)):<!wrt>
             void = if (p_i > 0) then let
             val s = $UNSAFE.ptr0_get<string>(p_source)
-            val s_size: size_t = string_length(s) + i2sz(1)
+            val s_size = g1ofg0(string_length(s) + i2sz(1))
             val _ = c_memcpy(p_destination, string2ptr(s), s_size)
-            val p_destination_next = $UNSAFE.cast2Ptr1(
-                add_ptr_bsz(p_destination, s_size))
-            val p_source_next = $UNSAFE.cast2ptr(ptr_succ<string>(p_source))
+            val p_destination_next = add_ptr_bsz(p_destination, s_size)
+            val p_source_next = ptr_succ<string>(p_source)
         in
             text_store(p_destination_next, p_source_next, p_i - i2sz(1), p_n)
         end
@@ -1583,8 +1593,7 @@ $CLOUDI.info_key_value_new
 
 implement
 $CLOUDI.info_key_value_new1
-    (response_opt,
-     key0,
+    (key0,
      value0) = let
     val size = i2sz(2)
     val pairs = arrayptr_make_uninitized<string>(size)
@@ -1596,13 +1605,12 @@ $CLOUDI.info_key_value_new1
       | 1 => x := value0
     val () = $effmask_all(arrayptr_initize<string>(pairs, size))
 in
-    text_pairs_new(pairs, size, response_opt)
+    text_pairs_new(pairs, size, None_vt())
 end
 
 implement
 $CLOUDI.info_key_value_new2
-    (response_opt,
-     key0,
+    (key0,
      value0,
      key1,
      value1) = let
@@ -1618,13 +1626,12 @@ $CLOUDI.info_key_value_new2
       | 3 => x := value1
     val () = $effmask_all(arrayptr_initize<string>(pairs, size))
 in
-    text_pairs_new(pairs, size, response_opt)
+    text_pairs_new(pairs, size, None_vt())
 end
 
 implement
 $CLOUDI.info_key_value_new3
-    (response_opt,
-     key0,
+    (key0,
      value0,
      key1,
      value1,
@@ -1644,7 +1651,7 @@ $CLOUDI.info_key_value_new3
       | 5 => x := value2
     val () = $effmask_all(arrayptr_initize<string>(pairs, size))
 in
-    text_pairs_new(pairs, size, response_opt)
+    text_pairs_new(pairs, size, None_vt())
 end
 
 fn
