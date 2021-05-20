@@ -1486,7 +1486,7 @@ in
                 ptr = let
                 val () = $UNSAFE.ptr0_set<ptr>(pairs_p_incr, segment)
             in
-                $UNSAFE.cast2ptr(ptr_succ<ptr>(pairs_p_incr))
+                $UNSAFE.cast2ptr(ptr0_succ<ptr>(pairs_p_incr))
             end
             val pairs_p_next = if (store_next) then
                 segment_store_text(pairs_p, $UNSAFE.castvwtp1{ptr}(p_next))
@@ -1540,8 +1540,8 @@ in
             [nt:int]
             size_t(nt) = if (p_i > 0) then let
             val s = $UNSAFE.ptr0_get<string>(p)
-            val s_size: size_t = string_length(s) + i2sz(1)
-            val p_next = ptr_succ<string>(p)
+            val s_size = string_length(s) + i2sz(1)
+            val p_next = ptr0_succ<string>(p)
         in
             text_size_total(total + s_size, p_next, p_i - i2sz(1), p_n)
         end
@@ -1558,8 +1558,8 @@ in
             val s = $UNSAFE.ptr0_get<string>(p_source)
             val s_size = g1ofg0(string_length(s) + i2sz(1))
             val _ = c_memcpy(p_destination, string2ptr(s), s_size)
-            val p_destination_next = add_ptr_bsz(p_destination, s_size)
-            val p_source_next = ptr_succ<string>(p_source)
+            val p_destination_next = add_ptr1_bsz(p_destination, s_size)
+            val p_source_next = ptr0_succ<string>(p_source)
         in
             text_store(p_destination_next, p_source_next, p_i - i2sz(1), p_n)
         end

@@ -6,6 +6,7 @@
     * Fix ATS CloudI API option type use
     * Add the info_key_value_new function to the ATS CloudI API
     * Add the msg_size integration test in ATS
+    * Add the null integration test in ATS
 
 2021-05-18 Michael Truog   <mjtruog at protonmail dot com>
 
