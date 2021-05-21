@@ -79,6 +79,8 @@ typedef c_instance = $extype"cloudi_instance_t"
 absvtype instance_vtype(s:vt@ype+) = ptr
 vtypedef instance(s:vt@ype) = instance_vtype(s)
 vtypedef stateptr(s:vt@ype) = aPtr1(s)
+absvtype trans_id_vtype = ptr
+vtypedef trans_id = trans_id_vtype
 
 absvtype threads_vtype = ptr
 vtypedef threads = threads_vtype
@@ -110,15 +112,40 @@ c_callback =
      ptr) -<fun1>
     void
 
-datavtype
-trans_id_ptr = TransId of (Ptr1) (* read-only ptr *)
+fn
+trans_id_null
+    ():<fun0>
+    trans_id
+fn
+trans_id_eq
+    (trans_id1: !trans_id,
+     trans_id2: !trans_id):<fun0>
+    bool
+fn
+trans_id_neq
+    (trans_id1: !trans_id,
+     trans_id2: !trans_id):<fun0>
+    bool
+fn
+trans_id_copy
+    (trans_id: !trans_id):<!wrt>
+    trans_id
+fn
+trans_id_free
+    (trans_id: trans_id):<!exn,!wrt>
+    void
 
 datavtype
 memory_ptr = Ptr of (Ptr1, uint32)
 
 fn
 string2read
-    (str: string): memory_ptr
+    (str: string):<fun0>
+    memory_ptr
+fn
+memory2string
+    (ptr: !memory_ptr):<fun0>
+    string
 
 datavtype
 memory_free_ptr =
@@ -127,17 +154,21 @@ memory_free_ptr =
 
 fn
 memory2free
-    (ptr: memory_ptr): memory_free_ptr
+    (ptr: memory_ptr):<!wrt>
+    memory_free_ptr
 fn
 stropt2free
     (str: Stropt0,
-     default: string): memory_free_ptr
+     default: string):<fun0>
+    memory_free_ptr
 fn
 strptr2free
-    (str: Strptr1): memory_free_ptr
+    (str: Strptr1):<fun0>
+    memory_free_ptr
 fn
 strnptr2free {l:agz}{n:nat}
-    (str: strnptr(l, n)): memory_free_ptr
+    (str: strnptr(l, n)):<fun0>
+    memory_free_ptr
 
 typedef timeout_initialize = uintBtwe(101, 4294967195)
 typedef timeout_async = uintBtwe(499, 4294967295)
@@ -170,13 +201,11 @@ callback (s:vt@ype) =
      memory_ptr,
      timeout,
      priority,
-     !trans_id_ptr,
+     !trans_id,
      !memory_ptr,
      !stateptr(s),
      !instance(s)) -<fun1>
     response
-
-val trans_id_null: Ptr1
 
 (*
 
@@ -258,7 +287,7 @@ send_async {s:vt@ype}
      timeout_opt: Option_vt(timeout),
      request_info_opt: Option_vt(memory_ptr),
      priority_opt: Option_vt(priority)):<!exn,!ref,!wrt>
-    result(trans_id_ptr)
+    result(trans_id)
 
 fn
 send_sync {s:vt@ype}
@@ -268,7 +297,7 @@ send_sync {s:vt@ype}
      timeout_opt: Option_vt(timeout),
      request_info_opt: Option_vt(memory_ptr),
      priority_opt: Option_vt(priority)):<!exn,!ref,!wrt>
-    result(@(memory_ptr, memory_ptr, trans_id_ptr))
+    result(@(memory_ptr, memory_ptr, trans_id))
 
 fn
 mcast_async {s:vt@ype}
@@ -279,7 +308,7 @@ mcast_async {s:vt@ype}
      request_info_opt: Option_vt(memory_ptr),
      priority_opt: Option_vt(priority)):<!exn,!ref,!wrt>
     [l:addr][n:int]
-    result(@(arrayptr(trans_id_ptr, l, n), size_t(n)))
+    result(@(arrayptr(trans_id, l, n), size_t(n)))
 
 fn
 forward_async {s:vt@ype}
@@ -289,7 +318,7 @@ forward_async {s:vt@ype}
      request: memory_free_ptr,
      timeout: timeout,
      priority: priority,
-     trans_id: !trans_id_ptr,
+     trans_id: !trans_id,
      source: !memory_ptr):<!exn,!wrt>
     void
 
@@ -301,7 +330,7 @@ forward_sync {s:vt@ype}
      request: memory_free_ptr,
      timeout: timeout,
      priority: priority,
-     trans_id: !trans_id_ptr,
+     trans_id: !trans_id,
      source: !memory_ptr):<!exn,!wrt>
     void
 
@@ -314,7 +343,7 @@ forward {s:vt@ype}
      request: memory_free_ptr,
      timeout: timeout,
      priority: priority,
-     trans_id: !trans_id_ptr,
+     trans_id: !trans_id,
      source: !memory_ptr):<!exn,!wrt>
     void
 
@@ -326,7 +355,7 @@ return_async {s:vt@ype}
      response_info: memory_free_ptr,
      response: memory_free_ptr,
      timeout: timeout,
-     trans_id: !trans_id_ptr,
+     trans_id: !trans_id,
      source: !memory_ptr):<!exn,!wrt>
     void
 
@@ -338,7 +367,7 @@ return_sync {s:vt@ype}
      response_info: memory_free_ptr,
      response: memory_free_ptr,
      timeout: timeout,
-     trans_id: !trans_id_ptr,
+     trans_id: !trans_id,
      source: !memory_ptr):<!exn,!wrt>
     void
 
@@ -351,7 +380,7 @@ return {s:vt@ype}
      response_info: memory_free_ptr,
      response: memory_free_ptr,
      timeout: timeout,
-     trans_id: !trans_id_ptr,
+     trans_id: !trans_id,
      source: !memory_ptr):<!exn,!wrt>
     void
 
@@ -359,9 +388,9 @@ fn
 recv_async {s:vt@ype}
     (api: !instance(s),
      timeout_opt: Option_vt(timeout),
-     trans_id_opt: Option_vt(trans_id_ptr),
+     trans_id_opt: Option_vt(trans_id),
      consume_opt: Option_vt(bool)):<!exn,!ref,!wrt>
-    result(@(memory_ptr, memory_ptr, trans_id_ptr))
+    result(@(memory_ptr, memory_ptr, trans_id))
 
 fn
 process_index {s:vt@ype}

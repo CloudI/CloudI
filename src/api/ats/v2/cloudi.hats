@@ -29,4 +29,8 @@
 #staload CLOUDI = "cloudi.sats"
 #staload _/*CLOUDI*/ = "cloudi.dats"
 
+overload = with $CLOUDI.trans_id_eq
+overload != with $CLOUDI.trans_id_neq
+overload <> with $CLOUDI.trans_id_neq
+
 #endif /* CLOUDI_HATS */

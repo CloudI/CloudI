@@ -41,7 +41,7 @@ request_ats
      request: $CLOUDI.memory_ptr,
      timeout: $CLOUDI.timeout,
      priority: $CLOUDI.priority,
-     trans_id: !$CLOUDI.trans_id_ptr,
+     trans_id: !$CLOUDI.trans_id,
      source: !$CLOUDI.memory_ptr,
      state: !$CLOUDI.stateptr(state_type),
      api: !$CLOUDI.instance(state_type)):

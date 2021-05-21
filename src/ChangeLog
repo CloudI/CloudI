@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-05-21 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve ATS CloudI API trans_id type
+    * Add the messaging integration test in ATS (sequence1)
+
 2021-05-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix ATS CloudI API option type use
