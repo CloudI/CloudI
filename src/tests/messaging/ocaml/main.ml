@@ -229,10 +229,10 @@ let sequence2 request_type name pattern _ request timeout _ trans_id pid _ api =
   print_endline ("messaging sequence2 start ocaml (" ^ request ^ ")") ;
   let rec recv_asyncs_loop () =
     (* the sending process is excluded from the services that receive
-      the asynchronous message, so in this case, the receiving thread
-      will not be called, despite the fact it has subscribed to 'e',
-      to prevent a process (in this case thread) from deadlocking
-      with itself. *)
+       the asynchronous message, so in this case, the receiving thread
+       will not be called, despite the fact it has subscribed to "e",
+       to prevent a process (in this case thread) from deadlocking
+       with itself. *)
     match Cloudi.mcast_async api ((Cloudi.prefix api) ^ "e") " " with
     | Error (error) ->
       prerr_endline error ;

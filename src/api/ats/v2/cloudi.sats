@@ -112,10 +112,35 @@ c_callback =
      ptr) -<fun1>
     void
 
+(*
+
+   function effect tags:
+   !ntm - possibly non-terminating (divergent)
+   !exn - may raise an exception (partial functions)
+   !ref - write to memory not owned (no proof)
+          (includes file descriptors, not reentrant)
+   !wrt - write (includes alloc/free) to memory owned (reentrant)
+   fun0 - mathematical purity (no side-effects)
+   fun1 - may have all possible side-effects (default)
+
+   operational purity (Haskell's purity) is similar to <!ntm,!exn>
+   (catching exceptions breaks referential transparency and
+    most Haskell source code uses throwIO for raising exceptions)
+
+ *)
+
 fn
 trans_id_null
     ():<fun0>
     trans_id
+fn
+trans_id_is_null
+    (trans_id: !trans_id):<!wrt>
+    bool
+fn
+trans_id_isnot_null
+    (trans_id: !trans_id):<!wrt>
+    bool
 fn
 trans_id_eq
     (trans_id1: !trans_id,
@@ -131,8 +156,22 @@ trans_id_copy
     (trans_id: !trans_id):<!wrt>
     trans_id
 fn
+trans_id_store
+    (trans_id: trans_id):<!wrt>
+    trans_id
+fn
+trans_ids_store {l:addr}{n:int}
+    (trans_ids: !arrayptr(trans_id, l, n),
+     trans_ids_size: size_t(n)):<!wrt>
+    void
+fn
 trans_id_free
-    (trans_id: trans_id):<!exn,!wrt>
+    (trans_id: trans_id):<!wrt>
+    void
+fn
+trans_ids_free {l:addr}{n:int}
+    (trans_ids: arrayptr(trans_id, l, n),
+     trans_ids_size: size_t(n)):<!wrt>
     void
 
 datavtype
@@ -206,19 +245,6 @@ callback (s:vt@ype) =
      !stateptr(s),
      !instance(s)) -<fun1>
     response
-
-(*
-
-   function effect tags:
-   !ntm - possibly non-terminating (divergent)
-   !exn - may raise an exception (partial functions)
-   !ref - write to memory not owned (no proof)
-          (includes file descriptors, not reentrant)
-   !wrt - write (includes alloc/free) to memory owned (reentrant)
-   fun0 - mathematical purity (no side-effects)
-   fun1 - may have all possible side-effects (default)
-
- *)
 
 fn {s:vt@ype}
 callback_attach

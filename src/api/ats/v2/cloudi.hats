@@ -32,5 +32,7 @@
 overload = with $CLOUDI.trans_id_eq
 overload != with $CLOUDI.trans_id_neq
 overload <> with $CLOUDI.trans_id_neq
+overload iseqz with $CLOUDI.trans_id_is_null
+overload isneqz with $CLOUDI.trans_id_isnot_null
 
 #endif /* CLOUDI_HATS */

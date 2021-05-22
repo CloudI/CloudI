@@ -534,6 +534,24 @@ in
     TransId(trans_id_p, false)
 end
 
+implement
+$CLOUDI.trans_id_is_null
+    (trans_id) = let
+    val trans_id_null_value = $CLOUDI.trans_id_null()
+    val is_null = $CLOUDI.trans_id_eq(trans_id_null_value, trans_id)
+    val () = $CLOUDI.trans_id_free(trans_id_null_value)
+in
+    is_null
+end
+
+implement
+$CLOUDI.trans_id_isnot_null
+    (trans_id) = let
+    val is_null = $CLOUDI.trans_id_is_null(trans_id)
+in
+    ~is_null
+end
+
 fn
 trans_id_compare
     (trans_id1: !$CLOUDI.trans_id,
@@ -555,10 +573,10 @@ $CLOUDI.trans_id_neq
     (trans_id1,
      trans_id2) = (trans_id_compare(trans_id1, trans_id2) <> 0)
 
-fn
-trans_id_new
-    (trans_id_p: Ptr1):<!wrt>
-    $CLOUDI.trans_id = let
+implement
+$CLOUDI.trans_id_copy
+    (trans_id) = let
+    val TransId(trans_id_p, _) = trans_id
     val size_copy = i2sz(16)
     val (_, _ | trans_id_p_copy) = malloc_gc(size_copy)
     val _ = c_memcpy(trans_id_p_copy, trans_id_p, size_copy)
@@ -567,49 +585,83 @@ in
 end
 
 implement
-$CLOUDI.trans_id_copy
+$CLOUDI.trans_id_store
     (trans_id) = let
-    val TransId(trans_id_p, _) = trans_id
+    val trans_id_copy = $CLOUDI.trans_id_copy(trans_id)
+    val () = $CLOUDI.trans_id_free(trans_id)
 in
-    trans_id_new(trans_id_p)
+    trans_id_copy
+end
+
+implement
+$CLOUDI.trans_ids_store
+    (trans_ids,
+     trans_ids_size) = let
+    fun trans_id_store {i,ni:nat | i <= ni} .<i>.
+        (p: ptr,
+         p_i: size_t(i),
+         p_n: size_t(ni)):<!wrt>
+        void = if (p_i > 0) then let
+        val trans_id = $UNSAFE.ptr0_get<$CLOUDI.trans_id>(p)
+        val trans_id_new = $CLOUDI.trans_id_store(trans_id)
+        val () = $UNSAFE.ptr0_set<$CLOUDI.trans_id>(p, trans_id_new)
+        val p_next = ptr0_succ<$CLOUDI.trans_id>(p)
+    in
+        trans_id_store(p_next, p_i - i2sz(1), p_n)
+    end
+    else
+        ()
+in
+    if (trans_ids_size > i2sz(0)) then
+        trans_id_store(ptrcast(trans_ids), trans_ids_size, trans_ids_size)
+    else
+        ()
 end
 
 fn
-trans_id_free_deep {l:agz}
-    (trans_id: $CLOUDI.trans_id,
-     trans_id_p: ptr(l)):<!exn,!wrt>
+trans_id_free_ptr {l:agz}
+    (trans_id_p: ptr(l)):<!wrt>
     void = let
-    val ~TransId(trans_id_p_free, owned) = trans_id
-    val () = assertloc(owned = true)
-    val () = assertloc(trans_id_p_free = trans_id_p)
     prval trans_id_pfgc = $UNSAFE.castview0{b0ytes_v(l, 16)}(0)
     prval trans_id_pfat = $UNSAFE.castview0{mfree_gc_v(l)}(0)
 in
     mfree_gc{l}{16}(trans_id_pfgc, trans_id_pfat | trans_id_p)
 end
 
-fn
-trans_id_free_shallow
-    (trans_id: $CLOUDI.trans_id):<!exn>
-    Ptr1 = let
-    val ~TransId(trans_id_c, owned) = trans_id
-    val () = assertloc(owned = false)
-in
-    trans_id_c
-end
-
 implement
 $CLOUDI.trans_id_free
     (trans_id) = let
-    val TransId(trans_id_p, owned) = trans_id
+    val ~TransId(trans_id_p, owned) = trans_id
 in
     if (owned) then
-        trans_id_free_deep(trans_id, trans_id_p)
-    else let
-        val _ = trans_id_free_shallow(trans_id)
-    in
+        trans_id_free_ptr(trans_id_p)
+    else
         ()
+end
+
+implement
+$CLOUDI.trans_ids_free {l}{n}
+    (trans_ids,
+     trans_ids_size) = let
+    fun trans_id_free {i,ni:nat | i <= ni} .<i>.
+        (p: ptr,
+         p_i: size_t(i),
+         p_n: size_t(ni)):<!wrt>
+        void = if (p_i > 0) then let
+        val trans_id = $UNSAFE.ptr0_get<$CLOUDI.trans_id>(p)
+        val () = $CLOUDI.trans_id_free(trans_id)
+        val p_next = ptr0_succ<$CLOUDI.trans_id>(p)
+    in
+        trans_id_free(p_next, p_i - i2sz(1), p_n)
     end
+    else
+        ()
+    val () = if (trans_ids_size > i2sz(0)) then
+        trans_id_free(ptrcast(trans_ids), trans_ids_size, trans_ids_size)
+    else
+        ()
+in
+    arrayptr_free($UNSAFE.castvwtp0(trans_ids))
 end
 
 implement {s}
@@ -1111,7 +1163,7 @@ in
       | ~$CLOUDI.Ok(_) => let
         val () = assertloc(c_get_trans_id_count(api_c) = i2u(1))
     in
-        $CLOUDI.Ok(trans_id_new(c_get_trans_id(api_c, i2u(0))))
+        $CLOUDI.Ok(TransId(c_get_trans_id(api_c, i2u(0)), false))
     end
       | ~$CLOUDI.Error(status_error) =>
         $CLOUDI.Error(status_error)
@@ -1193,7 +1245,7 @@ in
         array_initize$init<$CLOUDI.trans_id>
             (i,
              x) =
-            x := trans_id_new(c_get_trans_id(api_c, sz2u(i)))
+            x := TransId(c_get_trans_id(api_c, sz2u(i)), false)
         val size = u2sz(c_get_trans_id_count(api_c))
         val trans_ids = arrayptr_make_uninitized<$CLOUDI.trans_id>(size)
         val () = $effmask_all(
@@ -1225,8 +1277,9 @@ $CLOUDI.forward_async
         callback_request(api_c, request, request_size_c))
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
-    val trans_id_c = trans_id_free_shallow(
-        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id))
+    val ~TransId(trans_id_c, owned) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id)
+    val () = assertloc(owned = false)
     val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
         $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_forward_async(api_c, name_c,
@@ -1258,8 +1311,9 @@ $CLOUDI.forward_sync
         callback_request(api_c, request, request_size_c))
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
-    val trans_id_c = trans_id_free_shallow(
-        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id))
+    val ~TransId(trans_id_c, owned) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id)
+    val () = assertloc(owned = false)
     val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
         $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_forward_sync(api_c, name_c,
@@ -1292,8 +1346,9 @@ $CLOUDI.forward
         callback_request(api_c, request, request_size_c))
     val timeout_c = u_u32(timeout)
     val priority_c = i_i8(priority)
-    val trans_id_c = trans_id_free_shallow(
-        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id))
+    val ~TransId(trans_id_c, owned) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id)
+    val () = assertloc(owned = false)
     val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
         $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_forward(api_c, request_type, name_c,
@@ -1325,8 +1380,9 @@ $CLOUDI.return_async
     val response_c = $effmask_ref(
         callback_response(api_c, response, response_size_c))
     val timeout_c = u_u32(timeout)
-    val trans_id_c = trans_id_free_shallow(
-        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id))
+    val ~TransId(trans_id_c, owned) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id)
+    val () = assertloc(owned = false)
     val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
         $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_return_async(api_c, name_c, pattern_c,
@@ -1357,8 +1413,9 @@ $CLOUDI.return_sync
     val response_c = $effmask_ref(
         callback_response(api_c, response, response_size_c))
     val timeout_c = u_u32(timeout)
-    val trans_id_c = trans_id_free_shallow(
-        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id))
+    val ~TransId(trans_id_c, owned) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id)
+    val () = assertloc(owned = false)
     val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
         $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_return_sync(api_c, name_c, pattern_c,
@@ -1390,8 +1447,9 @@ $CLOUDI.return
     val response_c = $effmask_ref(
         callback_response(api_c, response, response_size_c))
     val timeout_c = u_u32(timeout)
-    val trans_id_c = trans_id_free_shallow(
-        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id))
+    val ~TransId(trans_id_c, owned) =
+        $UNSAFE.castvwtp1{$CLOUDI.trans_id}(trans_id)
+    val () = assertloc(owned = false)
     val ~$CLOUDI.Ptr(pid_c, pid_size_c) =
         $UNSAFE.castvwtp1{$CLOUDI.memory_ptr}(source)
     val status = c_return(api_c, request_type, name_c, pattern_c,
