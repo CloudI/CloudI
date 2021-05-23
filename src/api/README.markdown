@@ -9,6 +9,7 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 
 ### Supported languages:
 
+* `ATS == 2 (Postiats)`
 * `C`
 * `C++`
 * `Elixir`
@@ -26,8 +27,9 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 C/C++, Go, Haskell, Java, JavaScript, OCaml, Perl, PHP, Python, and Ruby
 all have an implementation of the CloudI API that is completely done in that
 programming language (to avoid extra complexity).
-Python does have a Python with C integration CloudI API that is the
-Python module `cloudi_c` (instead of the Python module `cloudi`).
+ATS uses the C CloudI API to add more type information in the ATS CloudI API.
+A separate Python/C CloudI API uses the C++ CloudI API to provide more
+efficiency (when using the `cloudi_c` Python module instead of `cloudi`).
 Any use of the CloudI API in these programming languages
 (that are not running in the Erlang VM, i.e., "external" services)
 is executed as separate OS processes with separate threads
@@ -43,6 +45,14 @@ C CloudI API in [cloudi.i](https://github.com/CloudI/CloudI/blob/master/src/api/
 SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 ### Examples exist within the integration tests:
+
+#### ATS
+
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/ats/v2/main.dats)
+* [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/ats/v2/main.dats)
+* [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/ats/v2/main.dats)
+* [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/ats/v2/main.dats)
+* [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/null/ats/v2/main.dats)
 
 #### [C/C++](https://cloudi.org/faq.html#6_C)
 

@@ -1635,7 +1635,7 @@ in
                                                 sequence3_g1)
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "sequence3",
                                                 sequence3)
-        val () = if (thread_index = i2u(0)) then let
+        val () = if ($CLOUDI.process_index(api) = i2u(0)) then let
             (* start sequence1 *)
             val trans_id = send_async(api, "sequence1", "1")
         in
