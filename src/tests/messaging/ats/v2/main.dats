@@ -1307,8 +1307,7 @@ sequence2_ats
     val () = recv_asyncs_loop(api)
     val () = println!("messaging sequence2 end ats2 (", request_str, ")")
     (* start sequence3 *)
-    val trans_id_next = send_async(api, "sequence1", request_str)
-    //val trans_id_next = send_async(api, "sequence3", request_str)
+    val trans_id_next = send_async(api, "sequence3", request_str)
     val () = $CLOUDI.trans_id_free(trans_id_next)
 in
     $CLOUDI.Response($CLOUDI.StringLiteral("end"))
@@ -1332,6 +1331,246 @@ sequence2
      api_c: ptr):
     void =
     $CLOUDI.callback_attach(sequence2_ats,
+                            request_type, name_c, pattern_c,
+                            request_info_c, request_info_size_c,
+                            request_c, request_size_c,
+                            timeout_c, priority_c, trans_id_c,
+                            pid_c, pid_size_c, state_c, api_c)
+
+fn
+sequence3_f1_ats
+    (request_type: $CLOUDI.request_type,
+     name: string,
+     pattern: string,
+     request_info: $CLOUDI.memory_ptr,
+     request: $CLOUDI.memory_ptr,
+     timeout: $CLOUDI.timeout,
+     priority: $CLOUDI.priority,
+     trans_id: !$CLOUDI.trans_id,
+     source: !$CLOUDI.memory_ptr,
+     state: !$CLOUDI.stateptr(state_type),
+     api: !$CLOUDI.instance(state_type)):
+    $CLOUDI.response = let
+    val ~$CLOUDI.Ptr(_, _) = request_info
+    val request_str = $CLOUDI.memory2string(request)
+    val ~$CLOUDI.Ptr(_, _) = request
+    val request_i = g0string2int(request_str)
+in
+    if (request_i = 4) then
+        $CLOUDI.Response($CLOUDI.StringLiteral("done"))
+    else let
+        val name_next = string0_append($CLOUDI.prefix_(api), "f2")
+        val request_new = g0int2string(request_i + 2) (* two steps forward *)
+    in
+        $CLOUDI.Forward($CLOUDI.strptr2free(name_next),
+                        $CLOUDI.StringLiteral(""),
+                        $CLOUDI.strptr2free(request_new))
+    end
+end
+
+fn
+sequence3_f1
+    (request_type: $CLOUDI.request_type,
+     name_c: ptr,
+     pattern_c: ptr,
+     request_info_c: ptr,
+     request_info_size_c: uint32,
+     request_c: ptr,
+     request_size_c: uint32,
+     timeout_c: uint32,
+     priority_c: int8,
+     trans_id_c: ptr,
+     pid_c: ptr,
+     pid_size_c: uint32,
+     state_c: ptr,
+     api_c: ptr):
+    void =
+    $CLOUDI.callback_attach(sequence3_f1_ats,
+                            request_type, name_c, pattern_c,
+                            request_info_c, request_info_size_c,
+                            request_c, request_size_c,
+                            timeout_c, priority_c, trans_id_c,
+                            pid_c, pid_size_c, state_c, api_c)
+
+fn
+sequence3_f2_ats
+    (request_type: $CLOUDI.request_type,
+     name: string,
+     pattern: string,
+     request_info: $CLOUDI.memory_ptr,
+     request: $CLOUDI.memory_ptr,
+     timeout: $CLOUDI.timeout,
+     priority: $CLOUDI.priority,
+     trans_id: !$CLOUDI.trans_id,
+     source: !$CLOUDI.memory_ptr,
+     state: !$CLOUDI.stateptr(state_type),
+     api: !$CLOUDI.instance(state_type)):
+    $CLOUDI.response = let
+    val ~$CLOUDI.Ptr(_, _) = request_info
+    val request_str = $CLOUDI.memory2string(request)
+    val ~$CLOUDI.Ptr(_, _) = request
+    val request_i = g0string2int(request_str)
+    val name_next = string0_append($CLOUDI.prefix_(api), "f1")
+    val request_new = g0int2string(request_i - 1) (* one step back *)
+in
+    $CLOUDI.Forward($CLOUDI.strptr2free(name_next),
+                    $CLOUDI.StringLiteral(""),
+                    $CLOUDI.strptr2free(request_new))
+end
+
+fn
+sequence3_f2
+    (request_type: $CLOUDI.request_type,
+     name_c: ptr,
+     pattern_c: ptr,
+     request_info_c: ptr,
+     request_info_size_c: uint32,
+     request_c: ptr,
+     request_size_c: uint32,
+     timeout_c: uint32,
+     priority_c: int8,
+     trans_id_c: ptr,
+     pid_c: ptr,
+     pid_size_c: uint32,
+     state_c: ptr,
+     api_c: ptr):
+    void =
+    $CLOUDI.callback_attach(sequence3_f2_ats,
+                            request_type, name_c, pattern_c,
+                            request_info_c, request_info_size_c,
+                            request_c, request_size_c,
+                            timeout_c, priority_c, trans_id_c,
+                            pid_c, pid_size_c, state_c, api_c)
+
+fn
+sequence3_g1_ats
+    (request_type: $CLOUDI.request_type,
+     name: string,
+     pattern: string,
+     request_info: $CLOUDI.memory_ptr,
+     request: $CLOUDI.memory_ptr,
+     timeout: $CLOUDI.timeout,
+     priority: $CLOUDI.priority,
+     trans_id: !$CLOUDI.trans_id,
+     source: !$CLOUDI.memory_ptr,
+     state: !$CLOUDI.stateptr(state_type),
+     api: !$CLOUDI.instance(state_type)):
+    $CLOUDI.response = let
+    val ~$CLOUDI.Ptr(_, _) = request_info
+    val request_str = $CLOUDI.memory2string(request)
+    val ~$CLOUDI.Ptr(_, _) = request
+    val response = string0_append(request_str, "suffix")
+in
+    $CLOUDI.Response($CLOUDI.strptr2free(response))
+end
+
+fn
+sequence3_g1
+    (request_type: $CLOUDI.request_type,
+     name_c: ptr,
+     pattern_c: ptr,
+     request_info_c: ptr,
+     request_info_size_c: uint32,
+     request_c: ptr,
+     request_size_c: uint32,
+     timeout_c: uint32,
+     priority_c: int8,
+     trans_id_c: ptr,
+     pid_c: ptr,
+     pid_size_c: uint32,
+     state_c: ptr,
+     api_c: ptr):
+    void =
+    $CLOUDI.callback_attach(sequence3_g1_ats,
+                            request_type, name_c, pattern_c,
+                            request_info_c, request_info_size_c,
+                            request_c, request_size_c,
+                            timeout_c, priority_c, trans_id_c,
+                            pid_c, pid_size_c, state_c, api_c)
+
+fn
+sequence3_ats
+    (request_type: $CLOUDI.request_type,
+     name: string,
+     pattern: string,
+     request_info: $CLOUDI.memory_ptr,
+     request: $CLOUDI.memory_ptr,
+     timeout: $CLOUDI.timeout,
+     priority: $CLOUDI.priority,
+     trans_id: !$CLOUDI.trans_id,
+     source: !$CLOUDI.memory_ptr,
+     state: !$CLOUDI.stateptr(state_type),
+     api: !$CLOUDI.instance(state_type)):
+    $CLOUDI.response = let
+    val ~$CLOUDI.Ptr(_, _) = request_info
+    val request_str = $CLOUDI.memory2string(request)
+    val ~$CLOUDI.Ptr(_, _) = request
+    val () = println!("messaging sequence3 start ats2 (", request_str, ")")
+    val test1_id = send_async(api, "f1", "0")
+    val () = case+ $CLOUDI.recv_async(api, None_vt(),
+                                      Some_vt(test1_id), None_vt()) of
+      | ~$CLOUDI.Ok(@(response_info, response, trans_id)) => let
+        val ~$CLOUDI.Ptr(_, _) = response_info
+        val response_str = $CLOUDI.memory2string(response)
+        val ~$CLOUDI.Ptr(_, _) = response
+        val () = $CLOUDI.trans_id_free(trans_id)
+    in
+        assertloc(response_str = "done")
+    end
+      | ~$CLOUDI.Error(status) => let
+        val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
+    in
+        $raise $CLOUDI.FatalError
+    end
+    val name_send_sync_ptr = string0_append($CLOUDI.prefix_(api), "g1")
+    val name_send_sync = $UNSAFE.strptr2string(name_send_sync_ptr)
+    val request_send_sync = $CLOUDI.string2read("prefix_")
+    val () = case+ $CLOUDI.send_sync(api, name_send_sync, request_send_sync,
+                                     None_vt(), None_vt(), None_vt()) of
+      | ~$CLOUDI.Ok(@(response_info, response, trans_id)) => let
+        val ~$CLOUDI.Ptr(_, _) = response_info
+        val response_str = $CLOUDI.memory2string(response)
+        val ~$CLOUDI.Ptr(_, _) = response
+        val () = $CLOUDI.trans_id_free(trans_id)
+    in
+        assertloc(response_str = "prefix_suffix")
+    end
+      | ~$CLOUDI.Error(status) => let
+        val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
+    in
+        $raise $CLOUDI.FatalError
+    end
+    val () = strptr_free(name_send_sync_ptr)
+    val () = println!("messaging sequence3 end ats2 (", request_str, ")")
+    (* loop to find any infrequent problems, restart sequence1 *)
+    val iteration = g0string2int(request_str) + 1
+    val request_next_ptr = g0int2string(iteration)
+    val request_next = $UNSAFE.strptr2string(request_next_ptr)
+    val trans_id_next = send_async(api, "sequence1", request_next)
+    val () = strptr_free(request_next_ptr)
+    val () = $CLOUDI.trans_id_free(trans_id_next)
+in
+    $CLOUDI.Response($CLOUDI.StringLiteral("end"))
+end
+
+fn
+sequence3
+    (request_type: $CLOUDI.request_type,
+     name_c: ptr,
+     pattern_c: ptr,
+     request_info_c: ptr,
+     request_info_size_c: uint32,
+     request_c: ptr,
+     request_size_c: uint32,
+     timeout_c: uint32,
+     priority_c: int8,
+     trans_id_c: ptr,
+     pid_c: ptr,
+     pid_size_c: uint32,
+     state_c: ptr,
+     api_c: ptr):
+    void =
+    $CLOUDI.callback_attach(sequence3_ats,
                             request_type, name_c, pattern_c,
                             request_info_c, request_info_size_c,
                             request_c, request_size_c,
@@ -1388,11 +1627,19 @@ in
                                                 sequence2_e8)
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "sequence2",
                                                 sequence2)
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "f1",
+                                                sequence3_f1)
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "f2",
+                                                sequence3_f2)
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "g1",
+                                                sequence3_g1)
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "sequence3",
+                                                sequence3)
         val () = if (thread_index = i2u(0)) then let
             (* start sequence1 *)
-            val trans_id_next = send_async(api, "sequence1", "1")
+            val trans_id = send_async(api, "sequence1", "1")
         in
-            $CLOUDI.trans_id_free(trans_id_next)
+            $CLOUDI.trans_id_free(trans_id)
         end
         else
             ()

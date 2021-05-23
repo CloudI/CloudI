@@ -183,6 +183,10 @@ string2read
     (str: string):<fun0>
     memory_ptr
 fn
+strptr2read
+    (str: !Strptr1):<fun0>
+    memory_ptr
+fn
 memory2string
     (ptr: !memory_ptr):<fun0>
     string
@@ -517,6 +521,8 @@ info_key_value_new3
      key2: string,
      value2: string):<!wrt>
     memory_free_ptr
+
+(* exception handling in ATS2 is not thread-safe *)
 
 fn
 threads_create

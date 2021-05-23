@@ -693,6 +693,10 @@ in
 end
 
 implement
+$CLOUDI.strptr2read
+    (str) = $CLOUDI.string2read($UNSAFE.strptr2string(str))
+
+implement
 $CLOUDI.memory2string
     (ptr) = let
     val $CLOUDI.Ptr(p, _) = ptr
