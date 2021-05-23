@@ -125,7 +125,8 @@ c_callback =
 
    operational purity (Haskell's purity) is similar to <!ntm,!exn>
    (catching exceptions breaks referential transparency and
-    most Haskell source code uses throwIO for raising exceptions)
+    most Haskell source code uses throwIO for raising exceptions,
+    so <!ntm> should be closer in practice)
 
  *)
 
