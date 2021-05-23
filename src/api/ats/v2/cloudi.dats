@@ -294,12 +294,12 @@ c_initialize: {l1:agz}{l2:addr}
     (!$CLOUDI.c_instance? @ l1 >> $CLOUDI.c_instance @ l1 |
      ptr(l1),
      uint,
-     ptr(l2)) -<fun,!wrt>
+     ptr(l2)) -<fun,!ref,!wrt>
     intGte(0) = "ext#cloudi_initialize"
 extern fn
 c_destroy: {l1:agz}
     (!$CLOUDI.c_instance @ l1 |
-     ptr(l1)) -<fun,!wrt>
+     ptr(l1)) -<fun,!ref,!wrt>
     [l2:addr] ptr(l2) = "ext#cloudi_destroy"
 extern fn
 c_initialize_thread_count: {l1:agz}
