@@ -1175,7 +1175,6 @@
         [{restart_all, true},
          {hibernate, false},
          {duo_mode, false},
-         {request_pid_options, [{priority, high}]},
          {scope, cloudi_service_test_messaging_erlang_variation0}]},
     {internal,
         "/tests/messaging/erlang/variation1/",
@@ -1186,7 +1185,6 @@
         [{restart_all, true},
          {hibernate, false},
          {duo_mode, true},
-         {request_pid_options, [{priority, high}]},
          {scope, cloudi_service_test_messaging_erlang_variation1}]},
     {internal,
         "/tests/messaging/erlang/variation2/",
@@ -1197,7 +1195,6 @@
         [{restart_all, true},
          {hibernate, true},
          {duo_mode, false},
-         {request_pid_options, [{priority, high}]},
          {scope, cloudi_service_test_messaging_erlang_variation2}]},
     {internal,
         "/tests/messaging/erlang/variation3/",
@@ -1208,7 +1205,6 @@
         [{restart_all, true},
          {hibernate, true},
          {duo_mode, true},
-         {request_pid_options, [{priority, high}]},
          {scope, cloudi_service_test_messaging_erlang_variation3}]}
 ]}.
 % automatic node detection with a UDP multicast group

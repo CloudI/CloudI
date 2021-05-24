@@ -4,6 +4,8 @@
 2021-05-23 Michael Truog   <mjtruog at protonmail dot com>
 
     * Small improvements to the ATS CloudI API
+    * Use Erlang process high priority in cloudi_core_i_logger
+      (and in no other processes)
 
 2021-05-22 Michael Truog   <mjtruog at protonmail dot com>
 

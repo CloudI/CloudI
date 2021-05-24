@@ -647,6 +647,9 @@ init([#config_logging{file = FilePath,
                       log_time_offset = LogTimeOffset,
                       aspects_log_before = AspectsLogBefore,
                       aspects_log_after = AspectsLogAfter}]) ->
+    % due to queue_mode sync and overload it is best to have this process
+    % running with high priority
+    normal = erlang:process_flag(priority, high),
     StdoutPort = stdout_open(Stdout),
     FormattersLevel = case FormattersConfig of
         undefined ->
