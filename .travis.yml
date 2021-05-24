@@ -1,52 +1,69 @@
-dist: trusty
+dist: bionic
 sudo: required
 language: erlang
 matrix:
   include:
-    # works on Precise and Trusty
+    #- os: linux
+    #  addons:
+    #    apt:
+    #      sources:
+    #        - ubuntu-toolchain-r-test
+    #      packages:
+    #        - g++-7
+    #  env:
+    #    - CONFIGURE_ENV="CC=gcc-7 CXX=g++-7"
     - os: linux
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-7
+            - g++-6
       env:
-        - CONFIGURE_ENV="CC=gcc-7 CXX=g++-7"
-    # works on Trusty
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+    #- os: linux
+    #  addons:
+    #    apt:
+    #      sources:
+    #        - llvm-toolchain-trusty-5.0
+    #      packages:
+    #        - clang-5.0
+    #  env:
+    #    - CONFIGURE_ENV="CC=clang-5.0 CXX=clang++-5.0"
     - os: linux
       addons:
         apt:
           sources:
-            - llvm-toolchain-trusty-5.0
+            - llvm-toolchain-bionic-4.0
           packages:
-            - clang-5.0
+            - clang-4.0
       env:
-        - CONFIGURE_ENV="CC=clang-5.0 CXX=clang++-5.0"
+        - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 compiler:
   - clang
   - gcc
 otp_release:
-  - 23.2.5
+  - 23.3.1
   - 22.3.4
-  - 21.3.8.1
 python:
   - "3.8"
 rvm:
   - 2.7.0
+go:
+  - 1.15.x
 services:
   - mysql
   - postgresql
 before_install:
   # travis default image has: make autoconf automake libtool g++ git perl python python-dev
-  - sudo apt-get install default-jdk php5 libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev
+  - sudo apt-get install ats2-lang default-jdk ocaml php libboost-system-dev libboost-thread-dev libboost-dev libgmp-dev
 before_script:
   - kerl list installations
   - mkdir build
   - cd build
   - ../src/autogen.sh
   - export ${CONFIGURE_ENV}
-  - ../src/configure --with-test-timeout=vm --with-long-test-timeout=yes --prefix=`pwd`/../install_local
+  - ../src/configure --with-test-timeout=vm --with-long-test-timeout=yes --prefix=`pwd`/../install_local --enable-ats2-support --enable-go-support --enable-ocaml-support
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests IDENTIFIED BY 'cloudi_tests';"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
