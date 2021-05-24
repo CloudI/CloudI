@@ -9,7 +9,7 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 
 ### Supported languages:
 
-* `ATS == 2 (Postiats)`
+* `ATS2/Postiats >= 0.3.13`
 * `C`
 * `C++`
 * `Elixir`

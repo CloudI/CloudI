@@ -93,7 +93,7 @@ Optional (default="yes"):
 
 Optional (default="no"):
 
-* `ATS2/Postiats`
+* `ATS2/Postiats >= 0.3.13`
   * `(ats2-lang /Ubuntu)`
   * Use the "--enable-ats2-support" configure flag to enable
 * `Go >= 1.11`
