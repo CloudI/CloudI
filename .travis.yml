@@ -49,8 +49,6 @@ python:
   - "3.8"
 rvm:
   - 2.7.0
-go:
-  - 1.15.x
 services:
   - mysql
   - postgresql
@@ -63,7 +61,7 @@ before_script:
   - cd build
   - ../src/autogen.sh
   - export ${CONFIGURE_ENV}
-  - ../src/configure --with-test-timeout=vm --with-long-test-timeout=yes --prefix=`pwd`/../install_local --enable-go-support --enable-ocaml-support
+  - ../src/configure --with-test-timeout=vm --with-long-test-timeout=yes --prefix=`pwd`/../install_local --enable-ocaml-support
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests IDENTIFIED BY 'cloudi_tests';"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
