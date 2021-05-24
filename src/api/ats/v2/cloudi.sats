@@ -117,10 +117,11 @@ c_callback =
    function effect tags:
    !ntm - possibly non-terminating (divergent)
    !exn - may raise an exception (partial functions)
-   !ref - write to memory not owned (no proof)
+   !ref - write to memory not owned (no proof) or
+          read from global memory that may change state during runtime
           (includes file descriptors, not reentrant)
    !wrt - write (includes alloc/free) to memory owned (reentrant)
-   fun0 - mathematical purity (no side-effects)
+   fun0 - mathematical purity (no side-effects) during runtime
    fun1 - may have all possible side-effects (default)
 
    operational purity (Haskell's purity) is similar to <!ntm,!exn>

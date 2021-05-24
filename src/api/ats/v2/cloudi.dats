@@ -934,7 +934,8 @@ $CLOUDI.callback_attach
     in
         $CLOUDI.Null()
     end
-    val ~TransId(_, _) = trans_id
+    val ~TransId(_, owned) = trans_id
+    val () = assertloc(owned = false)
     val ~$CLOUDI.Ptr(_, _) = source
     prval () = $UNSAFE.cast2void(state)
     prval () = $UNSAFE.cast2void(api)
