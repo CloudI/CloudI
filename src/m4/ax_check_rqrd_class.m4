@@ -50,12 +50,12 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 6
+#serial 6 # modified
 
 AU_ALIAS([AC_CHECK_RQRD_CLASS], [AX_CHECK_RQRD_CLASS])
 AC_DEFUN([AX_CHECK_RQRD_CLASS],[
 CLASS=`echo $1|sed 's/\./_/g'`
-AC_CHECK_CLASS($1)
+AX_CHECK_CLASS($1)
 if test "$HAVE_LAST_CLASS" = "no"; then
         AC_MSG_ERROR([Required class $1 missing, exiting.])
 fi
