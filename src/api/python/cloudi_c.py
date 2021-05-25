@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -292,6 +292,12 @@ class API(object):
         returns the service termination timeout
         """
         return self.__api.timeout_terminate()
+
+    def priority_default(self):
+        """
+        returns the default service request send priority
+        """
+        return self.__api.priority_default()
 
     def poll(self, timeout=-1):
         """

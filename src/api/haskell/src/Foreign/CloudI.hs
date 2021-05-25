@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -68,6 +68,7 @@ module Foreign.CloudI
     , timeoutAsync
     , timeoutSync
     , timeoutTerminate
+    , priorityDefault
     , poll
     , shutdown
     , threadCreate
@@ -310,11 +311,11 @@ sendAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
 sendAsync api0@Instance.T{
       Instance.terminateException = terminateException
     , Instance.timeoutAsync = timeoutAsync'
-    , Instance.priorityDefault = priorityDefault}
+    , Instance.priorityDefault = priorityDefault'}
     name request timeoutOpt requestInfoOpt priorityOpt =
     let timeout = fromMaybe timeoutAsync' timeoutOpt
         requestInfo = fromMaybe ByteString.empty requestInfoOpt
-        priority = fromMaybe priorityDefault priorityOpt
+        priority = fromMaybe priorityDefault' priorityOpt
         sendAsyncTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "send_async")
             , Erlang.OtpErlangString name
@@ -345,11 +346,11 @@ sendSync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
 sendSync api0@Instance.T{
       Instance.terminateException = terminateException
     , Instance.timeoutSync = timeoutSync'
-    , Instance.priorityDefault = priorityDefault}
+    , Instance.priorityDefault = priorityDefault'}
     name request timeoutOpt requestInfoOpt priorityOpt =
     let timeout = fromMaybe timeoutSync' timeoutOpt
         requestInfo = fromMaybe ByteString.empty requestInfoOpt
-        priority = fromMaybe priorityDefault priorityOpt
+        priority = fromMaybe priorityDefault' priorityOpt
         sendSyncTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "send_sync")
             , Erlang.OtpErlangString name
@@ -384,11 +385,11 @@ mcastAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
 mcastAsync api0@Instance.T{
       Instance.terminateException = terminateException
     , Instance.timeoutAsync = timeoutAsync'
-    , Instance.priorityDefault = priorityDefault}
+    , Instance.priorityDefault = priorityDefault'}
     name request timeoutOpt requestInfoOpt priorityOpt =
     let timeout = fromMaybe timeoutAsync' timeoutOpt
         requestInfo = fromMaybe ByteString.empty requestInfoOpt
-        priority = fromMaybe priorityDefault priorityOpt
+        priority = fromMaybe priorityDefault' priorityOpt
         mcastAsyncTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "mcast_async")
             , Erlang.OtpErlangString name
@@ -646,6 +647,12 @@ timeoutTerminate :: Instance.T s -> Int
 timeoutTerminate Instance.T{Instance.timeoutTerminate = timeoutTerminate'} =
     timeoutTerminate'
 
+-- | returns the default service request send priority
+-- from the service configuration
+priorityDefault :: Instance.T s -> Int
+priorityDefault Instance.T{Instance.priorityDefault = priorityDefault'} =
+    priorityDefault'
+
 nullResponse :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     s -> Instance.T s -> IO (Instance.Response s)
@@ -800,12 +807,12 @@ handleEvents messages api0 external cmd0 = do
             processCount' <- Get.getWord32host
             timeoutAsync' <- Get.getWord32host
             timeoutSync' <- Get.getWord32host
-            priorityDefault <- Get.getInt8
+            priorityDefault' <- Get.getInt8
             let api1 = Instance.reinit api0
                     processCount'
                     timeoutAsync'
                     timeoutSync'
-                    priorityDefault
+                    priorityDefault'
             empty <- Get.isEmpty
             if not empty then
                 handleEvents messages api1 external 0
@@ -838,7 +845,7 @@ pollRequestDataGet messages api0 external = do
             timeoutAsync' <- Get.getWord32host
             timeoutSync' <- Get.getWord32host
             timeoutTerminate' <- Get.getWord32host
-            priorityDefault <- Get.getInt8
+            priorityDefault' <- Get.getInt8
             let api1 = Instance.init api0
                     processIndex'
                     processCount'
@@ -849,7 +856,7 @@ pollRequestDataGet messages api0 external = do
                     timeoutAsync'
                     timeoutSync'
                     timeoutTerminate'
-                    priorityDefault
+                    priorityDefault'
             empty <- Get.isEmpty
             if not empty then
                 handleEvents messages api1 external 0
@@ -942,12 +949,12 @@ pollRequestDataGet messages api0 external = do
             processCount' <- Get.getWord32host
             timeoutAsync' <- Get.getWord32host
             timeoutSync' <- Get.getWord32host
-            priorityDefault <- Get.getInt8
+            priorityDefault' <- Get.getInt8
             let api1 = Instance.reinit api0
                     processCount'
                     timeoutAsync'
                     timeoutSync'
-                    priorityDefault
+                    priorityDefault'
             empty <- Get.isEmpty
             if not empty then
                 pollRequestDataGet messages api1 external

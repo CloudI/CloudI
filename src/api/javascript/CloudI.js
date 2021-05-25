@@ -561,6 +561,10 @@ CloudI.API.prototype.timeout_terminate = function () {
     return this._timeout_terminate;
 };
 
+CloudI.API.prototype.priority_default = function () {
+    return this._priority_default;
+};
+
 CloudI.API.prototype._null_response = function (request_type, name, pattern,
                                                 request_info, request,
                                                 timeout, priority,

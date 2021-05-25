@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -462,6 +462,12 @@ sub timeout_terminate
 {
     my $self = shift;
     return $self->{_timeout_terminate};
+}
+
+sub priority_default
+{
+    my $self = shift;
+    return $self->{_priority_default};
 }
 
 sub _null_response

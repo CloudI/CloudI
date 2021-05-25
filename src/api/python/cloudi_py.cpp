@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -364,6 +364,8 @@ python_cloudi_timeout_sync(PyObject * self, PyObject *);
 static PyObject *
 python_cloudi_timeout_terminate(PyObject * self, PyObject *);
 static PyObject *
+python_cloudi_priority_default(PyObject * self, PyObject *);
+static PyObject *
 python_cloudi_poll(PyObject * self, PyObject *);
 static PyObject *
 python_cloudi_shutdown(PyObject * self, PyObject * args, PyObject * kwargs);
@@ -429,6 +431,9 @@ static PyMethodDef python_cloudi_instance_object_methods[] = {
     {"timeout_terminate",
      python_cloudi_timeout_terminate, METH_VARARGS,
      "Provide the termination timeout."},
+    {"priority_default",
+     python_cloudi_priority_default, METH_VARARGS,
+     "Provide the default priority."},
     {"poll",
      python_cloudi_poll, METH_VARARGS,
      "Handle incoming requests."},
@@ -1395,6 +1400,15 @@ python_cloudi_timeout_terminate(PyObject * self, PyObject *)
         (python_cloudi_instance_object *) self;
     CloudI::API * api = object->api;
     return Py_BuildValue("I", api->timeout_terminate());
+}
+
+static PyObject *
+python_cloudi_priority_default(PyObject * self, PyObject *)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    CloudI::API * api = object->api;
+    return Py_BuildValue("i", api->priority_default());
 }
 
 static PyObject *

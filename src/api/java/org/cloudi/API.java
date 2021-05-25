@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1028,6 +1028,11 @@ public class API
     public int timeout_terminate()
     {
         return this.timeout_terminate;
+    }
+
+    public byte priority_default()
+    {
+        return this.priority_default;
     }
 
     private void callback(final int command,

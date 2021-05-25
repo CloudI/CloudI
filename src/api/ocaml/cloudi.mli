@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -185,6 +185,10 @@ val timeout_sync : 's Instance.t -> int
 (** returns the service termination timeout
     based on the service configuration *)
 val timeout_terminate : 's Instance.t -> int
+
+(** returns the default service request send priority
+    from the service configuration *)
+val priority_default : 's Instance.t -> int
 
 (** blocks to process incoming CloudI service requests *)
 val poll : 's Instance.t -> int -> (bool, string) result

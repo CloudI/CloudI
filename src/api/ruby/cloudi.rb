@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -77,6 +77,7 @@ module CloudI
         attr_reader :timeout_async
         attr_reader :timeout_sync
         attr_reader :timeout_terminate
+        attr_reader :priority_default
 
         def self.thread_count
             s = getenv('CLOUDI_API_INIT_THREAD_COUNT')

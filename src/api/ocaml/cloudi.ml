@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -1343,6 +1343,9 @@ let timeout_sync (api : 's Instance.t) : int =
 
 let timeout_terminate (api : 's Instance.t) : int =
   api.Instance.timeout_terminate
+
+let priority_default (api : 's Instance.t) : int =
+  api.Instance.priority_default
 
 let poll (api : 's Instance.t) (timeout : int) : (bool, string) result =
   poll_request api timeout true

@@ -703,6 +703,11 @@ func (api *Instance) TimeoutTerminate() uint32 {
 	return api.timeoutTerminate
 }
 
+// PriorityDefault returns the default service request send priority from the service configuration
+func (api *Instance) PriorityDefault() int8 {
+	return api.priorityDefault
+}
+
 func (api *Instance) callback(command uint32, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) error {
 	functionQueue := api.callbacks[pattern]
 	var function Callback
