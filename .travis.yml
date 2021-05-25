@@ -12,15 +12,24 @@ matrix:
     #        - g++-7
     #  env:
     #    - CONFIGURE_ENV="CC=gcc-7 CXX=g++-7"
+    #- os: linux
+    #  addons:
+    #    apt:
+    #      sources:
+    #        - ubuntu-toolchain-r-test
+    #      packages:
+    #        - g++-6
+    #  env:
+    #    - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
     - os: linux
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-6
+            - g++-5
       env:
-        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
     #- os: linux
     #  addons:
     #    apt:
@@ -30,15 +39,24 @@ matrix:
     #        - clang-5.0
     #  env:
     #    - CONFIGURE_ENV="CC=clang-5.0 CXX=clang++-5.0"
+    #- os: linux
+    #  addons:
+    #    apt:
+    #      sources:
+    #        - llvm-toolchain-bionic-4.0
+    #      packages:
+    #        - clang-4.0
+    #  env:
+    #    - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
     - os: linux
       addons:
         apt:
           sources:
-            - llvm-toolchain-bionic-4.0
+            - llvm-toolchain-bionic-3.9
           packages:
-            - clang-4.0
+            - clang-3.9
       env:
-        - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
+        - MATRIX_EVAL="CC=clang-3.9 && CXX=clang++-3.9"
 compiler:
   - clang
   - gcc
