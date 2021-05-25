@@ -78,9 +78,13 @@ _Unwind_GetIP(0);
          ]], [[
 backtrace(0, 0);
          ]])],
-        [has_execinfo="yes"],
-        [backtrace=""])
+        [has_execinfo="yes"])
     AC_MSG_RESULT($has_execinfo)
+
+    dnl backtrace data is required to print backtrace information
+    if test "x$has_unwind" = "xno" -a "x$has_execinfo" = "xno"; then
+        backtrace=""
+    fi
 
     want_dladdr="no"
     if test "x$backtrace" = "xbackward"; then
