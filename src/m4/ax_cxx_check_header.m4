@@ -14,7 +14,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -37,9 +37,8 @@
 
 AC_DEFUN([AX_CXX_CHECK_HEADER],
 [
-    AC_LANG_SAVE
-    AC_LANG_CPLUSPLUS
+    AC_LANG_PUSH([C++])
     AX_CHECK_PRIVATE_HEADER($1, $2, $3, $4, $5)
-    AC_LANG_RESTORE
+    AC_LANG_POP([C++])
 ])
 

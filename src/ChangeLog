@@ -6,6 +6,7 @@
     * Improve backward-cpp so Dl_info is defined for the macro
       BACKWARD_SYSTEM_LINUX
     * Improve M4 C++ backtrace detection
+    * Fix M4 macros that become obsolete with GNU Autoconf 2.71
 
 2021-05-23 Michael Truog   <mjtruog at protonmail dot com>
 
