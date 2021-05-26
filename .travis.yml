@@ -64,7 +64,7 @@ notifications:
       - mjtruog@gmail.com
   irc:
     channels:
-      - "chat.freenode.net#cloudi"
+      - "irc.oftc.net#cloudi"
     template:
       - "%{repository_slug} (%{branch} - %{commit}) %{author}: %{commit_message}"
       - "View Changes %{compare_url}"
