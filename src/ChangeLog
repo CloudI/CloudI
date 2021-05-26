@@ -6,6 +6,7 @@
     * Add the missing priority_default function to the
       Go/Haskell/Java/JavaScript/OCaml/Perl/PHP/Python/Python-C/Ruby
       CloudI APIs
+    * Fix Erlang type specification information in cloudi_service_api
 
 2021-05-24 Michael Truog   <mjtruog at protonmail dot com>
 

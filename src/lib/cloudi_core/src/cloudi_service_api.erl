@@ -869,8 +869,7 @@
          {aspects_request_after, list(aspect_request_after_external())} |
          {aspects_terminate_before, list(aspect_terminate_before_external())} |
          {aspects_suspend, list(aspect_suspend())} |
-         {aspects_resume, list(aspect_resume())} |
-         {limit, limit_external()}).
+         {aspects_resume, list(aspect_resume())}).
 -type service_update_plan() ::
     service_update_plan_internal() |
     service_update_plan_external().
@@ -910,6 +909,7 @@
                   nodes_properties()).
 -type node_status_local() ::
     nonempty_list({services_running, integer_string_ge_0()} |
+                  {services_restarted, integer_string_ge_0()} |
                   {services_failed, integer_string_ge_0()} |
                   {uptime, nanoseconds_string()} |
                   {uptime_cost_total, float_string_ge_0()} |
@@ -1046,13 +1046,13 @@
          {file_read_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
     nonempty_list({file, string() | undefined} |
-                  {stdout, boolean()} |
                   {level, loglevel()} |
+                  {redirect, node() | undefined} |
+                  {syslog, logging_syslog_set_proplist() | undefined} |
+                  {stdout, boolean()} |
                   {queue_mode_async, pos_integer()} |
                   {queue_mode_sync, pos_integer()} |
                   {queue_mode_overload, pos_integer()} |
-                  {redirect, node() | undefined} |
-                  {syslog, logging_syslog_set_proplist() | undefined} |
                   {formatters, logging_formatters_set_proplist() | undefined} |
                   {log_time_offset, loglevel()} |
                   {aspects_log_before, list(aspect_log_before())} |
