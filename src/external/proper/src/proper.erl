@@ -1,5 +1,4 @@
-%%% -*- coding: utf-8 -*-
-%%% -*- erlang-indent-level: 2 -*-
+%%% -*- coding: utf-8; erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
 %%% Copyright 2010-2021 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>,
@@ -284,6 +283,20 @@
 %%% is undefined.</dd>
 %%% <dt>`nocolors'</dt>
 %%% <dd>Do not use term colors in output.</dd>
+%%% <dt>`{numworkers, <Non_negative_number>}'</dt>
+%%% <dd> Specifies the number of workers to spawn when performing the tests (defaults to 0).
+%%% Each worker gets their own share of the total of number of tests to perform.</dd>
+%%% <dt>`{strategy_fun, <Strategy_function>}'</dt>
+%%% <dd> Overrides the default function used to split the load of tests among the workers.
+%%% It should be of the type {@link strategy_fun()}.</dd>
+%%% <dt>`pure | impure'</dt>
+%%% <dd> Declares the type of the property, as in pure with no side-effects or state,
+%%% and impure with them. <b>Notice</b>: this option will only be taken into account if
+%%% the number of workers set is greater than 0. In addition, <i>impure</i> properties
+%%% have each worker spawned on its own node.</dd>
+%%% <dt>`{stop_nodes, boolean()}'</dt>
+%%% <dd> Specifies whether parallel PropEr should stop the nodes after running a property
+%%% or not. Defaults to true.</dd>
 %%% </dl>
 %%%
 %%% == Spec testing ==
@@ -464,16 +477,15 @@
 -type numeric_stats() :: {number(), float(), number()}.
 -type time_period() :: non_neg_integer().
 
-%% @type outer_test(). A testable property that has optionally been wrapped with
-%% one or more <a href="#external-wrappers">external wrappers</a>.
 -opaque outer_test() :: test()
 		      | {'fails', outer_test()}
 		      | {'setup', setup_fun(), outer_test()}
 		      | {'numtests', pos_integer(), outer_test()}
 		      | {'on_output', output_fun(), outer_test()}.
+%% A testable property that has optionally been wrapped with one or
+%% more <a href="#external-wrappers">external wrappers</a>.
+
 %% TODO: Should the tags be of the form '$...'?
-%% @type test(). A testable property that has not been wrapped with an
-%% <a href="#external-wrappers">external wrapper</a>.
 -opaque test() :: boolean()
 	        | {'forall', proper_types:raw_type(), dependent_test()}
 	        | {'exists', proper_types:raw_type(), dependent_test(), boolean()}
@@ -485,6 +497,9 @@
 	        | {'timeout', time_period(), fun(() -> boolean())}.
 	      %%| {'always', pos_integer(), delayed_test()}
 	      %%| {'sometimes', pos_integer(), delayed_test()}
+%% A testable property that has not been wrapped with an
+%% <a href="#external-wrappers">external wrapper</a>.
+
 -type delayed_test() :: fun(() -> test()).
 -type dependent_test() :: fun((proper_gen:instance()) -> test()).
 -type lazy_test() :: delayed_test() | dependent_test().
@@ -498,7 +513,16 @@
 
 -type false_positive_mfas() :: fun((mfa(),Args::[term()],{fail,Result::term()} | {error | exit | throw,Reason::term()}) -> boolean()) | 'undefined'.
 
-%%
+-type purity() :: 'pure' | 'impure'.
+
+-type test_range()  :: {Start :: non_neg_integer(), ToPass :: pos_integer()}.
+-type worker_args() :: test_range() | {node(), test_range()}.
+
+%% Strategy function type
+-type strategy_fun() :: fun((NumTests :: pos_integer(), NumWorkers :: pos_integer()) -> [{non_neg_integer(), non_neg_integer()}]).
+%% A function that given a number of tests and a number of workers, splits
+%% the load in the form of a list of tuples with the first element as the
+%% starting test and the second element as the number of tests to do from there on.
 
 %%-----------------------------------------------------------------------------
 %% Options and Context types
@@ -510,6 +534,7 @@
 		  | 'long_result'
 		  | 'nocolors'
 		  | 'noshrink'
+		  | purity()
 		  | 'quiet'
 		  | 'verbose'
 		  | pos_integer()
@@ -518,6 +543,9 @@
 		  | {'max_shrinks',non_neg_integer()}
 		  | {'max_size',proper_gen:size()}
 		  | {'numtests',pos_integer()}
+		  | {'numworkers', non_neg_integer()}
+		  | {'strategy_fun', strategy_fun()}
+		  | {'stop_nodes', boolean()}
 		  | {'on_output',output_fun()}
 		  | {'search_steps',pos_integer()}
 		  | {'search_strategy',proper_target:strategy()}
@@ -544,7 +572,12 @@
 	       skip_mfas        = []              :: [mfa()],
 	       false_positive_mfas                :: false_positive_mfas(),
 	       setup_funs       = []              :: [setup_fun()],
-               nocolors         = false           :: boolean()}).
+	       numworkers       = 0               :: non_neg_integer(),
+	       property_type    = pure            :: purity(),
+	       strategy_fun     = default_strategy_fun() :: strategy_fun(),
+	       stop_nodes       = true            :: boolean(),
+	       parent           = self()          :: pid(),
+	       nocolors         = false           :: boolean()}).
 -type opts() :: #opts{}.
 -record(ctx, {mode     = new :: 'new' | 'try_shrunk' | 'try_cexm',
 	      bound    = []  :: imm_testcase() | counterexample(),
@@ -660,6 +693,30 @@ tests_at_next_size(Size, #opts{numtests = NumTests, start_size = StartSize,
 	    {1, NextSize}
     end.
 
+-spec size_at_nth_test(non_neg_integer(), opts()) -> proper_gen:size().
+size_at_nth_test(NumTest, #opts{max_size = MaxSize, start_size = StartSize,
+                 numtests = NumTests}) ->
+    SizesToTest = MaxSize - StartSize + 1,
+    Size = case NumTests >= SizesToTest of
+        true ->
+            Div = NumTests div SizesToTest,
+            Rem = NumTests rem SizesToTest,
+            case NumTest < Rem * (Div + 1) of
+                true ->
+                    NumTest div (Div + 1) + StartSize;
+                false ->
+                    (NumTest div 2) - (Rem div Div) + StartSize
+            end;
+        false ->
+            case NumTest =:= 0 of
+                true -> StartSize;
+                false ->
+                    Diff = (SizesToTest - 1) div (NumTests - 1),
+                    NumTest * Diff + StartSize
+            end
+    end,
+    min(MaxSize, Size).
+
 %% @private
 -spec get_size(proper_types:type()) -> proper_gen:size() | 'undefined'.
 get_size(Type) ->
@@ -686,7 +743,7 @@ global_state_init_size_seed(Size, Seed) ->
 -spec global_state_init(opts()) -> 'ok'.
 global_state_init(#opts{start_size = StartSize, constraint_tries = CTries,
 			search_strategy = Strategy, search_steps = SearchSteps,
-			any_type = AnyType, seed = Seed} = Opts) ->
+			any_type = AnyType, seed = Seed, numworkers = NumWorkers} = Opts) ->
     clean_garbage(),
     put('$size', StartSize - 1),
     put('$left', 0),
@@ -695,6 +752,8 @@ global_state_init(#opts{start_size = StartSize, constraint_tries = CTries,
     grow_size(Opts),
     put('$constraint_tries', CTries),
     put('$any_type', AnyType),
+    put('$property_id', erlang:unique_integer()),
+    put('$proper_test_incr', NumWorkers),
     {_, _, _} = Seed, % just an assertion
     proper_arith:rand_restart(Seed),
     proper_typeserver:restart(),
@@ -719,6 +778,8 @@ global_state_erase() ->
     erase('$parameters'),
     erase('$search_strategy'),
     erase('$search_steps'),
+    erase('$property_id'),
+    erase('$proper_test_incr'),
     ok.
 
 -spec setup_test(opts()) -> [finalize_fun()].
@@ -745,15 +806,20 @@ finalize_test(Finalizers) ->
     lists:foreach(fun (Fun) -> ok = Fun() end, Finalizers).
 
 %% @private
--spec spawn_link_migrate(fun(() -> 'ok')) -> pid().
-spawn_link_migrate(ActualFun) ->
+-spec spawn_link_migrate(node(), fun(() -> 'ok')) -> pid().
+spawn_link_migrate(Node, ActualFun) ->
     PDictStuff = get(),
     Fun = fun() ->
-	      lists:foreach(fun({K,V}) -> put(K,V) end, PDictStuff),
-	      proper_arith:rand_reseed(),
-	      ok = ActualFun()
-	  end,
-    spawn_link(Fun).
+            lists:foreach(fun({K,V}) -> put(K,V) end, PDictStuff),
+            proper_arith:rand_reseed(),
+            ok = ActualFun()
+          end,
+    case Node of
+        undefined ->
+            spawn_link(Fun);
+        Node ->
+            spawn_link(Node, Fun)
+    end.
 
 -spec save_counterexample(counterexample()) -> 'ok'.
 save_counterexample(CExm) ->
@@ -929,7 +995,7 @@ add_user_opt(NewUserOpt, SingleUserOpt) ->
 
 -spec parse_opts(user_opts()) -> opts().
 parse_opts(UserOptsList) when is_list(UserOptsList) ->
-    parse_opts(lists:reverse(UserOptsList), #opts{});
+    parse_opts(lists:reverse(UserOptsList), maybe_override_numworkers(#opts{}));
 parse_opts(SingleUserOpt) ->
     parse_opts([SingleUserOpt]).
 
@@ -938,6 +1004,13 @@ parse_opts([], Opts) ->
     Opts;
 parse_opts([UserOpt | Rest], Opts) ->
     parse_opts(Rest, parse_opt(UserOpt,Opts)).
+
+-spec maybe_override_numworkers(opts()) -> opts().
+maybe_override_numworkers(Opts) ->
+    case os:getenv("NUMWORKERS") of
+        false -> Opts;
+        N -> Opts#opts{numworkers = erlang:list_to_integer(N)}
+    end.
 
 -define(POS_INTEGER(N),     (is_integer(N) andalso N > 0)).
 -define(NON_NEG_INTEGER(N), (is_integer(N) andalso N >= 0)).
@@ -959,6 +1032,8 @@ parse_opt(UserOpt, Opts) ->
 	noshrink       -> Opts#opts{noshrink = true};
 	quiet          -> Opts#opts{output_fun = fun(_,_) -> ok end};
 	verbose        -> Opts#opts{output_fun = fun io:format/2};
+	PropertyType when PropertyType =:= pure orelse PropertyType =:= impure ->
+        Opts#opts{property_type = PropertyType};
 	%% integer
 	N when is_integer(N) ->
 	    ?VALIDATE_OPT(?POS_INTEGER(N), Opts#opts{numtests = N});
@@ -974,6 +1049,12 @@ parse_opt(UserOpt, Opts) ->
 	    ?VALIDATE_OPT(?NON_NEG_INTEGER(Size), Opts#opts{max_size = Size});
 	{numtests,N} ->
 	    ?VALIDATE_OPT(?POS_INTEGER(N), Opts#opts{numtests = N});
+    {numworkers,N} ->
+        ?VALIDATE_OPT(?NON_NEG_INTEGER(N), Opts#opts{numworkers = N});
+    {strategy_fun,Fun} ->
+        ?VALIDATE_OPT(is_function(Fun, 2), Opts#opts{strategy_fun = Fun});
+    {stop_nodes,B} ->
+        ?VALIDATE_OPT(is_boolean(B), Opts#opts{stop_nodes = B});
 	{on_output,Print} ->
 	    ?VALIDATE_OPT(is_function(Print, 2),
 			  Opts#opts{output_fun = Print, nocolors = true});
@@ -1162,9 +1243,19 @@ test(RawTest, Opts) ->
 
 -spec inner_test(raw_test(), opts()) -> result().
 inner_test(RawTest, Opts) ->
-    #opts{numtests = NumTests, long_result = Long, output_fun = Print} = Opts,
+    #opts{numtests = NumTests, long_result = Long, output_fun = Print,
+            numworkers = NumWorkers} = Opts,
     Test = cook_test(RawTest, Opts),
-    ImmResult = perform(NumTests, Test, Opts),
+	ImmResult = case NumWorkers > 0 of
+	true ->
+        Opts1 = case NumWorkers > NumTests of
+            true -> Opts#opts{numworkers = NumTests};
+            false -> Opts
+        end,
+        parallel_perform(Test, Opts1);
+	false ->
+	    perform(NumTests, Test, Opts)
+	end,
     Print("~n", []),
     report_imm_result(ImmResult, Opts),
     {ShortResult,LongResult} = get_result(ImmResult, Test, Opts),
@@ -1172,6 +1263,49 @@ inner_test(RawTest, Opts) ->
 	true  -> LongResult;
 	false -> ShortResult
     end.
+
+%% @private
+-spec spawn_workers_and_get_result(
+        SpawnFun   :: fun((worker_args()) -> [{non_neg_integer(), non_neg_integer()}]),
+        WorkerArgs :: [worker_args()]) -> imm_result().
+spawn_workers_and_get_result(SpawnFun, WorkerArgs) ->
+    _ = maybe_start_cover_server(WorkerArgs),
+    WorkerList = lists:map(SpawnFun, WorkerArgs),
+    InitialResult = #pass{samples = [], printers = [], actions = []},
+    AggregatedImmResult = aggregate_imm_result(WorkerList, InitialResult),
+    ok = maybe_stop_cover_server(WorkerArgs),
+    AggregatedImmResult.
+
+%% @private
+%% @doc Runs PropEr in parallel mode, through the use of workers to perform the tests.
+%% Under this mode, PropEr needs information whether a property is pure or impure,
+%% and this information is passed via an option.
+%% When testing impure properties, PropEr will start a node for every worker that will be
+%% spawned in order to avoid test collisions between them.
+-spec parallel_perform(test(), opts()) -> imm_result().
+parallel_perform(Test, #opts{property_type = pure, numtests = NumTests,
+                             numworkers = NumWorkers, strategy_fun = StrategyFun} = Opts) ->
+    SpawnFun = fun({Start, ToPass}) ->
+                  spawn_link_migrate(undefined, fun() -> perform(Start, ToPass, Test, Opts) end)
+               end,
+    TestsPerWorker = StrategyFun(NumTests, NumWorkers),
+    spawn_workers_and_get_result(SpawnFun, TestsPerWorker);
+parallel_perform(Test, #opts{property_type = impure, numtests = NumTests,
+                             numworkers = NumWorkers, strategy_fun = StrategyFun,
+                             stop_nodes = StopNodes} = Opts) ->
+    TestsPerWorker = StrategyFun(NumTests, NumWorkers),
+    Nodes = start_nodes(NumWorkers),
+    ensure_code_loaded(Nodes),
+    NodeList = lists:zip(Nodes, TestsPerWorker),
+    SpawnFun = fun({Node, {Start, ToPass}}) ->
+                  spawn_link_migrate(Node, fun() -> perform(Start, ToPass, Test, Opts) end)
+               end,
+    AggregatedImmResult = spawn_workers_and_get_result(SpawnFun, NodeList),
+    ok = case StopNodes of
+        true -> stop_nodes();
+        false -> ok
+    end,
+    AggregatedImmResult.
 
 -spec retry(test(), counterexample(), opts()) -> short_result().
 retry(Test, CExm, Opts) ->
@@ -1219,7 +1353,7 @@ multi_test(Mod, RawTestKind, Opts) ->
 
 -spec mfa_test(mfa(), raw_test_kind(), opts()) -> long_result().
 mfa_test({Mod,Fun,Arity} = MFA, RawTestKind, ImmOpts) ->
-    {RawTest,#opts{output_fun = Print} = Opts} =
+    {RawTest,#opts{output_fun = Print, numworkers = NumWorkers} = Opts} =
 	case RawTestKind of
 	    test ->
 		OuterTest = Mod:Fun(),
@@ -1231,8 +1365,15 @@ mfa_test({Mod,Fun,Arity} = MFA, RawTestKind, ImmOpts) ->
     global_state_reset(Opts),
     Print("Testing ~w:~w/~b~n", [Mod,Fun,Arity]),
     Finalizers = setup_test(Opts),
-    LongResult = inner_test(RawTest, Opts#opts{long_result = true}),
+    Opts1 = case NumWorkers > 0 of
+        true ->
+            _ = start_nodes(NumWorkers),
+            Opts#opts{stop_nodes = false};
+        false -> Opts
+    end,
+    LongResult = inner_test(RawTest, Opts1#opts{long_result = true}),
     ok = finalize_test(Finalizers),
+    ok = stop_nodes(),
     Print("~n", []),
     LongResult.
 
@@ -1273,21 +1414,107 @@ get_rerun_result(#fail{}) ->
 get_rerun_result({error,_Reason} = ErrorResult) ->
     ErrorResult.
 
+-spec check_if_early_fail() -> 'ok'.
+check_if_early_fail() ->
+    Id = get('$property_id'),
+    receive
+        {worker_msg, {failed_test, From}, Id} ->
+            Passed = get('$tests_passed'),
+            From ! {worker_msg, {performed, Passed, Id}},
+            ok
+        after 0 -> ok
+    end.
+
+-spec update_tests_passed(non_neg_integer()) -> non_neg_integer().
+update_tests_passed(Passed) ->
+    case get('$tests_passed') of
+        undefined -> put('$tests_passed', Passed);
+        Passed2 -> put('$tests_passed', Passed + Passed2)
+    end.
+
+-spec perform(non_neg_integer(), test(), opts()) -> imm_result() | 'ok'.
 perform(NumTests, Test, Opts) ->
     perform(0, NumTests, ?MAX_TRIES_FACTOR * NumTests, Test, none, none, Opts).
 
+-spec perform(non_neg_integer(), pos_integer(), test(), opts()) -> imm_result() | 'ok'.
+perform(Passed, NumTests, Test, Opts) ->
+    Size = size_at_nth_test(Passed, Opts),
+    put('$size', Size),
+    %% When working on parallelizing PropEr initially we used to hit
+    %% too easily the default maximum number of tries that PropEr had,
+    %% so when running on parallel it has a higher than usual max
+    %% number of tries. The number was picked after testing locally
+    %% with different values.
+    perform(Passed, NumTests, 3 * ?MAX_TRIES_FACTOR * NumTests, Test, none, none, Opts).
+
 -spec perform(non_neg_integer(), pos_integer(), non_neg_integer(), test(),
 	      [sample()] | 'none', [stats_printer()] | 'none', opts()) ->
-	  imm_result().
+      imm_result() | 'ok'.
+perform(Passed, _ToPass, 0, _Test, Samples, Printers,
+        #opts{numworkers = NumWorkers, parent = From} = _Opts) when NumWorkers > 0 ->
+    R = case Passed of
+        0 -> {error, cant_satisfy};
+        _ -> #pass{samples = Samples, printers = Printers, performed = Passed, actions = []}
+    end,
+    update_tests_passed(Passed),
+    From ! {worker_msg, R, self(), get('$property_id')},
+    ok;
 perform(Passed, _ToPass, 0, _Test, Samples, Printers, _Opts) ->
     case Passed of
 	0 -> {error, cant_satisfy};
 	_ -> #pass{samples = Samples, printers = Printers, performed = Passed, actions = []}
     end;
+perform(ToPass, ToPass, _TriesLeft, _Test, Samples, Printers,
+        #opts{numworkers = NumWorkers, parent = From} = _Opts) when NumWorkers > 0 ->
+    R = #pass{samples = Samples, printers = Printers, performed = ToPass, actions = []},
+    check_if_early_fail(),
+    From ! {worker_msg, R#pass{performed = floor(ToPass div NumWorkers + 1)}, self(), get('$property_id')},
+    ok;
 perform(ToPass, ToPass, _TriesLeft, _Test, Samples, Printers, _Opts) ->
     #pass{samples = Samples, printers = Printers, performed = ToPass, actions = []};
 perform(Passed, ToPass, TriesLeft, Test, Samples, Printers,
-	#opts{output_fun = Print} = Opts) ->
+        #opts{output_fun = Print, numworkers = NumWorkers, parent = From} = Opts) when NumWorkers > 0 ->
+    check_if_early_fail(),
+    case run(Test, Opts) of
+	#pass{reason = true_prop, samples = MoreSamples,
+	      printers = MorePrinters} ->
+	    Print(".", []),
+	    NewSamples = add_samples(MoreSamples, Samples),
+	    NewPrinters = case Printers of
+			      none -> MorePrinters;
+			      _    -> Printers
+			  end,
+	    grow_size(Opts),
+        update_tests_passed(floor((Passed + 1) div NumWorkers + 1)),
+	    perform(Passed + get('$proper_test_incr'), ToPass, TriesLeft - 1, Test,
+		    NewSamples, NewPrinters, Opts);
+	#fail{} = FailResult ->
+	    Print("!", []),
+        R = FailResult#fail{performed = (Passed + 1) div NumWorkers + 1},
+        From ! {worker_msg, R, self(), get('$property_id')},
+        ok;
+    {error, rejected} ->
+	    Print("x", []),
+	    grow_size(Opts),
+	    perform(Passed, ToPass, TriesLeft - 1, Test,
+		    Samples, Printers, Opts);
+    {error, Reason} = Error when Reason =:= arity_limit
+			      orelse Reason =:= non_boolean_result
+			      orelse Reason =:= type_mismatch ->
+	    From ! {worker_msg, Error, self(), get('$property_id')},
+        ok;
+	{error, {cant_generate,_MFAs}} = Error ->
+	    From ! {worker_msg, Error, self(), get('$property_id')},
+        ok;
+	{error, {typeserver,_SubReason}} = Error ->
+	    From ! {worker_msg, Error, self(), get('$property_id')},
+        ok;
+	Other ->
+        From ! {worker_msg, {error, {unexpected, Other}}, self(), get('$property_id')},
+        ok
+    end;
+perform(Passed, ToPass, TriesLeft, Test, Samples, Printers,
+        #opts{output_fun = Print} = Opts) ->
     case run(Test, Opts) of
 	#pass{reason = true_prop, samples = MoreSamples,
 	      printers = MorePrinters} ->
@@ -1371,13 +1598,11 @@ perform_search(Steps, NumSteps, TriesLeft, Target, DTest,
 	    Error
     end.
 
-
 -spec add_samples([sample()], [sample()] | 'none') -> [sample()].
 add_samples(MoreSamples, none) ->
     MoreSamples;
 add_samples(MoreSamples, Samples) ->
     [M ++ S || {M, S} <- proper_arith:safe_zip(MoreSamples, Samples)].
-
 
 %% Evaluated only for its side-effects.
 -spec gen_and_print_samples(proper_types:raw_type(),
@@ -1519,7 +1744,7 @@ run({whenfail, NewAction, Prop}, #ctx{actions = Actions} = Ctx, Opts) ->
 run({trapexit, Prop}, Ctx, Opts) ->
     OldFlag = process_flag(trap_exit, true),
     Self = self(),
-    Child = spawn_link_migrate(fun() -> child(Self, Prop, Ctx, Opts) end),
+    Child = spawn_link_migrate(undefined, fun() -> child(Self, Prop, Ctx, Opts) end),
     Result =
 	receive
 	    {result, RecvResult} ->
@@ -1531,7 +1756,7 @@ run({trapexit, Prop}, Ctx, Opts) ->
     Result;
 run({timeout, Limit, Prop}, Ctx, Opts) ->
     Self = self(),
-    Child = spawn_link_migrate(fun() -> child(Self, Prop, Ctx, Opts) end),
+    Child = spawn_link_migrate(undefined, fun() -> child(Self, Prop, Ctx, Opts) end),
     receive
 	{result, RecvResult} -> RecvResult
     after Limit ->
@@ -1790,7 +2015,12 @@ shrink(Shrunk, [RawImmInstance | Rest] = TestTail, {Type,Prop} = StrTest, Reason
     ImmInstance = case proper_types:find_prop(is_user_nf, Type) of
                     {ok, true} ->
                       case proper_types:safe_is_instance(RawImmInstance, Type) of
-                        false -> proper_gen:clean_instance(RawImmInstance);
+                        false ->
+                          CleanInstance = proper_gen:clean_instance(RawImmInstance),
+                          case proper_types:safe_is_instance(CleanInstance, Type) of
+                            true -> CleanInstance;
+                            false -> RawImmInstance
+                          end;
                         true -> RawImmInstance
                       end;
                     {ok, false} -> RawImmInstance;
@@ -1959,6 +2189,40 @@ apply_skip(Args, Prop) ->
 %% Output functions
 %%-----------------------------------------------------------------------------
 
+-spec aggregate_imm_result([pid()], imm_result()) -> imm_result().
+aggregate_imm_result([], ImmResult) ->
+    ImmResult;
+aggregate_imm_result(WorkerList, #pass{performed = Passed, samples = Samples} = ImmResult) ->
+    Id = get('$property_id'),
+    receive
+        %% if we haven't received anything yet we use the first pass we get
+        {worker_msg, #pass{} = Received, From, Id} when Passed =:= undefined ->
+            aggregate_imm_result(WorkerList -- [From], Received);
+        %% from that moment on, we accumulate the count of passed tests
+        {worker_msg, #pass{performed = PassedRcvd, samples = SamplesRcvd}, From, Id} ->
+            NewImmResult = ImmResult#pass{performed = Passed + PassedRcvd,
+                                          samples = Samples ++ SamplesRcvd},
+            aggregate_imm_result(WorkerList -- [From], NewImmResult);
+        {worker_msg, #fail{performed = FailedOn} = Received, From, Id} ->
+            lists:foreach(fun(P) ->
+                            P ! {worker_msg, {failed_test, self()}, Id}
+			  end, WorkerList -- [From]),
+            Performed = lists:foldl(fun(Worker, Acc) ->
+                                receive
+                                    {worker_msg, {performed, undefined, Id}} -> Acc;
+                                    {worker_msg, {performed, P, Id}} -> P + Acc;
+                                    {worker_msg, #fail{performed = FailedOn2}, Worker, Id} -> FailedOn2 + Acc
+                                end
+                             end, 0, WorkerList -- [From]),
+            kill_workers(WorkerList),
+            aggregate_imm_result([], Received#fail{performed = Performed + FailedOn});
+        {worker_msg, {error, _Reason} = Error, _From, Id} ->
+            kill_workers(WorkerList),
+            aggregate_imm_result([], Error);
+        {'EXIT', From, _ExcReason} ->
+            aggregate_imm_result(WorkerList -- [From], ImmResult)
+    end.
+
 -spec report_imm_result(imm_result(), opts()) -> 'ok'.
 report_imm_result(#pass{samples = Samples, printers = Printers,
 			performed = Performed},
@@ -2109,6 +2373,122 @@ report_shrinking(NumShrinks, MinImmTestCase, MinActions, Opts) ->
     print_imm_testcase(MinImmTestCase, "", Print),
     execute_actions(MinActions).
 
+-spec default_strategy_fun() -> strategy_fun().
+default_strategy_fun() ->
+    fun(NumTests,NumWorkers) ->
+        Decr = case NumTests of
+                    1 -> 0;
+                    _ -> 1
+               end,
+        [begin
+	   L2 = lists:seq(X - 1, NumTests - Decr, NumWorkers),
+	   {hd(L2), lists:last(L2)}  % {_Start, _NumTests}
+	 end || X <- lists:seq(1, NumWorkers)]
+    end.
+
+%% @private
+-spec update_worker_node_ref({node(), {already_running, boolean()}}) -> [node()].
+update_worker_node_ref(NodeName) ->
+    NewMap = case get(worker_nodes) of
+	       undefined -> [NodeName];
+	       Map -> [NodeName|Map]
+	     end,
+    put(worker_nodes, NewMap).
+
+%% @private
+%% @doc Starts a remote node to ensure the testing will not
+%% crash the BEAM, and loads on it all the needed code.
+-spec start_node(node()) -> node().
+start_node(SlaveName) ->
+    [] = os:cmd("epmd -daemon"),
+    HostName = list_to_atom(net_adm:localhost()),
+    _ = net_kernel:start([proper_master, shortnames]),
+    case slave:start_link(HostName, SlaveName) of
+        {ok, Node} ->
+            _ = update_worker_node_ref({Node, {already_running, false}}),
+            Node;
+        {error, {already_running, Node}} ->
+            _ = update_worker_node_ref({Node, {already_running, true}}),
+            Node
+    end.
+
+-spec maybe_start_cover_server([tuple()]) -> {'ok', [node()]}
+                                           | {'error', {'already_started', pid()}}.
+maybe_start_cover_server(NodeList) ->
+    case os:getenv("COVER") of
+        false -> {ok, []};
+        "true" ->
+            {Nodes, _} = lists:unzip(NodeList),
+            cover:start(Nodes)
+    end.
+
+-spec maybe_stop_cover_server([node()]) -> 'ok'.
+maybe_stop_cover_server(NodeList) ->
+    case os:getenv("COVER") of
+        false -> ok;
+        "true" ->
+            {Nodes, _} = lists:unzip(NodeList),
+            cover:stop(Nodes)
+    end.
+
+%% @private
+-spec maybe_load_binary([node()], module()) -> 'ok' | 'error'.
+maybe_load_binary(Nodes, Module) ->
+    %% we check if the module was either preloaded or cover_compiled
+    %% and in such cases ignore those
+    case code:is_loaded(Module) of
+        {file, Loaded} when is_list(Loaded) ->
+            case code:get_object_code(Module) of
+                {Module, Binary, Filename} ->
+                    _ = rpc:multicall(Nodes, code, load_binary, [Module, Filename, Binary]),
+                    ok;
+                error -> error
+            end;
+        _ -> ok
+    end.
+
+%% @private
+-spec ensure_code_loaded([node()]) -> 'ok'.
+ensure_code_loaded(Nodes) ->
+    %% get all the files that need to be loaded from the current directory
+    Files = filelib:wildcard("**/*.beam"),
+    %% but we only care about the filename, without the .beam extension
+    Modules = [list_to_atom(filename:basename(File, ".beam")) || File <- Files],
+    %% ensure that all modules are available on the nodes
+    lists:foreach(fun(Module) -> maybe_load_binary(Nodes, Module) end, Modules),
+    lists:foreach(fun(P) -> rpc:multicall(Nodes, code, add_patha, [P]) end,
+		  code:get_path()),
+    _ = rpc:multicall(Nodes, code, ensure_modules_loaded, [Modules]),
+    ok.
+
+%% @private
+%% @doc Starts multiple (NumNodes) remote nodes.
+-spec start_nodes(non_neg_integer()) -> [node()].
+start_nodes(NumNodes) ->
+    [start_node(list_to_atom("proper_slave_" ++ integer_to_list(N)))
+     || N <- lists:seq(1, NumNodes)].
+
+%% @private
+%% @doc Stops all the registered (started) nodes.
+-spec stop_nodes() -> 'ok'.
+stop_nodes() ->
+    case get(worker_nodes) of
+        undefined -> ok;
+        Nodes ->
+            StopFun = fun({Node, {already_running, false}}) -> slave:stop(Node);
+			 ({_Node, {already_running, true}}) -> ok
+		      end,
+            lists:foreach(StopFun, Nodes),
+            _ = net_kernel:stop(),
+            erase(worker_nodes),
+            ok
+    end.
+
+%% @private
+%% @doc Unlinks and kills all the workers.
+-spec kill_workers([pid()]) -> ok.
+kill_workers(WorkerList) ->
+    lists:foreach(fun(P) -> unlink(P), exit(P, kill) end, WorkerList).
 
 %%-----------------------------------------------------------------------------
 %% Stats printing functions
