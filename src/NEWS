@@ -1,5 +1,24 @@
 ------------------------------------------------------------------------        
 
+May 27, 2021
+  Version 2.0.2 released.
+  * Added the ATS CloudI API (ATS2/Postiats >= 0.3.13)
+  * Added more information to the CloudI Service API functions
+    services_status, nodes_status, logging_status and code_status
+  * Added the overload queue_mode to the CloudI logger to prevent
+    node logging redirects from causing excessive memory consumption
+  * Updated cloudi_service_http_cowboy to use cowboy 2.9.0
+  * Added cache replacement algorithms to cloudi_service_filesystem
+    (replace argument may be lfuda, lfuda_gdsf or lru)
+  * Added queue dependencies to cloudi_service_api_batch
+  * Added more descriptive C/C++ CloudI API termination handler output
+  * Erlang/OTP 24 support was added
+  * Add hackney support to cloudi_service_http_client
+  * Added the service configuration options aspects_suspend and
+    aspects_resume for handling service suspend state changes
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 November 27, 2020
   Version 2.0.1 released.
   * backwards incompatible changes:

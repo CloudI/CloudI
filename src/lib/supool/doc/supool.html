@@ -13,9 +13,9 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Supervisor_Pool">Supervisor Pool</a></h3>
    Simple supervisor process pool with round-robin.
-<p>Copyright © 2011-2018 Michael Truog</p>
+<p>Copyright © 2011-2021 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.4 Sep 15 2018 17:33:35
+<p><b>Version:</b> 2.0.2 May 26 2021 19:26:39
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
@@ -54,11 +54,13 @@
 <h3 class="function"><a name="code_change-3">code_change/3</a></h3>
 <div class="spec">
 <p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="get-1">get/1</a></h3>
 <div class="spec">
 <p><tt>get(Name::atom()) -&gt; pid() | undefined</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_pool_process.">Get a pool process.</a></h4>
 </p>
@@ -66,31 +68,37 @@
 <h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
 <div class="spec">
 <p><tt>handle_call(Request, X2, State) -&gt; any()</tt></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
 <div class="spec">
 <p><tt>handle_cast(Request, State) -&gt; any()</tt></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
 <div class="spec">
 <p><tt>handle_info(Request, State) -&gt; any()</tt></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="init-1">init/1</a></h3>
 <div class="spec">
 <p><tt>init(X1) -&gt; any()</tt></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="pool_worker_start_link-2">pool_worker_start_link/2</a></h3>
 <div class="spec">
 <p><tt>pool_worker_start_link(Name::atom(), Supervisor::pid()) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="start_link-3">start_link/3</a></h3>
 <div class="spec">
 <p><tt>start_link(Name::atom(), Count::pos_integer(), ChildSpec::<a href="#type-child_spec">child_spec()</a>) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_the_pool_supervisor.">Start the pool supervisor.</a></h4>
 </p>
@@ -98,6 +106,7 @@
 <h3 class="function"><a name="start_link-4">start_link/4</a></h3>
 <div class="spec">
 <p><tt>start_link(Name::atom(), Count::pos_integer(), ChildSpec::<a href="#type-child_spec">child_spec()</a>, Options::<a href="#type-options">options()</a>) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_the_pool_supervisor_with_restart_options.">Start the pool supervisor with restart options.</a></h4>
 </p>
@@ -105,6 +114,7 @@
 <h3 class="function"><a name="terminate-2">terminate/2</a></h3>
 <div class="spec">
 <p><tt>terminate(X1, X2) -&gt; any()</tt></p>
+<p> </p>
 </div>
 <hr>
 

@@ -12,9 +12,9 @@
 <h1>Module supool_sup</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Pool_Supervisor">Pool Supervisor</a></h3>.
-<p>Copyright © 2011-2017 Michael Truog</p>
+<p>Copyright © 2011-2021 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.1 Sep 15 2018 17:33:35
+<p><b>Version:</b> 2.0.2 May 26 2021 19:26:39
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="supervisor.html"><tt>supervisor</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
@@ -34,21 +34,25 @@
 <h3 class="function"><a name="init-1">init/1</a></h3>
 <div class="spec">
 <p><tt>init(X1) -&gt; any()</tt></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="start_children-2">start_children/2</a></h3>
 <div class="spec">
 <p><tt>start_children(Supervisor::pid(), ChildSpecs::[<a href="supool.html#type-child_spec">supool:child_spec()</a>, ...]) -&gt; {ok, [pid()]} | {error, any()}</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="start_link-4">start_link/4</a></h3>
 <div class="spec">
 <p><tt>start_link(Name::atom(), Count::pos_integer(), ChildSpec::<a href="supool.html#type-child_spec">supool:child_spec()</a>, Options::<a href="supool.html#type-options">supool:options()</a>) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="which_children-1">which_children/1</a></h3>
 <div class="spec">
 <p><tt>which_children(Supervisor::pid()) -&gt; [pid()]</tt><br></p>
+<p> </p>
 </div>
 <hr>
 

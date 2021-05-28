@@ -6,7 +6,7 @@ defmodule Nodefinder.Mixfile do
 
   def project do
     [app: :nodefinder,
-     version: "2.0.0",
+     version: "2.0.2",
      language: :erlang,
      erlc_options: [
        {:d, :erlang.list_to_atom('ERLANG_OTP_VERSION_' ++ :erlang.system_info(:otp_release))},
@@ -54,7 +54,7 @@ defmodule Nodefinder.Mixfile do
   end
 
   defp package do
-    [files: ~w(src doc rebar.config AUTHORS LICENSE ChangeLog README.markdown),
+    [files: ~w(src doc rebar.config AUTHORS ChangeLog README.markdown LICENSE),
      maintainers: ["Michael Truog", "Paul Mineiro"],
      licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/okeuday/nodefinder"}]

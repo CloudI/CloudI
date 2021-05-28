@@ -21,7 +21,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
    This Erlang trie implementation uses binary keys.
 <p>Copyright © 2010-2020 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.1 Nov 26 2020 14:30:51
+<p><b>Version:</b> 2.0.1 May 26 2021 18:06:34
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -148,6 +148,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="append-3">append/3</a></h3>
 <div class="spec">
 <p><tt>append(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Append_a_value_as_a_list_element_in_a_trie_instance.">Append a value as a list element in a trie instance.</a></h4>
 </p>
@@ -155,6 +156,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="append_list-3">append_list/3</a></h3>
 <div class="spec">
 <p><tt>append_list(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, ValueList::list(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Append_a_list_of_values_as_a_list_element_in_a_trie_instance.">Append a list of values as a list element in a trie instance.</a></h4>
 </p>
@@ -162,6 +164,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="erase-2">erase/2</a></h3>
 <div class="spec">
 <p><tt>erase(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Erase_a_value_in_a_trie.">Erase a value in a trie.</a></h4>
 </p>
@@ -169,6 +172,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="erase_similar-2">erase_similar/2</a></h3>
 <div class="spec">
 <p><tt>erase_similar(Similar::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; [&lt;&lt;_:8, _:_*8&gt;&gt;]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Erase_all_entries_within_a_trie_that_share_a_common_prefix.">Erase all entries within a trie that share a common prefix.</a></h4>
 </p>
@@ -176,6 +180,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="fetch-2">fetch/2</a></h3>
 <div class="spec">
 <p><tt>fetch(X1::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-nonempty_trie">nonempty_trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fetch_a_value_from_a_trie.">Fetch a value from a trie.</a></h4>
 </p>
@@ -183,6 +188,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="fetch_keys-1">fetch_keys/1</a></h3>
 <div class="spec">
 <p><tt>fetch_keys(Node::<a href="#type-trie">trie()</a>) -&gt; [&lt;&lt;_:8, _:_*8&gt;&gt;]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fetch_all_the_keys_in_a_trie.">Fetch all the keys in a trie.</a></h4>
 </p>
@@ -190,6 +196,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="fetch_keys_similar-2">fetch_keys_similar/2</a></h3>
 <div class="spec">
 <p><tt>fetch_keys_similar(Similar::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; [&lt;&lt;_:8, _:_*8&gt;&gt;]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fetch_the_keys_within_a_trie_that_share_a_common_prefix.">Fetch the keys within a trie that share a common prefix.</a></h4>
 </p>
@@ -197,6 +204,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="filter-2">filter/2</a></h3>
 <div class="spec">
 <p><tt>filter(F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any()) -&gt; boolean()), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Filter_a_trie_with_a_predicate_function.">Filter a trie with a predicate function.</a></h4>
 </p>
@@ -204,6 +212,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="find-2">find/2</a></h3>
 <div class="spec">
 <p><tt>find(X1::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; {ok, any()} | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Find_a_value_in_a_trie.">Find a value in a trie.</a></h4>
 </p>
@@ -211,6 +220,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="find_prefix-2">find_prefix/2</a></h3>
 <div class="spec">
 <p><tt>find_prefix(X1::&lt;&lt;_:8, _:_*8&gt;&gt;, X2::<a href="#type-trie">trie()</a>) -&gt; {ok, any()} | prefix | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Find_a_value_in_a_trie_by_prefix.">Find a value in a trie by prefix.</a></h4>
   The atom 'prefix' is returned if the string supplied is a prefix
@@ -220,6 +230,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="find_prefix_longest-2">find_prefix_longest/2</a></h3>
 <div class="spec">
 <p><tt>find_prefix_longest(Match::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; {ok, &lt;&lt;_:8, _:_*8&gt;&gt;, any()} | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Find_the_longest_key_in_a_trie_that_is_a_prefix_to_the_passed_string.">Find the longest key in a trie that is a prefix to the passed string.</a></h4>
 </p>
@@ -227,6 +238,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="find_prefixes-2">find_prefixes/2</a></h3>
 <div class="spec">
 <p><tt>find_prefixes(Match::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; [{&lt;&lt;_:8, _:_*8&gt;&gt;, any()}]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Find_all_the_keys_in_a_trie_that_are_prefixes_to_the_passed_string.">Find all the keys in a trie that are prefixes to the passed string.</a></h4>
   The entries are returned in alphabetical order.</p>
@@ -234,6 +246,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="fold-3">fold/3</a></h3>
 <div class="spec">
 <p><tt>fold(F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fold_a_function_over_the_trie.">Fold a function over the trie.</a></h4>
   Traverses in alphabetical order.</p>
@@ -241,6 +254,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="fold_similar-4">fold_similar/4</a></h3>
 <div class="spec">
 <p><tt>fold_similar(Similar::&lt;&lt;_:8, _:_*8&gt;&gt;, F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix.">Fold a function over the keys within a trie that share a common prefix.</a></h4>
   Traverses in alphabetical order.</p>
@@ -248,6 +262,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="foldl-3">foldl/3</a></h3>
 <div class="spec">
 <p><tt>foldl(F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fold_a_function_over_the_trie.">Fold a function over the trie.</a></h4>
   Traverses in alphabetical order.</p>
@@ -255,6 +270,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="foldl_similar-4">foldl_similar/4</a></h3>
 <div class="spec">
 <p><tt>foldl_similar(Similar::&lt;&lt;_:8, _:_*8&gt;&gt;, F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix.">Fold a function over the keys within a trie that share a common prefix.</a></h4>
   Traverses in alphabetical order.</p>
@@ -262,6 +278,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="foldr-3">foldr/3</a></h3>
 <div class="spec">
 <p><tt>foldr(F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fold_a_function_over_the_trie_in_reverse.">Fold a function over the trie in reverse.</a></h4>
   Traverses in reverse alphabetical order.</p>
@@ -269,6 +286,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="foldr_similar-4">foldr_similar/4</a></h3>
 <div class="spec">
 <p><tt>foldr_similar(Similar::&lt;&lt;_:8, _:_*8&gt;&gt;, F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any(), any()) -&gt; any()), A::any(), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_share_a_common_prefix_in_reverse.">Fold a function over the keys within a trie that share a common prefix in reverse.</a></h4>
   Traverses in reverse alphabetical order.</p>
@@ -276,6 +294,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="foreach-2">foreach/2</a></h3>
 <div class="spec">
 <p><tt>foreach(F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any()) -&gt; any()), Node::<a href="#type-trie">trie()</a>) -&gt; any()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Call_a_function_for_each_element.">Call a function for each element.</a></h4>
   Traverses in alphabetical order.</p>
@@ -283,6 +302,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="from_list-1">from_list/1</a></h3>
 <div class="spec">
 <p><tt>from_list(L::[&lt;&lt;_:8, _:_*8&gt;&gt; | tuple()]) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_a_trie_from_a_list.">Create a trie from a list.</a></h4>
 </p>
@@ -290,6 +310,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="is_key-2">is_key/2</a></h3>
 <div class="spec">
 <p><tt>is_key(X1::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Determine_if_a_key_exists_in_a_trie.">Determine if a key exists in a trie.</a></h4>
 </p>
@@ -297,6 +318,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="map-2">map/2</a></h3>
 <div class="spec">
 <p><tt>map(F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any()) -&gt; any()), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Map_a_function_over_a_trie.">Map a function over a trie.</a></h4>
   Traverses in reverse alphabetical order.</p>
@@ -304,6 +326,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="merge-3">merge/3</a></h3>
 <div class="spec">
 <p><tt>merge(F::fun((&lt;&lt;_:8, _:_*8&gt;&gt;, any(), any()) -&gt; any()), Node1::<a href="#type-trie">trie()</a>, Node2::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Merge_two_trie_instance.">Merge two trie instance.</a></h4>
   Update the second trie parameter with all of the elements
@@ -312,6 +335,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="new-0">new/0</a></h3>
 <div class="spec">
 <p><tt>new() -&gt; <a href="#type-empty_trie">empty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_a_new_trie_instance.">Create a new trie instance.</a></h4>
 </p>
@@ -319,6 +343,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
 <p><tt>new(L::[&lt;&lt;_:8, _:_*8&gt;&gt; | tuple()]) -&gt; <a href="#type-trie">trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_a_new_trie_instance_from_a_list.">Create a new trie instance from a list.</a></h4>
   The list may contain either: strings, 2 element tuples with a string as the
@@ -330,6 +355,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="prefix-3">prefix/3</a></h3>
 <div class="spec">
 <p><tt>prefix(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Insert_a_value_as_the_first_list_element_in_a_trie_instance.">Insert a value as the first list element in a trie instance.</a></h4>
   The reverse of append/3.</p>
@@ -337,6 +363,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="size-1">size/1</a></h3>
 <div class="spec">
 <p><tt>size(Node::<a href="#type-trie">trie()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Size_of_a_trie_instance.">Size of a trie instance.</a></h4>
 </p>
@@ -344,6 +371,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="store-2">store/2</a></h3>
 <div class="spec">
 <p><tt>store(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Store_only_a_key_in_a_trie_instance.">Store only a key in a trie instance.</a></h4>
 </p>
@@ -351,6 +379,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="store-3">store/3</a></h3>
 <div class="spec">
 <p><tt>store(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, NewValue::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Store_a_key/value_pair_in_a_trie_instance.">Store a key/value pair in a trie instance.</a></h4>
 </p>
@@ -358,6 +387,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="take-2">take/2</a></h3>
 <div class="spec">
 <p><tt>take(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; {any(), <a href="#type-trie">trie()</a>} | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Take_a_value_from_the_trie.">Take a value from the trie.</a></h4>
 </p>
@@ -365,6 +395,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="to_list-1">to_list/1</a></h3>
 <div class="spec">
 <p><tt>to_list(Node::<a href="#type-trie">trie()</a>) -&gt; [{&lt;&lt;_:8, _:_*8&gt;&gt;, any()}]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Convert_all_entries_in_a_trie_to_a_list.">Convert all entries in a trie to a list.</a></h4>
   The list is in alphabetical order.</p>
@@ -372,6 +403,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="to_list_similar-2">to_list_similar/2</a></h3>
 <div class="spec">
 <p><tt>to_list_similar(Similar::&lt;&lt;_:8, _:_*8&gt;&gt;, Node::<a href="#type-trie">trie()</a>) -&gt; [{&lt;&lt;_:8, _:_*8&gt;&gt;, any()}]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Return_a_list_of_all_entries_within_a_trie_that_share_a_common_prefix.">Return a list of all entries within a trie that share a common prefix.</a></h4>
 </p>
@@ -379,6 +411,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="update-3">update/3</a></h3>
 <div class="spec">
 <p><tt>update(X1::&lt;&lt;_:8, _:_*8&gt;&gt;, F::fun((any()) -&gt; any()), Node::<a href="#type-nonempty_trie">nonempty_trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Update_a_value_in_a_trie.">Update a value in a trie.</a></h4>
 </p>
@@ -386,6 +419,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="update-4">update/4</a></h3>
 <div class="spec">
 <p><tt>update(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, F::fun((any()) -&gt; any()), Initial::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Update_or_add_a_value_in_a_trie.">Update or add a value in a trie.</a></h4>
 </p>
@@ -393,6 +427,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <h3 class="function"><a name="update_counter-3">update_counter/3</a></h3>
 <div class="spec">
 <p><tt>update_counter(Key::&lt;&lt;_:8, _:_*8&gt;&gt;, Increment::number(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Update_a_counter_in_a_trie.">Update a counter in a trie.</a></h4>
 </p>

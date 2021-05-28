@@ -14,7 +14,7 @@
    <h3><a name="Local_Variable_Pool_Supervisor">Local Variable Pool Supervisor</a></h3>.
 <p>Copyright © 2015-2020 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.1 Nov 26 2020 15:32:51
+<p><b>Version:</b> 2.0.1 May 26 2021 19:32:09
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -34,11 +34,13 @@
 <h3 class="function"><a name="init-1">init/1</a></h3>
 <div class="spec">
 <p><tt>init(X1) -&gt; any()</tt></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="start_link-4">start_link/4</a></h3>
 <div class="spec">
 <p><tt>start_link(Parent::pid(), MaxR::non_neg_integer(), MaxT::pos_integer(), Pool::nonempty_list()) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_the_Pool_supervisor.">Start the Pool supervisor.</a></h4>
 </p>
@@ -46,6 +48,7 @@
 <h3 class="function"><a name="stop_link-1">stop_link/1</a></h3>
 <div class="spec">
 <p><tt>stop_link(Supervisor::pid()) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_the_Pool_supervisor.">Stop the Pool supervisor.</a></h4>
 </p>

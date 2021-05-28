@@ -13,9 +13,9 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Key2Value">Key2Value</a></h3>
    Maintain 2 lookups for 2 separate keys and 1 value.
-<p>Copyright © 2011-2017 Michael Truog</p>
+<p>Copyright © 2011-2020 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.1 Sep 15 2018 16:56:30
+<p><b>Version:</b> 2.0.2 May 26 2021 18:41:37
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -66,6 +66,8 @@
 <tr><td valign="top"><a href="#is_key2-2">is_key2/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#new-0">new/0</a></td><td></td></tr>
 <tr><td valign="top"><a href="#new-1">new/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#size1-1">size1/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#size2-1">size2/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#store-4">store/4</a></td><td></td></tr>
 <tr><td valign="top"><a href="#update1-3">update1/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#update2-3">update2/3</a></td><td></td></tr>
@@ -76,81 +78,109 @@
 <h3 class="function"><a name="erase-3">erase/3</a></h3>
 <div class="spec">
 <p><tt>erase(K1::<a href="#type-key1">key1()</a>, K2::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="erase1-2">erase1/2</a></h3>
 <div class="spec">
 <p><tt>erase1(K::<a href="#type-key1">key1()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="erase2-2">erase2/2</a></h3>
 <div class="spec">
 <p><tt>erase2(K::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="fetch1-2">fetch1/2</a></h3>
 <div class="spec">
 <p><tt>fetch1(K::<a href="#type-key1">key1()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {list(), any()}</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="fetch2-2">fetch2/2</a></h3>
 <div class="spec">
 <p><tt>fetch2(K::<a href="#type-key2">key2()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {list(), any()}</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="find1-2">find1/2</a></h3>
 <div class="spec">
 <p><tt>find1(K::<a href="#type-key1">key1()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {ok, {list(), any()}} | error</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="find2-2">find2/2</a></h3>
 <div class="spec">
 <p><tt>find2(K::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {ok, {list(), any()}} | error</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="fold1-3">fold1/3</a></h3>
 <div class="spec">
 <p><tt>fold1(F::fun((<a href="#type-key1">key1()</a>, [<a href="#type-key2">key2()</a>], <a href="#type-value">value()</a>, any()) -&gt; any()), A0::any(), State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; any()</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="fold2-3">fold2/3</a></h3>
 <div class="spec">
 <p><tt>fold2(F::fun(([<a href="#type-key1">key1()</a>], <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>, any()) -&gt; any()), A0::any(), State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; any()</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="is_key1-2">is_key1/2</a></h3>
 <div class="spec">
 <p><tt>is_key1(K::<a href="#type-key1">key1()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="is_key2-2">is_key2/2</a></h3>
 <div class="spec">
 <p><tt>is_key2(K::<a href="#type-key2">key2()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="new-0">new/0</a></h3>
 <div class="spec">
 <p><tt>new() -&gt; <a href="#type-key2value_dict">key2value_dict</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
 <p><tt>new(Module::atom()) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="size1-1">size1/1</a></h3>
+<div class="spec">
+<p><tt>size1(Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="size2-1">size2/1</a></h3>
+<div class="spec">
+<p><tt>size2(Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="store-4">store/4</a></h3>
 <div class="spec">
 <p><tt>store(K1::<a href="#type-key1">key1()</a>, K2::<a href="#type-key2">key2()</a>, V::<a href="#type-value">value()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="update1-3">update1/3</a></h3>
 <div class="spec">
 <p><tt>update1(K1::<a href="#type-key1">key1()</a>, F::fun((<a href="#type-value">value()</a>) -&gt; <a href="#type-value">value()</a>), Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="update2-3">update2/3</a></h3>
 <div class="spec">
 <p><tt>update2(K2::<a href="#type-key2">key2()</a>, F::fun((<a href="#type-value">value()</a>) -&gt; <a href="#type-value">value()</a>), Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
 </div>
 <hr>
 

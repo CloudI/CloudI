@@ -1,7 +1,7 @@
 #-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 # ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-AC_INIT([CloudI], [2.0.1], [mjtruog at protonmail dot com],
+AC_INIT([CloudI], [2.0.2], [mjtruog at protonmail dot com],
         [cloudi], [https://cloudi.org/])
 AC_SUBST(CLOUDI_CORE_RELEASE_VERSION, [1])
 

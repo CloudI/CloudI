@@ -3,7 +3,7 @@
 
 {application, hello_world_embedded,
   [{description, "Hello World Embedded Example Application"},
-   {vsn, "2.0.1"},
+   {vsn, "2.0.2"},
    {modules,
     [hello_world_embedded,
      hello_world_embedded_app,

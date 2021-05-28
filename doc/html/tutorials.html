@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 1.5.5">
+<meta name="generator" content="Asciidoctor 2.0.10">
 <meta name="description" content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing">
 <meta name="keywords" content="tutorial, cloud, private cloud, framework, erlang, fault tolerant, distributed systems, embarrassingly parallel, divide and conquer, cloudi">
 <title>CloudI User Tutorials</title>
 <link rel="stylesheet" href="style_adoc.css">
 <!-- Open Graph Protocol (OGP) with LinkedIn requirements -->
 <meta property="og:title" content="CloudI: A Cloud at the lowest level - Tutorials" />
-<meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, or Ruby services.
+<meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of ATS, C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, or Ruby services.
 
 The bare essentials for efficient fault-tolerant processing on a cloud!" />
 <meta property="og:image" content="https://cloudi.org/images/cloud_ogp.png" />
@@ -21,7 +21,7 @@ The bare essentials for efficient fault-tolerant processing on a cloud!" />
 <body class="article">
 <div id="header">
 <a href="https://cloudi.org/">
-Cloud<font style="font-family: serif">I</font><img width="156" height="106" src="images/cloud.png" />
+Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156" height="106" src="images/cloud.png" />
 </a>
 </div>
 <br />
@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width="156" height="106" src=
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html" class="active">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.1.tar.gz" rel="noopener" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.2.tar.gz" rel="noopener" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -40,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width="156" height="106" src=
 <div id="header_document">
 <h1>CloudI User Tutorials</h1>
 <div class="details">
-<span id="revnumber">version 2.0.1,</span>
-<span id="revdate">2020-11-27</span>
+<span id="revnumber">version 2.0.2,</span>
+<span id="revdate">2021-05-27</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle"></div>
@@ -87,7 +87,7 @@ With CloudI, you can create a system with Microservices that doesn&#8217;t requi
 If a supported programming language doesn&#8217;t yet have a tutorial written yet, it is best to refer to the <a href="#cloudi_examples">CloudI Examples</a>.</p>
 </div>
 <div class="sect2">
-<h3 id="a_href_tutorial_java_html_java_tutorial_a"><a href="tutorial_java.html">Java Tutorial</a></h3>
+<h3 id="java_tutorial"><a href="tutorial_java.html">Java Tutorial</a></h3>
 
 </div>
 </div>
@@ -108,6 +108,9 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 <p>Basic Count Integration Test</p>
 <div class="ulist">
 <ul>
+<li>
+<p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/ats/v2/main.dats">ATS</a></p>
+</li>
 <li>
 <p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/c/main.c">C</a></p>
 </li>
@@ -149,6 +152,9 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 <div class="ulist">
 <ul>
 <li>
+<p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/ats/v2/main.dats">ATS</a></p>
+</li>
+<li>
 <p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c/main.c">C</a></p>
 </li>
 <li>
@@ -188,6 +194,9 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 <p>Basic Message Size (Forwarding) Integration Test</p>
 <div class="ulist">
 <ul>
+<li>
+<p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/ats/v2/main.dats">ATS</a></p>
+</li>
 <li>
 <p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx/main.cpp">C++</a></p>
 </li>
@@ -229,6 +238,9 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 <div class="ulist">
 <ul>
 <li>
+<p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/ats/v2/main.dats">ATS</a></p>
+</li>
+<li>
 <p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx/main.cpp">C++</a></p>
 </li>
 <li>
@@ -268,6 +280,9 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 <p>Basic Null Response Integration Test</p>
 <div class="ulist">
 <ul>
+<li>
+<p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/null/ats/v2/main.dats">ATS</a></p>
+</li>
 <li>
 <p><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/null/c/main.c">C</a></p>
 </li>
@@ -316,6 +331,16 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 </li>
 <li>
 <p><a href="https://github.com/okeuday/odroid_display">LCD Display Service</a></p>
+</li>
+</ul>
+</div>
+</dd>
+<dt class="hdlist1">C++</dt>
+<dd>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/CloudI/CloudI/tree/master/src/tests/hexpi#pi-as-a-hexadecimal-fraction">hexpi Map-Reduce</a></p>
 </li>
 </ul>
 </div>
@@ -384,13 +409,13 @@ With this approach, the business logic will always have fault tolerance guarante
 </div>
 <div class="paragraph">
 <p>The main data throughput to the business logic should utilize CloudI service requests for reliable timeouts and service redundancy.
-Often the main data throughput is HTTP protocol usage coming from any of the provided HTTP servers (both cloudi_service_http_cowboy1 and cloudi_service_http_elli are Erlang CloudI services for HTTP servers).
+Often the main data throughput is HTTP protocol usage coming from any of the provided HTTP servers (both cloudi_service_http_cowboy and cloudi_service_http_elli are Erlang CloudI services for HTTP servers).
 The incoming HTTP requests are automatically load-balanced among the available services, based on the incoming URL path matching a service name pattern for a pool of service processes.</p>
 </div>
 <div class="paragraph">
-<p>CloudI services provide process pooling automatically when their configuration has a <a href="api.html#2_services_add" target="_blank">count_process or count_thread (of an external service)</a> greater than 1.
-A CloudI service&#8217;s process pooling can be adjusted dynamically based on the incoming service request rate by using the <a href="api.html#2_services_add_config_opts_count_process_dynamic" target="_blank">count_process_dynamic</a> service configuration option.
-When a service request is sent it will automatically select a service execution process (which represents an external service thread within an OS process or an internal service Erlang process within the Erlang VM) randomly from those available, due to <a href="api.html#1_subscribe" target="_blank">subscribing</a> with the same service name pattern.</p>
+<p>CloudI services provide process pooling automatically when their configuration has a <a href="api.html#2_services_add" target="_blank" rel="noopener">count_process or count_thread (of an external service)</a> greater than 1.
+A CloudI service&#8217;s process pooling can be adjusted dynamically based on the incoming service request rate by using the <a href="api.html#2_services_add_config_opts_count_process_dynamic" target="_blank" rel="noopener">count_process_dynamic</a> service configuration option.
+When a service request is sent it will automatically select a service execution process (which represents an external service thread within an OS process or an internal service Erlang process within the Erlang VM) randomly from those available, due to <a href="api.html#1_subscribe" target="_blank" rel="noopener">subscribing</a> with the same service name pattern.</p>
 </div>
 <div class="paragraph">
 <p>Relying on this process pooling keeps services dependable and helps to reduce their potential complexity, since a service developer only needs to focus on developing serial source code.
@@ -412,7 +437,7 @@ If the service request messaging is able to keep many separate external CloudI s
 <div class="paragraph">
 <p>Controlling the potential service request latency with the selection of the programming languages can avoid prematurely exhausting computational resources.
 A good approach is using as few programming languages that can reasonably be used for the business logic design.
-Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, OCaml, Java, Python/C, Haskell, Go (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds, when under high load) due to inefficiencies within the programming language runtimes.
+Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank" rel="noopener">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, OCaml, Java, Python/C, Haskell, Go (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds, when under high load) due to inefficiencies within the programming language runtimes.
 By considering the latency requirements of the system early during development it will be easier to scale the deployment and avoid wasted development effort.</p>
 </div>
 <div class="paragraph">

@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 2.0.1
-:revdate: 2020-11-27
+:revnumber: 2.0.2
+:revdate: 2021-05-27
 :lang: en
 :encoding: UTF-8
 :toc:
@@ -64,7 +64,7 @@ A single Java CloudI service is used to provide a REST API that handles book rec
 | client                  |         GET | client/get
 |===
 
-The table above shows how the HTTP method becomes a suffix on the URL path to create the CloudI service name pattern suffix (cloudi_service_http_cowboy1 adds the HTTP method as a suffix in lowercase when sending the HTTP request data as a CloudI service request).
+The table above shows how the HTTP method becomes a suffix on the URL path to create the CloudI service name pattern suffix (cloudi_service_http_cowboy adds the HTTP method as a suffix in lowercase when sending the HTTP request data as a CloudI service request).
 When the CloudI service is configured, a service name pattern prefix is provided to describe the scope of the service.
 For the book recommendation Java service, the prefix "/tutorial/java/service/" is used so the full service name pattern for the table's first entry becomes "/tutorial/java/service/item/refresh/post".
 A CloudI service name pattern suffix is used with a `subscribe` CloudI API function call to declare a service process will accept service requests with a matching service name.
@@ -82,7 +82,7 @@ To send a service request to all destinations that match a service name requires
 All services are structured for a 3 part sequence: initialization, handling-requests, and termination.
 During CloudI service initialization, data structures are initialized to confirm that the service is ready for a runtime that may last indefinitely (making the  initialization stage the most critical stage for a service's reliability).
 Inside the service initialization the `subscribe` CloudI API function is typically called so that incoming service requests are handled after initialization is done.
-The book recommendation service initialization is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]):
+The book recommendation service initialization is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]):
 
 [source,java]
 ----
@@ -148,8 +148,8 @@ The "client" service request is used by the WebSocket interface to handle any of
 
 All of the subscriptions that have been discussed are simply for CloudI service requests that define the interface of a REST API.
 For the REST API to be used by HTTP requests, a HTTP server that creates CloudI service requests needs to be used.
-CloudI includes two CloudI services that are HTTP Servers: cloudi_service_http_cowboy1 and cloudi_service_http_elli.
-The book recommendation service will use cloudi_service_http_cowboy1 for handling both basic HTTP requests and WebSocket requests.
+CloudI includes two CloudI services that are HTTP Servers: cloudi_service_http_cowboy and cloudi_service_http_elli.
+The book recommendation service will use cloudi_service_http_cowboy for handling both basic HTTP requests and WebSocket requests.
 
 The initialization sequence ends when the `poll` CloudI API function is called to begin handling requests.
 
@@ -163,7 +163,7 @@ All CloudI service requests are able to receive a response.
 The CloudI service that handles the request can make the request asynchronous by providing a "null response" (a response that has the response data and response_info data set to a binary of size 0) due to the control of the service request passing to the receiver when the service request is handled.
 That means that the `send_async` CloudI API function call is an asynchronous send due to not waiting for a response to occur, though a response may be sent in the future if the receiving service decides to send a response.
 
-An example of a service request handling function is below (using the "itemRefresh" function from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/Service.java#L166-L212[Service.java:166-212^]):
+An example of a service request handling function is below (using the "itemRefresh" function from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L166-L212[Service.java:166-212^]):
 
 [source,java]
 ----
@@ -246,9 +246,9 @@ Make sure CloudI is installed and running, using the installation and start sequ
 
 [source,shell]
 ----
-wget https://osdn.net/dl/cloudi/cloudi-2.0.1.tar.gz
-tar zxvf cloudi-2.0.1.tar.gz
-cd cloudi-2.0.1/src
+wget https://osdn.net/dl/cloudi/cloudi-2.0.2.tar.gz
+tar zxvf cloudi-2.0.2.tar.gz
+cd cloudi-2.0.2/src
 ./configure
 make
 sudo make install
@@ -280,7 +280,7 @@ cat << EOF > website.conf
   {dest_refresh, none},
   {count_process, 4}],
  [{prefix, "/tutorial/java/"},
-  {module, cloudi_service_http_cowboy1},
+  {module, cloudi_service_http_cowboy},
   {args,
    [{port, 8080}, {use_websockets, true}]},
   {timeout_async, 600000},
@@ -300,7 +300,7 @@ cat << EOF > tutorial.conf
          "-server "
          "-ea:org.cloudi... "
          "-Xms3g -Xmx3g "
-         "-jar $PWD/target/cloudi_tutorial_java-2.0.1-jar-with-dependencies.jar "
+         "-jar $PWD/target/cloudi_tutorial_java-2.0.2-jar-with-dependencies.jar "
          "-pgsql_hostname localhost "
          "-pgsql_port 5432 "
          "-pgsql_database cloudi_tutorial_java "
@@ -339,14 +339,14 @@ bunzip2 schema.sql.bz2
 psql -h localhost cloudi_tutorial_java cloudi_tutorial_java < schema.sql
 ----
 
-Now the tutorial services can be started by relying on the default CloudI configuration having cloudi_service_http_cowboy1 running on port 6464 so that CloudI Service API requests can be made dynamically (using cloudi_service_api_requests) to start new service instances:
+Now the tutorial services can be started by relying on the default CloudI configuration having cloudi_service_http_cowboy running on port 6464 so that CloudI Service API requests can be made dynamically (using cloudi_service_api_requests) to start new service instances:
 
 [source,shell]
 ----
 curl -X POST -d @website.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
 ----
 
-The result will be similar to `["ServiceId1","ServiceId2"]` where `ServiceId1` is a UUID (Universally Unique Identifier) for the new service instance of cloudi_service_filesystem and `ServiceId2` is a UUID for the new service instance of cloudi_service_http_cowboy1.
+The result will be similar to `["ServiceId1","ServiceId2"]` where `ServiceId1` is a UUID (Universally Unique Identifier) for the new service instance of cloudi_service_filesystem and `ServiceId2` is a UUID for the new service instance of cloudi_service_http_cowboy.
 The HTTP request above starts the new HTTP server service on port 8080 with the 10 minute timeout value and the web interface files.
 Now we can use port 8080 for a CloudI Service API request so the 10 minute timeout value is used when initializing the book recommendation service:
 
@@ -397,13 +397,13 @@ To understand how book recommendations are occurring in the interface, lets star
 | client/get                  | client                  |                        | thread > 0
 |===
 
-The table above shows the service subscriptions that occur during service initialization (in link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]).
+The table above shows the service subscriptions that occur during service initialization (in link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]).
 The service configuration used for running `Service.java` was stored in the `tutorial.conf` file and it specified a total of 4 threads with `count_thread` being set to `4`.
 The service configuration did not provide a `count_process` setting so the number of OS processes defaulted to `1` (the thread count is applied to each OS process separately, i.e., `count_process` == `2` would have 2 OS processes, each with `4` threads).
 The service configuration always specifies a service name pattern prefix and that was set to "/tutorial/java/service/" in the `tutorial.conf` file.
 
-When a HTTP request (on port 8080) is made to the REST API through cloudi_service_http_cowboy1, a CloudI service request is sent based on the HTTP request URL path using the default timeout that was configured for cloudi_service_http_cowboy1 service requests (10 minutes).
-The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/html/tutorial/java/index.html#L542-L550[index.html:542-550^]):
+When a HTTP request (on port 8080) is made to the REST API through cloudi_service_http_cowboy, a CloudI service request is sent based on the HTTP request URL path using the default timeout that was configured for cloudi_service_http_cowboy service requests (10 minutes).
+The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/html/tutorial/java/index.html#L542-L550[index.html:542-550^]):
 
 [source,javascript]
 ----
@@ -418,7 +418,7 @@ The Javascript interface relies on a WebSocket connection for any usage of the R
     websocket = new WebSocket(websocket_url);
 ----
 
-This means that the URL path includes the Java book recommendation service prefix of "/tutorial/java/service/" with a suffix of "client/get" (all WebSocket connections are initialized with the GET HTTP method and cloudi_service_http_cowboy1 is adding the "/get" suffix to the URL path before sending a CloudI service request).
+This means that the URL path includes the Java book recommendation service prefix of "/tutorial/java/service/" with a suffix of "client/get" (all WebSocket connections are initialized with the GET HTTP method and cloudi_service_http_cowboy is adding the "/get" suffix to the URL path before sending a CloudI service request).
 All REST API requests are then sent as JSON data on the WebSocket connection with a `message_name` property to distinguish between the different endpoints.
 The endpoints can also be used as separate URL paths to receive the same response without a WebSocket connection (which is useful for testing):
 
@@ -431,7 +431,7 @@ curl -X POST -d '{"message_name": "item_list", "user_id": 1, "language": "en", "
 
 A WebSocket request is sent as a CloudI service request that is randomly load-balanced among the 3 threads that have subscribed with the function named "client" (in `Service.java` the subscription occurred when `thread_index` > 0 with 4 threads so 3 threads handle the "client" function).
 If `Service.java` had `count_process` set to `2` in its service configuration, the service request would instead be randomly load-balanced among 6 total threads with each group of 3 in a separate OS process.
-The service request handler function "client" is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/Service.java#L385-L508[Service.java:385-508^]):
+The service request handler function "client" is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L385-L508[Service.java:385-508^]):
 
 [source,java]
 ----
@@ -588,7 +588,7 @@ The refresh of the items takes a few minutes when getting all the current data f
 However, after the thread is done refreshing the items, the interface would want to know that new items may exist, so it can request a new list of items (similar to how a new list of recommendations is requested by the interface after a notification).
 
 To utilize the result of the "itemRefresh" function processing thread requires that the `poll` CloudI API function is interrupted to call a function that is not a service request handler (to allow usage of the `mcast_async` CloudI API function for sending a notification to all connected WebSockets, similar to what occurs with a successful "recommendation_refresh" `message_name` in the "client" function).
-For scheduling an interrupt of the `poll` function the timeout parameter is used as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/Service.java#L139-L144[Service.java:139-144^]):
+For scheduling an interrupt of the `poll` function the timeout parameter is used as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L139-L144[Service.java:139-144^]):
 
 [source,java]
 ----
@@ -600,7 +600,7 @@ For scheduling an interrupt of the `poll` function the timeout parameter is used
             }
 ----
 
-Each interrupt of the `poll` function allows execution to check if it can run a chunk of function objects in the `ServiceIdle` class as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L10-L74[ServiceIdle.java:10-74^]):
+Each interrupt of the `poll` function allows execution to check if it can run a chunk of function objects in the `ServiceIdle` class as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L10-L74[ServiceIdle.java:10-74^]):
 
 [source,java]
 ----
@@ -671,7 +671,7 @@ public class ServiceIdle
 }
 ----
 
-The result of the "itemRefresh" function processing thread is stored in the `ServiceIdle` class instance within the `GutenbergRefresh` class which handles the item refresh process (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L101-L104[GutenbergRefresh.java:101-104^]):
+The result of the "itemRefresh" function processing thread is stored in the `ServiceIdle` class instance within the `GutenbergRefresh` class which handles the item refresh process (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L101-L104[GutenbergRefresh.java:101-104^]):
 
 [source,java]
 ----
@@ -681,7 +681,7 @@ The result of the "itemRefresh" function processing thread is stored in the `Ser
             this.idle.execute(GutenbergRefreshDone.failure(error));
 ----
 
-After the `poll` function is interrupted and the `ServiceIdle` class has function objects to call, the `GutenbergRefreshDone` function object is executed to send the "itemRefresh" result notification to all connected WebSockets (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.1/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L32-L52[GutenbergRefreshDone.java:32-52^]):
+After the `poll` function is interrupted and the `ServiceIdle` class has function objects to call, the `GutenbergRefreshDone` function object is executed to send the "itemRefresh" result notification to all connected WebSockets (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L32-L52[GutenbergRefreshDone.java:32-52^]):
 
 [source,java]
 ----
