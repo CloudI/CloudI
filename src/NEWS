@@ -13,7 +13,7 @@ May 27, 2021
   * Added queue dependencies to cloudi_service_api_batch
   * Added more descriptive C/C++ CloudI API termination handler output
   * Erlang/OTP 24 support was added
-  * Add hackney support to cloudi_service_http_client
+  * Added hackney support to cloudi_service_http_client
   * Added the service configuration options aspects_suspend and
     aspects_resume for handling service suspend state changes
   * Bugs were fixed and other improvements were added
