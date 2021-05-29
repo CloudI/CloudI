@@ -1643,6 +1643,28 @@ public class API
         return text.toByteArray();
     }
 
+    private static byte[] text_pairs_new(final HashMap<String,
+                                                       ArrayList<String>> pairs,
+                                         final boolean response)
+    {
+        final ByteArrayOutputStream text = new ByteArrayOutputStream(1024);
+        for (HashMap.Entry<String, ArrayList<String>> pair : pairs.entrySet())
+        {
+            final byte[] key_bytes = pair.getKey().getBytes();
+            for (String value : pair.getValue())
+            {
+                final byte[] value_bytes = value.getBytes();
+                text.write(key_bytes, 0, key_bytes.length);
+                text.write(0);
+                text.write(value_bytes, 0, value_bytes.length);
+                text.write(0);
+            }
+        }
+        if (response && text.size() == 0)
+            text.write(0);
+        return text.toByteArray();
+    }
+
     /**
      * Decode service request info key/value data
      *
@@ -1670,10 +1692,36 @@ public class API
      * Encode service response info key/value data
      *
      * @param  pairs info key/value map
+     * @return encoded binary
+     */
+    public static byte[] info_key_value_new(HashMap<String,
+                                                    ArrayList<String>> pairs)
+    {
+        return API.info_key_value_new(pairs, true);
+    }
+
+    /**
+     * Encode service response info key/value data
+     *
+     * @param  pairs info key/value map
      * @param  response if encoding response data
      * @return encoded binary
      */
     public static byte[] info_key_value_new(Map<String, List<String>> pairs,
+                                            boolean response)
+    {
+        return API.text_pairs_new(pairs, response);
+    }
+
+    /**
+     * Encode service response info key/value data
+     *
+     * @param  pairs info key/value map
+     * @param  response if encoding response data
+     * @return encoded binary
+     */
+    public static byte[] info_key_value_new(HashMap<String,
+                                                    ArrayList<String>> pairs,
                                             boolean response)
     {
         return API.text_pairs_new(pairs, response);
