@@ -7,12 +7,15 @@ OCAMLDEPS = str.cmxa unix.cmxa threads/threads.cmxa \
             $(top_builddir)/api/ocaml/external/nums.cmxa \
             -ccopt -L$(top_builddir)/api/ocaml/external/ \
             $(top_builddir)/api/ocaml/cloudi.cmxa
-SUFFIXES = .ml .cmx
+SUFFIXES = .mli .ml .cmi .cmx
 
 all-local: null_ocaml
 
-null_ocaml: main.cmx
+null_ocaml: main.cmi main.cmx
 	$(OCAMLOPT) -o null_ocaml $(OCAMLDEPS) main.cmx
+
+.mli.cmi:
+	$(OCAMLC) $(OCAMLFLAGS) -o $@ -c $<
 
 .ml.cmx:
 	$(OCAMLOPT) $(OCAMLFLAGS) -o $@ -c \

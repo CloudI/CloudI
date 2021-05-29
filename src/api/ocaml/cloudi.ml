@@ -59,7 +59,7 @@ type callback_result =
 
 module Instance = struct
   type 's t = {
-      mutable state : 's;
+      state : 's;
       terminate_exception : bool;
       socket : Unix.file_descr;
       use_header : bool;
