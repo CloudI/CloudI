@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -704,7 +704,13 @@ headers_external_outgoing([]) ->
     #{};
 headers_external_outgoing(ResponseInfo)
     when is_binary(ResponseInfo); is_list(ResponseInfo) ->
-    cloudi_response_info:key_value_parse(ResponseInfo).
+    HeadersOutgoing = cloudi_response_info:key_value_parse(ResponseInfo),
+    case maps:find(<<"set-cookie">>, HeadersOutgoing) of
+        {ok, Value} when is_binary(Value) ->
+            maps:put(<<"set-cookie">>, [Value], HeadersOutgoing);
+        _ ->
+            HeadersOutgoing
+    end.
 
 header_set_if_not(Key, Value, Headers) ->
     maps:update_with(Key, fun(ValueOld) ->

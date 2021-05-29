@@ -3,6 +3,8 @@
 
 2021-05-28 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Fix cloudi_service_http_cowboy handling of
+      a single set-cookie response header value
     * Add OCaml pre-release 4.13.0 (trunk) support
     * Improve C/C++ CloudI API backtrace configure check
 
