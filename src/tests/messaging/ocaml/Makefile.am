@@ -7,19 +7,14 @@ OCAMLDEPS = str.cmxa unix.cmxa threads/threads.cmxa \
             $(top_builddir)/api/ocaml/external/nums.cmxa \
             -ccopt -L$(top_builddir)/api/ocaml/external/ \
             $(top_builddir)/api/ocaml/cloudi.cmxa
-SUFFIXES = .mli .ml .cmi .cmx
 
 all-local: messaging_ocaml
 
-messaging_ocaml: main.cmi main.cmx
+messaging_ocaml: main.mli main.ml
+	$(OCAMLC) $(OCAMLFLAGS) -o main.cmi -c main.mli
+	$(OCAMLOPT) $(OCAMLFLAGS) -o main.cmx -c \
+                -I $(top_builddir)/api/ocaml/ -thread main.ml
 	$(OCAMLOPT) -o messaging_ocaml $(OCAMLDEPS) main.cmx
-
-.mli.cmi:
-	$(OCAMLC) $(OCAMLFLAGS) -o $@ -c $<
-
-.ml.cmx:
-	$(OCAMLOPT) $(OCAMLFLAGS) -o $@ -c \
-                -I $(top_builddir)/api/ocaml/ -thread $<
 
 install-exec-hook: messaging_ocaml
 	$(MKDIR_P) $(instdir)
