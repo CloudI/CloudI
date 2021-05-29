@@ -90,6 +90,7 @@ backtrace(0, 0);
              ]])],
             [$has_execinfo="yes"])
     else
+        EXECINFO_LDFLAGS=""
         EXECINFO_LIB=""
     fi
 
@@ -161,13 +162,13 @@ dladdr(0, 0);
             unwind_status="execinfo"
         fi
         if test "x$want_dw" = "xyes"; then
-            BACKTRACE_LDFLAGS=$DW_LDFLAGS
+            BACKTRACE_LDFLAGS="$DW_LDFLAGS $EXECINFO_LDFLAGS"
             BACKTRACE_LIB="$DW_LIB $EXECINFO_LIB"
             AC_DEFINE([BACKWARD_HAS_DW], [1],
                       [Define if libdw is usable.])
             AC_MSG_RESULT([backward-cpp dw $unwind_status])
         elif test "x$want_bfd" = "xyes"; then
-            BACKTRACE_LDFLAGS=$BFD_LDFLAGS
+            BACKTRACE_LDFLAGS="$BFD_LDFLAGS $EXECINFO_LDFLAGS"
             BACKTRACE_LIB="$BFD_LIB $EXECINFO_LIB"
             AC_DEFINE([BACKWARD_HAS_BFD], [1],
                       [Define if libbfd is usable.])
@@ -183,7 +184,7 @@ dladdr(0, 0);
                   [Provide C++ backtraces with backward code.])
     elif test "x$backtrace" = "xbooster"; then
         BACKTRACE_CPPFLAGS="-I\$(top_srcdir)/external/booster"
-        BACKTRACE_LDFLAGS=$DL_LDFLAGS
+        BACKTRACE_LDFLAGS="$DL_LDFLAGS $EXECINFO_LDFLAGS"
         BACKTRACE_LIB="$DL_LIB $EXECINFO_LIB"
         if test "x$has_unwind" = "xyes"; then
             AC_DEFINE([BOOSTER_HAVE_UNWIND_BACKTRACE], [1],
