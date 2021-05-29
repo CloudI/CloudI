@@ -88,7 +88,7 @@ backtrace(0, 0);
              ]], [[
 backtrace(0, 0);
              ]])],
-            [$has_execinfo="yes"])
+            [has_execinfo="yes"])
     else
         EXECINFO_LDFLAGS=""
         EXECINFO_LIB=""

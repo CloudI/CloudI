@@ -5,6 +5,7 @@
 
     * Add overloaded Java CloudI API HashMap
       implementation for info_key_value_new
+    * Improve C/C++ CloudI API backtrace configure check
 
 2021-05-28 Michael Truog   <mjtruog at protonmail dot com>
 
