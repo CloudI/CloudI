@@ -4,6 +4,7 @@
 2021-05-28 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add OCaml pre-release 4.13.0 (trunk) support
+    * Improve C/C++ CloudI API backtrace configure check
 
 2021-05-27 Michael Truog   <mjtruog at protonmail dot com>
 
