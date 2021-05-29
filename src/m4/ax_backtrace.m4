@@ -80,7 +80,7 @@ backtrace(0, 0);
          ]])],
         [has_execinfo="yes"])
     AC_MSG_RESULT($has_execinfo)
-    if "x$has_execinfo" = "xno"; then
+    if test "x$has_execinfo" = "xno"; then
         dnl libexecinfo may be required at link-time
         AX_CHECK_PRIVATE_LIB(execinfo, backtrace,
             [AC_LANG_PROGRAM([[
