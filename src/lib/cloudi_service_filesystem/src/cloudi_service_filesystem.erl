@@ -505,8 +505,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      Files1} = read_files_init(ReplaceHit0, ReplaceN, ReadLN, Toggle,
                                ContentTypeLookup,
                                UseContentDisposition, UseHttpGetSuffix,
-                               FilesSizeLimitN, ProcessIndex, Directory,
-                               Prefix, Dispatcher),
+                               FilesSizeLimitN, Directory, Prefix, Dispatcher),
     MTimeFake = datetime_utc(cloudi_timestamp:native_monotonic()),
     Files7 = lists:foldl(fun(Pattern, Files2) ->
         true = UseHttpGetSuffix,
@@ -1845,7 +1844,7 @@ file_notify_send([#file_notify{send = Send,
 
 read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
                 UseContentDisposition, UseHttpGetSuffix,
-                FilesSizeLimit, ProcessIndex, Directory, Prefix, Dispatcher) ->
+                FilesSizeLimit, Directory, Prefix, Dispatcher) ->
     TimeNative = cloudi_timestamp:native_monotonic(),
     FilesSize0 = 0,
     Files0 = cloudi_x_trie:new(),
@@ -1895,7 +1894,7 @@ read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
     InitA = {ReplaceHit0, FilesSize0, Files0},
     if
         ReadL == [] ->
-            fold_files(ProcessIndex, Directory, InitF, InitA);
+            fold_files(Directory, InitF, InitA);
         true ->
             fold_files_exact(ReadL, Directory, InitF, InitA)
     end.
@@ -2022,8 +2021,7 @@ read_files_refresh(ReplaceHit0, Replace0, ReplaceIndexUsed, ReadL, Toggle,
     {ReplaceHitN,
      ReplaceN,
      FilesSize3,
-     Files3} = replace_fold(ReplaceHit0, Replace0,
-                            ReadL, ProcessIndex, Directory,
+     Files3} = replace_fold(ReplaceHit0, Replace0, ReadL, Directory,
                             RefreshRemoveF, RefreshUpdateF, RefreshA),
     ok = replace_persist(ReplaceHitN, ReplaceN, ReplaceIndexUsed,
                          ProcessIndex, Directory),
@@ -2101,8 +2099,7 @@ fold_files_exact_element([{FileName, SegmentI, SegmentSize} | ReadL],
             fold_files_exact_element(ReadL, Directory, F, A)
     end.
 
--spec fold_files(ProcessIndex :: non_neg_integer(),
-                 Directory :: string() | binary(),
+-spec fold_files(Directory :: string() | binary(),
                  F :: fold_files_f(),
                  A :: any()) ->
     any().
@@ -2110,12 +2107,13 @@ fold_files_exact_element([{FileName, SegmentI, SegmentSize} | ReadL],
 % similar to filelib:fold_files/5 but
 % with recursive always true, with a regex of ".*",
 % with links included, and with both the filename and file_info provided to F
-fold_files(ProcessIndex, Directory, F, A)
+fold_files(Directory, F, A)
     when is_function(F, 6) ->
     case file:list_dir_all(Directory) of
         {ok, FileNames0} ->
-            FileNamesN = lists:delete(replace_index_filename(ProcessIndex),
-                                      FileNames0),
+            FileNamesN = lists:filter(fun(FileName) ->
+                not lists:prefix(?REPLACE_INDEX_FILENAME, FileName)
+            end, FileNames0),
             fold_files_directory(FileNamesN, Directory, F, A);
         {error, Reason} ->
             ?LOG_WARN("directory ~s error: ~p", [Directory, Reason]),
@@ -2777,15 +2775,15 @@ replace_hit_update(FileName, _, TimeNativeOld,
     end,
     cloudi_x_trie:store(FileName, TimeNative, ReplaceHit).
 
-replace_fold(_, undefined, ReadL, ProcessIndex, Directory,
+replace_fold(_, undefined, ReadL, Directory,
              _, UpdateF, A) ->
     if
         ReadL == [] ->
-            fold_files(ProcessIndex, Directory, UpdateF, A);
+            fold_files(Directory, UpdateF, A);
         true ->
             fold_files_exact(ReadL, Directory, UpdateF, A)
     end;
-replace_fold(ReplaceHit, Replace, ReadL, ProcessIndex, Directory,
+replace_fold(ReplaceHit, Replace, ReadL, Directory,
              RemoveF, UpdateF, A) ->
     PriorityKeyDefault = case Replace of
         #lfuda{age = Age} ->
@@ -2821,7 +2819,7 @@ replace_fold(ReplaceHit, Replace, ReadL, ProcessIndex, Directory,
     {ReplaceRemoveN,
      ReplaceListN} = if
         ReadL == [] ->
-            fold_files(ProcessIndex, Directory, ReplaceF, ReplaceA);
+            fold_files(Directory, ReplaceF, ReplaceA);
         true ->
             fold_files_exact(ReadL, Directory, ReplaceF, ReplaceA)
     end,
