@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -181,6 +181,7 @@
         prefix :: string(),
         prefix_length :: pos_integer(),
         service :: pid(),
+        process_index :: non_neg_integer(),
         directory :: string(),
         directory_length :: non_neg_integer(),
         files_size_limit :: undefined | pos_integer(),
@@ -226,7 +227,7 @@
         redirect = undefined :: undefined | binary()
     }).
 
--define(REPLACE_INDEX_FILENAME, ".cloudi_service_filesystem_replace_index").
+-define(REPLACE_INDEX_FILENAME, ".cloudi_service_filesystem_replace_index_").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -399,6 +400,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = is_list(DirectoryRaw),
+    ProcessIndex = cloudi_service:process_index(Dispatcher),
     Directory = cloudi_environment:transform(DirectoryRaw),
     DirectoryLength = erlang:length(Directory),
     FilesSizeLimitN = if
@@ -431,7 +433,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         Replace0 =:= lru ->
             true = is_integer(FilesSizeLimitN) andalso
                    is_integer(Refresh),
-            replace_new(Replace0, ReplaceIndexUsed, Directory)
+            replace_new(Replace0, ReplaceIndexUsed, ProcessIndex, Directory)
     end,
     true = is_list(ReadL0),
     true = is_list(WriteTruncateL),
@@ -503,7 +505,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      Files1} = read_files_init(ReplaceHit0, ReplaceN, ReadLN, Toggle,
                                ContentTypeLookup,
                                UseContentDisposition, UseHttpGetSuffix,
-                               FilesSizeLimitN, Directory, Prefix, Dispatcher),
+                               FilesSizeLimitN, ProcessIndex, Directory,
+                               Prefix, Dispatcher),
     MTimeFake = datetime_utc(cloudi_timestamp:native_monotonic()),
     Files7 = lists:foldl(fun(Pattern, Files2) ->
         true = UseHttpGetSuffix,
@@ -712,6 +715,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     {ok, #state{prefix = Prefix,
                 prefix_length = erlang:length(Prefix),
                 service = Service,
+                process_index = ProcessIndex,
                 directory = Directory,
                 directory_length = DirectoryLength,
                 files_size_limit = FilesSizeLimitN,
@@ -812,6 +816,7 @@ cloudi_service_handle_info(refresh,
                            #state{prefix = Prefix,
                                   prefix_length = PrefixLength,
                                   service = Service,
+                                  process_index = ProcessIndex,
                                   directory = Directory,
                                   directory_length = DirectoryLength,
                                   files_size_limit = FilesSizeLimit,
@@ -838,8 +843,8 @@ cloudi_service_handle_info(refresh,
                                     ReadL, ToggleNew,
                                     FilesSize, Files, ContentTypeLookup,
                                     UseContentDisposition, UseHttpGetSuffix,
-                                    FilesSizeLimit, DirectoryLength,
-                                    Directory, PrefixLength,
+                                    FilesSizeLimit, ProcessIndex,
+                                    DirectoryLength, Directory, PrefixLength,
                                     Prefix, Dispatcher),
     _ = erlang:send_after(Refresh * 1000, Service, refresh),
     if
@@ -1840,7 +1845,7 @@ file_notify_send([#file_notify{send = Send,
 
 read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
                 UseContentDisposition, UseHttpGetSuffix,
-                FilesSizeLimit, Directory, Prefix, Dispatcher) ->
+                FilesSizeLimit, ProcessIndex, Directory, Prefix, Dispatcher) ->
     TimeNative = cloudi_timestamp:native_monotonic(),
     FilesSize0 = 0,
     Files0 = cloudi_x_trie:new(),
@@ -1890,7 +1895,7 @@ read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
     InitA = {ReplaceHit0, FilesSize0, Files0},
     if
         ReadL == [] ->
-            fold_files(Directory, InitF, InitA);
+            fold_files(ProcessIndex, Directory, InitF, InitA);
         true ->
             fold_files_exact(ReadL, Directory, InitF, InitA)
     end.
@@ -1898,7 +1903,7 @@ read_files_init(ReplaceHit0, Replace, ReadL, Toggle, ContentTypeLookup,
 read_files_refresh(ReplaceHit0, Replace0, ReplaceIndexUsed, ReadL, Toggle,
                    FilesSize0, Files0, ContentTypeLookup,
                    UseContentDisposition, UseHttpGetSuffix,
-                   FilesSizeLimit, DirectoryLength, Directory,
+                   FilesSizeLimit, ProcessIndex, DirectoryLength, Directory,
                    PrefixLength, Prefix, Dispatcher) ->
     TimeNative = cloudi_timestamp:native_monotonic(),
     RefreshRemoveF = fun(FileName, _,
@@ -2018,9 +2023,10 @@ read_files_refresh(ReplaceHit0, Replace0, ReplaceIndexUsed, ReadL, Toggle,
      ReplaceN,
      FilesSize3,
      Files3} = replace_fold(ReplaceHit0, Replace0,
-                            ReadL, Directory,
+                            ReadL, ProcessIndex, Directory,
                             RefreshRemoveF, RefreshUpdateF, RefreshA),
-    ok = replace_persist(ReplaceHitN, ReplaceN, ReplaceIndexUsed, Directory),
+    ok = replace_persist(ReplaceHitN, ReplaceN, ReplaceIndexUsed,
+                         ProcessIndex, Directory),
     % remove anything not updated, since the file was removed
     {_,
      FilesSizeN,
@@ -2095,7 +2101,8 @@ fold_files_exact_element([{FileName, SegmentI, SegmentSize} | ReadL],
             fold_files_exact_element(ReadL, Directory, F, A)
     end.
 
--spec fold_files(Directory :: string() | binary(),
+-spec fold_files(ProcessIndex :: non_neg_integer(),
+                 Directory :: string() | binary(),
                  F :: fold_files_f(),
                  A :: any()) ->
     any().
@@ -2103,18 +2110,19 @@ fold_files_exact_element([{FileName, SegmentI, SegmentSize} | ReadL],
 % similar to filelib:fold_files/5 but
 % with recursive always true, with a regex of ".*",
 % with links included, and with both the filename and file_info provided to F
-fold_files(Directory, F, A)
+fold_files(ProcessIndex, Directory, F, A)
     when is_function(F, 6) ->
     case file:list_dir_all(Directory) of
         {ok, FileNames0} ->
-            FileNamesN = lists:delete(?REPLACE_INDEX_FILENAME, FileNames0),
+            FileNamesN = lists:delete(replace_index_filename(ProcessIndex),
+                                      FileNames0),
             fold_files_directory(FileNamesN, Directory, F, A);
         {error, Reason} ->
             ?LOG_WARN("directory ~s error: ~p", [Directory, Reason]),
             A
     end.
 
-fold_files(Directory, Path, F, A)
+fold_files_list(Directory, Path, F, A)
     when is_function(F, 6) ->
     case file:list_dir_all(filename:join(Directory, Path)) of
         {ok, FileNames} ->
@@ -2151,7 +2159,7 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
     case read_file_info(FilePath) of
         {ok, #file_info{type = directory}} ->
             fold_files_directory(FileNames, Directory, F,
-                                 fold_files(Directory, FileName, F, A));
+                                 fold_files_list(Directory, FileName, F, A));
         {ok, #file_info{type = Type}}
             when Type =:= device;
                  Type =:= other;
@@ -2564,22 +2572,27 @@ replace_type(#lfuda{policy = Policy}) ->
 replace_type(#lru{}) ->
     lru.
 
-replace_new(true, ReplaceIndexUsed, Directory) ->
-    replace_new(lfuda, ReplaceIndexUsed, Directory); % default algorithm
-replace_new(lfuda, ReplaceIndexUsed, Directory) ->
-    replace_new_index(#lfuda{policy = lfuda},
-                      ReplaceIndexUsed, Directory);
-replace_new(lfuda_gdsf, ReplaceIndexUsed, Directory) ->
-    replace_new_index(#lfuda{policy = gdsf},
-                      ReplaceIndexUsed, Directory);
-replace_new(lru, ReplaceIndexUsed, Directory) ->
-    replace_new_index(#lru{start = erlang:system_info(start_time)},
-                      ReplaceIndexUsed, Directory).
+replace_index_filename(ProcessIndex) ->
+    Suffix = erlang:integer_to_list(ProcessIndex),
+    ?REPLACE_INDEX_FILENAME ++ Suffix.
 
-replace_new_index(Replace, false, _) ->
+replace_new(true, ReplaceIndexUsed, ProcessIndex, Directory) ->
+    % default algorithm
+    replace_new(lfuda, ReplaceIndexUsed, ProcessIndex, Directory);
+replace_new(lfuda, ReplaceIndexUsed, ProcessIndex, Directory) ->
+    replace_new_index(#lfuda{policy = lfuda},
+                      ReplaceIndexUsed, ProcessIndex, Directory);
+replace_new(lfuda_gdsf, ReplaceIndexUsed, ProcessIndex, Directory) ->
+    replace_new_index(#lfuda{policy = gdsf},
+                      ReplaceIndexUsed, ProcessIndex, Directory);
+replace_new(lru, ReplaceIndexUsed, ProcessIndex, Directory) ->
+    replace_new_index(#lru{start = erlang:system_info(start_time)},
+                      ReplaceIndexUsed, ProcessIndex, Directory).
+
+replace_new_index(Replace, false, _, _) ->
     {Replace, cloudi_x_trie:new()};
-replace_new_index(Replace, true, Directory) ->
-    IndexPath = filename:join(Directory, ?REPLACE_INDEX_FILENAME),
+replace_new_index(Replace, true, ProcessIndex, Directory) ->
+    IndexPath = filename:join(Directory, replace_index_filename(ProcessIndex)),
     case file:consult(IndexPath) of
         {ok, IndexData} ->
             replace_new_index_data(IndexData, replace_type(Replace), Replace);
@@ -2645,25 +2658,27 @@ replace_new_index_loaded(ReplaceHit, TimeNativeOldMax,
     end, ReplaceHit),
     {Replace, ReplaceHitNew}.
 
-replace_persist(_, undefined, _, _) ->
+replace_persist(_, undefined, _, _, _) ->
     ok;
-replace_persist(_, _, false, _) ->
+replace_persist(_, _, false, _, _) ->
     ok;
 replace_persist(ReplaceHit,
-                #lfuda{age = Age} = Replace, true, Directory) ->
+                #lfuda{age = Age} = Replace, true,
+                ProcessIndex, Directory) ->
     ReplaceIndex = cloudi_x_trie:foldr(fun(FileName,
                                            {PriorityKey, HitsOld}, L) ->
         [{FileName, {PriorityKey - Age, HitsOld}} | L]
     end, [], ReplaceHit),
     replace_persist_index_data({replace_type(Replace), ReplaceIndex},
-                               Directory);
-replace_persist(ReplaceHit, Replace, true, Directory) ->
+                               ProcessIndex, Directory);
+replace_persist(ReplaceHit, Replace, true,
+                ProcessIndex, Directory) ->
     ReplaceIndex = cloudi_x_trie:to_list(ReplaceHit),
     replace_persist_index_data({replace_type(Replace), ReplaceIndex},
-                               Directory).
+                               ProcessIndex, Directory).
 
-replace_persist_index_data(IndexData, Directory) ->
-    IndexPath = filename:join(Directory, ?REPLACE_INDEX_FILENAME),
+replace_persist_index_data(IndexData, ProcessIndex, Directory) ->
+    IndexPath = filename:join(Directory, replace_index_filename(ProcessIndex)),
     IndexPathTmp = IndexPath ++ "_tmp",
     IndexDataBin = unicode:characters_to_binary(io_lib:format("~tp.~n",
                                                               [IndexData])),
@@ -2762,15 +2777,15 @@ replace_hit_update(FileName, _, TimeNativeOld,
     end,
     cloudi_x_trie:store(FileName, TimeNative, ReplaceHit).
 
-replace_fold(_, undefined, ReadL, Directory,
+replace_fold(_, undefined, ReadL, ProcessIndex, Directory,
              _, UpdateF, A) ->
     if
         ReadL == [] ->
-            fold_files(Directory, UpdateF, A);
+            fold_files(ProcessIndex, Directory, UpdateF, A);
         true ->
             fold_files_exact(ReadL, Directory, UpdateF, A)
     end;
-replace_fold(ReplaceHit, Replace, ReadL, Directory,
+replace_fold(ReplaceHit, Replace, ReadL, ProcessIndex, Directory,
              RemoveF, UpdateF, A) ->
     PriorityKeyDefault = case Replace of
         #lfuda{age = Age} ->
@@ -2806,7 +2821,7 @@ replace_fold(ReplaceHit, Replace, ReadL, Directory,
     {ReplaceRemoveN,
      ReplaceListN} = if
         ReadL == [] ->
-            fold_files(Directory, ReplaceF, ReplaceA);
+            fold_files(ProcessIndex, Directory, ReplaceF, ReplaceA);
         true ->
             fold_files_exact(ReadL, Directory, ReplaceF, ReplaceA)
     end,

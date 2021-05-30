@@ -3,6 +3,8 @@
 
 2021-05-29 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Improve cloudi_service_filesystem replace_index use by
+      adding the process index as a suffix on the filename
     * Add overloaded Java CloudI API HashMap
       implementation for info_key_value_new
     * Improve C/C++ CloudI API backtrace configure check
