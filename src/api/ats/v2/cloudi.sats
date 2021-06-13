@@ -252,25 +252,6 @@ callback (s:vt@ype) =
      !instance(s)) -<fun1>
     response
 
-fn {s:vt@ype}
-callback_attach
-    (callback: callback(s),
-     request_type: request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):<fun1>
-    void
-
 fn
 thread_count():<!exn>
     uintGt(0)
@@ -292,11 +273,15 @@ destroy2void
     (api: instance(s)):<!ref,!wrt>
     void
 
-fn
-subscribe {s:vt@ype}
+fn {s:vt@ype}
+subscribe$f
+    ():<fun0>
+    callback(s)
+
+fn {s:vt@ype}
+subscribe
     (api: !instance(s),
-     suffix: string,
-     f: c_callback):<!exn,!ref,!wrt>
+     suffix: string):<!exn,!ref,!wrt>
     result(unit)
 
 fn

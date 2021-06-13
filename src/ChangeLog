@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-06-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the ATS CloudI API subscribe function to use the
+      ATS v2 function$name implement template idiom to automatically
+      create the c_callback function used by the C CloudI API
+      (now only the ATS callback function is necessary for the subscribe)
+        * Added the subscribe$f function which must be implemented before
+          calling the subscribe function
+        * Removed the callback_attach function (made it private)
+
 2021-06-12 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix ATS CloudI API source code style to be consistent

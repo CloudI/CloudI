@@ -33,7 +33,7 @@
 vtypedef state_type = unit
 
 fn
-request_ats
+request
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -54,30 +54,6 @@ in
 end
 
 fn
-request
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(request_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
 task
     (thread_index: uint):
     void = let
@@ -85,7 +61,9 @@ task
 in
     case+ $CLOUDI.new(thread_index, state_value, true) of
       | ~$CLOUDI.Ok(api) => let
-        val () = case+ $CLOUDI.subscribe(api, "ats2/get", request) of
+        implement
+        $CLOUDI.subscribe$f<state_type>() = request
+        val () = case+ $CLOUDI.subscribe<state_type>(api, "ats2/get") of
           | ~$CLOUDI.Ok(_) =>
             ()
           | ~$CLOUDI.Error(status) =>

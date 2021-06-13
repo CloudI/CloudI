@@ -34,7 +34,7 @@ staload UNSAFE = "prelude/SATS/unsafe.sats"
 vtypedef state_type = unit
 
 fn
-sequence1_abcd_ats
+sequence1_abcd
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -54,36 +54,15 @@ sequence1_abcd_ats
     val request_str = $CLOUDI.memory2string(request)
     val () = assertloc(request_str = "test1")
     val response = $CLOUDI.memory2free(request)
+    val () = $CLOUDI.return(api, request_type, name, pattern,
+                            $CLOUDI.StringLiteral(""), response,
+                            timeout, trans_id, source)
 in
-    $CLOUDI.Response(response)
+    $CLOUDI.NullError("execution never gets here")
 end
 
 fn
-sequence1_abcd
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_abcd_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1_abc__ats
+sequence1_abc_
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -108,31 +87,7 @@ in
 end
 
 fn
-sequence1_abc_
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_abc__ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1_ab_d_ats
+sequence1_ab_d
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -157,31 +112,7 @@ in
 end
 
 fn
-sequence1_ab_d
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_ab_d_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1_a_cd_ats
+sequence1_a_cd
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -206,31 +137,7 @@ in
 end
 
 fn
-sequence1_a_cd
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_a_cd_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1__bcd_ats
+sequence1__bcd
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -255,31 +162,7 @@ in
 end
 
 fn
-sequence1__bcd
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1__bcd_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1_ab___ats
+sequence1_ab__
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -304,31 +187,7 @@ in
 end
 
 fn
-sequence1_ab__
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_ab___ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1_a__d_ats
+sequence1_a__d
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -353,31 +212,7 @@ in
 end
 
 fn
-sequence1_a__d
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_a__d_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1___cd_ats
+sequence1___cd
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -402,31 +237,7 @@ in
 end
 
 fn
-sequence1___cd
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1___cd_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1_a____ats
+sequence1_a___
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -451,31 +262,7 @@ in
 end
 
 fn
-sequence1_a___
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_a____ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1____d_ats
+sequence1____d
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -500,31 +287,7 @@ in
 end
 
 fn
-sequence1____d
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1____d_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence1______ats
+sequence1_____
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -547,30 +310,6 @@ sequence1______ats
 in
     $CLOUDI.Response(response)
 end
-
-fn
-sequence1_____
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1______ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
 
 fn
 send_async
@@ -598,7 +337,7 @@ in
 end
 
 fn
-sequence1_ats
+sequence1
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -799,31 +538,7 @@ in
 end
 
 fn
-sequence1
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence1_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e1_ats
+sequence2_e1
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -843,31 +558,7 @@ in
 end
 
 fn
-sequence2_e1
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e1_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e2_ats
+sequence2_e2
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -887,31 +578,7 @@ in
 end
 
 fn
-sequence2_e2
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e2_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e3_ats
+sequence2_e3
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -931,31 +598,7 @@ in
 end
 
 fn
-sequence2_e3
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e3_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e4_ats
+sequence2_e4
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -975,31 +618,7 @@ in
 end
 
 fn
-sequence2_e4
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e4_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e5_ats
+sequence2_e5
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1019,31 +638,7 @@ in
 end
 
 fn
-sequence2_e5
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e5_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e6_ats
+sequence2_e6
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1063,31 +658,7 @@ in
 end
 
 fn
-sequence2_e6
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e6_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e7_ats
+sequence2_e7
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1107,31 +678,7 @@ in
 end
 
 fn
-sequence2_e7
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e7_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_e8_ats
+sequence2_e8
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1151,31 +698,7 @@ in
 end
 
 fn
-sequence2_e8
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_e8_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence2_ats
+sequence2
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1314,31 +837,7 @@ in
 end
 
 fn
-sequence2
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence2_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence3_f1_ats
+sequence3_f1
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1369,31 +868,7 @@ in
 end
 
 fn
-sequence3_f1
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence3_f1_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence3_f2_ats
+sequence3_f2
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1412,38 +887,17 @@ sequence3_f2_ats
     val request_i = g0string2int(request_str)
     val name_next = string0_append($CLOUDI.prefix_(api), "f1")
     val request_new = g0int2string(request_i - 1) (* one step back *)
+    val () = $CLOUDI.forward(api, request_type,
+                             $CLOUDI.strptr2free(name_next),
+                             $CLOUDI.StringLiteral(""),
+                             $CLOUDI.strptr2free(request_new),
+                             timeout, priority, trans_id, source)
 in
-    $CLOUDI.Forward($CLOUDI.strptr2free(name_next),
-                    $CLOUDI.StringLiteral(""),
-                    $CLOUDI.strptr2free(request_new))
+    $CLOUDI.NullError("execution never gets here")
 end
 
 fn
-sequence3_f2
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence3_f2_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence3_g1_ats
+sequence3_g1
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1465,31 +919,7 @@ in
 end
 
 fn
-sequence3_g1
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence3_g1_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
-sequence3_ats
+sequence3
     (request_type: $CLOUDI.request_type,
      name: string,
      pattern: string,
@@ -1554,30 +984,6 @@ in
 end
 
 fn
-sequence3
-    (request_type: $CLOUDI.request_type,
-     name_c: ptr,
-     pattern_c: ptr,
-     request_info_c: ptr,
-     request_info_size_c: uint32,
-     request_c: ptr,
-     request_size_c: uint32,
-     timeout_c: uint32,
-     priority_c: int8,
-     trans_id_c: ptr,
-     pid_c: ptr,
-     pid_size_c: uint32,
-     state_c: ptr,
-     api_c: ptr):
-    void =
-    $CLOUDI.callback_attach(sequence3_ats,
-                            request_type, name_c, pattern_c,
-                            request_info_c, request_info_size_c,
-                            request_c, request_size_c,
-                            timeout_c, priority_c, trans_id_c,
-                            pid_c, pid_size_c, state_c, api_c)
-
-fn
 task
     (thread_index: uint):
     void = let
@@ -1585,56 +991,81 @@ task
 in
     case+ $CLOUDI.new(thread_index, state_value, false) of
       | ~$CLOUDI.Ok(api) => let
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "a/b/c/d",
-                                                sequence1_abcd)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "a/b/c/*",
-                                                sequence1_abc_)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "a/b/*/d",
-                                                sequence1_ab_d)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "a/*/c/d",
-                                                sequence1_a_cd)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "*/b/c/d",
-                                                sequence1__bcd)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "a/b/*",
-                                                sequence1_ab__)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "a/*/d",
-                                                sequence1_a__d)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "*/c/d",
-                                                sequence1___cd)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "a/*",
-                                                sequence1_a___)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "*/d",
-                                                sequence1____d)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "*",
-                                                sequence1_____)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "sequence1",
-                                                sequence1)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e1)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e2)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e3)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e4)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e5)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e6)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e7)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "e",
-                                                sequence2_e8)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "sequence2",
-                                                sequence2)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "f1",
-                                                sequence3_f1)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "f2",
-                                                sequence3_f2)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "g1",
-                                                sequence3_g1)
-        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe(api, "sequence3",
-                                                sequence3)
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_abcd
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/c/d")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_abc_
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/c/*")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_ab_d
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/*/d")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_a_cd
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/*/c/d")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1__bcd
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*/b/c/d")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_ab__
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/*")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_a__d
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/*/d")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1___cd
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*/c/d")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_a___
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/*")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1____d
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*/d")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1_____
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence1
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "sequence1")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e1
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e2
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e3
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e4
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e5
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e6
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e7
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2_e8
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence2
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "sequence2")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence3_f1
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "f1")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence3_f2
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "f2")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence3_g1
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "g1")
+        implement
+        $CLOUDI.subscribe$f<state_type>() = sequence3
+        val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "sequence3")
         val () = if ($CLOUDI.process_index(api) = i2u(0)) then let
             (* start sequence1 *)
             val trans_id = send_async(api, "sequence1", "1")

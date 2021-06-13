@@ -208,6 +208,39 @@ callback_response
      response: $CLOUDI.memory_free_ptr,
      size_c: &uint32):<!ref,!wrt>
     Ptr1
+extern fn
+api_c_get {s:vt@ype}
+    (api: !$CLOUDI.instance(s)):<fun0>
+    ptr
+extern fn {a:t@ype}
+result_value {s:vt@ype}
+    (value: a,
+     status: intGte(0),
+     api: !$CLOUDI.instance(s)):<!exn>
+    $CLOUDI.result(a)
+extern fn
+result_value_unit {s:vt@ype}
+    (status: intGte(0),
+     api: !$CLOUDI.instance(s)):<!exn>
+    $CLOUDI.result(unit)
+extern fn {s:vt@ype}
+callback_attach
+    (callback: $CLOUDI.callback(s),
+     request_type: $CLOUDI.request_type,
+     name_c: ptr,
+     pattern_c: ptr,
+     request_info_c: ptr,
+     request_info_size_c: uint32,
+     request_c: ptr,
+     request_size_c: uint32,
+     timeout_c: uint32,
+     priority_c: int8,
+     trans_id_c: ptr,
+     pid_c: ptr,
+     pid_size_c: uint32,
+     state_c: ptr,
+     api_c: ptr):<fun1>
+    void
 
 (* C CloudI API related functions
  *)
@@ -836,10 +869,9 @@ in
     response_c
 end
 
-fn
-api_c_get {s:vt@ype}
-    (api: !$CLOUDI.instance(s)):<fun0>
-    ptr = let
+implement
+api_c_get
+    (api) = let
     val INSTANCE(@{api_c_ptr = (_, _ | api_c), ...}) = api
 in
     api_c
@@ -863,12 +895,11 @@ optional_trans_id
   | ~None_vt() =>
     $CLOUDI.trans_id_null()
 
-fn {a:t@ype}
-result_value {s:vt@ype}
-    (value: a,
-     status: intGte(0),
-     api: !$CLOUDI.instance(s)):<!exn>
-    $CLOUDI.result(a) =
+implement {a}
+result_value
+    (value,
+     status,
+     api) =
 if (status = c_int_success) then
     $CLOUDI.Ok(value)
 else let
@@ -880,15 +911,13 @@ in
         $CLOUDI.Error(status)
 end
 
-fn
-result_value_unit {s:vt@ype}
-    (status: intGte(0),
-     api: !$CLOUDI.instance(s)):<!exn>
-    $CLOUDI.result(unit) =
-    result_value<unit>(unit(), status, api)
+implement
+result_value_unit
+    (status,
+     api) = result_value<unit>(unit(), status, api)
 
 implement {s}
-$CLOUDI.callback_attach
+callback_attach
     (callback,
      request_type,
      name_c,
@@ -1108,14 +1137,37 @@ in
     ()
 end
 
-implement
+implement {s}
 $CLOUDI.subscribe
     (api,
-     suffix,
-     f) = let
+     suffix) = let
     val api_c = api_c_get(api)
+    fn
+    f_wrapper
+        (request_type: $CLOUDI.request_type,
+         name_c: ptr,
+         pattern_c: ptr,
+         request_info_c: ptr,
+         request_info_size_c: uint32,
+         request_c: ptr,
+         request_size_c: uint32,
+         timeout_c: uint32,
+         priority_c: int8,
+         trans_id_c: ptr,
+         pid_c: ptr,
+         pid_size_c: uint32,
+         state_c: ptr,
+         f_api_c: ptr):<fun1>
+        void =
+        callback_attach<s>($CLOUDI.subscribe$f<s>(),
+                           request_type, name_c, pattern_c,
+                           request_info_c, request_info_size_c,
+                           request_c, request_size_c,
+                           timeout_c, priority_c, trans_id_c,
+                           pid_c, pid_size_c, state_c, f_api_c)
+    val f_c: $CLOUDI.c_callback = f_wrapper
 in
-    result_value_unit(c_subscribe(api_c, string2ptr(suffix), f), api)
+    result_value_unit(c_subscribe(api_c, string2ptr(suffix), f_c), api)
 end
 
 implement
