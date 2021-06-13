@@ -7,8 +7,8 @@
       ATS v2 function$name implement template idiom to automatically
       create the c_callback function used by the C CloudI API
       (now only the ATS callback function is necessary for the subscribe)
-        * Added the subscribe$f function which must be implemented before
-          calling the subscribe function
+        * Added the subscribe$function function which must be implemented
+          before calling the subscribe function
         * Removed the callback_attach function (made it private)
 
 2021-06-12 Michael Truog   <mjtruog at protonmail dot com>

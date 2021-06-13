@@ -1159,7 +1159,7 @@ $CLOUDI.subscribe
          state_c: ptr,
          f_api_c: ptr):<fun1>
         void =
-        callback_attach<s>($CLOUDI.subscribe$f<s>(),
+        callback_attach<s>($CLOUDI.subscribe$function<s>(),
                            request_type, name_c, pattern_c,
                            request_info_c, request_info_size_c,
                            request_c, request_size_c,

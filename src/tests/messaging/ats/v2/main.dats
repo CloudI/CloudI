@@ -992,79 +992,79 @@ in
     case+ $CLOUDI.new(thread_index, state_value, false) of
       | ~$CLOUDI.Ok(api) => let
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_abcd
+        $CLOUDI.subscribe$function<state_type>() = sequence1_abcd
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/c/d")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_abc_
+        $CLOUDI.subscribe$function<state_type>() = sequence1_abc_
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/c/*")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_ab_d
+        $CLOUDI.subscribe$function<state_type>() = sequence1_ab_d
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/*/d")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_a_cd
+        $CLOUDI.subscribe$function<state_type>() = sequence1_a_cd
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/*/c/d")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1__bcd
+        $CLOUDI.subscribe$function<state_type>() = sequence1__bcd
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*/b/c/d")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_ab__
+        $CLOUDI.subscribe$function<state_type>() = sequence1_ab__
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/b/*")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_a__d
+        $CLOUDI.subscribe$function<state_type>() = sequence1_a__d
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/*/d")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1___cd
+        $CLOUDI.subscribe$function<state_type>() = sequence1___cd
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*/c/d")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_a___
+        $CLOUDI.subscribe$function<state_type>() = sequence1_a___
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "a/*")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1____d
+        $CLOUDI.subscribe$function<state_type>() = sequence1____d
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*/d")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1_____
+        $CLOUDI.subscribe$function<state_type>() = sequence1_____
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "*")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence1
+        $CLOUDI.subscribe$function<state_type>() = sequence1
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "sequence1")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e1
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e1
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e2
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e2
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e3
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e3
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e4
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e4
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e5
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e5
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e6
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e6
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e7
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e7
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2_e8
+        $CLOUDI.subscribe$function<state_type>() = sequence2_e8
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "e")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence2
+        $CLOUDI.subscribe$function<state_type>() = sequence2
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "sequence2")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence3_f1
+        $CLOUDI.subscribe$function<state_type>() = sequence3_f1
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "f1")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence3_f2
+        $CLOUDI.subscribe$function<state_type>() = sequence3_f2
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "f2")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence3_g1
+        $CLOUDI.subscribe$function<state_type>() = sequence3_g1
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "g1")
         implement
-        $CLOUDI.subscribe$f<state_type>() = sequence3
+        $CLOUDI.subscribe$function<state_type>() = sequence3
         val- ~$CLOUDI.Ok(_) = $CLOUDI.subscribe<state_type>(api, "sequence3")
         val () = if ($CLOUDI.process_index(api) = i2u(0)) then let
             (* start sequence1 *)

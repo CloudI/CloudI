@@ -274,7 +274,7 @@ destroy2void
     void
 
 fn {s:vt@ype}
-subscribe$f
+subscribe$function
     ():<fun0>
     callback(s)
 

@@ -111,7 +111,7 @@ in
           | ~$CLOUDI.Error(status) =>
             assertloc(status = 0)
         implement
-        $CLOUDI.subscribe$f<state_type>() = request
+        $CLOUDI.subscribe$function<state_type>() = request
         val () = case+ $CLOUDI.subscribe<state_type>(api, "ats2.xml/get") of
           | ~$CLOUDI.Ok(_) =>
             ()

@@ -74,7 +74,7 @@ in
     case+ $CLOUDI.new(thread_index, state_value, true) of
       | ~$CLOUDI.Ok(api) => let
         implement
-        $CLOUDI.subscribe$f<state_type>() = request
+        $CLOUDI.subscribe$function<state_type>() = request
         val () = case+ $CLOUDI.subscribe<state_type>(api, "ats2") of
           | ~$CLOUDI.Ok(_) =>
             ()
