@@ -597,7 +597,8 @@ implement
 $CLOUDI.trans_ids_store
     (trans_ids,
      trans_ids_size) = let
-    fun trans_id_store {i,ni:nat | i <= ni} .<i>.
+    fun
+    trans_id_store {i,ni:nat | i <= ni} .<i>.
         (p: ptr,
          p_i: size_t(i),
          p_n: size_t(ni)):<!wrt>
@@ -643,7 +644,8 @@ implement
 $CLOUDI.trans_ids_free {l}{n}
     (trans_ids,
      trans_ids_size) = let
-    fun trans_id_free {i,ni:nat | i <= ni} .<i>.
+    fun
+    trans_id_free {i,ni:nat | i <= ni} .<i>.
         (p: ptr,
          p_i: size_t(i),
          p_n: size_t(ni)):<!wrt>
@@ -1702,7 +1704,8 @@ text_pairs_new {l:addr}{n:int}
         true
 in
     if (size > i2sz(0)) then let
-        fun text_size_total {i,ni:nat | i <= ni} .<i>.
+        fun
+        text_size_total {i,ni:nat | i <= ni} .<i>.
             (total: size_t,
              p: ptr,
              p_i: size_t(i),
@@ -1719,7 +1722,8 @@ in
             g1ofg0(total)
         val text_size = text_size_total(i2sz(0), ptrcast(pairs), size, size)
         val (_, _ | text_p) = malloc_gc(text_size)
-        fun text_store {i,ni:nat | i <= ni} .<i>.
+        fun
+        text_store {i,ni:nat | i <= ni} .<i>.
             (p_destination: Ptr1,
              p_source: ptr,
              p_i: size_t(i),
