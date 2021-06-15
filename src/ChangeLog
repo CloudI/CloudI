@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-06-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix the Go integation tests links in the CloudI API README
+
 2021-06-13 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change the ATS CloudI API subscribe function to use the
