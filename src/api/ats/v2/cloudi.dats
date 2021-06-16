@@ -130,6 +130,26 @@ C_GET_FUNCTION(uint32_t, timeout_sync)
 C_GET_FUNCTION(uint32_t, timeout_terminate)
 C_GET_FUNCTION(int8_t,   priority_default)
 %}
+
+typedef c_instance = $extype"cloudi_instance_t"
+typedef
+c_callback =
+    ($CLOUDI.request_type,
+     ptr,
+     ptr,
+     ptr,
+     uint32,
+     ptr,
+     uint32,
+     uint32,
+     int8,
+     ptr,
+     ptr,
+     uint32,
+     ptr,
+     ptr) -<fun1>
+    void
+
 macdef c_int_success = 0
 macdef c_int_terminate = $extval(int, "cloudi_terminate")
 macdef c_int_timeout = $extval(int, "cloudi_timeout")
@@ -324,14 +344,14 @@ c_get_priority_default:
     int8 = "ext#"
 extern fn
 c_initialize: {l1:agz}{l2:addr}
-    (!$CLOUDI.c_instance? @ l1 >> $CLOUDI.c_instance @ l1 |
+    (!c_instance? @ l1 >> c_instance @ l1 |
      ptr(l1),
      uint,
      ptr(l2)) -<fun,!ref,!wrt>
     intGte(0) = "ext#cloudi_initialize"
 extern fn
 c_destroy: {l1:agz}
-    (!$CLOUDI.c_instance @ l1 |
+    (!c_instance @ l1 |
      ptr(l1)) -<fun,!ref,!wrt>
     [l2:addr] ptr(l2) = "ext#cloudi_destroy"
 extern fn
@@ -343,7 +363,7 @@ extern fn
 c_subscribe: {l1:agz}
     (ptr,
      ptr(l1),
-     $CLOUDI.c_callback) -<fun,!ref,!wrt>
+     c_callback) -<fun,!ref,!wrt>
     intGte(0) = "ext#cloudi_subscribe"
 extern fn
 c_subscribe_count: {l1:agz}
@@ -534,7 +554,7 @@ c_memcmp
  *)
 datavtype
 instance_(s:vt@ype) = {l1,l2:agz} INSTANCE of (@{
-  api_c_ptr = ($CLOUDI.c_instance @ l1, mfree_gc_v(l1) | ptr(l1))
+  api_c_ptr = (c_instance @ l1, mfree_gc_v(l1) | ptr(l1))
 , state_p = ptr(l2)
 , terminate_return_value = bool
 })
@@ -1095,7 +1115,7 @@ $CLOUDI.new
     (thread_index,
      state_value,
      terminate_return_value) = let
-    val (api_c_pfgc, api_c_pfat | api_c) = ptr_alloc<$CLOUDI.c_instance>()
+    val (api_c_pfgc, api_c_pfat | api_c) = ptr_alloc<c_instance>()
     val status = c_initialize(api_c_pfgc | api_c, thread_index, the_null_ptr)
 in
     if (status = c_int_success) then let
@@ -1165,7 +1185,7 @@ $CLOUDI.subscribe
                            request_c, request_size_c,
                            timeout_c, priority_c, trans_id_c,
                            pid_c, pid_size_c, state_c, f_api_c)
-    val f_c: $CLOUDI.c_callback = f_wrapper
+    val f_c: c_callback = f_wrapper
 in
     result_value_unit(c_subscribe(api_c, string2ptr(suffix), f_c), api)
 end

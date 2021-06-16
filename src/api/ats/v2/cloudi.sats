@@ -74,7 +74,6 @@ typedef struct cloudi_instance_t
 } cloudi_instance_t;
 #endif /* CLOUDI_H */
 %}
-typedef c_instance = $extype"cloudi_instance_t"
 
 absvtype instance_vtype(s:vt@ype+) = ptr
 vtypedef instance(s:vt@ype) = instance_vtype(s)
@@ -93,24 +92,6 @@ result (a:vt@ype+) =
 #define ASYNC 1
 #define SYNC ~1
 typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
-
-typedef
-c_callback =
-    (request_type,
-     ptr,
-     ptr,
-     ptr,
-     uint32,
-     ptr,
-     uint32,
-     uint32,
-     int8,
-     ptr,
-     ptr,
-     uint32,
-     ptr,
-     ptr) -<fun1>
-    void
 
 (*
 

@@ -3,6 +3,7 @@
 
 2021-06-15 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Improve the ATS CloudI API by making other C types private
     * Fix the Go integation tests links in the CloudI API README
 
 2021-06-13 Michael Truog   <mjtruog at protonmail dot com>
