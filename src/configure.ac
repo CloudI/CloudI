@@ -31,6 +31,8 @@ AC_CHECK_FILE("/usr/local/lib",
 AC_PREREQ([2.59])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
+# AC_CONFIG_MACRO_DIRS is best with autoconf >= 2.70 and automake >= 1.13
+# AC_CONFIG_MACRO_DIR is deprecated in autoconf 2.70
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([1.10 no-define no-dependencies foreign])

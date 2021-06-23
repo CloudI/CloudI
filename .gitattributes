@@ -1,0 +1,24 @@
+# exclude external dependencies in Github (linguist) language stats
+src/external/* linguist-vendored
+src/service_api/python/jsonrpclib/* linguist-vendored
+src/api/haskell/external/* linguist-vendored
+src/m4/ax_boost_base.m4 linguist-vendored=true
+src/m4/ax_boost_system.m4 linguist-vendored=true
+src/m4/ax_boost_thread.m4 linguist-vendored=true
+src/m4/ax_compare_version.m4 linguist-vendored=true
+src/m4/ax_compiler_version.m4 linguist-vendored=true
+src/m4/ax_cxx_exceptions.m4 linguist-vendored=true
+src/m4/ax_compiler_vendor.m4 linguist-vendored=true
+src/m4/ax_check_class.m4 linguist-vendored=true
+src/m4/ax_check_rqrd_class.m4 linguist-vendored=true
+src/m4/ax_prog_javac.m4 linguist-vendored=true
+src/m4/ax_prog_javac_works.m4 linguist-vendored=true
+src/m4/ax_prog_java.m4 linguist-vendored=true
+src/m4/ax_prog_java_works.m4 linguist-vendored=true
+src/m4/ax_prog_jar.m4 linguist-vendored=true
+src/m4/ax_try_compile_java.m4 linguist-vendored=true
+src/m4/ax_lib_socket_nsl.m4 linguist-vendored=true
+src/m4/ax_prog_python_version.m4 linguist-vendored=true
+src/m4/ax_prog_ruby_version.m4 linguist-vendored=true
+src/m4/ax_pthread.m4 linguist-vendored=true
+src/m4/ax_recursive_eval.m4 linguist-vendored=true
