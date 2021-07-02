@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -469,7 +469,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {aspects_init_after, list(aspect_init_after_internal())} |
          {aspects_request_before, list(aspect_request_before_internal())} |
          {aspects_request_after, list(aspect_request_after_internal())} |
@@ -486,7 +486,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({priority, low | normal | high} |
@@ -495,7 +495,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {info_pid_uses, infinity | pos_integer()} |
          {info_pid_options,
           list({priority, low | normal | high} |
@@ -504,7 +504,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {duo_mode, boolean()} |
          {hibernate,
           service_options_internal_hibernate_options() | boolean()} |
@@ -544,7 +544,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {aspects_init_after, list(aspect_init_after_external())} |
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |
@@ -798,7 +798,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {aspects_init_after, list(aspect_init_after_internal())} |
          {aspects_request_before, list(aspect_request_before_internal())} |
          {aspects_request_after, list(aspect_request_after_internal())} |
@@ -814,7 +814,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({priority, low | normal | high} |
@@ -823,7 +823,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {info_pid_uses, infinity | pos_integer()} |
          {info_pid_options,
           list({priority, low | normal | high} |
@@ -832,7 +832,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {hibernate,
           list({period, period_seconds()} |
                {rate_request_min, number()}) | boolean()} |
@@ -863,7 +863,7 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})} |
+               {message_queue_data, off_heap | on_heap})} |
          {aspects_init_after, list(aspect_init_after_external())} |
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |

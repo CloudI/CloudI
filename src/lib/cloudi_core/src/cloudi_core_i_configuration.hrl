@@ -328,7 +328,7 @@
                     {max_heap_size,
                      cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
-                    {message_queue_data, off_heap | on_heap | mixed}),
+                    {message_queue_data, off_heap | on_heap}),
 
         % Relevant for both Internal and External Services, different values:
 
@@ -397,7 +397,7 @@
                     {max_heap_size,
                      cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
-                    {message_queue_data, off_heap | on_heap | mixed}),
+                    {message_queue_data, off_heap | on_heap}),
         % how many service requests should restart the Erlang process used for
         % handling the service requests
         % (an integer greater than 0 or the atom 'infinity' are valid values)
@@ -414,7 +414,7 @@
                     {max_heap_size,
                      cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
-                    {message_queue_data, off_heap | on_heap | mixed}),
+                    {message_queue_data, off_heap | on_heap}),
         % how many info messages should restart the Erlang process used for
         % handling the info message
         % (an integer greater than 0 or the atom 'infinity' are valid values)
@@ -431,7 +431,7 @@
                     {max_heap_size,
                      cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
-                    {message_queue_data, off_heap | on_heap | mixed}),
+                    {message_queue_data, off_heap | on_heap}),
         % use two Erlang processes instead of one for an internal service to
         % keep send operations separate from receive operations.  better
         % throughput can be achieved with duo_mode, especially when sending to
