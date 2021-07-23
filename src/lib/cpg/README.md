@@ -8,8 +8,7 @@ cpg provides a process group interface that is focused on
 availability and partition tolerance (in the CAP theorem).
 The pg process group implementation added in Erlang/OTP 23 by
 WhatsApp Inc. (Facebook Inc.) is based on cpg.
-The cpg interface is compatible with pg2
-(scheduled for removal in Erlang/OTP 24).
+The cpg interface is compatible with pg2 (removed in Erlang/OTP 24).
 
 ## Features (Compare and Contrast)
 
@@ -27,7 +26,7 @@ The cpg interface is compatible with pg2
 * pg uses one monitor per remote node (it takes longer to update a group after an Erlang process dies and may never remove remote group members).
 * pg uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).
 
-### pg2 (=< Erlang/OTP 24)
+### pg2 (< Erlang/OTP 24)
 
 * pg2 uses global:trans/2 which is unable to handle network or node failures.
 * pg2 uses ets while cpg does not (cpg instead provides cached data for more efficient access to the process group data).

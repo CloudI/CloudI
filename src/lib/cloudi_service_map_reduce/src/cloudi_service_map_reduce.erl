@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -435,9 +435,15 @@ cloudi_service_terminate(shutdown, _Timeout,
                          #state{log_execution_time = true,
                                 map_requests = #{},
                                 time_running = TimeRunningStart,
+                                suspended = Suspended,
                                 elapsed_seconds = ElapsedSeconds}) ->
-    TimeRunningEnd = cloudi_timestamp:seconds_monotonic(),
-    ElapsedSecondsNew = ElapsedSeconds + (TimeRunningEnd - TimeRunningStart),
+    ElapsedSecondsNew = if
+        Suspended =:= true ->
+            ElapsedSeconds;
+        Suspended =:= false ->
+            TimeRunningEnd = cloudi_timestamp:seconds_monotonic(),
+            ElapsedSeconds + (TimeRunningEnd - TimeRunningStart)
+    end,
     ?LOG_INFO("total time taken was ~p hours",
               [hours_elapsed(ElapsedSecondsNew)]),
     ok;
