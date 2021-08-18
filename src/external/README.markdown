@@ -9,9 +9,9 @@ C++ `backward-cpp`
 ------------------
 `for creating a backtrace in C++`
 
-- `https://github.com/bombela/backward-cpp`
-- `commit cc475eb3b0fed934ea0897e96578f712048c3b53`
-- `Wed Apr 15 16:02:20 UTC 2020`
+- `https://github.com/okeuday/backward-cpp`
+- `commit c5e783c4e8914f1103d55ae891a39759cd5c9dea (CloudI)`
+- `Wed Aug 18 05:40:23 UTC 2021`
 - `MIT`
 
 C++ `booster (only booster/backtrace.h)`

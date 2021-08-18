@@ -36,9 +36,7 @@
 AC_DEFUN([AX_BACKTRACE],
 [
     AS_CASE([$host_os],
-            [linux*], [AS_CASE([$host_cpu],
-                               [x86*], [backtrace="backward"],
-                               [*], [backtrace="booster"])],
+            [linux*], [backtrace="backward"],
             [*], [backtrace="booster"])
 
     AC_LANG_PUSH([C++])
@@ -68,7 +66,7 @@ _Unwind_GetIP(0);
         [has_unwind="yes"])
     AC_MSG_RESULT($has_unwind)
 
-    dnl in case unwind (or dladdr) can not be used
+    dnl in case unwind can not be used
     dnl (currently a requirement for having a backtrace)
     has_execinfo="no"
     AC_MSG_CHECKING(for execinfo.h)
@@ -101,6 +99,50 @@ backtrace(0, 0);
 
     want_dladdr="no"
     if test "x$backtrace" = "xbackward"; then
+        dnl libunwind can provide more accurate stacktraces
+        dnl (e.g., signal handlers) but is unsupported on some architectures
+        AS_CASE([$host_cpu],
+                [x86*|arm*], [has_libunwind="yes"],
+                [*], [has_libunwind="no"])
+        if test "x$has_libunwind" = "xyes"; then
+            AX_CHECK_PRIVATE_LIB(unwind, unw_getcontext,
+                [AC_LANG_PROGRAM([[
+#include <libunwind.h>
+                 ]], [[
+unw_getcontext(0);
+                 ]])],
+                [has_libunwind="yes"],
+                [has_libunwind="no"])
+        else
+            UNWIND_LDFLAGS=""
+            UNWIND_LIB=""
+        fi
+
+        AX_CHECK_PRIVATE_LIB(dwarf, dwarf_elf_init,
+            [AC_LANG_PROGRAM([[
+#include <libdwarf/libdwarf.h>
+#include <libdwarf/dwarf.h>
+             ]], [[
+dwarf_elf_init(0, 0, 0, 0, 0, 0);
+             ]])],
+            [AX_CHECK_PRIVATE_LIB(elf, elf_version,
+                [AC_LANG_PROGRAM([[
+#include <libelf.h>
+                 ]], [[
+elf_version(EV_CURRENT);
+                 ]])],
+                [want_dwarf="yes"],
+                [want_dwarf="no"])
+             ],
+            [want_dwarf="no"])
+        AX_CHECK_PRIVATE_LIB(bfd, bfd_init,
+            [AC_LANG_PROGRAM([[
+#include <bfd.h>
+             ]], [[
+bfd_init();
+             ]])],
+            [want_bfd="yes"],
+            [want_bfd="no"])
         AX_CHECK_PRIVATE_LIB(dw, dwfl_begin,
             [AC_LANG_PROGRAM([[
 #include <elfutils/libdw.h>
@@ -111,20 +153,18 @@ dwfl_begin(0);
              ]])],
             [want_dw="yes"],
             [want_dw="no"])
-        AX_CHECK_PRIVATE_LIB(bfd, bfd_init,
-            [AC_LANG_PROGRAM([[
-#include <bfd.h>
-             ]], [[
-bfd_init();
-             ]])],
-            [want_bfd="yes"],
-            [want_bfd="no"])
-        if test "x$want_dw" = "xyes"; then
+        if test "x$want_dwarf" = "xyes"; then
+            want_dw="no"
             want_bfd="no"
-            want_dladdr="no"
+            want_dladdr="yes"
         elif test "x$want_bfd" = "xyes"; then
             want_dw="no"
+            want_dwarf="no"
             want_dladdr="yes"
+        elif test "x$want_dw" = "xyes"; then
+            want_dwarf="no"
+            want_bfd="no"
+            want_dladdr="no"
         else
             want_dladdr="no"
         fi
@@ -140,7 +180,8 @@ bfd_init();
 dladdr(0, 0);
              ]])],
             [has_dladdr="yes"],
-            [want_bfd="no"])
+            [want_dwarf="no"
+             want_bfd="no"])
     fi
     BACKTRACE_CPPFLAGS=""
     BACKTRACE_LDFLAGS=""
@@ -148,32 +189,56 @@ dladdr(0, 0);
     AC_MSG_CHECKING([for backtrace])
     if test "x$backtrace" = "xbackward"; then
         BACKTRACE_CPPFLAGS="-I\$(top_srcdir)/external/backward-cpp/"
-        if test "x$has_unwind" = "xyes"; then
-            AC_DEFINE([BACKWARD_HAS_UNWIND], [1],
-                      [Define if libgcc has _Unwind_GetIP().])
-            AC_DEFINE([BACKWARD_HAS_BACKTRACE], [0],
-                      [Define if execinfo.h is usable.])
-            unwind_status="unwind"
-        elif test "x$has_unwind" = "xno"; then
+        if test "x$has_libunwind" = "xyes"; then
             AC_DEFINE([BACKWARD_HAS_UNWIND], [0],
                       [Define if libgcc has _Unwind_GetIP().])
+            AC_DEFINE([BACKWARD_HAS_LIBUNWIND], [1],
+                      [Define if libunwind is usable.])
+            AC_DEFINE([BACKWARD_HAS_BACKTRACE], [0],
+                      [Define if execinfo.h is usable.])
+            unwind_status="libunwind"
+        elif test "x$has_unwind" = "xyes"; then
+            AC_DEFINE([BACKWARD_HAS_UNWIND], [1],
+                      [Define if libgcc has _Unwind_GetIP().])
+            AC_DEFINE([BACKWARD_HAS_LIBUNWIND], [0],
+                      [Define if libunwind is usable.])
+            AC_DEFINE([BACKWARD_HAS_BACKTRACE], [0],
+                      [Define if execinfo.h is usable.])
+            UNWIND_LDFLAGS=""
+            UNWIND_LIB=""
+            unwind_status="unwind"
+        else
+            AC_DEFINE([BACKWARD_HAS_UNWIND], [0],
+                      [Define if libgcc has _Unwind_GetIP().])
+            AC_DEFINE([BACKWARD_HAS_LIBUNWIND], [0],
+                      [Define if libunwind is usable.])
             AC_DEFINE([BACKWARD_HAS_BACKTRACE], [1],
                       [Define if execinfo.h is usable.])
+            UNWIND_LDFLAGS="$EXECINFO_LDFLAGS"
+            UNWIND_LIB="$EXECINFO_LIB"
             unwind_status="execinfo"
         fi
-        if test "x$want_dw" = "xyes"; then
-            BACKTRACE_LDFLAGS="$DW_LDFLAGS $EXECINFO_LDFLAGS"
-            BACKTRACE_LIB="$DW_LIB $EXECINFO_LIB"
-            AC_DEFINE([BACKWARD_HAS_DW], [1],
-                      [Define if libdw is usable.])
-            AC_MSG_RESULT([backward-cpp dw $unwind_status])
+        if test "x$want_dwarf" = "xyes"; then
+            BACKTRACE_LDFLAGS="$DWARF_LDFLAGS $ELF_LDFLAGS $DL_LDFLAGS $UNWIND_LDFLAGS"
+            BACKTRACE_LIB="$DWARF_LIB $ELF_LIB $DL_LIB $UNWIND_LIB"
+            AC_DEFINE([BACKWARD_HAS_DWARF], [1],
+                      [Define if libdwarf is usable.])
+            AC_MSG_RESULT([backward-cpp dwarf $unwind_status])
         elif test "x$want_bfd" = "xyes"; then
-            BACKTRACE_LDFLAGS="$BFD_LDFLAGS $EXECINFO_LDFLAGS"
-            BACKTRACE_LIB="$BFD_LIB $EXECINFO_LIB"
+            BACKTRACE_LDFLAGS="$BFD_LDFLAGS $DL_LDFLAGS $UNWIND_LDFLAGS"
+            BACKTRACE_LIB="$BFD_LIB $DL_LIB $UNWIND_LIB"
             AC_DEFINE([BACKWARD_HAS_BFD], [1],
                       [Define if libbfd is usable.])
             AC_MSG_RESULT([backward-cpp bfd $unwind_status])
+        elif test "x$want_dw" = "xyes"; then
+            BACKTRACE_LDFLAGS="$DW_LDFLAGS $UNWIND_LDFLAGS"
+            BACKTRACE_LIB="$DW_LIB $UNWIND_LIB"
+            AC_DEFINE([BACKWARD_HAS_DW], [1],
+                      [Define if libdw is usable.])
+            AC_MSG_RESULT([backward-cpp dw $unwind_status])
         else
+            BACKTRACE_LDFLAGS="$UNWIND_LDFLAGS"
+            BACKTRACE_LIB="$UNWIND_LIB"
             AC_DEFINE([BACKWARD_HAS_BACKTRACE_SYMBOL], [1],
                       [Define if execinfo.h is usable.])
             AC_MSG_RESULT([backward-cpp execinfo $unwind_status])
@@ -190,7 +255,7 @@ dladdr(0, 0);
             AC_DEFINE([BOOSTER_HAVE_UNWIND_BACKTRACE], [1],
                       [Define if libgcc has _Unwind_GetIP().])
             unwind_status="unwind"
-        elif test "x$has_unwind" = "xno"; then
+        else
             unwind_status="execinfo"
         fi
         if test "x$has_dladdr" = "xyes"; then

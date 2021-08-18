@@ -69,6 +69,18 @@ Please see the [FAQ](https://cloudi.org/faq.html) for more details.
 
 Optional (default="yes"):
 
+* `C`
+  * Use the "--enable-c-support=no" configure flag to disable
+* `C++`
+  * `backtrace symbols options:`
+    * `(libdwarf-dev libelf-dev /Ubuntu, libdwarf-dev elfutils-dev /Alpine)`
+    * `(binutils-dev /Ubuntu, binutils-dev /Alpine)`
+    * `(libdw-dev /Ubuntu, elfutils-dev /Alpine)`
+  * `backtrace data options:`
+    * `(libunwind-dev /Ubuntu, libunwind-dev /Alpine)`
+    * `compiler unwind.h`
+    * `(libexecinfo-dev /Alpine)`
+  * Use the "--enable-cxx-support=no" configure flag to disable
 * `Java >= 1.5 JDK`
   * `(default-jdk /Ubuntu)`
   * Use the "--enable-java-support=no" configure flag to disable

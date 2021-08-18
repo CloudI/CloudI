@@ -308,8 +308,8 @@ class thread_pool
         }
 
         /// stop boolean reference for checking if an exit should occur
-        /// (should be stored as a 'boost const &' to
-        ///  prevent external modifications)
+        /// (should be stored as a 'bool const &' to prevent
+        //   external modifications)
         bool const & stop() const
         {
             return m_stop;
