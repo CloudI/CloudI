@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2012-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy1_handler).
@@ -213,13 +213,10 @@ handle(Req0,
                     NameIncoming ++ [$/ |
                         cloudi_string:lowercase(erlang:binary_to_list(Method))]
             end,
-            PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-            PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
-            PeerPort = erlang:integer_to_binary(ClientPort),
-            HeadersIncoming1 = [{<<"peer">>, PeerShort},
-                                {<<"peer-port">>, PeerPort},
-                                {<<"source-address">>, PeerLong},
-                                {<<"source-port">>, PeerPort},
+            SourceAddress = cloudi_ip_address:to_binary(ClientIpAddr),
+            SourcePort = erlang:integer_to_binary(ClientPort),
+            HeadersIncoming1 = [{<<"source-address">>, SourceAddress},
+                                {<<"source-port">>, SourcePort},
                                 {<<"url-path">>, PathRaw} |
                                 HeadersIncoming0],
             HeadersIncomingN = if
@@ -227,7 +224,7 @@ handle(Req0,
                     case lists:keyfind(<<"x-forwarded-for">>, 1,
                                        HeadersIncoming0) of
                         false ->
-                            [{<<"x-forwarded-for">>, PeerShort} |
+                            [{<<"x-forwarded-for">>, SourceAddress} |
                              HeadersIncoming1];
                         _ ->
                             HeadersIncoming1
@@ -363,19 +360,16 @@ websocket_init(_Transport, Req0,
         SubscribeWebSocket =:= false ->
             HeadersIncoming0
     end,
-    PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-    PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
-    PeerPort = erlang:integer_to_binary(ClientPort),
-    HeadersIncoming2 = [{<<"peer">>, PeerShort},
-                        {<<"peer-port">>, PeerPort},
-                        {<<"source-address">>, PeerLong},
-                        {<<"source-port">>, PeerPort},
+    SourceAddress = cloudi_ip_address:to_binary(ClientIpAddr),
+    SourcePort = erlang:integer_to_binary(ClientPort),
+    HeadersIncoming2 = [{<<"source-address">>, SourceAddress},
+                        {<<"source-port">>, SourcePort},
                         {<<"url-path">>, PathRaw} | HeadersIncoming1],
     HeadersIncomingN = if
         SetXForwardedFor =:= true ->
             case lists:keyfind(<<"x-forwarded-for">>, 1, HeadersIncoming0) of
                 false ->
-                    [{<<"x-forwarded-for">>, PeerShort} | HeadersIncoming2];
+                    [{<<"x-forwarded-for">>, SourceAddress} | HeadersIncoming2];
                 _ ->
                     HeadersIncoming2
                     

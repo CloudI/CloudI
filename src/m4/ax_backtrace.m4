@@ -154,12 +154,12 @@ dwfl_begin(0);
             [want_dw="yes"],
             [want_dw="no"])
         if test "x$want_dwarf" = "xyes"; then
-            want_dw="no"
             want_bfd="no"
+            want_dw="no"
             want_dladdr="yes"
         elif test "x$want_bfd" = "xyes"; then
-            want_dw="no"
             want_dwarf="no"
+            want_dw="no"
             want_dladdr="yes"
         elif test "x$want_dw" = "xyes"; then
             want_dwarf="no"

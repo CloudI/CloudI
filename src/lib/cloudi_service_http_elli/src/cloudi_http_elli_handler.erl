@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -171,13 +171,10 @@ handle(Req,
                     NameIncoming ++ [$/ |
                         cloudi_string:lowercase(erlang:binary_to_list(Method))]
             end,
-            PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-            PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
-            PeerPort = erlang:integer_to_binary(ClientPort),
-            HeadersIncoming1 = [{<<"peer">>, PeerShort},
-                                {<<"peer-port">>, PeerPort},
-                                {<<"source-address">>, PeerLong},
-                                {<<"source-port">>, PeerPort},
+            SourceAddress = cloudi_ip_address:to_binary(ClientIpAddr),
+            SourcePort = erlang:integer_to_binary(ClientPort),
+            HeadersIncoming1 = [{<<"source-address">>, SourceAddress},
+                                {<<"source-port">>, SourcePort},
                                 {<<"url-path">>, PathRaw} |
                                 HeadersIncoming0],
             HeadersIncomingN = if
@@ -185,7 +182,7 @@ handle(Req,
                     case lists:keyfind(<<"x-forwarded-for">>, 1,
                                        HeadersIncoming0) of
                         false ->
-                            [{<<"x-forwarded-for">>, PeerShort} |
+                            [{<<"x-forwarded-for">>, SourceAddress} |
                              HeadersIncoming1];
                         _ ->
                             HeadersIncoming1

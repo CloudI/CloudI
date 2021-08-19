@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -764,28 +764,27 @@ headers_request_filter(Headers0) ->
         {<<"host">>,                     undefined},
         {<<"url-path">>,                 undefined},
         % removed parameters
-        % (possible if coming from cloudi_service_http_cowboy)
-        {<<"peer">>,                     undefined},
-        {<<"peer-port">>,                undefined},
+        % (possible if coming from other services,
+        %  e.g., cloudi_service_http_cowboy or cloudi_service_tcp)
         {<<"source-address">>,           undefined},
         {<<"source-port">>,              undefined}],
     case cloudi_lists:take_values(Defaults, Headers0) of
         [undefined, _,
-         _, _, _, _ | _] ->
+         _, _ | _] ->
             {error, {request_info_missing, <<"host">>}};
         [Host, _,
-         _, _, _, _ | _]
+         _, _ | _]
             when not is_binary(Host) ->
             {error, {request_info_invalid, <<"host">>}};
         [_, undefined,
-         _, _, _, _ | _] ->
+         _, _ | _] ->
             {error, {request_info_missing, <<"url-path">>}};
         [_, URLPath,
-         _, _, _, _ | _]
+         _, _ | _]
             when not is_binary(URLPath) ->
             {error, {request_info_invalid, <<"url-path">>}};
         [Host, URLPath,
-         _, _, _, _ | Headers1] ->
+         _, _ | Headers1] ->
             {ok, Host, URLPath, Headers1}
     end.
 

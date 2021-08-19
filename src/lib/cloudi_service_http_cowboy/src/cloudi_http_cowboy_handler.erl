@@ -624,21 +624,18 @@ upgrade_to_websocket(Req,
             NameIncoming ++ "/get"
     end,
     PathRawStr = erlang:binary_to_list(PathRaw),
-    PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-    PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
-    PeerPort = erlang:integer_to_binary(ClientPort),
+    SourceAddress = cloudi_ip_address:to_binary(ClientIpAddr),
+    SourcePort = erlang:integer_to_binary(ClientPort),
     HeadersIncoming1 = if
         SetXForwardedFor =:= true ->
-            header_set_if_not(<<"x-forwarded-for">>, PeerShort,
+            header_set_if_not(<<"x-forwarded-for">>, SourceAddress,
                               HeadersIncoming0);
         SetXForwardedFor =:= false ->
             HeadersIncoming0
     end,
     HeadersIncomingN = HeadersIncoming1#{
-                           <<"peer">> => PeerShort,
-                           <<"peer-port">> => PeerPort,
-                           <<"source-address">> => PeerLong,
-                           <<"source-port">> => PeerPort,
+                           <<"source-address">> => SourceAddress,
+                           <<"source-port">> => SourcePort,
                            <<"url-path">> => PathRaw},
     ResponseLookup = if
         WebSocketProtocol /= undefined ->
@@ -886,21 +883,18 @@ handle(Req0,
                             'normal'
                     end
             end,
-            PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
-            PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
-            PeerPort = erlang:integer_to_binary(ClientPort),
+            SourceAddress = cloudi_ip_address:to_binary(ClientIpAddr),
+            SourcePort = erlang:integer_to_binary(ClientPort),
             HeadersIncoming1 = if
                 SetXForwardedFor =:= true ->
-                    header_set_if_not(<<"x-forwarded-for">>, PeerShort,
+                    header_set_if_not(<<"x-forwarded-for">>, SourceAddress,
                                       HeadersIncoming0);
                 SetXForwardedFor =:= false ->
                     HeadersIncoming0
             end,
             HeadersIncomingN = HeadersIncoming1#{
-                                   <<"peer">> => PeerShort,
-                                   <<"peer-port">> => PeerPort,
-                                   <<"source-address">> => PeerLong,
-                                   <<"source-port">> => PeerPort,
+                                   <<"source-address">> => SourceAddress,
+                                   <<"source-port">> => SourcePort,
                                    <<"url-path">> => PathRaw},
             case handle_request(NameOutgoing, HeadersIncomingN,
                                 Body, Req0, State) of

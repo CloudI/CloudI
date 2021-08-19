@@ -4,13 +4,11 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI IP Address Parsing==
-%%% Use a fixed width format for simpler parsing, testing, and to allow
-%%% better pattern matching within service names.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,92 +29,31 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_ip_address).
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([to_binary/1,
-         to_string/1,
-         from_binary/1,
-         from_string/1]).
+-export([from_binary/1,
+         from_string/1,
+         to_binary/1,
+         to_string/1]).
 
 -type format_binary() ::
-    <<_:120>> | <<_:312>>.
+    <<_:8, _:_*8>>.
+% IPv4 dotted decimal address (no octal or hex)
+% IPv6 lowercase hex with colons
 -type format_string() ::
-    string().
--export_type([format_binary/0, format_string/0]).
+    nonempty_list($0..$9 | $. | $a..$f | $: | $%).
+-export_type([format_binary/0,
+              format_string/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Create a binary string representation.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec to_binary(inet:ip_address()) -> format_binary().
-
-to_binary({B1, B2, B3, B4}) ->
-    [B1a, B1b, B1c] = int_to_dec_list_3(B1),
-    [B2a, B2b, B2c] = int_to_dec_list_3(B2),
-    [B3a, B3b, B3c] = int_to_dec_list_3(B3),
-    [B4a, B4b, B4c] = int_to_dec_list_3(B4),
-    <<B1a, B1b, B1c, $., B2a, B2b, B2c, $., B3a, B3b, B3c, $., B4a, B4b, B4c>>;
-to_binary({S1, S2, S3, S4, S5, S6, S7, S8}) ->
-    [S1a, S1b, S1c, S1d] = int_to_hex_list_4(S1),
-    [S2a, S2b, S2c, S2d] = int_to_hex_list_4(S2),
-    [S3a, S3b, S3c, S3d] = int_to_hex_list_4(S3),
-    [S4a, S4b, S4c, S4d] = int_to_hex_list_4(S4),
-    [S5a, S5b, S5c, S5d] = int_to_hex_list_4(S5),
-    [S6a, S6b, S6c, S6d] = int_to_hex_list_4(S6),
-    [S7a, S7b, S7c, S7d] = int_to_hex_list_4(S7),
-    [S8a, S8b, S8c, S8d] = int_to_hex_list_4(S8),
-    <<S1a, S1b, S1c, S1d, $:,
-      S2a, S2b, S2c, S2d, $:,
-      S3a, S3b, S3c, S3d, $:,
-      S4a, S4b, S4c, S4d, $:,
-      S5a, S5b, S5c, S5d, $:,
-      S6a, S6b, S6c, S6d, $:,
-      S7a, S7b, S7c, S7d, $:,
-      S8a, S8b, S8c, S8d>>.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Create a list string representation.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec to_string(inet:ip_address()) -> format_string().
-
-to_string({B1, B2, B3, B4}) ->
-    [B1a, B1b, B1c] = int_to_dec_list_3(B1),
-    [B2a, B2b, B2c] = int_to_dec_list_3(B2),
-    [B3a, B3b, B3c] = int_to_dec_list_3(B3),
-    [B4a, B4b, B4c] = int_to_dec_list_3(B4),
-    [B1a, B1b, B1c, $., B2a, B2b, B2c, $., B3a, B3b, B3c, $., B4a, B4b, B4c];
-to_string({S1, S2, S3, S4, S5, S6, S7, S8}) ->
-    [S1a, S1b, S1c, S1d] = int_to_hex_list_4(S1),
-    [S2a, S2b, S2c, S2d] = int_to_hex_list_4(S2),
-    [S3a, S3b, S3c, S3d] = int_to_hex_list_4(S3),
-    [S4a, S4b, S4c, S4d] = int_to_hex_list_4(S4),
-    [S5a, S5b, S5c, S5d] = int_to_hex_list_4(S5),
-    [S6a, S6b, S6c, S6d] = int_to_hex_list_4(S6),
-    [S7a, S7b, S7c, S7d] = int_to_hex_list_4(S7),
-    [S8a, S8b, S8c, S8d] = int_to_hex_list_4(S8),
-    [S1a, S1b, S1c, S1d, $:,
-     S2a, S2b, S2c, S2d, $:,
-     S3a, S3b, S3c, S3d, $:,
-     S4a, S4b, S4c, S4d, $:,
-     S5a, S5b, S5c, S5d, $:,
-     S6a, S6b, S6c, S6d, $:,
-     S7a, S7b, S7c, S7d, $:,
-     S8a, S8b, S8c, S8d].
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -127,24 +64,8 @@ to_string({S1, S2, S3, S4, S5, S6, S7, S8}) ->
 -spec from_binary(format_binary()) ->
     inet:ip_address().
 
-from_binary(<<B1a, B1b, B1c, $., B2a, B2b, B2c, $.,
-              B3a, B3b, B3c, $., B4a, B4b, B4c>>) ->
-    {erlang:list_to_integer([B1a, B1b, B1c]),
-     erlang:list_to_integer([B2a, B2b, B2c]),
-     erlang:list_to_integer([B3a, B3b, B3c]),
-     erlang:list_to_integer([B4a, B4b, B4c])};
-from_binary(<<S1a, S1b, S1c, S1d, $:, S2a, S2b, S2c, S2d, $:,
-              S3a, S3b, S3c, S3d, $:, S4a, S4b, S4c, S4d, $:,
-              S5a, S5b, S5c, S5d, $:, S6a, S6b, S6c, S6d, $:,
-              S7a, S7b, S7c, S7d, $:, S8a, S8b, S8c, S8d>>) ->
-    {erlang:list_to_integer([S1a, S1b, S1c, S1d], 16),
-     erlang:list_to_integer([S2a, S2b, S2c, S2d], 16),
-     erlang:list_to_integer([S3a, S3b, S3c, S3d], 16),
-     erlang:list_to_integer([S4a, S4b, S4c, S4d], 16),
-     erlang:list_to_integer([S5a, S5b, S5c, S5d], 16),
-     erlang:list_to_integer([S6a, S6b, S6c, S6d], 16),
-     erlang:list_to_integer([S7a, S7b, S7c, S7d], 16),
-     erlang:list_to_integer([S8a, S8b, S8c, S8d], 16)}.
+from_binary(BinaryIP) ->
+    from_string(erlang:binary_to_list(BinaryIP)).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -155,53 +76,126 @@ from_binary(<<S1a, S1b, S1c, S1d, $:, S2a, S2b, S2c, S2d, $:,
 -spec from_string(format_string()) ->
     inet:ip_address().
 
-from_string([B1a, B1b, B1c, $., B2a, B2b, B2c, $.,
-             B3a, B3b, B3c, $., B4a, B4b, B4c]) ->
-    {erlang:list_to_integer([B1a, B1b, B1c]),
-     erlang:list_to_integer([B2a, B2b, B2c]),
-     erlang:list_to_integer([B3a, B3b, B3c]),
-     erlang:list_to_integer([B4a, B4b, B4c])};
-from_string([S1a, S1b, S1c, S1d, $:, S2a, S2b, S2c, S2d, $:,
-             S3a, S3b, S3c, S3d, $:, S4a, S4b, S4c, S4d, $:,
-             S5a, S5b, S5c, S5d, $:, S6a, S6b, S6c, S6d, $:,
-             S7a, S7b, S7c, S7d, $:, S8a, S8b, S8c, S8d]) ->
-    {erlang:list_to_integer([S1a, S1b, S1c, S1d], 16),
-     erlang:list_to_integer([S2a, S2b, S2c, S2d], 16),
-     erlang:list_to_integer([S3a, S3b, S3c, S3d], 16),
-     erlang:list_to_integer([S4a, S4b, S4c, S4d], 16),
-     erlang:list_to_integer([S5a, S5b, S5c, S5d], 16),
-     erlang:list_to_integer([S6a, S6b, S6c, S6d], 16),
-     erlang:list_to_integer([S7a, S7b, S7c, S7d], 16),
-     erlang:list_to_integer([S8a, S8b, S8c, S8d], 16)}.
+from_string(StringIP) ->
+    {ok, IP} = inet:parse_strict_address(StringIP),
+    IP.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a binary string representation.===
+%% IPv6 doesn't shorten a group of zeroes so more exact pattern matches
+%% are possible in service names.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec to_binary(inet:ip_address()) ->
+    format_binary().
+
+to_binary(IP) ->
+    erlang:list_to_binary(to_string(IP)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a list string representation.===
+%% IPv6 doesn't shorten a group of zeroes so more exact pattern matches
+%% are possible in service names.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec to_string(inet:ip_address()) ->
+    format_string().
+
+to_string({I0, I1, I2, I3})
+    when ((I0 bor I1 bor I2 bor I3) band (bnot 16#ff)) =:= 0 ->
+    Delimiter = $.,
+    S0 = int_to_dec_list([], I3),
+    S1 = int_to_dec_list([Delimiter | S0], I2),
+    SN = int_to_dec_list([Delimiter | S1], I1),
+    int_to_dec_list([Delimiter | SN], I0);
+to_string({I0, I1, I2, I3, I4, I5, I6, I7})
+    when ((I0 bor I1 bor I2 bor I3 bor
+           I4 bor I5 bor I6 bor I7) band (bnot 16#ffff)) =:= 0 ->
+    Delimiter = $:,
+    S0 = int_to_hex_list([], I7),
+    S1 = int_to_hex_list([Delimiter | S0], I6),
+    S2 = int_to_hex_list([Delimiter | S1], I5),
+    S3 = int_to_hex_list([Delimiter | S2], I4),
+    S4 = int_to_hex_list([Delimiter | S3], I3),
+    S5 = int_to_hex_list([Delimiter | S4], I2),
+    SN = int_to_hex_list([Delimiter | S5], I1),
+    int_to_hex_list([Delimiter | SN], I0).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-int_to_dec_list_3(Value0)
-    when is_integer(Value0), Value0 >= 0, Value0 =< 255 ->
-    C1 = (Value0 rem 10) + $0,
-    Value1 = Value0 div 10,
-    C2 = (Value1 rem 10) + $0,
-    Value2 = Value1 div 10,
-    C3 = Value2 + $0,
-    [C3, C2, C1].
+int_to_dec_list(L, I)
+    when I < 10 ->
+    [int_to_dec(I) | L];
+int_to_dec_list(L, I) ->
+    int_to_dec_list([int_to_dec(I rem 10) | L], I div 10).
 
-int_to_hex_list_4(Value0)
-    when is_integer(Value0), Value0 >= 0, Value0 =< 65535 ->
-    C1 = int_to_hex(Value0 rem 16),
-    Value1 = Value0 div 16,
-    C2 = int_to_hex(Value1 rem 16),
-    Value2 = Value1 div 16,
-    C3 = int_to_hex(Value2 rem 16),
-    Value3 = Value2 div 16,
-    C4 = int_to_hex(Value3),
-    [C4, C3, C2, C1].
+int_to_hex_list(L, I)
+    when I < 16 ->
+    [int_to_hex(I) | L];
+int_to_hex_list(L, I) ->
+    int_to_hex_list([int_to_hex(I rem 16) | L], I div 16).
 
--compile({inline, [{int_to_hex,1}]}).
+-compile({inline,
+          [{int_to_dec,1},
+           {int_to_hex,1}]}).
+
+int_to_dec(I) when 0 =< I, I =< 9 ->
+    I + $0.
 
 int_to_hex(I) when 0 =< I, I =< 9 ->
     I + $0;
 int_to_hex(I) when 10 =< I, I =< 15 ->
     (I - 10) + $a.
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+-include("cloudi_core_i_test.hrl").
+
+module_test_() ->
+    {timeout, ?TEST_TIMEOUT, [
+        {"from_binary tests", ?_assertOk(t_from_binary())},
+        {"from_string tests", ?_assertOk(t_from_string())},
+        {"to_binary tests", ?_assertOk(t_to_binary())},
+        {"to_string tests", ?_assertOk(t_to_string())}
+    ]}.
+
+t_from_binary() ->
+    {0,0,0,0,0,0,0,0} = from_binary(<<"::">>), % any
+    {0,0,0,0,0,0,0,1} = from_binary(<<"::1">>), % localhost
+    {8194,0,0,4660,43981,
+     65535,49320,257} = from_binary(<<"2002::1234:abcd:ffff:c0a8:101">>),
+    {8194,0,0,4660,43981,
+     65535,49320,257} = from_binary(<<"2002:0:0:1234:abcd:ffff:c0a8:101">>),
+    ok.
+
+t_from_string() ->
+    {0,0,0,0,0,0,0,0} = from_string("::"), % any
+    {0,0,0,0,0,0,0,1} = from_string("::1"), % localhost
+    {8194,0,0,4660,43981,
+     65535,49320,257} = from_string("2002::1234:abcd:ffff:c0a8:101"),
+    {8194,0,0,4660,43981,
+     65535,49320,257} = from_string("2002:0:0:1234:abcd:ffff:c0a8:101"),
+    ok.
+
+t_to_binary() ->
+    <<"0:0:0:0:0:0:0:0">> = to_binary({0,0,0,0,0,0,0,0}),
+    <<"0:0:0:0:0:0:0:1">> = to_binary({0,0,0,0,0,0,0,1}),
+    <<"2002:0:0:1234:abcd:ffff:c0a8:101">> = to_binary({8194,0,0,4660,43981,
+                                                        65535,49320,257}),
+    ok.
+
+t_to_string() ->
+    "0:0:0:0:0:0:0:0" = to_string({0,0,0,0,0,0,0,0}),
+    "0:0:0:0:0:0:0:1" = to_string({0,0,0,0,0,0,0,1}),
+    "2002:0:0:1234:abcd:ffff:c0a8:101" = to_string({8194,0,0,4660,43981,
+                                                    65535,49320,257}),
+    ok.
+
+-endif.

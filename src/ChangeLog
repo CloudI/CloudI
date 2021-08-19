@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-08-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_ip_address so it uses standard formatting
+      (no fixed size is possible due to past support of octal in IPv4)
+    * Change cloudi_service_tcp and cloudi_service_udp RequestInfo for
+      consistency with HTTP services
+      (e.g., source-address is used instead of source_address)
+    * Change cloudi_service_http_cowboy, cloudi_service_http_cowboy1 and
+      cloudi_service_http_elli by removing RequestInfo
+      "peer" and "peer-port" (to rely on "source-address" and "source-port")
+    * Change cloudi_service_http_client to ignore RequestInfo with
+      "peer" or "peer-port"
+
 2021-08-17 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve C/C++ CloudI API backtrace configure check

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2013-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_udp).
@@ -118,10 +118,10 @@ cloudi_service_handle_info({udp, Socket, SourceAddress, SourcePort, Request},
     SourceAddressFormatted = cloudi_ip_address:to_binary(SourceAddress),
     SourcePortFormatted = erlang:integer_to_binary(SourcePort),
     RequestInfo = cloudi_request_info:key_value_new(
-        [{<<"source_address">>, SourceAddressFormatted},
-         {<<"source_port">>, SourcePortFormatted},
-         {<<"destination_address">>, DestinationAddressFormatted},
-         {<<"destination_port">>, DestinationPortFormatted}]),
+        [{<<"source-address">>, SourceAddressFormatted},
+         {<<"source-port">>, SourcePortFormatted},
+         {<<"destination-address">>, DestinationAddressFormatted},
+         {<<"destination-port">>, DestinationPortFormatted}]),
     case cloudi_service:send_async_active(Dispatcher, Name,
                                           RequestInfo, Request,
                                           undefined, undefined) of
