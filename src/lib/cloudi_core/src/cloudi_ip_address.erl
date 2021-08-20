@@ -151,34 +151,23 @@ to_string({I0, I1, I2, I3, I4, I5, I6, I7})
 
 patterns_expand({_, _, _, _} = IPv4, Bits)
     when Bits >= 0 andalso Bits =< 32 ->
-    patterns_expand_segment(erlang:tuple_to_list(IPv4), [], 0, Bits, ipv4);
+    patterns_expand_segment(erlang:tuple_to_list(IPv4), [], 0, Bits, 8, ipv4);
 patterns_expand({_, _, _, _, _, _, _, _} = IPv6, Bits)
     when Bits >= 0 andalso Bits =< 128 ->
-    patterns_expand_segment(erlang:tuple_to_list(IPv6), [], 0, Bits, ipv6).
+    patterns_expand_segment(erlang:tuple_to_list(IPv6), [], 0, Bits, 16, ipv6).
 
 patterns_expand_segment(SegmentL, Prefix, PrefixSize,
-                        0, Version) ->
+                        0, _, Version) ->
     true = lists:all(fun(Zero) -> Zero =:= 0 end, SegmentL),
     [patterns_expand_string(Prefix, PrefixSize, Version)];
 patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
-                        Bits, ipv4 = Version)
-    when Bits >= 8 ->
+                        Bits, BitsMax, Version)
+    when Bits >= BitsMax ->
     patterns_expand_segment(SegmentL, [Segment | Prefix], PrefixSize + 1,
-                            Bits - 8, Version);
+                            Bits - BitsMax, BitsMax, Version);
 patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
-                        Bits, ipv6 = Version)
-    when Bits >= 16 ->
-    patterns_expand_segment(SegmentL, [Segment | Prefix], PrefixSize + 1,
-                            Bits - 16, Version);
-patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
-                        Bits, Version) ->
+                        Bits, BitsMax, Version) ->
     true = lists:all(fun(Zero) -> Zero =:= 0 end, SegmentL),
-    BitsMax = if
-        Version =:= ipv4 ->
-            8;
-        Version =:= ipv6 ->
-            16
-    end,
     SegmentMask = (1 bsl (BitsMax - Bits)) - 1,
     0 = Segment band SegmentMask,
     [patterns_expand_string([SegmentValue | Prefix], PrefixSize + 1, Version)
@@ -197,14 +186,14 @@ patterns_expand_string_exact_dec([], S, _) ->
     S;
 patterns_expand_string_exact_dec([Segment | Prefix], S, Delimiter) ->
     patterns_expand_string_exact_dec(Prefix,
-                                     int_to_dec_list([Delimiter | S], Segment),
+                                     int_to_dec_list(S, Segment, Delimiter),
                                      Delimiter).
 
 patterns_expand_string_exact_hex([], S, _) ->
     S;
 patterns_expand_string_exact_hex([Segment | Prefix], S, Delimiter) ->
     patterns_expand_string_exact_hex(Prefix,
-                                     int_to_hex_list([Delimiter | S], Segment),
+                                     int_to_hex_list(S, Segment, Delimiter),
                                      Delimiter).
 
 patterns_expand_string_wildcard(0, S, _) ->
@@ -214,11 +203,21 @@ patterns_expand_string_wildcard(1, S, _) ->
 patterns_expand_string_wildcard(Count, S, Delimiter) ->
     patterns_expand_string_wildcard(Count - 1, [Delimiter, $? | S], Delimiter).
 
+int_to_dec_list([] = L, I, _) ->
+    int_to_dec_list(L, I);
+int_to_dec_list(L, I, Delimiter) ->
+    int_to_dec_list([Delimiter | L], I).
+
 int_to_dec_list(L, I)
     when I < 10 ->
     [int_to_dec(I) | L];
 int_to_dec_list(L, I) ->
     int_to_dec_list([int_to_dec(I rem 10) | L], I div 10).
+
+int_to_hex_list([] = L, I, _) ->
+    int_to_hex_list(L, I);
+int_to_hex_list(L, I, Delimiter) ->
+    int_to_hex_list([Delimiter | L], I).
 
 int_to_hex_list(L, I)
     when I < 16 ->
@@ -280,6 +279,7 @@ t_patterns() ->
      "172.31.?.?"] = patterns("172.16.0.0/12"),
     ["192.168.0.?", "192.168.1.?"] = patterns("192.168.0.0/23"),
     ["192.168.2.?", "192.168.3.?"] = patterns("192.168.2.0/23"),
+    ["192.168.0.1"] = patterns("192.168.0.1/32"),
     ok.
 
 t_to_binary() ->
