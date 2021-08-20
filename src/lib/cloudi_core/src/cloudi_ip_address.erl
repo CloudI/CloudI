@@ -173,7 +173,13 @@ patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
 patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
                         Bits, Version) ->
     true = lists:all(fun(Zero) -> Zero =:= 0 end, SegmentL),
-    SegmentMask = (1 bsl Bits) - 1,
+    BitsMax = if
+        Version =:= ipv4 ->
+            8;
+        Version =:= ipv6 ->
+            16
+    end,
+    SegmentMask = (1 bsl (BitsMax - Bits)) - 1,
     0 = Segment band SegmentMask,
     [patterns_expand_string([SegmentValue | Prefix], PrefixSize + 1, Version)
      || SegmentValue <- lists:seq(Segment, Segment + SegmentMask)].
@@ -272,6 +278,8 @@ t_patterns() ->
      "172.21.?.?", "172.22.?.?", "172.23.?.?", "172.24.?.?", "172.25.?.?",
      "172.26.?.?", "172.27.?.?", "172.28.?.?", "172.29.?.?", "172.30.?.?",
      "172.31.?.?"] = patterns("172.16.0.0/12"),
+    ["192.168.0.?", "192.168.1.?"] = patterns("192.168.0.0/23"),
+    ["192.168.2.?", "192.168.3.?"] = patterns("192.168.2.0/23"),
     ok.
 
 t_to_binary() ->
