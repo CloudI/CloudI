@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-08-19 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_ip_address:patterns/1 for creating service name patterns
+      that match IP addresses based on a CIDR notation string
+
 2021-08-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_ip_address so it uses standard formatting

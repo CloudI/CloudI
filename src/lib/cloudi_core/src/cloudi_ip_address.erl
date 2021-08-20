@@ -39,6 +39,7 @@
 %% external interface
 -export([from_binary/1,
          from_string/1,
+         patterns/1,
          to_binary/1,
          to_string/1]).
 
@@ -48,8 +49,11 @@
 % IPv6 lowercase hex with colons
 -type format_string() ::
     nonempty_list($0..$9 | $. | $a..$f | $: | $%).
+-type cidr_string() ::
+    nonempty_list($0..$9 | $. | $a..$f | $: | $/).
 -export_type([format_binary/0,
-              format_string/0]).
+              format_string/0,
+              cidr_string/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -79,6 +83,22 @@ from_binary(BinaryIP) ->
 from_string(StringIP) ->
     {ok, IP} = inet:parse_strict_address(StringIP),
     IP.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create service name pattern strings that represent a CIDR (Classless Inter-Domain Routing) notation string.===
+%% Usage of the resulting patterns requires at least 1 suffix letter
+%% in the service name pattern string created with each pattern
+%% (i.e., each pattern wouldn't be used as a suffix).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec patterns(cidr_string()) ->
+    nonempty_list(cloudi:service_name_pattern()).
+
+patterns([_ | _] = CIDR) ->
+    {StringIP, StringBits} = cloudi_string:splitr($/, CIDR),
+    patterns_expand(from_string(StringIP), erlang:list_to_integer(StringBits)).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -129,6 +149,65 @@ to_string({I0, I1, I2, I3, I4, I5, I6, I7})
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+patterns_expand({_, _, _, _} = IPv4, Bits)
+    when Bits >= 0 andalso Bits =< 32 ->
+    patterns_expand_segment(erlang:tuple_to_list(IPv4), [], 0, Bits, ipv4);
+patterns_expand({_, _, _, _, _, _, _, _} = IPv6, Bits)
+    when Bits >= 0 andalso Bits =< 128 ->
+    patterns_expand_segment(erlang:tuple_to_list(IPv6), [], 0, Bits, ipv6).
+
+patterns_expand_segment(SegmentL, Prefix, PrefixSize,
+                        0, Version) ->
+    true = lists:all(fun(Zero) -> Zero =:= 0 end, SegmentL),
+    [patterns_expand_string(Prefix, PrefixSize, Version)];
+patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
+                        Bits, ipv4 = Version)
+    when Bits >= 8 ->
+    patterns_expand_segment(SegmentL, [Segment | Prefix], PrefixSize + 1,
+                            Bits - 8, Version);
+patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
+                        Bits, ipv6 = Version)
+    when Bits >= 16 ->
+    patterns_expand_segment(SegmentL, [Segment | Prefix], PrefixSize + 1,
+                            Bits - 16, Version);
+patterns_expand_segment([Segment | SegmentL], Prefix, PrefixSize,
+                        Bits, Version) ->
+    true = lists:all(fun(Zero) -> Zero =:= 0 end, SegmentL),
+    SegmentMask = (1 bsl Bits) - 1,
+    0 = Segment band SegmentMask,
+    [patterns_expand_string([SegmentValue | Prefix], PrefixSize + 1, Version)
+     || SegmentValue <- lists:seq(Segment, Segment + SegmentMask)].
+
+patterns_expand_string(Prefix, PrefixSize, ipv4) ->
+    Delimiter = $.,
+    S = patterns_expand_string_wildcard(4 - PrefixSize, [], Delimiter),
+    patterns_expand_string_exact_dec(Prefix, S, Delimiter);
+patterns_expand_string(Prefix, PrefixSize, ipv6) ->
+    Delimiter = $:,
+    S = patterns_expand_string_wildcard(8 - PrefixSize, [], Delimiter),
+    patterns_expand_string_exact_hex(Prefix, S, Delimiter).
+
+patterns_expand_string_exact_dec([], S, _) ->
+    S;
+patterns_expand_string_exact_dec([Segment | Prefix], S, Delimiter) ->
+    patterns_expand_string_exact_dec(Prefix,
+                                     int_to_dec_list([Delimiter | S], Segment),
+                                     Delimiter).
+
+patterns_expand_string_exact_hex([], S, _) ->
+    S;
+patterns_expand_string_exact_hex([Segment | Prefix], S, Delimiter) ->
+    patterns_expand_string_exact_hex(Prefix,
+                                     int_to_hex_list([Delimiter | S], Segment),
+                                     Delimiter).
+
+patterns_expand_string_wildcard(0, S, _) ->
+    S;
+patterns_expand_string_wildcard(1, S, _) ->
+    [$? | S];
+patterns_expand_string_wildcard(Count, S, Delimiter) ->
+    patterns_expand_string_wildcard(Count - 1, [Delimiter, $? | S], Delimiter).
+
 int_to_dec_list(L, I)
     when I < 10 ->
     [int_to_dec(I) | L];
@@ -162,6 +241,7 @@ module_test_() ->
     {timeout, ?TEST_TIMEOUT, [
         {"from_binary tests", ?_assertOk(t_from_binary())},
         {"from_string tests", ?_assertOk(t_from_string())},
+        {"patterns tests", ?_assertOk(t_patterns())},
         {"to_binary tests", ?_assertOk(t_to_binary())},
         {"to_string tests", ?_assertOk(t_to_string())}
     ]}.
@@ -182,6 +262,16 @@ t_from_string() ->
      65535,49320,257} = from_string("2002::1234:abcd:ffff:c0a8:101"),
     {8194,0,0,4660,43981,
      65535,49320,257} = from_string("2002:0:0:1234:abcd:ffff:c0a8:101"),
+    ok.
+
+t_patterns() ->
+    ["10.?.?.?"] = patterns("10.0.0.0/8"),
+    ["192.168.?.?"] = patterns("192.168.0.0/16"),
+    ["fd00:?:?:?:?:?:?:?"] = patterns("fd00::/16"),
+    ["172.16.?.?", "172.17.?.?", "172.18.?.?", "172.19.?.?", "172.20.?.?",
+     "172.21.?.?", "172.22.?.?", "172.23.?.?", "172.24.?.?", "172.25.?.?",
+     "172.26.?.?", "172.27.?.?", "172.28.?.?", "172.29.?.?", "172.30.?.?",
+     "172.31.?.?"] = patterns("172.16.0.0/12"),
     ok.
 
 t_to_binary() ->
