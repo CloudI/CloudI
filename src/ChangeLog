@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-08-24 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add additional cloudi_ip_address:patterns/1 tests
+
 2021-08-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_ip_address:patterns/1 for creating service name patterns
