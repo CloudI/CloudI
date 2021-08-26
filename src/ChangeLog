@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-08-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the validate_response argument to
+      cloudi_service_cron and cloudi_service_send for more
+      explicit validation that is configurable
+    * Add cloudi_service_shell:validate_response/2
+      for default validate_response argument use in
+      cloudi_service_cron and cloudi_service_send
+
 2021-08-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_send for service request sends that must

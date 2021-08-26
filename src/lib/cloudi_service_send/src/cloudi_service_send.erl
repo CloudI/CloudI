@@ -62,6 +62,8 @@
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
 -define(DEFAULT_SENDS,                         []).
+-define(DEFAULT_VALIDATE_RESPONSE,
+        {cloudi_service_shell, validate_response}).
 -define(DEFAULT_MCAST,                      false).
         % Use mcast for each send.
 -define(DEFAULT_ORDERED,                    false).
@@ -78,6 +80,7 @@
     {
         sends_failed :: non_neg_integer(),
         queue :: cloudi_queue:state(),
+        validate_response :: fun((any(), any()) -> boolean()),
         debug_level :: off | trace | debug | info | warn | error | fatal
     }).
 
@@ -92,13 +95,14 @@
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {sends,                    ?DEFAULT_SENDS},
+        {validate_response,        ?DEFAULT_VALIDATE_RESPONSE},
         {mcast,                    ?DEFAULT_MCAST},
         {ordered,                  ?DEFAULT_ORDERED},
         {retry,                    ?DEFAULT_RETRY},
         {retry_delay,              ?DEFAULT_RETRY_DELAY},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Sends, Mcast, Ordered, Retry, RetryDelay,
+    [Sends, ValidateResponse0, Mcast, Ordered, Retry, RetryDelay,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(Mcast),
     {SendsFailed,
@@ -108,6 +112,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                                       {ordered, Ordered}]),
                     Mcast,
                     Dispatcher),
+    ValidateResponseN = cloudi_args_type:
+                        function_required(ValidateResponse0, 2),
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
@@ -123,22 +129,24 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     end,
     {ok, #state{sends_failed = SendsFailed,
                 queue = Queue,
+                validate_response = ValidateResponseN,
                 debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     StateNew = recv(Request, State, Dispatcher),
     #state{sends_failed = SendsFailedNew,
            queue = QueueNew} = StateNew,
-    Shutdown = cloudi_queue:size(Dispatcher, QueueNew) == 0,
+    Stop = cloudi_queue:size(Dispatcher, QueueNew) == 0,
     if
-        Shutdown =:= true ->
-            if
+        Stop =:= true ->
+            StopReason = if
                 SendsFailedNew == 0 ->
-                    {stop, shutdown, StateNew};
+                    shutdown;
                 SendsFailedNew > 0 ->
-                    {stop, {sends_failed, SendsFailedNew}, StateNew}
-            end;
-        Shutdown =:= false ->
+                    {sends_failed, SendsFailedNew}
+            end,
+            {stop, StopReason, StateNew};
+        Stop =:= false ->
             {noreply, StateNew}
     end.
 
@@ -193,26 +201,23 @@ sends([_ | _] = Sends, Queue, Mcast, Dispatcher) ->
 recv(Request,
      #state{sends_failed = SendsFailed,
             queue = Queue,
+            validate_response = ValidateResponse,
             debug_level = DebugLogLevel} = State, Dispatcher) ->
     {Result,
      QueueNew} = cloudi_queue:handle_info(Request, Queue, Dispatcher),
     SendsFailedNew = case Result of
         ok ->
-            #return_async_active{response = Response} = Request,
-            try erlang:binary_to_integer(erlang:iolist_to_binary(Response)) of
-                0 ->
+            #return_async_active{response_info = ResponseInfo,
+                                 response = Response} = Request,
+            case ValidateResponse(ResponseInfo, Response) of
+                true ->
                     ?LOG(DebugLogLevel,
-                         "send successful", []);
-                I ->
-                    ?LOG(DebugLogLevel,
-                         "send response error: ~w", [I])
-            catch
-                _ ->
-                    % response is not understood as a shell status code response
-                    ?LOG(DebugLogLevel,
-                         "send response unexpected: ~p", [Response])
-            end,
-            SendsFailed;
+                         "send successful", []),
+                    SendsFailed;
+                false ->
+                    ?LOG_ERROR("send response error", []),
+                    SendsFailed + 1
+            end;
         {error, timeout} ->
             ?LOG_ERROR("send response timeout", []),
             SendsFailed + 1

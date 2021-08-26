@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2019-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_shell).
@@ -40,7 +40,8 @@
 
 %% external interface
 -export([exec/3,
-         exec/4]).
+         exec/4,
+         validate_response/2]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -100,6 +101,13 @@ exec(Agent, Prefix, Command) ->
 
 exec(Agent, Prefix, Command, Timeout) ->
     cloudi:send_sync(Agent, Prefix, Command, Timeout).
+
+-spec validate_response(cloudi_service:response_info(),
+                        Response :: cloudi_service:response()) ->
+    boolean().
+
+validate_response(_, Response) ->
+    erlang:binary_to_integer(Response) == 0.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service

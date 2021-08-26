@@ -27,7 +27,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -48,8 +48,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2019-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_cron).
@@ -105,6 +105,8 @@
         % e.g. [{"0 9 * * mon-fri",
         %        [{description, "hello"},
         %         {send_args, ["/shell", "echo \"hello world\""]}]}]
+-define(DEFAULT_VALIDATE_RESPONSE,
+        {cloudi_service_shell, validate_response}).
 -define(DEFAULT_USE_UTC,                    false).
 -define(DEFAULT_DEBUG,                       true).
 -define(DEFAULT_DEBUG_LEVEL,                trace).
@@ -138,6 +140,7 @@
         time_offset_monitor :: reference(),
         id_next :: expression_id(),
         expressions :: #{expression_id() := #expression{}},
+        validate_response :: fun((any(), any()) -> boolean()),
         sends = #{} :: #{cloudi_service:trans_id() := #send_data{}}
     }).
 
@@ -165,10 +168,12 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {send_mcast,                   ?DEFAULT_SEND_MCAST},
         {request_info_default,         ?DEFAULT_REQUEST_INFO_DEFAULT},
         {expressions,                  ?DEFAULT_EXPRESSIONS},
+        {validate_response,            ?DEFAULT_VALIDATE_RESPONSE},
         {use_utc,                      ?DEFAULT_USE_UTC},
         {debug,                        ?DEFAULT_DEBUG},
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
-    [SendArgsInfo, SendMcast, RequestInfoDefault, Expressions, UseUTC,
+    [SendArgsInfo, SendMcast, RequestInfoDefault, Expressions,
+     ValidateResponse0, UseUTC,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(SendArgsInfo),
     true = is_boolean(SendMcast),
@@ -196,6 +201,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                                            ProcessIndex, ProcessCount,
                                            SendArgsInfo, SendMcast,
                                            RequestInfoDefault),
+    ValidateResponseN = cloudi_args_type:
+                        function_required(ValidateResponse0, 2),
     Service = cloudi_service:self(Dispatcher),
     TimeOffsetMilliseconds = time_offset_milliseconds(),
     TimeOffsetMonitor = erlang:monitor(time_offset, clock_service),
@@ -206,7 +213,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 time_offset_milliseconds = TimeOffsetMilliseconds,
                 time_offset_monitor = TimeOffsetMonitor,
                 id_next = IdNext,
-                expressions = ExpressionsStarted}}.
+                expressions = ExpressionsStarted,
+                validate_response = ValidateResponseN}}.
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
                            #state{debug_level = DebugLogLevel,
@@ -215,21 +223,19 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
                            _Dispatcher) ->
     SendsNew = event_recv(Sends, Expressions, timeout, TransId, DebugLogLevel),
     {noreply, State#state{sends = SendsNew}};
-cloudi_service_handle_info(#return_async_active{response = Response,
+cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
+                                                response = Response,
                                                 trans_id = TransId},
                            #state{debug_level = DebugLogLevel,
                                   expressions = Expressions,
+                                  validate_response = ValidateResponse,
                                   sends = Sends} = State,
                            _Dispatcher) ->
-    Result = try erlang:binary_to_integer(erlang:iolist_to_binary(Response)) of
-        0 ->
+    Result = case ValidateResponse(ResponseInfo, Response) of
+        true ->
             ok;
-        _ ->
+        false ->
             error
-    catch
-        _ ->
-            % response is not understood as a shell status code response
-            ok
     end,
     SendsNew = event_recv(Sends, Expressions, Result, TransId, DebugLogLevel),
     {noreply, State#state{sends = SendsNew}};
