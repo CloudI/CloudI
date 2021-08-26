@@ -39,15 +39,6 @@
 
 -behaviour(cloudi_service).
 
-%% external interface
--export([notify_all/3,
-         notify_all/4,
-         notify_all/5,
-         notify_one/3,
-         notify_one/4,
-         notify_one/5,
-         notify_clear/2]).
-
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
@@ -228,144 +219,6 @@
     }).
 
 -define(REPLACE_INDEX_FILENAME, ".cloudi_service_filesystem_replace_index_").
-
-%%%------------------------------------------------------------------------
-%%% External interface functions
-%%%------------------------------------------------------------------------
-
--type agent() :: cloudi:agent().
--type service_name() :: cloudi:service_name().
--type timeout_milliseconds() :: cloudi:timeout_milliseconds().
--type priority() :: cloudi:priority().
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Subscribe all service processes to be notified of file updates.===
-%% The current file contents is returned, if the file is found.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec notify_all(Agent :: agent(),
-                 Name :: service_name(),
-                 NotifyName :: service_name()) ->
-    {{ok, binary()} | {error, any()},
-     AgentNew :: agent()}.
-
-notify_all(Agent, Name, NotifyName) ->
-    notify_all(Agent, Name,
-               NotifyName, undefined, undefined).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Subscribe all service processes to be notified of file updates.===
-%% The current file contents is returned, if the file is found.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec notify_all(Agent :: agent(),
-                 Name :: service_name(),
-                 NotifyName :: service_name(),
-                 NotifyTimeout :: timeout_milliseconds()) ->
-    {{ok, binary()} | {error, any()},
-     AgentNew :: agent()}.
-
-notify_all(Agent, Name, NotifyName, NotifyTimeout) ->
-    notify_all(Agent, Name,
-               NotifyName, NotifyTimeout, undefined).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Subscribe all service processes to be notified of file updates.===
-%% The current file contents is returned, if the file is found.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec notify_all(Agent :: agent(),
-                 Name :: service_name(),
-                 NotifyName :: service_name(),
-                 NotifyTimeout :: timeout_milliseconds(),
-                 NotifyPriority :: priority()) ->
-    {{ok, binary()} | {error, any()},
-     AgentNew :: agent()}.
-
-notify_all(Agent, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
-    notify(Agent, Name,
-           NotifyName, NotifyTimeout, NotifyPriority, mcast_async).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Subscribe to have a service process notified of file updates.===
-%% The current file contents is returned, if the file is found.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec notify_one(Agent :: agent(),
-                 Name :: service_name(),
-                 NotifyName :: service_name()) ->
-    {{ok, binary()} | {error, any()},
-     AgentNew :: agent()}.
-
-notify_one(Agent, Name, NotifyName) ->
-    notify_one(Agent, Name,
-               NotifyName, undefined, undefined).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Subscribe to have a service process notified of file updates.===
-%% The current file contents is returned, if the file is found.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec notify_one(Agent :: agent(),
-                 Name :: service_name(),
-                 NotifyName :: service_name(),
-                 NotifyTimeout :: timeout_milliseconds()) ->
-    {{ok, binary()} | {error, any()},
-     AgentNew :: agent()}.
-
-notify_one(Agent, Name, NotifyName, NotifyTimeout) ->
-    notify_one(Agent, Name,
-               NotifyName, NotifyTimeout, undefined).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Subscribe to have a service process notified of file updates.===
-%% The current file contents is returned, if the file is found.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec notify_one(Agent :: agent(),
-                 Name :: service_name(),
-                 NotifyName :: service_name(),
-                 NotifyTimeout :: timeout_milliseconds(),
-                 NotifyPriority :: priority()) ->
-    {{ok, binary()} | {error, any()},
-     AgentNew :: agent()}.
-
-notify_one(Agent, Name, NotifyName, NotifyTimeout, NotifyPriority) ->
-    notify(Agent, Name,
-           NotifyName, NotifyTimeout, NotifyPriority, send_async).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Clear all notification subscriptions for a file.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec notify_clear(Agent :: agent(),
-                   Name :: service_name()) ->
-    {ok | {error, any()},
-     AgentNew :: agent()}.
-
-notify_clear(Agent, Name) ->
-    case cloudi:send_sync(Agent, Name, notify_clear) of
-        {{error, _}, _} = Error ->
-            Error;
-        {{ok, {error, _} = Error}, AgentNew} ->
-            {Error, AgentNew};
-        {{ok, ok}, AgentNew} ->
-            {ok, AgentNew}
-    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -616,9 +469,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         true = is_list(NotifyNameOne) andalso is_integer(hd(NotifyNameOne)),
         true = lists:prefix(Prefix, PatternOne),
         case files_notify(#file_notify{send = send_async,
-                                       service_name = NotifyNameOne},
-                          PatternOne, Files14, Timeout, Priority,
-                          Prefix, DirectoryLength, UseHttpGetSuffix) of
+                                       service_name = NotifyNameOne,
+                                       timeout = Timeout,
+                                       priority = Priority},
+                          PatternOne, Files14) of
             {ok, _, Files15} ->
                 Files15;
             {error, Reason} ->
@@ -633,9 +487,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         true = is_list(NotifyNameAll) andalso is_integer(hd(NotifyNameAll)),
         true = lists:prefix(Prefix, PatternAll),
         case files_notify(#file_notify{send = mcast_async,
-                                       service_name = NotifyNameAll},
-                          PatternAll, Files17, Timeout, Priority,
-                          Prefix, DirectoryLength, UseHttpGetSuffix) of
+                                       service_name = NotifyNameAll,
+                                       timeout = Timeout,
+                                       priority = Priority},
+                          PatternAll, Files17) of
             {ok, _, Files18} ->
                 Files18;
             {error, Reason} ->
@@ -688,17 +543,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end, Files19, RedirectL),
     if
         NotifyOnStart =:= true ->
-            cloudi_x_trie:foreach(fun(Name,
+            cloudi_x_trie:foreach(fun(_,
                                       #file{contents = Contents,
-                                            path = FilePath,
                                             notify = NotifyL}) ->
-                FileName = lists:nthtail(DirectoryLength, FilePath),
-                case lists:prefix(Prefix ++ FileName, Name) of
-                    true ->
-                        file_notify_send(NotifyL, Contents, Dispatcher);
-                    false ->
-                        ok
-                end
+                file_notify_send(NotifyL, Contents, Dispatcher)
             end, FilesN);
         true ->
             ok
@@ -734,38 +582,6 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 content_type_lookup = ContentTypeLookup,
                 debug_level = DebugLogLevel}}.
 
-cloudi_service_handle_request(_RequestType, Name, _Pattern, _RequestInfo,
-                              #file_notify{} = Notify,
-                              Timeout, Priority, _TransId, _Pid,
-                              #state{prefix = Prefix,
-                                     directory_length = DirectoryLength,
-                                     files = Files,
-                                     use_http_get_suffix = UseHttpGetSuffix
-                                     } = State, _Dispatcher) ->
-    case files_notify(Notify, Name, Files, Timeout, Priority,
-                      Prefix, DirectoryLength, UseHttpGetSuffix) of
-        {ok, Contents, FilesNew} ->
-            {reply, Contents, State#state{files = FilesNew}};
-        {error, _} = Error ->
-            {reply, Error, State}
-    end;
-cloudi_service_handle_request(_RequestType, Name, _Pattern, _RequestInfo,
-                              notify_clear,
-                              _Timeout, _Priority, _TransId, _Pid,
-                              #state{prefix = Prefix,
-                                     directory_length = DirectoryLength,
-                                     files = Files,
-                                     use_http_get_suffix = UseHttpGetSuffix
-                                     } = State, _Dispatcher) ->
-    case cloudi_x_trie:find(Name, Files) of
-        {ok, #file{path = FilePath} = File} ->
-            FileName = lists:nthtail(DirectoryLength, FilePath),
-            FilesNew = file_refresh(FileName, File#file{notify = []},
-                                    Files, UseHttpGetSuffix, Prefix),
-            {reply, ok, State#state{files = FilesNew}};
-        error ->
-            {reply, {error, not_found}, State}
-    end;
 cloudi_service_handle_request(_RequestType, Name, _Pattern,
                               RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
@@ -1432,34 +1248,11 @@ request_append_file([{Range, Request} | RangeRequests],
              <<>>, State}
     end.
 
-notify(Agent, Name, [I | _] = NotifyName,
-       NotifyTimeout, NotifyPriority, Send)
-    when is_list(NotifyName), is_integer(I),
-         ((is_integer(NotifyTimeout) andalso NotifyTimeout >= 0 andalso
-           NotifyTimeout =< 4294967295) orelse
-          (NotifyTimeout =:= undefined) orelse (NotifyTimeout =:= immediate)),
-         ((is_integer(NotifyPriority) andalso NotifyPriority >= -128 andalso
-           NotifyPriority =< 127) orelse (NotifyPriority =:= undefined)) ->
-    case cloudi:send_sync(Agent, Name,
-                          #file_notify{send = Send,
-                                       service_name = NotifyName,
-                                       timeout = NotifyTimeout,
-                                       priority = NotifyPriority}) of
-        {{error, _}, _} = Error ->
-            Error;
-        {{ok, {error, _} = Error}, AgentNew} ->
-            {Error, AgentNew};
-        {{ok, Contents}, _} = Success when is_binary(Contents) ->
-            Success
-    end.
-
-files_notify(#file_notify{timeout = NotifyTimeout,
-                          priority = NotifyPriority} = Notify,
-             Pattern, Files0, Timeout, Priority,
-             Prefix, DirectoryLength, UseHttpGetSuffix) ->
+files_notify(#file_notify{} = Notify,
+             Pattern, Files0) ->
     {ContentsN,
      FilesN} = cloudi_x_trie:fold_match(Pattern,
-                                        fun(_, File, {Contents0, Files1}) ->
+                                        fun(Name, File, {Contents0, Files1}) ->
         Files2 = if
             Files1 =:= undefined ->
                 Files0;
@@ -1467,26 +1260,10 @@ files_notify(#file_notify{timeout = NotifyTimeout,
                 Files1
         end,
         #file{contents = Contents1,
-              path = FilePath,
               notify = NotifyL} = File,
-        NotifyTimeoutNew = if
-            is_integer(NotifyTimeout) ->
-                NotifyTimeout;
-            true ->
-                Timeout
-        end,
-        NotifyPriorityNew = if
-            is_integer(NotifyPriority) ->
-                NotifyPriority;
-            true ->
-                Priority
-        end,
-        NotifyNew = Notify#file_notify{timeout = NotifyTimeoutNew,
-                                       priority = NotifyPriorityNew},
-        FileName = lists:nthtail(DirectoryLength, FilePath),
-        Files3 = file_refresh(FileName,
-                              File#file{notify = [NotifyNew | NotifyL]},
-                              Files2, UseHttpGetSuffix, Prefix),
+        Files3 = cloudi_x_trie:store(Name,
+                                     File#file{notify = [Notify | NotifyL]},
+                                     Files2),
         Contents2 = if
             Contents0 =:= undefined ->
                 Contents1;

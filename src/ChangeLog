@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-08-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_send for service request sends that must
+      occur based on service configuration argument data
+      (e.g., for cloudi_service_api_batch or configuration file use)
+    * Remove cloudi_service_filesystem notify functions because
+      they were assuming only 1 process existed
+    * Fix cloudi_service_filesystem notify_one/notify_all so a
+      single pattern matching a single path
+      causes a single notification
+      (previously an exact pattern for a GET method would affect
+       the other methods present causing a notification for each method)
+
 2021-08-24 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add additional cloudi_ip_address:patterns/1 tests

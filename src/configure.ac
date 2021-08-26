@@ -922,6 +922,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src
     lib/cloudi_service_request_rate/src/cloudi_service_request_rate.app.src
     lib/cloudi_service_router/src/cloudi_service_router.app.src
+    lib/cloudi_service_send/src/cloudi_service_send.app.src
     lib/cloudi_service_shell/src/cloudi_service_shell.app.src
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src

@@ -77,6 +77,8 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_router,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_service_send,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_shell,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_tcp,

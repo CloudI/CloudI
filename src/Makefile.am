@@ -28,6 +28,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_quorum/src \
      -d $(top_srcdir)/lib/cloudi_service_request_rate/src \
      -d $(top_srcdir)/lib/cloudi_service_router/src \
+     -d $(top_srcdir)/lib/cloudi_service_send/src \
      -d $(top_srcdir)/lib/cloudi_service_shell/src \
      -d $(top_srcdir)/lib/cloudi_service_tcp/src \
      -d $(top_srcdir)/lib/cloudi_service_udp/src \
@@ -234,6 +235,7 @@ dialyze: all \
               lib/cloudi_service_quorum/ebin \
               lib/cloudi_service_request_rate/ebin \
               lib/cloudi_service_router/ebin \
+              lib/cloudi_service_send/ebin \
               lib/cloudi_service_shell/ebin \
               lib/cloudi_service_tcp/ebin \
               lib/cloudi_service_udp/ebin \
@@ -299,6 +301,7 @@ dialyze-internal: all \
               lib/cloudi_service_quorum/ebin \
               lib/cloudi_service_request_rate/ebin \
               lib/cloudi_service_router/ebin \
+              lib/cloudi_service_send/ebin \
               lib/cloudi_service_shell/ebin \
               lib/cloudi_service_tcp/ebin \
               lib/cloudi_service_udp/ebin \

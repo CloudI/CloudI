@@ -27,6 +27,7 @@ REBAR_DIRS="\
     lib/cloudi_service_quorum \
     lib/cloudi_service_request_rate \
     lib/cloudi_service_router \
+    lib/cloudi_service_send \
     lib/cloudi_service_shell \
     lib/cloudi_service_tcp \
     lib/cloudi_service_udp \

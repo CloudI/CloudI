@@ -98,7 +98,14 @@
     {internal,
         "/cloudi/api/",
         cloudi_service_api_batch,
-        [],
+        [{queues,
+          [{"start",
+            [[{module, cloudi_service_send},
+              {args,
+               [{sends,
+                 [{"/tests/echo/post", <<"0">>}]},
+                {debug, true}]},
+              {max_r, 0}]]}]}],
         none, 5000, 5000, 5000, undefined, undefined, 1, 5, 300,
         []},
 
@@ -849,8 +856,10 @@
          {cache, refresh}, % 5 seconds
          {files_size, 1024}, % KiB
          {replace, lfuda_gdsf},
-         {notify_one, [{"/tests/http_req/index.html/get", "/tests/echo/put"}]}
-         ],
+         {redirect,
+          [{"/tests/http_req/redirect/*", "/tests/http_req/*"}]},
+         {notify_one,
+          [{"/tests/http_req/index.html/get", "/tests/echo/put"}]}],
         immediate_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
     %{internal,
