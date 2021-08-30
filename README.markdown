@@ -64,8 +64,8 @@ Please see the [FAQ](https://cloudi.org/faq.html) for more details.
 
 * `Erlang >= 21.0 (erlang /Ubuntu, erlang /Alpine)`
 * `C/C++ (C++98 compliant, improved error information with C++11 support)`
-  * `GCC >= 4.9 (g++ /Ubuntu, g++ /Alpine)`` or clang >= 3.3 (clang /Ubuntu, clang /Alpine)`
-* `boost >= 1.40.0` `(libboost-system-dev libboost-thread-dev libboost-dev /Ubuntu,`` boost-system boost-thread boost-dev /Alpine)`
+  * `GCC >= 4.9 (g++ /Ubuntu, g++ /Alpine)` `or clang >= 3.3 (clang /Ubuntu, clang /Alpine)`
+* `boost >= 1.40.0` `(libboost-system-dev libboost-thread-dev libboost-dev /Ubuntu,` `boost-system boost-thread boost-dev /Alpine)`
 
 Optional (default="yes"):
 
@@ -75,19 +75,19 @@ Optional (default="yes"):
   * `CloudI::API::backtrace() function`
     * `backtrace with backward-cpp (Linux)`
       * `backtrace symbols options:`
-        * `(libdwarf-dev libelf-dev /Ubuntu,`` libdwarf-dev elfutils-dev /Alpine)`
-        * `(binutils-dev /Ubuntu,`` binutils-dev /Alpine)`
-        * `(libdw-dev /Ubuntu,`` elfutils-dev /Alpine)`
+        * `(libdwarf-dev libelf-dev /Ubuntu,` `libdwarf-dev elfutils-dev /Alpine)`
+        * `(binutils-dev /Ubuntu,` `binutils-dev /Alpine)`
+        * `(libdw-dev /Ubuntu,` `elfutils-dev /Alpine)`
       * `backtrace data options:`
-        * `(libunwind-dev /Ubuntu,`` libunwind-dev /Alpine)`
+        * `(libunwind-dev /Ubuntu,` `libunwind-dev /Alpine)`
         * `compiler unwind.h`
         * `(libexecinfo-dev /Alpine)`
     * `backtrace with boost::stacktrace (boost >= 1.71)`
-      * `(libboost-stacktrace-dev /Ubuntu,`` boost-stacktrace_basic /Alpine)`
+      * `(libboost-stacktrace-dev /Ubuntu,` `boost-stacktrace_basic /Alpine)`
     * Use the "--with-cxx-backtrace=no" configure flag to disable
   * Use the "--enable-cxx-support=no" configure flag to disable
 * `Java >= 1.5 JDK`
-  * `(default-jdk /Ubuntu,`` openjdk8 /Alpine)`
+  * `(default-jdk /Ubuntu,` `openjdk8 /Alpine)`
   * Use the "--enable-java-support=no" configure flag to disable
   * Java CloudI API is available as a [Maven package](https://github.com/CloudI/cloudi_api_java#readme)
 * `JavaScript >= 0.12.18`
