@@ -75,7 +75,7 @@ static std::string backtrace_string()
     {
         result << ":" << std::endl;
     }
-    resolver.load_stacktrace(st);
+    resolver.load_stacktrace(backtrace);
     for (size_t i = BACKTRACE_FRAME_OFFSET; i < backtrace.size(); ++i)
     {
         backward::ResolvedTrace const & trace = resolver.resolve(backtrace[i]);
