@@ -41,10 +41,10 @@
 #include <boost/exception/all.hpp>
 #define BACKTRACE_FRAMES 32
 #define BACKTRACE_FRAME_OFFSET 2
-#if defined(BACKTRACE_USE_BOOST)
-#include <boost/stacktrace.hpp>
-#elif defined(BACKTRACE_USE_BACKWARD)
+#if defined(BACKTRACE_USE_BACKWARD)
 #include <backward.hpp>
+#elif defined(BACKTRACE_USE_BOOST)
+#include <boost/stacktrace.hpp>
 #elif defined(BACKTRACE_USE_BOOSTER)
 #include <booster/backtrace.h>
 #endif
