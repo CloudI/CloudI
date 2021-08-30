@@ -101,7 +101,7 @@ Optional (default="yes"):
   * (`php /Ubuntu`, `php7 /Alpine`)
   * Use the "--enable-php-support=no" configure flag to disable
 * `Python >= 2.7.0`
-  * (`python3 python3-dev /Ubuntu`, `python3-dev /Alpine`)
+  * (`python3 python3-dev /Ubuntu`, `python3 python3-dev /Alpine`)
   * Use the "--enable-python-support=no" and "--enable-python-c-support=no" configure flag to disable
   * Python and Python/C CloudI API is available as a [PyPI package](https://github.com/CloudI/cloudi_api_python#readme)
 * `Ruby >= 1.9.0`
