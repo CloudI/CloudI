@@ -806,8 +806,6 @@ class API
         // ...
         // throw (boost::enable_error_info(e)
         //            << errinfo_stack(CloudI::API::backtrace()));
-        //
-        // (n.b., requires the --with-cxx-backtrace configuration option)
         static std::string backtrace();
 
         // Use fatal_error as the base class for exceptions

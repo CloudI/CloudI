@@ -7,8 +7,8 @@
 #
 # DESCRIPTION
 #
-#   Determine if backward-cpp or booster dependencies are available
-#   to create a backtrace for the C++ CloudI API.
+#   Determine if backward-cpp, boost::stacktrace or booster dependencies are
+#   available to create a backtrace for the C++ CloudI API.
 #
 # MIT License
 #
@@ -35,6 +35,8 @@
 
 AC_DEFUN([AX_BACKTRACE],
 [
+    dnl checks below will select the backtrace approach that provides
+    dnl the most information
     AS_CASE([$host_os],
             [linux*], [backtrace="backward"],
             [*], [backtrace="booster"])
@@ -54,50 +56,91 @@ abi::__cxa_demangle(0, 0, 0, 0);
         [backtrace="booster"])
     AC_MSG_RESULT($has_cxxabi)
 
-    dnl preferred, rather than execinfo.h
-    has_unwind="no"
-    AC_MSG_CHECKING([for _Unwind_GetIP])
-    AC_LINK_IFELSE(
+    dnl Many backtrace libraries depend on dladdr
+    has_dladdr="no"
+    AX_CHECK_PRIVATE_LIB(dl, dladdr,
         [AC_LANG_PROGRAM([[
-#include <unwind.h>
+#include <dlfcn.h>
          ]], [[
-_Unwind_GetIP(0);
+dladdr(0, 0);
          ]])],
-        [has_unwind="yes"])
-    AC_MSG_RESULT($has_unwind)
+        [has_dladdr="yes"])
 
-    dnl in case unwind can not be used
-    dnl (currently a requirement for having a backtrace)
-    has_execinfo="no"
-    AC_MSG_CHECKING(for execinfo.h)
-    AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM([[
-#include <execinfo.h>
-         ]], [[
-backtrace(0, 0);
-         ]])],
-        [has_execinfo="yes"])
-    AC_MSG_RESULT($has_execinfo)
-    if test "x$has_execinfo" = "xno"; then
-        dnl libexecinfo may be required at link-time
-        AX_CHECK_PRIVATE_LIB(execinfo, backtrace,
+    dnl boost::stacktrace major changes stopped before 1.71.0 (added in 1.65.0)
+    dnl use instead of booster, if possible
+    if test "x$backtrace" = "xbooster" -a "x$has_dladdr" = "xyes"; then
+        AC_MSG_CHECKING([for boost::stacktrace])
+        CPPFLAGS_SAVED="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
+        LDFLAGS_SAVED="$LDFLAGS"
+        LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
+        LIBS_SAVED="$LIBS"
+        LIBS="-lboost_stacktrace_basic $DL_LIB $LIBS"
+        has_boost_stacktrace="no"
+        AC_LINK_IFELSE(
+            [AC_LANG_PROGRAM([[
+#include <iostream>
+#include <boost/version.hpp>
+#if (BOOST_VERSION / 100000 > 1) ||                                          \
+    ((BOOST_VERSION / 100000 == 1) && (BOOST_VERSION / 100 % 1000 >= 71))
+#include <boost/stacktrace.hpp>
+#endif
+             ]], [[
+std::cout << boost::stacktrace::stacktrace();
+             ]])],
+            [has_boost_stacktrace="yes"
+             backtrace="boost"])
+        AC_MSG_RESULT($has_boost_stacktrace)
+        CPPFLAGS="$CPPFLAGS_SAVED"
+        LDFLAGS="$LDFLAGS_SAVED"
+        LIBS="$LIBS_SAVED"
+    fi
+
+    if test "x$backtrace" = "xbackward" -o "x$backtrace" = "xbooster"; then
+        dnl preferred, rather than execinfo.h
+        has_unwind="no"
+        AC_MSG_CHECKING([for _Unwind_GetIP])
+        AC_LINK_IFELSE(
+            [AC_LANG_PROGRAM([[
+#include <unwind.h>
+             ]], [[
+_Unwind_GetIP(0);
+             ]])],
+            [has_unwind="yes"])
+        AC_MSG_RESULT($has_unwind)
+
+        dnl in case unwind can not be used
+        dnl (currently a requirement for having a backtrace)
+        has_execinfo="no"
+        AC_MSG_CHECKING(for execinfo.h)
+        AC_LINK_IFELSE(
             [AC_LANG_PROGRAM([[
 #include <execinfo.h>
              ]], [[
 backtrace(0, 0);
              ]])],
             [has_execinfo="yes"])
-    else
-        EXECINFO_LDFLAGS=""
-        EXECINFO_LIB=""
+        AC_MSG_RESULT($has_execinfo)
+        if test "x$has_execinfo" = "xno"; then
+            dnl libexecinfo may be required at link-time
+            AX_CHECK_PRIVATE_LIB(execinfo, backtrace,
+                [AC_LANG_PROGRAM([[
+#include <execinfo.h>
+                 ]], [[
+backtrace(0, 0);
+                 ]])],
+                [has_execinfo="yes"])
+        else
+            EXECINFO_LDFLAGS=""
+            EXECINFO_LIB=""
+        fi
+
+        dnl backtrace data is required to print backtrace information
+        if test "x$has_unwind" = "xno" -a "x$has_execinfo" = "xno"; then
+            backtrace=""
+        fi
     fi
 
-    dnl backtrace data is required to print backtrace information
-    if test "x$has_unwind" = "xno" -a "x$has_execinfo" = "xno"; then
-        backtrace=""
-    fi
-
-    want_dladdr="no"
     if test "x$backtrace" = "xbackward"; then
         dnl libunwind can provide more accurate stacktraces
         dnl (e.g., signal handlers) but is unsupported on some architectures
@@ -118,31 +161,32 @@ unw_getcontext(0);
             UNWIND_LIB=""
         fi
 
-        AX_CHECK_PRIVATE_LIB(dwarf, dwarf_elf_init,
-            [AC_LANG_PROGRAM([[
+        want_dwarf="no"
+        want_bfd="no"
+        if test "x$has_dladdr" = "xyes"; then
+            AX_CHECK_PRIVATE_LIB(dwarf, dwarf_elf_init,
+                [AC_LANG_PROGRAM([[
 #include <libdwarf/libdwarf.h>
 #include <libdwarf/dwarf.h>
-             ]], [[
-dwarf_elf_init(0, 0, 0, 0, 0, 0);
-             ]])],
-            [AX_CHECK_PRIVATE_LIB(elf, elf_version,
-                [AC_LANG_PROGRAM([[
-#include <libelf.h>
                  ]], [[
-elf_version(EV_CURRENT);
+dwarf_elf_init(0, 0, 0, 0, 0, 0);
                  ]])],
-                [want_dwarf="yes"],
-                [want_dwarf="no"])
-             ],
-            [want_dwarf="no"])
-        AX_CHECK_PRIVATE_LIB(bfd, bfd_init,
-            [AC_LANG_PROGRAM([[
+                [AX_CHECK_PRIVATE_LIB(elf, elf_version,
+                    [AC_LANG_PROGRAM([[
+#include <libelf.h>
+                     ]], [[
+elf_version(EV_CURRENT);
+                     ]])],
+                    [want_dwarf="yes"])
+                 ])
+            AX_CHECK_PRIVATE_LIB(bfd, bfd_init,
+                [AC_LANG_PROGRAM([[
 #include <bfd.h>
-             ]], [[
+                 ]], [[
 bfd_init();
-             ]])],
-            [want_bfd="yes"],
-            [want_bfd="no"])
+                 ]])],
+                [want_bfd="yes"])
+        fi
         AX_CHECK_PRIVATE_LIB(dw, dwfl_begin,
             [AC_LANG_PROGRAM([[
 #include <elfutils/libdw.h>
@@ -153,30 +197,12 @@ dwfl_begin(0);
              ]])],
             [want_dw="yes"],
             [want_dw="no"])
-        if test "x$want_dwarf" = "xyes" -o "x$want_bfd" = "xyes"; then
-            want_dladdr="yes"
-        else
-            want_dladdr="no"
-        fi
-    elif test "x$backtrace" = "xbooster"; then
-        want_dladdr="yes"
     fi
-    has_dladdr="no"
-    if test "x$want_dladdr" = "xyes"; then
-        AX_CHECK_PRIVATE_LIB(dl, dladdr,
-            [AC_LANG_PROGRAM([[
-#include <dlfcn.h>
-             ]], [[
-dladdr(0, 0);
-             ]])],
-            [has_dladdr="yes"],
-            [want_dwarf="no"
-             want_bfd="no"])
-    fi
+
     BACKTRACE_CPPFLAGS=""
     BACKTRACE_LDFLAGS=""
     BACKTRACE_LIB=""
-    AC_MSG_CHECKING([for backtrace])
+    AC_MSG_CHECKING([for C/C++ backtrace])
     if test "x$backtrace" = "xbackward"; then
         BACKTRACE_CPPFLAGS="-I\$(top_srcdir)/external/backward-cpp/"
         if test "x$has_libunwind" = "xyes"; then
@@ -237,6 +263,13 @@ dladdr(0, 0);
                   [Specify linux support.])
         AC_DEFINE([BACKTRACE_USE_BACKWARD], [1],
                   [Provide C++ backtraces with backward code.])
+    elif test "x$backtrace" = "xboost"; then
+        BACKTRACE_CPPFLAGS=""
+        BACKTRACE_LDFLAGS=""
+        BACKTRACE_LIB="-lboost_stacktrace_basic $DL_LIB"
+        AC_DEFINE([BACKTRACE_USE_BOOST], [1],
+                  [Provide C++ backtraces with boost::stacktrace.])
+        AC_MSG_RESULT([boost])
     elif test "x$backtrace" = "xbooster"; then
         BACKTRACE_CPPFLAGS="-I\$(top_srcdir)/external/booster"
         BACKTRACE_LDFLAGS="$DL_LDFLAGS $EXECINFO_LDFLAGS"

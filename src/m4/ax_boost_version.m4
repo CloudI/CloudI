@@ -12,7 +12,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2018-2021 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -38,10 +38,8 @@ AC_DEFUN([AX_BOOST_VERSION],
     AC_CACHE_CHECK([for boost compilation version], ax_cv_cxx_boost_version, [
     CPPFLAGS_SAVED="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
-    export CPPFLAGS
     LDFLAGS_SAVED="$LDFLAGS"
     LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
-    export LDFLAGS
 
     AC_LANG_PUSH(C++)
     AC_RUN_IFELSE(

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-08-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add boost::stacktrace support for the C++ CloudI API as a
+      cross-platform dependency to use instead of booster
+      (backward-cpp is still preferred on Linux)
+    * Update README dependency package information
+
 2021-08-27 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve C/C++ CloudI API backtrace configure check

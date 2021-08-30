@@ -41,7 +41,9 @@
 #include <boost/exception/all.hpp>
 #define BACKTRACE_FRAMES 32
 #define BACKTRACE_FRAME_OFFSET 2
-#if defined(BACKTRACE_USE_BACKWARD)
+#if defined(BACKTRACE_USE_BOOST)
+#include <boost/stacktrace.hpp>
+#elif defined(BACKTRACE_USE_BACKWARD)
 #include <backward.hpp>
 #elif defined(BACKTRACE_USE_BOOSTER)
 #include <booster/backtrace.h>
@@ -59,12 +61,12 @@ extern "C" {
 static std::string backtrace_string()
 {
 #if defined(BACKTRACE_USE_BACKWARD)
-    backward::StackTrace st;
-    st.load_here(BACKTRACE_FRAMES);
     std::ostringstream result;
-    backward::TraceResolver  resolver;
+    backward::StackTrace backtrace;
+    backtrace.load_here(BACKTRACE_FRAMES);
+    backward::TraceResolver resolver;
     result << "trace (most recent call last)";
-    unsigned int const thread_id = st.thread_id();
+    unsigned int const thread_id = backtrace.thread_id();
     if (thread_id)
     {
         result << " in thread " << thread_id << ":" << std::endl;
@@ -74,9 +76,9 @@ static std::string backtrace_string()
         result << ":" << std::endl;
     }
     resolver.load_stacktrace(st);
-    for (size_t i = BACKTRACE_FRAME_OFFSET; i < st.size(); ++i)
+    for (size_t i = BACKTRACE_FRAME_OFFSET; i < backtrace.size(); ++i)
     {
-        backward::ResolvedTrace const & trace = resolver.resolve(st[i]);
+        backward::ResolvedTrace const & trace = resolver.resolve(backtrace[i]);
         bool indented = true;
 
         result << "#" <<
@@ -93,7 +95,7 @@ static std::string backtrace_string()
         }
         for (size_t j = 0; j < trace.inliners.size(); ++j)
         {
-            if (not indented)
+            if (! indented)
                 result << "    ";
             backward::ResolvedTrace::SourceLoc const & location =
                 trace.inliners[j];
@@ -104,9 +106,9 @@ static std::string backtrace_string()
                 std::dec << location.line << std::endl;
             indented = false;
         }
-        if (not trace.source.filename.empty())
+        if (! trace.source.filename.empty())
         {
-            if (not indented)
+            if (! indented)
                 result << "    ";
             result <<
                 std::setfill(' ') << std::setw(18) << std::right <<
@@ -117,16 +119,44 @@ static std::string backtrace_string()
         }
     }
     return result.str();
-#elif defined(BACKTRACE_USE_BOOSTER)
-    booster::backtrace b(BACKTRACE_FRAMES);
+#elif defined(BACKTRACE_USE_BOOST)
     std::ostringstream result;
     result << "trace (most recent call last):" << std::endl;
-    for (unsigned int i = BACKTRACE_FRAME_OFFSET; i < b.stack_size(); ++i)
+    boost::stacktrace::stacktrace const backtrace(BACKTRACE_FRAME_OFFSET,
+                                                  BACKTRACE_FRAMES);
+    for (size_t i = 0; i < backtrace.size(); ++i)
+    {
+        boost::stacktrace::frame const & frame = backtrace[i];
+
+        result << "#" <<
+            std::setfill(' ') << std::setw(2) << std::left <<
+            std::dec << i << " " <<
+            std::setfill(' ') << std::setw(18) << std::right <<
+            std::hex << frame.address();
+        if (! frame.name().empty())
+        {
+            result << " in " << frame.name();
+        }
+        if (! frame.source_file().empty())
+        {
+            result << std::endl <<
+                "   at " << frame.source_file() << ":" <<
+                std::dec << frame.source_line();
+        }
+        result << std::endl;
+    }
+    return result.str();
+#elif defined(BACKTRACE_USE_BOOSTER)
+    std::ostringstream result;
+    booster::backtrace backtrace(BACKTRACE_FRAMES);
+    result << "trace (most recent call last):" << std::endl;
+    for (unsigned int i = BACKTRACE_FRAME_OFFSET;
+         i < backtrace.stack_size(); ++i)
     {
         result << "#" <<
             std::setfill(' ') << std::setw(2) << std::left <<
             std::dec << (i - BACKTRACE_FRAME_OFFSET) << " ";
-        b.trace_line(i, result);
+        backtrace.trace_line(i, result);
     }
     return result.str();
 #else

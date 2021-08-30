@@ -62,45 +62,59 @@ Please see the [FAQ](https://cloudi.org/faq.html) for more details.
 
 ### Requirements
 
-* `Erlang >= 21.0 (erlang /Ubuntu)`
+* `Erlang >= 21.0 (erlang /Ubuntu, erlang /Alpine)`
 * `C/C++ (C++98 compliant, improved error information with C++11 support)`
-  * `GCC >= 4.9 (g++ /Ubuntu) or clang >= 3.3 (clang /Ubuntu)`
-* `boost >= 1.40.0 (libboost-system-dev libboost-thread-dev libboost-dev /Ubuntu)`
+  * `GCC >= 4.9 (g++ /Ubuntu, g++ /Alpine)`` or clang >= 3.3 (clang /Ubuntu, clang /Alpine)`
+* `boost >= 1.40.0` `(libboost-system-dev libboost-thread-dev libboost-dev /Ubuntu,`` boost-system boost-thread boost-dev /Alpine)`
 
 Optional (default="yes"):
 
 * `C`
   * Use the "--enable-c-support=no" configure flag to disable
 * `C++`
-  * `backtrace symbols options:`
-    * `(libdwarf-dev libelf-dev /Ubuntu, libdwarf-dev elfutils-dev /Alpine)`
-    * `(binutils-dev /Ubuntu, binutils-dev /Alpine)`
-    * `(libdw-dev /Ubuntu, elfutils-dev /Alpine)`
-  * `backtrace data options:`
-    * `(libunwind-dev /Ubuntu, libunwind-dev /Alpine)`
-    * `compiler unwind.h`
-    * `(libexecinfo-dev /Alpine)`
+  * `CloudI::API::backtrace() function`
+    * `backtrace with backward-cpp (Linux)`
+      * `backtrace symbols options:`
+        * `(libdwarf-dev libelf-dev /Ubuntu,`` libdwarf-dev elfutils-dev /Alpine)`
+        * `(binutils-dev /Ubuntu,`` binutils-dev /Alpine)`
+        * `(libdw-dev /Ubuntu,`` elfutils-dev /Alpine)`
+      * `backtrace data options:`
+        * `(libunwind-dev /Ubuntu,`` libunwind-dev /Alpine)`
+        * `compiler unwind.h`
+        * `(libexecinfo-dev /Alpine)`
+    * `backtrace with boost::stacktrace (boost >= 1.71)`
+      * `(libboost-stacktrace-dev /Ubuntu,`` boost-stacktrace_basic /Alpine)`
+    * Use the "--with-cxx-backtrace=no" configure flag to disable
   * Use the "--enable-cxx-support=no" configure flag to disable
 * `Java >= 1.5 JDK`
-  * `(default-jdk /Ubuntu)`
+  * `(default-jdk /Ubuntu,`` openjdk8 /Alpine)`
   * Use the "--enable-java-support=no" configure flag to disable
+  * Java CloudI API is available as a [Maven package](https://github.com/CloudI/cloudi_api_java#readme)
 * `JavaScript >= 0.12.18`
-  * `(nodejs /Ubuntu)`
+  * `(nodejs /Ubuntu,`` nodejs /Alpine)`
   * Use the "--enable-javascript-support=no" configure flag to disable
+  * JavaScript CloudI API is available as a [npm package](https://github.com/CloudI/cloudi_api_javascript#readme)
 * `Perl >= 5.10 (with Compress::Zlib)`
-  * `(perl perl-modules /Ubuntu)`
+  * `(perl perl-modules /Ubuntu,`` perl /Alpine)`
   * Use the "--enable-perl-support=no" configure flag to disable
 * `PHP >= 7.0`
-  * `(php /Ubuntu)`
+  * `(php /Ubuntu,`` php7 /Alpine)`
   * Use the "--enable-php-support=no" configure flag to disable
 * `Python >= 2.7.0`
-  * `(python3 python3-dev /Ubuntu)`
+  * `(python3 python3-dev /Ubuntu,`` python3-dev /Alpine)`
   * Use the "--enable-python-support=no" and "--enable-python-c-support=no" configure flag to disable
+  * Python and Python/C CloudI API is available as a [PyPI package](https://github.com/CloudI/cloudi_api_python#readme)
 * `Ruby >= 1.9.0`
-  * `(ruby /Ubuntu)`
+  * `(ruby /Ubuntu,`` ruby /Alpine)`
   * Use the "--enable-ruby-support=no" configure flag to disable
+  * Ruby CloudI API is available as a [Ruby gem](https://github.com/CloudI/cloudi_api_ruby#readme)
+* `syscall_lock service configuration option`
+  * `syscall_lock with pledge (OpenBSD)`
+    * `libc unistd.h`
+  * `syscall_lock with libseccomp (Linux)`
+    * `(libseccomp-dev /Ubuntu,`` libseccomp-dev /Alpine)`
 * `GNU MP library`
-  * `(libgmp-dev /Ubuntu)`
+  * `(libgmp-dev /Ubuntu,`` gmp-dev /Alpine)`
   * Used in the hexpi (C++) integration test only
     ("--with-integration-tests=no" configure flag to disable)
 
@@ -110,14 +124,17 @@ Optional (default="no"):
   * `(ats2-lang /Ubuntu)`
   * Use the "--enable-ats2-support" configure flag to enable
 * `Go >= 1.11`
-  * `(golang /Ubuntu)`
+  * `(golang /Ubuntu,`` go /Alpine)`
   * Use the "--enable-go-support" configure flag to enable
+  * Go CloudI API is available as a [remote import](https://github.com/CloudI/cloudi_api_go#readme)
 * `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
-  * `(ghc cabal-install zlib1g-dev /Ubuntu)`
+  * `(ghc cabal-install zlib1g-dev /Ubuntu,`` ghc cabal zlib-dev /Alpine)`
   * Use the "--enable-haskell-support" configure flag to enable
+  * Haskell CloudI API is available as a [Hackage package](https://github.com/CloudI/cloudi_api_haskell#readme)
 * `OCaml >= 4.03.0`
-  * `(ocaml /Ubuntu)`
+  * `(ocaml /Ubuntu,`` ocaml /Alpine)`
   * Use the "--enable-ocaml-support" configure flag to enable
+  * OCaml CloudI API is available as an [opam package](https://github.com/CloudI/cloudi_api_ocaml#readme)
 
 ### Building
 

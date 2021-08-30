@@ -36,7 +36,7 @@ services:
   - postgresql
 before_install:
   # travis default image has: make autoconf automake libtool g++ git perl python python-dev
-  - sudo apt-get install default-jdk ocaml php libboost-system-dev libboost-thread-dev libboost-dev libgmp-dev libdwarf-dev libelf-dev
+  - sudo apt-get install default-jdk ocaml php libboost-system-dev libboost-thread-dev libboost-dev libseccomp-dev libgmp-dev libdwarf-dev libelf-dev
 before_script:
   - kerl list installations
   - mkdir build
