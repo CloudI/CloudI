@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-09-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update jinterface
+
 2021-08-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add boost::stacktrace support for the C++ CloudI API as a
