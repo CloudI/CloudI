@@ -14,10 +14,10 @@ if test $? -ne 0; then
     BUILD_OPERATING_SYSTEM=`uname -s`
 fi
 AC_SUBST(BUILD_OPERATING_SYSTEM)
-BUILD_REPOSITORY_VERSION=`git rev-parse HEAD`
+BUILD_REPOSITORY_VERSION=`git -C $srcdir/.. rev-parse HEAD`
 if test $? -ne 0; then
     BUILD_REPOSITORY_VERSION="$PACKAGE_VERSION"
-elif test `git rev-list -n 1 v$PACKAGE_VERSION` = "$BUILD_REPOSITORY_VERSION"; then
+elif test `git -C $srcdir/.. rev-list -n 1 v$PACKAGE_VERSION` = "$BUILD_REPOSITORY_VERSION"; then
     BUILD_REPOSITORY_VERSION="$PACKAGE_VERSION"
 fi
 AC_SUBST(BUILD_REPOSITORY_VERSION)
