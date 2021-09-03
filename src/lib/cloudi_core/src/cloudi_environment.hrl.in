@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -49,6 +49,8 @@
           "@ERLANG_OTP_VER@"},
          {build_cloudi_time,
           "@BUILD_TIME@"},
+         {build_cloudi_version,
+          "@BUILD_REPOSITORY_VERSION@"},
          {build_cloudi_cxx_compiler_version,
           "@CXX_COMPILER_VENDOR_VERSION@"},
          {build_cloudi_cxx_dependencies_versions,

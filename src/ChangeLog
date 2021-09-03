@@ -3,6 +3,9 @@
 
 2021-09-02 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add build_cloudi_version to the CloudI Service API
+      code_status output for the current git commit hash
+      (releases will have the same value as runtime_cloudi_version)
     * Update jinterface
 
 2021-08-30 Michael Truog   <mjtruog at protonmail dot com>

@@ -14,6 +14,13 @@ if test $? -ne 0; then
     BUILD_OPERATING_SYSTEM=`uname -s`
 fi
 AC_SUBST(BUILD_OPERATING_SYSTEM)
+BUILD_REPOSITORY_VERSION=`git rev-parse HEAD`
+if test $? -ne 0; then
+    BUILD_REPOSITORY_VERSION="$PACKAGE_VERSION"
+elif test `git rev-parse v$PACKAGE_VERSION` = "$BUILD_REPOSITORY_VERSION"; then
+    BUILD_REPOSITORY_VERSION="$PACKAGE_VERSION"
+fi
+AC_SUBST(BUILD_REPOSITORY_VERSION)
 
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)
@@ -65,7 +72,7 @@ AX_PTHREAD([pthread="true"])
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
 AC_SUBST(abs_top_builddir, [`pwd`])
 
-AX_RECURSIVE_EVAL("$libdir/cloudi-$VERSION", cloudi_prefix)
+AX_RECURSIVE_EVAL("$libdir/cloudi-$PACKAGE_VERSION", cloudi_prefix)
 AX_RECURSIVE_EVAL("$localstatedir/log/cloudi", cloudi_logdir)
 AX_RECURSIVE_EVAL("$sysconfdir/cloudi", cloudi_confdir)
 AX_RECURSIVE_EVAL("$cloudi_prefix/bin", cloudi_bindir)
