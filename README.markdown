@@ -212,7 +212,7 @@ if all the programming languages enabled by default are detected at configure
 time and the `--with-integration-tests-ran` configuration argument is used
 (to choose the [`src/cloudi_tests.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in) configuration file).
 
-If the `--with-integration-tests` configuration argument is used,
+If the `--with-integration-tests=no` configuration argument is used,
 the more minimal CloudI configuration will be used instead
 (in the [`src/cloudi_minimal.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in) configuration file)
 to support basic things like the
