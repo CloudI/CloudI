@@ -207,14 +207,15 @@ Unmaintained Services Excluded from this Repository:
 * TokyoTyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/CloudI/cloudi_service_db_tokyotyrant)
 * ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/cloudi_service_zeromq)
 
-The default CloudI configuration can run the included integration tests
-if all the supported programming languages are enabled at configure time
-(they are by default) and the `--with-integration-tests-ran` configuration
-argument is used (to choose the [`src/cloudi_tests.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in) file).
+The default CloudI configuration will run the included integration tests
+if all the programming languages enabled by default are detected at configure
+time and the `--with-integration-tests-ran` configuration argument is used
+(to choose the [`src/cloudi_tests.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in) configuration file).
 
-If the `--with-integration-tests-ran` configuration argument is not used,
+If the `--with-integration-tests` configuration argument is used,
 the more minimal CloudI configuration will be used instead
-(in the [`src/cloudi_minimal.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in) file) to support basic things like the
+(in the [`src/cloudi_minimal.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in) configuration file)
+to support basic things like the
 [Quick Start Guide](https://github.com/CloudI/CloudI/tree/master/doc#readme),
 the [Dashboard](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme)
 and any tutorials or examples.
