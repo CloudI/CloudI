@@ -89,8 +89,7 @@ int main(int, char **)
     assert(result == cloudi_success);
 
     result = cloudi_poll(&api, -1);
-    if (result != cloudi_success &&
-        result != cloudi_terminate)
+    if (result != cloudi_success)
         std::cerr << "error " << result << std::endl;
     std::cout << "terminate msg_size c++" << std::endl;
 

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-10-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_api_batch:queue_clear usage
+
 2021-09-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix CloudI Service API nodes_set discovery ec2

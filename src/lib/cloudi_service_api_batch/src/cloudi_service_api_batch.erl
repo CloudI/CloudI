@@ -374,12 +374,18 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 batch_queue_clear(QueueName,
                   #state{queues = Queues} = State) ->
     case cloudi_x_trie:find(QueueName, Queues) of
-        {ok, Queue} ->
-            QueueNew = Queue#queue{count = 0,
-                                   data = queue:new()},
-            QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
-            {ok,
-             State#state{queues = QueuesNew}};
+        {ok, #queue{service_id = ServiceId} = Queue} ->
+            StateNew = if
+                is_binary(ServiceId) ->
+                    QueueNew = Queue#queue{count = 0,
+                                           data = queue:new()},
+                    QueuesNew = cloudi_x_trie:store(QueueName,
+                                                    QueueNew, Queues),
+                    State#state{queues = QueuesNew};
+                ServiceId =:= undefined ->
+                    batch_queue_erase(QueueName, State)
+            end,
+            {ok, StateNew};
         error ->
             {{error, not_found}, State}
     end.
@@ -505,7 +511,7 @@ batch_queue_suspend(QueueName,
                     #queue{service_id = ServiceId,
                            suspended = false} = Queue,
                     #state{queues = Queues} = State)
-    when ServiceId /= undefined ->
+    when is_binary(ServiceId) ->
     case cloudi_service_api:services_suspend([ServiceId], infinity) of
         ok ->
             QueueNew = Queue#queue{suspended = true},
@@ -781,7 +787,7 @@ batch_queue_run_old(QueueName,
                            service_id = ServiceId,
                            suspended = true} = Queue,
                     #state{queues = Queues} = State)
-    when ServiceId /= undefined ->
+    when is_binary(ServiceId) ->
     case cloudi_service_api:services_resume([ServiceId], infinity) of
         ok ->
             QueueNew = Queue#queue{suspended = false},

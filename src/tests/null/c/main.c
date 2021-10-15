@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -65,8 +65,7 @@ void process_requests(void * p)
     assert(result == cloudi_success);
 
     result = cloudi_poll(&api, -1);
-    if (result != cloudi_success &&
-        result != cloudi_terminate)
+    if (result != cloudi_success)
         fprintf(stderr, "error %d\n", result);
     printf("terminate null c\n");
 

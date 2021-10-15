@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -106,8 +106,7 @@ void process_requests(void * p)
     assert(cloudi_get_subscribe_count(&api) == 1);
 
     result = cloudi_poll(&api, -1);
-    if (result != cloudi_success &&
-        result != cloudi_terminate)
+    if (result != cloudi_success)
         fprintf(stderr, "error %d\n", result);
     printf("terminate http_req c\n");
 
