@@ -216,7 +216,7 @@ services_remove(Agent, Prefix, [I | _] = QueueName, Timeout)
 -spec services_restart(Agent :: agent(),
                        Prefix :: service_name(),
                        QueueName :: nonempty_string()) ->
-    module_response(ok | {error, not_found}).
+    module_response(ok | {error, not_found | not_running}).
 
 services_restart(Agent, Prefix, [I | _] = QueueName)
     when is_integer(I) ->
@@ -227,7 +227,7 @@ services_restart(Agent, Prefix, [I | _] = QueueName)
                        Prefix :: service_name(),
                        QueueName :: nonempty_string(),
                        Timeout :: timeout_milliseconds()) ->
-    module_response(ok | {error, not_found}).
+    module_response(ok | {error, not_found | not_running}).
 
 services_restart(Agent, Prefix, [I | _] = QueueName, Timeout)
     when is_integer(I) ->
@@ -423,7 +423,13 @@ batch_queue_remove(QueueName,
                    #state{queues = Queues} = State) ->
     case cloudi_x_trie:find(QueueName, Queues) of
         {ok, #queue{service_id = ServiceId}} ->
-            _ = cloudi_service_api:services_remove([ServiceId], infinity),
+            if
+                is_binary(ServiceId) ->
+                    _ = cloudi_service_api:
+                        services_remove([ServiceId], infinity);
+                ServiceId =:= undefined ->
+                    ok
+            end,
             {ok, batch_queue_erase(QueueName, State)};
         error ->
             {{error, not_found}, State}
@@ -433,11 +439,17 @@ batch_queue_restart(QueueName,
                     #state{queues = Queues} = State) ->
     Result = case cloudi_x_trie:find(QueueName, Queues) of
         {ok, #queue{service_id = ServiceId}} ->
-            case cloudi_service_api:services_restart([ServiceId], infinity) of
-                ok ->
-                    ok;
-                {error, {service_not_found, ServiceId}} ->
-                    {error, not_found}
+            if
+                is_binary(ServiceId) ->
+                    case cloudi_service_api:
+                         services_restart([ServiceId], infinity) of
+                        ok ->
+                            ok;
+                        {error, {service_not_found, ServiceId}} ->
+                            {error, not_running}
+                    end;
+                ServiceId =:= undefined ->
+                    {error, not_running}
             end;
         error ->
             {error, not_found}
@@ -693,15 +705,27 @@ running_stopping(QueueName, Reason, Timeout,
     Queue = cloudi_x_trie:fetch(QueueName, Queues),
     #queue{service_id = ServiceId,
            terminate = Terminate} = Queue,
-    case cloudi_service_api:service_subscriptions(ServiceId, infinity) of
-        {error, not_found} ->
+    Running = if
+        is_binary(ServiceId) ->
+            case cloudi_service_api:
+                 service_subscriptions(ServiceId, infinity) of
+                {error, not_found} ->
+                    false;
+                _ ->
+                    true
+            end;
+        ServiceId =:= undefined ->
+            false
+    end,
+    if
+        Running =:= false ->
             QueuePurge = batch_queue_purge(Reason, State),
             QueueNew = Queue#queue{terminate = true,
                                    terminate_timer = undefined},
             QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
             running_stopped(QueuePurge, QueueName,
                             State#state{queues = QueuesNew});
-        _ when Terminate =:= true ->
+        Terminate =:= true ->
             TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
             TerminateTimer = if
                 TimeoutNew > 0 ->
@@ -715,7 +739,7 @@ running_stopping(QueueName, Reason, Timeout,
             QueueNew = Queue#queue{terminate_timer = TerminateTimer},
             State#state{queues = cloudi_x_trie:store(QueueName,
                                                      QueueNew, Queues)};
-        _ ->
+        true ->
             % terminate_timer was cancelled after the message was queued
             State
     end.

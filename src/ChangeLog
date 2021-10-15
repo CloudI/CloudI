@@ -3,7 +3,9 @@
 
 2021-10-15 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Fix cloudi_service_api_batch:queue_clear usage
+    * Fix cloudi_service_api_batch:queue_clear and
+      cloudi_service_api_batch:services_restart usage when
+      queue_dependencies configuration prevents queue execution
 
 2021-09-10 Michael Truog   <mjtruog at protonmail dot com>
 
