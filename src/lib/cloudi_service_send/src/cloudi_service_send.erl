@@ -62,6 +62,8 @@
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
 -define(DEFAULT_SENDS,                         []).
+-define(DEFAULT_ASYNC,                      false).
+        % Do not validate the response or wait for the response.
 -define(DEFAULT_VALIDATE_RESPONSE,
         {cloudi_service_shell, validate_response}).
 -define(DEFAULT_MCAST,                      false).
@@ -95,6 +97,7 @@
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {sends,                    ?DEFAULT_SENDS},
+        {async,                    ?DEFAULT_ASYNC},
         {validate_response,        ?DEFAULT_VALIDATE_RESPONSE},
         {mcast,                    ?DEFAULT_MCAST},
         {ordered,                  ?DEFAULT_ORDERED},
@@ -102,8 +105,16 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {retry_delay,              ?DEFAULT_RETRY_DELAY},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Sends, ValidateResponse0, Mcast, Ordered, Retry, RetryDelay,
+    [Sends, Async, ValidateResponse0, Mcast, Ordered, Retry, RetryDelay,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
+    if
+        Async =:= true ->
+            true = Retry == 0,
+            true = Ordered =:= false,
+            true = Debug =:= false;
+        Async =:= false ->
+            true
+    end,
     true = is_boolean(Mcast),
     {SendsFailed,
      Queue} = sends(Sends,
@@ -127,10 +138,16 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         Debug =:= true ->
             DebugLevel
     end,
-    {ok, #state{sends_failed = SendsFailed,
-                queue = Queue,
-                validate_response = ValidateResponseN,
-                debug_level = DebugLogLevel}}.
+    State = #state{sends_failed = SendsFailed,
+                   queue = Queue,
+                   validate_response = ValidateResponseN,
+                   debug_level = DebugLogLevel},
+    if
+        Async =:= true ->
+            {stop, stop_reason(SendsFailed), State};
+        Async =:= false ->
+            {ok, State}
+    end.
 
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     StateNew = recv(Request, State, Dispatcher),
@@ -139,13 +156,7 @@ cloudi_service_handle_info(Request, State, Dispatcher) ->
     Stop = cloudi_queue:size(Dispatcher, QueueNew) == 0,
     if
         Stop =:= true ->
-            StopReason = if
-                SendsFailedNew == 0 ->
-                    shutdown;
-                SendsFailedNew > 0 ->
-                    {sends_failed, SendsFailedNew}
-            end,
-            {stop, StopReason, StateNew};
+            {stop, stop_reason(SendsFailedNew), StateNew};
         Stop =:= false ->
             {noreply, StateNew}
     end.
@@ -224,4 +235,10 @@ recv(Request,
     end,
     State#state{sends_failed = SendsFailedNew,
                 queue = QueueNew}.
+
+stop_reason(0) ->
+    shutdown;
+stop_reason(SendsFailed)
+    when SendsFailed > 0 ->
+    {sends_failed, SendsFailed}.
 

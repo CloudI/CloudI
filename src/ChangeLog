@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-10-16 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the async argument to cloudi_service_send for
+      turning off response-handling features
+
 2021-10-15 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_api_batch:queue_clear and
