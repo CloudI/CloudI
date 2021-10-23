@@ -925,7 +925,7 @@ new(Dispatcher, Options)
     true = is_list(ServiceName) andalso is_integer(hd(ServiceName)),
     Prefix = cloudi_service:prefix(Dispatcher),
     ServiceNameFull = Prefix ++ ServiceName,
-    false = cloudi_x_trie:is_pattern2(ServiceNameFull),
+    false = cloudi_x_trie:is_pattern2_bytes(ServiceNameFull),
     true = cloudi_service:process_count_min(Dispatcher) > 1,
     true = is_integer(NodeCount) andalso
            (NodeCount >= 1),

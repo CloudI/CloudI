@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2013-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -83,9 +83,14 @@
 -include("cloudi_core_i_constants.hrl").
 -include("cloudi_core_i_configuration_defaults.hrl").
 
--type service_name() :: nonempty_string().
--type service_name_pattern() :: nonempty_string().
--type service_name_pattern_suffix() :: string().
+-type nonempty_bytestring() :: nonempty_list(byte()).
+-type bytestring() :: list(byte()).
+-export_type([nonempty_bytestring/0,
+              bytestring/0]).
+
+-type service_name() :: nonempty_bytestring().
+-type service_name_pattern() :: nonempty_bytestring().
+-type service_name_pattern_suffix() :: bytestring().
 -type request_info() :: any().
 -type request() :: any().
 -type response_info() :: any().

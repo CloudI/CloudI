@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -4829,7 +4829,7 @@ service_acl_expand_list([E | L], Output, ACL)
     end;
 service_acl_expand_list([E | L], Output, ACL)
     when is_list(E), is_integer(hd(E)) ->
-    try cloudi_x_trie:is_pattern2(E) of
+    try cloudi_x_trie:is_pattern2_bytes(E) of
         _ ->
             service_acl_expand_list(L, [E | Output], ACL)
     catch
@@ -4890,7 +4890,7 @@ acl_update_values([E | L], Output, Path, Key, ACL)
     end;
 acl_update_values([E | L], Output, Path, Key, ACL)
     when is_list(E), is_integer(hd(E)) ->
-    try cloudi_x_trie:is_pattern2(E) of
+    try cloudi_x_trie:is_pattern2_bytes(E) of
         _ ->
             acl_update_values(L, [E | Output], Path, Key, ACL)
     catch
@@ -4901,7 +4901,7 @@ acl_update_values([E | _], _, _, _, _) ->
     {error, {acl_invalid, E}}.
 
 service_name_valid(Name, ErrorReason) ->
-    try cloudi_x_trie:is_pattern2(Name) of
+    try cloudi_x_trie:is_pattern2_bytes(Name) of
         _ ->
             ok
     catch

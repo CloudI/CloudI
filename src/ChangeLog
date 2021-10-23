@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-10-23 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Force all service name and service name patterns to be
+      byte strings (in UTF8) to reduce cpg/trie memory usage
+        * Previously external services already had this limitation,
+          now it applies to internal services and configuration parameters
+    * Reduce memory use in the external service Erlang process
+    * Update trie
+
 2021-10-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the async argument to cloudi_service_send for

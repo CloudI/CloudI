@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2014-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_name).
@@ -56,9 +56,9 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new(Pattern :: string(),
-          Parameters :: list(string())) ->
-    {ok, string()} |
+-spec new(Pattern :: cloudi:bytestring(),
+          Parameters :: list(cloudi:bytestring())) ->
+    {ok, cloudi:bytestring()} |
     {error, parameters_ignored | parameter_missing}.
 
 new(Pattern, Parameters) ->
@@ -72,11 +72,11 @@ new(Pattern, Parameters) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new(Pattern :: string(),
-          Parameters :: list(string()),
+-spec new(Pattern :: cloudi:bytestring(),
+          Parameters :: list(cloudi:bytestring()),
           ParametersSelected :: list(pos_integer()),
           ParametersStrictMatching :: boolean()) ->
-    {ok, string()} |
+    {ok, cloudi:bytestring()} |
     {error,
      parameters_ignored | parameter_missing | parameters_selected_empty |
      {parameters_selected_ignored, list(pos_integer())} |
@@ -92,9 +92,9 @@ new(Pattern, Parameters, ParametersSelected, ParametersStrictMatching) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec parse(Name :: string(),
-            Pattern :: string()) ->
-    list(nonempty_string()) | error.
+-spec parse(Name :: cloudi:bytestring(),
+            Pattern :: cloudi:bytestring()) ->
+    list(cloudi:nonempty_bytestring()) | error.
 
 parse(Name, Pattern) ->
     cloudi_x_trie:pattern2_parse(Pattern, Name).
@@ -105,9 +105,9 @@ parse(Name, Pattern) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec parse_with_suffix(Name :: string(),
-                        Pattern :: string()) ->
-    {list(nonempty_string()), string()} | error.
+-spec parse_with_suffix(Name :: cloudi:bytestring(),
+                        Pattern :: cloudi:bytestring()) ->
+    {list(cloudi:nonempty_bytestring()), cloudi:bytestring()} | error.
 
 parse_with_suffix(Name, Pattern) ->
     cloudi_x_trie:pattern2_parse(Pattern, Name, with_suffix).
@@ -120,11 +120,11 @@ parse_with_suffix(Name, Pattern) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec pattern(Pattern :: string()) ->
+-spec pattern(Pattern :: cloudi:bytestring()) ->
     boolean().
 
 pattern(Pattern) ->
-    cloudi_x_trie:is_pattern2(Pattern).
+    cloudi_x_trie:is_pattern2_bytes(Pattern).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -132,13 +132,13 @@ pattern(Pattern) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec suffix(Prefix :: nonempty_string(),
-             NameOrPattern :: nonempty_string()) ->
-    string().
+-spec suffix(Prefix :: cloudi:nonempty_bytestring(),
+             NameOrPattern :: cloudi:nonempty_bytestring()) ->
+    cloudi:bytestring().
 
 suffix([PrefixC | _] = Prefix, [NameOrPatternC | _] = NameOrPattern)
     when is_integer(PrefixC), is_integer(NameOrPatternC) ->
-    case cloudi_x_trie:is_pattern2(NameOrPattern) of
+    case cloudi_x_trie:is_pattern2_bytes(NameOrPattern) of
         true ->
             % handle as a pattern
             suffix_pattern_parse(Prefix, NameOrPattern);

@@ -20,7 +20,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,8 +41,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2010-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -73,9 +73,12 @@
          foldr_similar/4,
          foreach/2,
          from_list/1,
+         is_bytestring/1,
          is_key/2,
          is_pattern/1,
+         is_pattern_bytes/1,
          is_pattern2/1,
+         is_pattern2_bytes/1,
          is_prefix/2,
          is_prefixed/2,
          is_prefixed/3,
@@ -719,6 +722,24 @@ fold_match_element_N([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Test if the parameter is a byte string.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_bytestring(L :: list(byte())) -> 'true' | 'false'.
+
+is_bytestring([]) ->
+    true;
+
+is_bytestring([C | L])
+    when C >= 0 andalso C =< 255 ->
+    is_bytestring(L);
+
+is_bytestring(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Test to determine if a string is a pattern.===
 %% "*" is the wildcard character (equivalent to the ".+" regex).
 %% "**" is forbidden.
@@ -739,8 +760,41 @@ is_pattern([$*, $* | _], _) ->
 is_pattern([$* | Pattern], _) ->
     is_pattern(Pattern, true);
 
-is_pattern([_ | Pattern], Result) ->
-    is_pattern(Pattern, Result).
+is_pattern([C | Pattern], Result)
+    when C >= 0 ->
+    is_pattern(Pattern, Result);
+
+is_pattern(_, _) ->
+    erlang:exit(badarg).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Test to determine if a byte string is a pattern.===
+%% "*" is the wildcard character (equivalent to the ".+" regex).
+%% "**" is forbidden.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_pattern_bytes(Pattern :: list(byte())) -> 'true' | 'false'.
+
+is_pattern_bytes(Pattern) ->
+    is_pattern_bytes(Pattern, false).
+
+is_pattern_bytes([], Result) ->
+    Result;
+
+is_pattern_bytes([$*, $* | _], _) ->
+    erlang:exit(badarg);
+
+is_pattern_bytes([$* | Pattern], _) ->
+    is_pattern_bytes(Pattern, true);
+
+is_pattern_bytes([C | Pattern], Result)
+    when C >= 0 andalso C =< 255 ->
+    is_pattern_bytes(Pattern, Result);
+
+is_pattern_bytes(_, _) ->
+    erlang:exit(badarg).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -767,12 +821,52 @@ is_pattern2([C0, C1 | _], _)
          C1 == $* orelse C1 == $? ->
     erlang:exit(badarg);
 
-is_pattern2([H | Pattern], _)
-    when H == $*; H == $? ->
+is_pattern2([C | Pattern], _)
+    when C == $*; C == $? ->
     is_pattern2(Pattern, true);
 
-is_pattern2([_ | Pattern], Result) ->
-    is_pattern2(Pattern, Result).
+is_pattern2([C | Pattern], Result)
+    when C >= 0 ->
+    is_pattern2(Pattern, Result);
+
+is_pattern2(_, _) ->
+    erlang:exit(badarg).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Test to determine if a byte string is a pattern (using 2 wildcard characters).===
+%% "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+%% "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+%% character in the pattern.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_pattern2_bytes(Pattern :: list(byte())) -> 'true' | 'false'.
+
+is_pattern2_bytes(Pattern) ->
+    is_pattern2_bytes(Pattern, false).
+
+is_pattern2_bytes([], Result) ->
+    Result;
+
+is_pattern2_bytes([$?], _) ->
+    erlang:exit(badarg);
+
+is_pattern2_bytes([C0, C1 | _], _)
+    when C0 == $* orelse C0 == $?,
+         C1 == $* orelse C1 == $? ->
+    erlang:exit(badarg);
+
+is_pattern2_bytes([C | Pattern], _)
+    when C == $*; C == $? ->
+    is_pattern2_bytes(Pattern, true);
+
+is_pattern2_bytes([C | Pattern], Result)
+    when C >= 0 andalso C =< 255 ->
+    is_pattern2_bytes(Pattern, Result);
+
+is_pattern2_bytes(_, _) ->
+    erlang:exit(badarg).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -2039,11 +2133,13 @@ test() ->
     false = trie:is_pattern("abcdef"),
     false = trie:is_pattern("abcde?f"),
     true = trie:is_pattern("abc*d*ef"),
+    true = trie:is_pattern_bytes("abc*d*ef"),
     {'EXIT',badarg} = (catch trie:is_pattern("abc**ef")),
     false = trie:is_pattern2("abcdef"),
     true = trie:is_pattern2("abc?def"),
     true = trie:is_pattern2("abc?d*ef"),
     true = trie:is_pattern2("abcd*ef"),
+    true = trie:is_pattern2_bytes("abcd*ef"),
     {'EXIT',badarg} = (catch trie:is_pattern2("abc**ef")),
     {'EXIT',badarg} = (catch trie:is_pattern2("abc??ef")),
     {'EXIT',badarg} = (catch trie:is_pattern2("abc?*ef")),

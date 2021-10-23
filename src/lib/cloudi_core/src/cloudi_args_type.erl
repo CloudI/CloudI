@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2015-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -157,9 +157,10 @@ priority(Priority) ->
 
 service_name([NameC | _] = Name)
     when is_integer(NameC) ->
-    case cloudi_x_trie:is_pattern2(Name) of
+    case cloudi_x_trie:is_pattern2_bytes(Name) of
         true ->
-            ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"", [Name]),
+            ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"",
+                            [erlang:list_to_binary(Name)]),
             erlang:exit(badarg);
         false ->
             true
@@ -174,15 +175,18 @@ service_name(Name) ->
 
 service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     when is_integer(PrefixC), is_integer(NameC) ->
-    case cloudi_x_trie:is_pattern2(Name) of
+    case cloudi_x_trie:is_pattern2_bytes(Name) of
         true ->
-            ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"", [Name]),
+            ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"",
+                            [erlang:list_to_binary(Name)]),
             erlang:exit(badarg);
         false ->
             case cloudi_x_trie:pattern2_suffix(Prefix, Name) of
                 error ->
                     ?LOG_ERROR_SYNC("prefix service name mismatch: "
-                                    "\"~ts\" \"~ts\"", [Prefix, Name]),
+                                    "\"~ts\" \"~ts\"",
+                                    [erlang:list_to_binary(Prefix),
+                                     erlang:list_to_binary(Name)]),
                     erlang:exit(badarg);
                 Suffix ->
                     Suffix
@@ -199,14 +203,16 @@ service_name_suffix(Prefix, [NameC | _])
 
 -spec service_name_pattern_suffix(Prefix :: cloudi:service_name_pattern(),
                                   Pattern :: cloudi:service_name_pattern()) ->
-    string().
+    cloudi:service_name_pattern_suffix().
 
 service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
     when is_integer(PrefixC), is_integer(PatternC) ->
     case suffix_pattern_parse(Prefix, Pattern) of
         error ->
             ?LOG_ERROR_SYNC("prefix service name pattern mismatch: "
-                            "\"~ts\" \"~ts\"", [Prefix, Pattern]),
+                            "\"~ts\" \"~ts\"",
+                            [erlang:list_to_binary(Prefix),
+                             erlang:list_to_binary(Pattern)]),
             erlang:exit(badarg);
         Suffix ->
             Suffix

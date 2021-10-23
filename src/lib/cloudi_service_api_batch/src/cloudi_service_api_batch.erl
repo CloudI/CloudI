@@ -423,10 +423,9 @@ batch_queue_remove(QueueName,
                    #state{queues = Queues} = State) ->
     case cloudi_x_trie:find(QueueName, Queues) of
         {ok, #queue{service_id = ServiceId}} ->
-            if
+            _ = if
                 is_binary(ServiceId) ->
-                    _ = cloudi_service_api:
-                        services_remove([ServiceId], infinity);
+                    cloudi_service_api:services_remove([ServiceId], infinity);
                 ServiceId =:= undefined ->
                     ok
             end,

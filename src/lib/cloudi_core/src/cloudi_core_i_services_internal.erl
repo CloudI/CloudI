@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -435,7 +435,7 @@ handle_call({'subscribe', Suffix}, _,
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             Pattern = Prefix ++ Suffix,
-            _ = cloudi_x_trie:is_pattern2(Pattern),
+            _ = cloudi_x_trie:is_pattern2_bytes(Pattern),
             cloudi_x_cpg:join(Scope, Pattern,
                               ReceiverPid, infinity);
         true ->
@@ -449,7 +449,7 @@ handle_call({'subscribe_count', Suffix}, _,
                    options = #config_service_options{
                        scope = Scope}} = State) ->
     Pattern = Prefix ++ Suffix,
-    _ = cloudi_x_trie:is_pattern2(Pattern),
+    _ = cloudi_x_trie:is_pattern2_bytes(Pattern),
     Count = cloudi_x_cpg:join_count(Scope, Pattern,
                                     ReceiverPid, infinity),
     hibernate_check({reply, Count, State});
@@ -464,7 +464,7 @@ handle_call({'unsubscribe', Suffix}, _,
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             Pattern = Prefix ++ Suffix,
-            _ = cloudi_x_trie:is_pattern2(Pattern),
+            _ = cloudi_x_trie:is_pattern2_bytes(Pattern),
             cloudi_x_cpg:leave(Scope, Pattern,
                                ReceiverPid, infinity);
         true ->
@@ -517,6 +517,7 @@ handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_async(Name, RequestInfo, Request,
@@ -541,6 +542,7 @@ handle_call({'send_async', Name, RequestInfo, Request,
 handle_call({'send_async', Name, RequestInfo, Request,
              Timeout, Priority, {Pattern, Pid}}, _,
             State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(handle_send_async_pid(Name, Pattern, RequestInfo, Request,
                                           Timeout, Priority, Pid, State));
 
@@ -561,6 +563,7 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_async_active(Name, RequestInfo, Request,
@@ -585,6 +588,7 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
 handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority, {Pattern, Pid}}, _,
             State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(handle_send_async_active_pid(Name, Pattern,
                                                  RequestInfo, Request,
                                                  Timeout, Priority,
@@ -606,6 +610,7 @@ handle_call({'send_async_active', Name, RequestInfo, Request,
 handle_call({'send_async_active', Name, RequestInfo, Request,
              Timeout, Priority, TransId, {Pattern, Pid}}, _,
             State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(handle_send_async_active_pid(Name, Pattern,
                                                  RequestInfo, Request,
                                                  Timeout, Priority,
@@ -628,6 +633,7 @@ handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_sync(Name, RequestInfo, Request,
@@ -652,6 +658,7 @@ handle_call({'send_sync', Name, RequestInfo, Request,
 handle_call({'send_sync', Name, RequestInfo, Request,
              Timeout, Priority, {Pattern, Pid}}, Client,
             State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(handle_send_sync_pid(Name, Pattern,
                                          RequestInfo, Request,
                                          Timeout, Priority,
@@ -674,6 +681,7 @@ handle_call({'mcast_async', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_mcast_async(Name, RequestInfo, Request,
@@ -699,6 +707,7 @@ handle_call({'mcast_async_active', Name, RequestInfo, Request,
              Timeout, Priority}, Client,
             #state{dest_deny = DestDeny,
                    dest_allow = DestAllow} = State) ->
+    true = cloudi_x_trie:is_bytestring(Name),
     hibernate_check(case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_mcast_async_active(Name, RequestInfo, Request,
@@ -2786,10 +2795,12 @@ handle_module_request_success({ReturnType, _, _, _, _, _, _, Source} = T, _)
          ReturnType =:= 'cloudi_service_return_sync' ->
     Source ! T,
     ok;
-handle_module_request_success({ForwardType, _, _, _, _, _, _, _, _, _} = T,
+handle_module_request_success({ForwardType, _, _,
+                               NameNext, _, _, _, _, _, _} = T,
                               Dispatcher)
     when ForwardType =:= 'cloudi_service_forward_async_retry';
          ForwardType =:= 'cloudi_service_forward_sync_retry' ->
+    true = cloudi_x_trie:is_bytestring(NameNext),
     Dispatcher ! T,
     ok.
 

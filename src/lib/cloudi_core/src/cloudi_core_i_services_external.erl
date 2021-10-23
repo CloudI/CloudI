@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -494,7 +494,7 @@ handle_event(EventType, EventContent, StateName, State) ->
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             Pattern = Prefix ++ Suffix,
-            _ = cloudi_x_trie:is_pattern2(Pattern),
+            _ = cloudi_x_trie:is_pattern2_bytes(Pattern),
             ok = cloudi_x_cpg:join(Scope, Pattern,
                                    Dispatcher, infinity);
         true ->
@@ -510,7 +510,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                     scope = Scope}} = State) ->
     true = is_list(Suffix),
     Pattern = Prefix ++ Suffix,
-    _ = cloudi_x_trie:is_pattern2(Pattern),
+    _ = cloudi_x_trie:is_pattern2_bytes(Pattern),
     Count = cloudi_x_cpg:join_count(Scope, Pattern,
                                     Dispatcher, infinity),
     ok = send('subscribe_count_out'(Count), State),
@@ -528,7 +528,7 @@ handle_event(EventType, EventContent, StateName, State) ->
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             Pattern = Prefix ++ Suffix,
-            _ = cloudi_x_trie:is_pattern2(Pattern),
+            _ = cloudi_x_trie:is_pattern2_bytes(Pattern),
             case cloudi_x_cpg:leave(Scope, Pattern,
                                     Dispatcher, infinity) of
                 ok ->
@@ -544,7 +544,7 @@ handle_event(EventType, EventContent, StateName, State) ->
          {'send_async', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
-    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = cloudi_x_trie:is_bytestring(Name),
     true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
@@ -564,7 +564,7 @@ handle_event(EventType, EventContent, StateName, State) ->
          {'send_sync', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
-    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = cloudi_x_trie:is_bytestring(Name),
     true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
@@ -584,7 +584,7 @@ handle_event(EventType, EventContent, StateName, State) ->
          {'mcast_async', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
-    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = cloudi_x_trie:is_bytestring(Name),
     true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
@@ -618,7 +618,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                         ResponseTimeoutImmediateMax,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
-    true = is_list(NameNext) andalso is_integer(hd(NameNext)),
+    true = cloudi_x_trie:is_bytestring(NameNext),
     true = is_integer(TimeoutNext),
     true = (TimeoutNext >= 0) andalso
            (TimeoutNext =< ?TIMEOUT_MAX_ERLANG),
@@ -703,7 +703,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                         ResponseTimeoutImmediateMax,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
-    true = is_list(NameNext) andalso is_integer(hd(NameNext)),
+    true = cloudi_x_trie:is_bytestring(NameNext),
     true = is_integer(TimeoutNext),
     true = (TimeoutNext >= 0) andalso
            (TimeoutNext =< ?TIMEOUT_MAX_ERLANG),
@@ -1818,40 +1818,31 @@ handle_recv_async(Timeout, TransId, Consume,
     end.
 
 'init_out'(ProcessIndex, ProcessCount,
-           ProcessCountMax, ProcessCountMin, [PrefixC | _] = Prefix,
+           ProcessCountMax, ProcessCountMin, Prefix,
            TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
-           PriorityDefault)
-    when is_integer(ProcessIndex), is_integer(ProcessCount),
-         is_integer(ProcessCountMax), is_integer(ProcessCountMin),
-         is_integer(PrefixC), is_integer(TimeoutInit),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_integer(TimeoutTerm), is_integer(PriorityDefault),
-         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW ->
+           PriorityDefault) ->
     true = ProcessCount < 4294967296,
     true = ProcessCountMax < 4294967296,
     true = ProcessCountMin < 4294967296,
-    PrefixBin = erlang:list_to_binary(Prefix),
-    PrefixSize = erlang:byte_size(PrefixBin) + 1,
+    PrefixSize = length(Prefix) + 1,
     true = PrefixSize < 4294967296,
     TimeoutTermExternal = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
-    <<?MESSAGE_INIT:32/unsigned-integer-native,
-      ProcessIndex:32/unsigned-integer-native,
-      ProcessCount:32/unsigned-integer-native,
-      ProcessCountMax:32/unsigned-integer-native,
-      ProcessCountMin:32/unsigned-integer-native,
-      PrefixSize:32/unsigned-integer-native,
-      PrefixBin/binary, 0:8,
-      TimeoutInit:32/unsigned-integer-native,
-      TimeoutAsync:32/unsigned-integer-native,
-      TimeoutSync:32/unsigned-integer-native,
-      TimeoutTermExternal:32/unsigned-integer-native,
-      PriorityDefault:8/signed-integer-native>>.
+    [<<?MESSAGE_INIT:32/unsigned-integer-native,
+       ProcessIndex:32/unsigned-integer-native,
+       ProcessCount:32/unsigned-integer-native,
+       ProcessCountMax:32/unsigned-integer-native,
+       ProcessCountMin:32/unsigned-integer-native,
+       PrefixSize:32/unsigned-integer-native>>,
+     Prefix |
+     <<0:8,
+       TimeoutInit:32/unsigned-integer-native,
+       TimeoutAsync:32/unsigned-integer-native,
+       TimeoutSync:32/unsigned-integer-native,
+       TimeoutTermExternal:32/unsigned-integer-native,
+       PriorityDefault:8/signed-integer-native>>].
 
 'reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
-             PriorityDefault)
-    when is_integer(ProcessCount), is_integer(TimeoutAsync),
-         is_integer(TimeoutSync), is_integer(PriorityDefault),
-         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW ->
+             PriorityDefault) ->
     true = ProcessCount < 4294967296,
     <<?MESSAGE_REINIT:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native,
@@ -1865,141 +1856,142 @@ handle_recv_async(Timeout, TransId, Consume,
 'keepalive_out'() ->
     <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.
 
-'send_async_out'([NameC | _] = Name, [PatternC | _] = Pattern,
+'send_async_out'(Name, Pattern,
                  RequestInfo, Request, Timeout, Priority, TransId, Source)
-    when is_integer(NameC), is_integer(PatternC),
-         is_binary(RequestInfo), is_binary(Request),
-         is_integer(Timeout), is_integer(Priority),
-         is_binary(TransId), is_pid(Source) ->
-    NameBin = erlang:list_to_binary(Name),
-    NameSize = erlang:byte_size(NameBin) + 1,
+    when is_binary(RequestInfo), is_binary(Request), is_pid(Source) ->
+    NameSize = length(Name) + 1,
     true = NameSize < 4294967296,
-    PatternBin = erlang:list_to_binary(Pattern),
-    PatternSize = erlang:byte_size(PatternBin) + 1,
+    PatternSize = length(Pattern) + 1,
     true = PatternSize < 4294967296,
-    RequestInfoSize = erlang:byte_size(RequestInfo),
+    RequestInfoSize = byte_size(RequestInfo),
     true = RequestInfoSize < 4294967296,
-    RequestSize = erlang:byte_size(Request),
+    RequestSize = byte_size(Request),
     true = RequestSize < 4294967296,
     SourceBin = erlang:term_to_binary(Source),
-    SourceSize = erlang:byte_size(SourceBin),
+    SourceSize = byte_size(SourceBin),
     true = SourceSize < 4294967296,
-    <<?MESSAGE_SEND_ASYNC:32/unsigned-integer-native,
-      NameSize:32/unsigned-integer-native,
-      NameBin/binary, 0:8,
-      PatternSize:32/unsigned-integer-native,
-      PatternBin/binary, 0:8,
-      RequestInfoSize:32/unsigned-integer-native,
-      RequestInfo/binary, 0:8,
-      RequestSize:32/unsigned-integer-native,
-      Request/binary, 0:8,
-      Timeout:32/unsigned-integer-native,
-      Priority:8/signed-integer-native,
-      TransId/binary,             % 128 bits
-      SourceSize:32/unsigned-integer-native,
-      SourceBin/binary>>.
+    [<<?MESSAGE_SEND_ASYNC:32/unsigned-integer-native,
+       NameSize:32/unsigned-integer-native>>,
+     Name,
+     0,
+     <<PatternSize:32/unsigned-integer-native>>,
+     Pattern,
+     0,
+     <<RequestInfoSize:32/unsigned-integer-native>>,
+     RequestInfo,
+     0,
+     <<RequestSize:32/unsigned-integer-native>>,
+     Request,
+     0,
+     <<Timeout:32/unsigned-integer-native,
+       Priority:8/signed-integer-native>>,
+     TransId,
+     <<SourceSize:32/unsigned-integer-native>> |
+     SourceBin].
 
-'send_sync_out'([NameC | _] = Name, [PatternC | _] = Pattern,
+'send_sync_out'(Name, Pattern,
                 RequestInfo, Request, Timeout, Priority, TransId, Source)
-    when is_integer(NameC), is_integer(PatternC),
-         is_binary(RequestInfo), is_binary(Request),
-         is_integer(Timeout), is_integer(Priority),
-         is_binary(TransId), is_pid(Source) ->
-    NameBin = erlang:list_to_binary(Name),
-    NameSize = erlang:byte_size(NameBin) + 1,
+    when is_binary(RequestInfo), is_binary(Request), is_pid(Source) ->
+    NameSize = length(Name) + 1,
     true = NameSize < 4294967296,
-    PatternBin = erlang:list_to_binary(Pattern),
-    PatternSize = erlang:byte_size(PatternBin) + 1,
+    PatternSize = length(Pattern) + 1,
     true = PatternSize < 4294967296,
-    RequestInfoSize = erlang:byte_size(RequestInfo),
+    RequestInfoSize = byte_size(RequestInfo),
     true = RequestInfoSize < 4294967296,
-    RequestSize = erlang:byte_size(Request),
+    RequestSize = byte_size(Request),
     true = RequestSize < 4294967296,
     SourceBin = erlang:term_to_binary(Source),
-    SourceSize = erlang:byte_size(SourceBin),
+    SourceSize = byte_size(SourceBin),
     true = SourceSize < 4294967296,
-    <<?MESSAGE_SEND_SYNC:32/unsigned-integer-native,
-      NameSize:32/unsigned-integer-native,
-      NameBin/binary, 0:8,
-      PatternSize:32/unsigned-integer-native,
-      PatternBin/binary, 0:8,
-      RequestInfoSize:32/unsigned-integer-native,
-      RequestInfo/binary, 0:8,
-      RequestSize:32/unsigned-integer-native,
-      Request/binary, 0:8,
-      Timeout:32/unsigned-integer-native,
-      Priority:8/signed-integer-native,
-      TransId/binary,             % 128 bits
-      SourceSize:32/unsigned-integer-native,
-      SourceBin/binary>>.
+    [<<?MESSAGE_SEND_SYNC:32/unsigned-integer-native,
+       NameSize:32/unsigned-integer-native>>,
+     Name,
+     0,
+     <<PatternSize:32/unsigned-integer-native>>,
+     Pattern,
+     0,
+     <<RequestInfoSize:32/unsigned-integer-native>>,
+     RequestInfo,
+     0,
+     <<RequestSize:32/unsigned-integer-native>>,
+     Request,
+     0,
+     <<Timeout:32/unsigned-integer-native,
+       Priority:8/signed-integer-native>>,
+     TransId,
+     <<SourceSize:32/unsigned-integer-native>> |
+     SourceBin].
 
 'return_async_out'() ->
     <<?MESSAGE_RETURN_ASYNC:32/unsigned-integer-native,
-      0:128>>.                    % 128 bits
+      0:128>>.
 
-'return_async_out'(TransId)
-    when is_binary(TransId) ->
-    <<?MESSAGE_RETURN_ASYNC:32/unsigned-integer-native,
-      TransId/binary>>.           % 128 bits
+'return_async_out'(TransId) ->
+    [<<?MESSAGE_RETURN_ASYNC:32/unsigned-integer-native>> |
+     TransId].
 
 'return_sync_out'() ->
     <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
-      0:32, 0:8,
-      0:32, 0:8,
-      0:128>>.                    % 128 bits
+      0:32,
+      0:8,
+      0:32,
+      0:8,
+      0:128>>.
 
-'return_sync_out'(timeout, TransId)
-    when is_binary(TransId) ->
-    <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
-      0:32, 0:8,
-      0:32, 0:8,
-      TransId/binary>>.           % 128 bits
+'return_sync_out'(timeout, TransId) ->
+    [<<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
+       0:32,
+       0:8,
+       0:32,
+       0:8>> |
+     TransId].
 
-'return_sync_out'(ResponseInfo, Response, TransId)
-    when is_binary(ResponseInfo), is_binary(Response), is_binary(TransId) ->
-    ResponseInfoSize = erlang:byte_size(ResponseInfo),
+'return_sync_out'(ResponseInfo, Response, TransId) ->
+    ResponseInfoSize = byte_size(ResponseInfo),
     true = ResponseInfoSize < 4294967296,
-    ResponseSize = erlang:byte_size(Response),
+    ResponseSize = byte_size(Response),
     true = ResponseSize < 4294967296,
-    <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
-      ResponseInfoSize:32/unsigned-integer-native,
-      ResponseInfo/binary, 0:8,
-      ResponseSize:32/unsigned-integer-native,
-      Response/binary, 0:8,
-      TransId/binary>>.           % 128 bits
+    [<<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
+       ResponseInfoSize:32/unsigned-integer-native>>,
+     ResponseInfo,
+     0,
+     <<ResponseSize:32/unsigned-integer-native>>,
+     Response,
+     0 |
+     TransId].
 
 'returns_async_out'() ->
     <<?MESSAGE_RETURNS_ASYNC:32/unsigned-integer-native,
       0:32>>.
 
-'returns_async_out'(TransIdList)
-    when is_list(TransIdList) ->
-    TransIdListBin = erlang:list_to_binary(TransIdList),
-    TransIdListCount = erlang:length(TransIdList),
+'returns_async_out'(TransIdList) ->
+    TransIdListCount = length(TransIdList),
     true = TransIdListCount < 4294967296,
-    <<?MESSAGE_RETURNS_ASYNC:32/unsigned-integer-native,
-      TransIdListCount:32/unsigned-integer-native,
-      TransIdListBin/binary>>.    % 128 bits * count
+    [<<?MESSAGE_RETURNS_ASYNC:32/unsigned-integer-native,
+       TransIdListCount:32/unsigned-integer-native>> |
+     TransIdList].
 
-'recv_async_out'(timeout, TransId)
-    when is_binary(TransId) ->
-    <<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
-      0:32, 0:8,
-      0:32, 0:8,
-      TransId/binary>>.           % 128 bits
+'recv_async_out'(timeout, TransId) ->
+    [<<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
+       0:32,
+       0:8,
+       0:32,
+       0:8>> |
+     TransId].
 
-'recv_async_out'(ResponseInfo, Response, TransId)
-    when is_binary(ResponseInfo), is_binary(Response), is_binary(TransId) ->
-    ResponseInfoSize = erlang:byte_size(ResponseInfo),
+'recv_async_out'(ResponseInfo, Response, TransId) ->
+    ResponseInfoSize = byte_size(ResponseInfo),
     true = ResponseInfoSize < 4294967296,
-    ResponseSize = erlang:byte_size(Response),
+    ResponseSize = byte_size(Response),
     true = ResponseSize < 4294967296,
-    <<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
-      ResponseInfoSize:32/unsigned-integer-native,
-      ResponseInfo/binary, 0:8,
-      ResponseSize:32/unsigned-integer-native,
-      Response/binary, 0:8,
-      TransId/binary>>.           % 128 bits
+    [<<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
+       ResponseInfoSize:32/unsigned-integer-native>>,
+     ResponseInfo,
+     0,
+     <<ResponseSize:32/unsigned-integer-native>>,
+     Response,
+     0 |
+     TransId].
 
 'subscribe_count_out'(Count)
     when is_integer(Count), Count >= 0, Count < 4294967296 ->
@@ -2209,11 +2201,11 @@ process_queues(State) ->
 
 send(Data, #state{protocol = Protocol,
                   incoming_port = IncomingPort,
-                  socket = Socket}) when is_binary(Data) ->
+                  socket = Socket}) ->
     socket_send(Socket, IncomingPort, Data, Protocol);
 send(Data, #state_socket{protocol = Protocol,
                          incoming_port = IncomingPort,
-                         socket = Socket}) when is_binary(Data) ->
+                         socket = Socket}) ->
     socket_send(Socket, IncomingPort, Data, Protocol).
 
 socket_send(Socket, _, Data, Protocol)
