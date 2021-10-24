@@ -9,6 +9,9 @@
       (if the service is resumed before the current service request
        is done, neither the aspects_suspend functions or
        the aspects_resume functions will execute)
+        * Before the fix, execution could fail to update the
+          service's state, with the problem being more common with the
+          aspects_suspend functions
     * Force all service name and service name patterns to be
       byte strings (in UTF8) to reduce cpg/trie memory usage
         * Previously external services already had this limitation,
