@@ -1319,54 +1319,24 @@ handle_event(EventType, EventContent, StateName, State) ->
                 suspended = SuspendedOld,
                 queue_requests = QueueRequests,
                 service_state = ServiceState,
-                options = #config_service_options{
-                    aspects_suspend = AspectsSuspend,
-                    aspects_resume = AspectsResume}} = State) ->
-    {Result, StateNew} = case SuspendedOld of
-        #suspended{processing = Suspend} ->
-            {if
-                 Suspend =:= true ->
-                     already_suspended;
-                 Suspend =:= false ->
-                     already_resumed
-             end,
-             State};
-        #suspended{processing = false}
-            when Suspend =:= true ->
-            TimeSuspend = cloudi_timestamp:native_monotonic(),
-            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsSuspend,
-                                                           ServiceState),
-            {ok,
-             State#state{suspended = #suspended{
-                             processing = true,
-                             busy = QueueRequests,
-                             time_suspend = TimeSuspend},
-                         queue_requests = true,
-                         service_state = ServiceStateNew}};
-        #suspended{processing = true,
-                   busy = Busy,
-                   time_suspend = TimeSuspend}
-            when Suspend =:= false ->
-            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsResume,
-                                                           ServiceState),
-            StateNext = State#state{suspended = #suspended{},
-                                    service_state = ServiceStateNew},
-            {{ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
-             if
-                 Busy =:= true ->
-                     StateNext;
-                 Busy =:= false ->
-                     process_queues(StateNext)
-             end}
-    end,
-    if
-        SuspendPending =:= undefined ->
-            ok;
-        is_pid(SuspendPending) ->
-            SuspendPending ! {'cloudi_service_suspended', Dispatcher, Result},
-            ok
-    end,
-    {keep_state, StateNew};
+                options = Options} = State) ->
+    case suspended_change(SuspendedOld, Suspend,
+                          SuspendPending, Dispatcher,
+                          QueueRequests, ServiceState, Options) of
+        undefined ->
+            {keep_state, State};
+        {#suspended{processing = false} = SuspendedNew,
+         false, ServiceStateNew} ->
+            StateNew = State#state{suspended = SuspendedNew,
+                                   service_state = ServiceStateNew},
+            {keep_state,
+             process_queues(StateNew)};
+        {SuspendedNew, QueueRequestsNew, ServiceStateNew} ->
+            {keep_state,
+             State#state{suspended = SuspendedNew,
+                         queue_requests = QueueRequestsNew,
+                         service_state = ServiceStateNew}}
+    end;
 
 'HANDLE'(info, {'cloudi_service_update', UpdatePending, UpdatePlan},
          #state{dispatcher = Dispatcher,
@@ -1437,8 +1407,7 @@ terminate(Reason, _,
                      aspects_terminate_before = Aspects}} = State) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(Dispatcher, OSPid, Reason),
-    {ok, _} = aspects_terminate_before(Aspects,
-                                       Reason, TimeoutTerm, ServiceState),
+    _ = aspects_terminate_before(Aspects, Reason, TimeoutTerm, ServiceState),
     ok = socket_close(Reason, socket_data_from_state(State)),
     ok.
 
@@ -2186,16 +2155,13 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdateNow =:= undefined ->
             StateNew
     end;
-process_queues(#state{suspended = #suspended{
-                          processing = true,
-                          busy = Busy} = Suspended} = State) ->
-    SuspendedNew = if
-        Busy =:= true ->
-            Suspended#suspended{busy = false};
-        Busy =:= false ->
-            Suspended
-    end,
-    State#state{suspended = SuspendedNew};
+process_queues(#state{suspended = #suspended{processing = true} = Suspended,
+                      service_state = ServiceState,
+                      options = Options} = State) ->
+    {SuspendedNew,
+     ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
+    State#state{suspended = SuspendedNew,
+                service_state = ServiceStateNew};
 process_queues(State) ->
     process_queue(State).
 

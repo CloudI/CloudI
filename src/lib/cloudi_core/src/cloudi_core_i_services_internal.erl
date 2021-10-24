@@ -1676,54 +1676,25 @@ handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
                    queue_requests = QueueRequests,
                    service_state = ServiceState,
                    duo_mode_pid = undefined,
-                   options = #config_service_options{
-                       aspects_suspend = AspectsSuspend,
-                       aspects_resume = AspectsResume}} = State) ->
-    {Result, StateNew} = case SuspendedOld of
-        #suspended{processing = Suspend} ->
-            {if
-                 Suspend =:= true ->
-                     already_suspended;
-                 Suspend =:= false ->
-                     already_resumed
-             end,
-             State};
-        #suspended{processing = false}
-            when Suspend =:= true ->
-            TimeSuspend = cloudi_timestamp:native_monotonic(),
-            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsSuspend,
-                                                           ServiceState),
-            {ok,
-             State#state{suspended = #suspended{
-                             processing = true,
-                             busy = QueueRequests,
-                             time_suspend = TimeSuspend},
-                         queue_requests = true,
-                         service_state = ServiceStateNew}};
-        #suspended{processing = true,
-                   busy = Busy,
-                   time_suspend = TimeSuspend}
-            when Suspend =:= false ->
-            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsResume,
-                                                           ServiceState),
-            StateNext = State#state{suspended = #suspended{},
-                                    service_state = ServiceStateNew},
-            {{ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
-             if
-                 Busy =:= true ->
-                     StateNext;
-                 Busy =:= false ->
-                     process_queues(StateNext)
-             end}
-    end,
-    if
-        SuspendPending =:= undefined ->
-            ok;
-        is_pid(SuspendPending) ->
-            SuspendPending ! {'cloudi_service_suspended', Dispatcher, Result},
-            ok
-    end,
-    hibernate_check({noreply, StateNew});
+                   options = Options} = State) ->
+    hibernate_check(case suspended_change(SuspendedOld, Suspend,
+                                          SuspendPending, Dispatcher,
+                                          QueueRequests, ServiceState,
+                                          Options) of
+        undefined ->
+            {noreply, State};
+        {#suspended{processing = false} = SuspendedNew,
+         false, ServiceStateNew} ->
+            StateNew = State#state{suspended = SuspendedNew,
+                                   service_state = ServiceStateNew},
+            {noreply,
+             process_queues(StateNew)};
+        {SuspendedNew, QueueRequestsNew, ServiceStateNew} ->
+            {noreply,
+             State#state{suspended = SuspendedNew,
+                         queue_requests = QueueRequestsNew,
+                         service_state = ServiceStateNew}}
+    end);
 
 handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
             #state{dispatcher = Dispatcher,
@@ -1872,9 +1843,8 @@ terminate(Reason,
                      aspects_terminate_before = Aspects}}) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(Dispatcher, Reason),
-    {ok, ServiceStateNew} = aspects_terminate_before(Aspects,
-                                                     Reason, TimeoutTerm,
-                                                     ServiceState),
+    ServiceStateNew = aspects_terminate_before(Aspects, Reason, TimeoutTerm,
+                                               ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
     ok;
 
@@ -3084,16 +3054,13 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdateNow =:= undefined ->
             State#state{update_plan = UpdatePlanNew}
     end;
-process_queues(#state{suspended = #suspended{
-                          processing = true,
-                          busy = Busy} = Suspended} = State) ->
-    SuspendedNew = if
-        Busy =:= true ->
-            Suspended#suspended{busy = false};
-        Busy =:= false ->
-            Suspended
-    end,
-    State#state{suspended = SuspendedNew};
+process_queues(#state{suspended = #suspended{processing = true} = Suspended,
+                      service_state = ServiceState,
+                      options = Options} = State) ->
+    {SuspendedNew,
+     ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
+    State#state{suspended = SuspendedNew,
+                service_state = ServiceStateNew};
 process_queues(State) ->
     % info messages should be processed before service requests
     StateNew = process_queue_info(State),
@@ -3536,9 +3503,8 @@ duo_mode_loop_terminate(Reason,
                                        aspects_terminate_before = Aspects}}) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(DuoModePid, Reason),
-    {ok, ServiceStateNew} = aspects_terminate_before(Aspects,
-                                                     Reason, TimeoutTerm,
-                                                     ServiceState),
+    ServiceStateNew = aspects_terminate_before(Aspects, Reason, TimeoutTerm,
+                                               ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
     _ = erlang:process_flag(trap_exit, false),
     erlang:exit(DuoModePid, Reason).
@@ -3884,54 +3850,24 @@ duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
                            suspended = SuspendedOld,
                            queue_requests = QueueRequests,
                            service_state = ServiceState,
-                           options = #config_service_options{
-                               aspects_suspend = AspectsSuspend,
-                               aspects_resume = AspectsResume}} = State) ->
-    {Result, StateNew} = case SuspendedOld of
-        #suspended{processing = Suspend} ->
-            {if
-                 Suspend =:= true ->
-                     already_suspended;
-                 Suspend =:= false ->
-                     already_resumed
-             end,
-             State};
-        #suspended{processing = false}
-            when Suspend =:= true ->
-            TimeSuspend = cloudi_timestamp:native_monotonic(),
-            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsSuspend,
-                                                           ServiceState),
-            {ok,
-             State#state_duo{suspended = #suspended{
-                                 processing = true,
-                                 busy = QueueRequests,
-                                 time_suspend = TimeSuspend},
-                             queue_requests = true,
-                             service_state = ServiceStateNew}};
-        #suspended{processing = true,
-                   busy = Busy,
-                   time_suspend = TimeSuspend}
-            when Suspend =:= false ->
-            {ok, ServiceStateNew} = aspects_suspend_resume(AspectsResume,
-                                                           ServiceState),
-            StateNext = State#state_duo{suspended = #suspended{},
-                                        service_state = ServiceStateNew},
-            {{ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
-             if
-                 Busy =:= true ->
-                     StateNext;
-                 Busy =:= false ->
-                     duo_process_queues(StateNext)
-             end}
-    end,
-    if
-        SuspendPending =:= undefined ->
-            ok;
-        is_pid(SuspendPending) ->
-            SuspendPending ! {'cloudi_service_suspended', DuoModePid, Result},
-            ok
-    end,
-    {noreply, StateNew};
+                           options = Options} = State) ->
+    case suspended_change(SuspendedOld, Suspend,
+                          SuspendPending, DuoModePid,
+                          QueueRequests, ServiceState, Options) of
+        undefined ->
+            {noreply, State};
+        {#suspended{processing = false} = SuspendedNew,
+         false, ServiceStateNew} ->
+            StateNew = State#state_duo{suspended = SuspendedNew,
+                                       service_state = ServiceStateNew},
+            {noreply,
+             duo_process_queues(StateNew)};
+        {SuspendedNew, QueueRequestsNew, ServiceStateNew} ->
+            {noreply,
+             State#state_duo{suspended = SuspendedNew,
+                             queue_requests = QueueRequestsNew,
+                             service_state = ServiceStateNew}}
+    end;
 
 duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
                 #state_duo{duo_mode_pid = DuoModePid,
@@ -4161,15 +4097,13 @@ duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
             StateNew
     end;
 duo_process_queues(#state_duo{suspended = #suspended{
-                                  processing = true,
-                                  busy = Busy} = Suspended} = State) ->
-    SuspendedNew = if
-        Busy =:= true ->
-            Suspended#suspended{busy = false};
-        Busy =:= false ->
-            Suspended
-    end,
-    State#state_duo{suspended = SuspendedNew};
+                                  processing = true} = Suspended,
+                              service_state = ServiceState,
+                              options = Options} = State) ->
+    {SuspendedNew,
+     ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
+    State#state_duo{suspended = SuspendedNew,
+                    service_state = ServiceStateNew};
 duo_process_queues(State) ->
     % info messages should be processed before service requests
     StateNew = duo_process_queue_info(State),

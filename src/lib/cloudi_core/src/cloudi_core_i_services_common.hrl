@@ -41,6 +41,7 @@
            {return_null_response, 6}]}).
 -compile({inline,
           [{request_timeout_adjustment_f, 1},
+           {suspended_idle, 3},
            {return_null_response, 6},
            {return_null_response, 7}]}).
 
@@ -495,8 +496,66 @@ request_timeout_adjustment_f(true) ->
 request_timeout_adjustment_f(false) ->
     fun(T) -> T end.
 
+suspended_change(#suspended{processing = Suspend}, Suspend,
+                 SuspendPending, Pid, _, _, _) ->
+    Result = if
+        Suspend =:= true ->
+            already_suspended;
+        Suspend =:= false ->
+            already_resumed
+    end,
+    ok = suspended_change_result(SuspendPending, Pid, Result),
+    undefined;
+suspended_change(#suspended{processing = false}, true,
+                 SuspendPending, Pid, QueueRequests, ServiceState, Options) ->
+    Busy = QueueRequests,
+    TimeSuspend = cloudi_timestamp:native_monotonic(),
+    ServiceStateNew = if
+        Busy =:= true ->
+            ServiceState;
+        Busy =:= false ->
+            #config_service_options{
+                aspects_suspend = AspectsSuspend} = Options,
+            aspects_suspend_resume(AspectsSuspend, ServiceState)
+    end,
+    ok = suspended_change_result(SuspendPending, Pid, ok),
+    Suspended = #suspended{processing = true,
+                           busy = Busy,
+                           time_suspend = TimeSuspend},
+    {Suspended, true, ServiceStateNew};
+suspended_change(#suspended{processing = true,
+                            busy = Busy,
+                            time_suspend = TimeSuspend}, false,
+                 SuspendPending, Pid, _, ServiceState, Options) ->
+    ServiceStateNew = if
+        Busy =:= true ->
+            ServiceState;
+        Busy =:= false ->
+            #config_service_options{
+                aspects_resume = AspectsResume} = Options,
+            aspects_suspend_resume(AspectsResume, ServiceState)
+    end,
+    Result = {ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
+    ok = suspended_change_result(SuspendPending, Pid, Result),
+    {#suspended{}, Busy, ServiceStateNew}.
+
+suspended_change_result(undefined, _, _) ->
+    ok;
+suspended_change_result(SuspendPending, Pid, Result)
+    when is_pid(SuspendPending) ->
+    SuspendPending ! {'cloudi_service_suspended', Pid, Result},
+    ok.
+
+suspended_idle(#suspended{processing = true,
+                          busy = true} = Suspended, ServiceState,
+               #config_service_options{aspects_suspend = AspectsSuspend}) ->
+    {Suspended#suspended{busy = false},
+     aspects_suspend_resume(AspectsSuspend, ServiceState)};
+suspended_idle(Suspended, ServiceState, _) ->
+    {Suspended, ServiceState}.
+
 aspects_terminate_before([], _, _, ServiceState) ->
-    {ok, ServiceState};
+    ServiceState;
 aspects_terminate_before([{M, F} = Aspect | L],
                          Reason, TimeoutTerm, ServiceState) ->
     try {ok, _} = M:F(Reason, TimeoutTerm, ServiceState) of
@@ -506,7 +565,7 @@ aspects_terminate_before([{M, F} = Aspect | L],
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
-            {ok, ServiceState}
+            ServiceState
     end;
 aspects_terminate_before([F | L],
                          Reason, TimeoutTerm, ServiceState) ->
@@ -517,11 +576,11 @@ aspects_terminate_before([F | L],
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
-            {ok, ServiceState}
+            ServiceState
     end.
 
 aspects_suspend_resume([], ServiceState) ->
-    {ok, ServiceState};
+    ServiceState;
 aspects_suspend_resume([{M, F} = Aspect | L], ServiceState) ->
     try {ok, _} = M:F(ServiceState) of
         {ok, ServiceStateNew} ->
@@ -530,7 +589,7 @@ aspects_suspend_resume([{M, F} = Aspect | L], ServiceState) ->
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
-            {ok, ServiceState}
+            ServiceState
     end;
 aspects_suspend_resume([F | L], ServiceState) ->
     try {ok, _} = F(ServiceState) of
@@ -540,7 +599,7 @@ aspects_suspend_resume([F | L], ServiceState) ->
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
-            {ok, ServiceState}
+            ServiceState
     end.
 
 return_null_response('cloudi_service_send_async',
