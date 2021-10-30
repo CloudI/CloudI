@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2017-2021 Michael Truog
+%%% @version 2.0.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_null).
@@ -101,11 +101,11 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
                  "\"~ts\" consumed~n"
                  "(~tp,~n"
                  " ~tp)",
-                 [Name, RequestInfo, Request]);
+                 [cloudi_service_name:utf8(Name), RequestInfo, Request]);
         DebugContents =:= false ->
             ?LOG(DebugLogLevel,
                  "\"~ts\" consumed",
-                 [Name])
+                 [cloudi_service_name:utf8(Name)])
     end,
     {reply, <<>>, State}.
 

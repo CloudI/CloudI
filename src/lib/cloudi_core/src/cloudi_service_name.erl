@@ -42,7 +42,9 @@
          parse/2,
          parse_with_suffix/2,
          pattern/1,
-         suffix/2]).
+         suffix/2,
+         utf8/1,
+         utf8_forced/1]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -153,6 +155,36 @@ suffix([PrefixC | _] = Prefix, [NameOrPatternC | _] = NameOrPattern)
     end;
 suffix(_, _) ->
     erlang:exit(badarg).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert the service name or service pattern type for interpretation as UTF8.===
+%% Used for io formatting with ~ts.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec utf8(NameOrPattern :: cloudi:nonempty_bytestring()) ->
+    <<_:_*8>>.
+
+utf8([_ | _] = NameOrPattern) ->
+    erlang:list_to_binary(NameOrPattern).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Force conversion of the service name or service pattern type for interpretation as UTF8.===
+%% Used for io formatting with ~ts.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec utf8_forced(NameOrPattern :: cloudi:nonempty_bytestring()) ->
+    <<_:_*8>>.
+
+utf8_forced([_ | _] = NameOrPattern) ->
+    try erlang:list_to_binary(NameOrPattern)
+    catch
+        error:badarg ->
+            cloudi_string:term_to_binary({invalid_utf8, NameOrPattern})
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

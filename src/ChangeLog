@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-10-29 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the cloudi_service_name functions utf8/1 and utf8_forced/1
+      for Erlang io formatting of a service name or service name pattern
+      with ~ts as UTF-8 (to avoid erroneous interpretation as UTF-32)
+
 2021-10-23 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix the service configuration options

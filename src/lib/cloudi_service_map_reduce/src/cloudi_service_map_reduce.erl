@@ -251,7 +251,8 @@ aspect_suspend(#state{map_reduce_module = MapReduceModule,
                       elapsed_seconds = ElapsedSeconds} = State) ->
     TimeRunningEnd = cloudi_timestamp:seconds_monotonic(),
     ElapsedSecondsNew = ElapsedSeconds + (TimeRunningEnd - TimeRunningStart),
-    ?LOG_INFO("~s ~ts suspended", [MapReduceModule, MapReduceName]),
+    ?LOG_INFO("~s ~ts suspended",
+              [MapReduceModule, cloudi_service_name:utf8(MapReduceName)]),
     {ok,
      State#state{suspended = true,
                  elapsed_seconds = ElapsedSecondsNew}};
@@ -267,7 +268,8 @@ aspect_resume(#state{service = Service,
                      suspended = true} = State) ->
     TimeRunningStart = cloudi_timestamp:seconds_monotonic(),
     Service ! cloudi_service_map_reduce_resumed,
-    ?LOG_INFO("~s ~ts resumed", [MapReduceModule, MapReduceName]),
+    ?LOG_INFO("~s ~ts resumed",
+              [MapReduceModule, cloudi_service_name:utf8(MapReduceName)]),
     {ok,
      State#state{time_running = TimeRunningStart,
                  suspended = false}}.

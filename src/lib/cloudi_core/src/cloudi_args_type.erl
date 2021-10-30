@@ -160,7 +160,7 @@ service_name([NameC | _] = Name)
     case cloudi_x_trie:is_pattern2_bytes(Name) of
         true ->
             ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"",
-                            [erlang:list_to_binary(Name)]),
+                            [cloudi_service_name:utf8_forced(Name)]),
             erlang:exit(badarg);
         false ->
             true
@@ -178,15 +178,15 @@ service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     case cloudi_x_trie:is_pattern2_bytes(Name) of
         true ->
             ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"",
-                            [erlang:list_to_binary(Name)]),
+                            [cloudi_service_name:utf8_forced(Name)]),
             erlang:exit(badarg);
         false ->
             case cloudi_x_trie:pattern2_suffix(Prefix, Name) of
                 error ->
                     ?LOG_ERROR_SYNC("prefix service name mismatch: "
                                     "\"~ts\" \"~ts\"",
-                                    [erlang:list_to_binary(Prefix),
-                                     erlang:list_to_binary(Name)]),
+                                    [cloudi_service_name:utf8_forced(Prefix),
+                                     cloudi_service_name:utf8_forced(Name)]),
                     erlang:exit(badarg);
                 Suffix ->
                     Suffix
@@ -211,8 +211,8 @@ service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
         error ->
             ?LOG_ERROR_SYNC("prefix service name pattern mismatch: "
                             "\"~ts\" \"~ts\"",
-                            [erlang:list_to_binary(Prefix),
-                             erlang:list_to_binary(Pattern)]),
+                            [cloudi_service_name:utf8_forced(Prefix),
+                             cloudi_service_name:utf8_forced(Pattern)]),
             erlang:exit(badarg);
         Suffix ->
             Suffix
