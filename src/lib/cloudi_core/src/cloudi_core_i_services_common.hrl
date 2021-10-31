@@ -42,6 +42,7 @@
 -compile({inline,
           [{request_timeout_adjustment_f, 1},
            {suspended_idle, 3},
+           {update_now, 2},
            {return_null_response, 6},
            {return_null_response, 7}]}).
 
@@ -553,6 +554,21 @@ suspended_idle(#suspended{processing = true,
      aspects_suspend_resume(AspectsSuspend, ServiceState)};
 suspended_idle(Suspended, ServiceState, _) ->
     {Suspended, ServiceState}.
+
+update_now(#config_service_update{update_pending = UpdatePending,
+                                  update_now = UpdateNow} = UpdatePlan,
+           Pid) ->
+    UpdatePlanNew = if
+        is_pid(UpdatePending) ->
+            UpdatePending ! {'cloudi_service_update', Pid},
+            UpdatePlan#config_service_update{update_pending = undefined,
+                                             process_busy = false};
+        UpdatePending =:= undefined ->
+            UpdatePlan#config_service_update{process_busy = false}
+    end,
+    {is_pid(UpdateNow), UpdatePlanNew};
+update_now(undefined, _) ->
+    {false, undefined}.
 
 aspects_terminate_before([], _, _, ServiceState) ->
     ServiceState;

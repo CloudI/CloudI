@@ -3036,31 +3036,24 @@ process_update(#state{dispatcher = Dispatcher,
     process_queues(StateNew#state{update_plan = undefined}).
 
 process_queues(#state{dispatcher = Dispatcher,
-                      update_plan = UpdatePlan} = State)
-    when is_record(UpdatePlan, config_service_update) ->
-    #config_service_update{update_pending = UpdatePending,
-                           update_now = UpdateNow} = UpdatePlan,
-    UpdatePlanNew = if
-        is_pid(UpdatePending) ->
-            UpdatePending ! {'cloudi_service_update', Dispatcher},
-            UpdatePlan#config_service_update{update_pending = undefined,
-                                             process_busy = false};
-        UpdatePending =:= undefined ->
-            UpdatePlan#config_service_update{process_busy = false}
-    end,
-    if
-        is_pid(UpdateNow) ->
-            process_update(State#state{update_plan = UpdatePlanNew});
-        UpdateNow =:= undefined ->
-            State#state{update_plan = UpdatePlanNew}
-    end;
-process_queues(#state{suspended = #suspended{processing = true} = Suspended,
+                      update_plan = UpdatePlan,
+                      suspended = #suspended{
+                          processing = Processing} = Suspended,
                       service_state = ServiceState,
-                      options = Options} = State) ->
+                      options = Options} = State)
+    when Processing orelse is_record(UpdatePlan, config_service_update) ->
     {SuspendedNew,
      ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
-    State#state{suspended = SuspendedNew,
-                service_state = ServiceStateNew};
+    case update_now(UpdatePlan, Dispatcher) of
+        {true, UpdatePlanNew} ->
+            process_update(State#state{update_plan = UpdatePlanNew,
+                                       suspended = SuspendedNew,
+                                       service_state = ServiceStateNew});
+        {false, UpdatePlanNew} ->
+            State#state{update_plan = UpdatePlanNew,
+                        suspended = SuspendedNew,
+                        service_state = ServiceStateNew}
+    end;
 process_queues(State) ->
     % info messages should be processed before service requests
     StateNew = process_queue_info(State),
@@ -4077,33 +4070,25 @@ duo_process_update(#state_duo{duo_mode_pid = DuoModePid,
     duo_process_queues(StateNew#state_duo{update_plan = undefined}).
 
 duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
-                              update_plan = UpdatePlan} = State)
-    when is_record(UpdatePlan, config_service_update) ->
-    #config_service_update{update_pending = UpdatePending,
-                           update_now = UpdateNow} = UpdatePlan,
-    UpdatePlanNew = if
-        is_pid(UpdatePending) ->
-            UpdatePending ! {'cloudi_service_update', DuoModePid},
-            UpdatePlan#config_service_update{update_pending = undefined,
-                                             process_busy = false};
-        UpdatePending =:= undefined ->
-            UpdatePlan#config_service_update{process_busy = false}
-    end,
-    StateNew = State#state_duo{update_plan = UpdatePlanNew},
-    if
-        is_pid(UpdateNow) ->
-            duo_process_update(StateNew);
-        UpdateNow =:= undefined ->
-            StateNew
-    end;
-duo_process_queues(#state_duo{suspended = #suspended{
-                                  processing = true} = Suspended,
+                              update_plan = UpdatePlan,
+                              suspended = #suspended{
+                                  processing = Processing} = Suspended,
                               service_state = ServiceState,
-                              options = Options} = State) ->
+                              options = Options} = State)
+    when Processing orelse is_record(UpdatePlan, config_service_update) ->
     {SuspendedNew,
      ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
-    State#state_duo{suspended = SuspendedNew,
-                    service_state = ServiceStateNew};
+    case update_now(UpdatePlan, DuoModePid) of
+        {true, UpdatePlanNew} ->
+            duo_process_update(State#state_duo{
+                                   update_plan = UpdatePlanNew,
+                                   suspended = SuspendedNew,
+                                   service_state = ServiceStateNew});
+        {false, UpdatePlanNew} ->
+            State#state_duo{update_plan = UpdatePlanNew,
+                            suspended = SuspendedNew,
+                            service_state = ServiceStateNew}
+    end;
 duo_process_queues(State) ->
     % info messages should be processed before service requests
     StateNew = duo_process_queue_info(State),

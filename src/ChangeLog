@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-10-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve service update while the service is suspended with
+      the service configuration option aspects_suspend set
+      (aspects_suspend functions are called before the update occurs,
+       if there is a pending update)
+
 2021-10-29 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the cloudi_service_name functions utf8/1 and utf8_forced/1
