@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-11-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the cloudi_service_map_reduce elapsed_seconds function
+    * Remove the cloudi_service_map_reduce suspend/resume functions
+      to rely upon CloudI service suspend/resume functionality
+      with the aspect_suspend/aspect_resume functions
+
 2021-10-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve service update while the service is suspended with

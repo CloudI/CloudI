@@ -41,16 +41,12 @@
 -behaviour(cloudi_service).
 
 %% external interface
--export([resume/2,
-         resume/3,
-         suspend/2,
-         suspend/3,
-         aspect_suspend/1,
-         aspect_resume/1]).
+-export([aspect_suspend/1,
+         aspect_resume/1,
+         elapsed_seconds/0]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
-         cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
@@ -157,6 +153,8 @@
             :: any()
     }).
 
+-define(ELAPSED_SECONDS_PDICT_KEY, cloudi_service_map_reduce_elapsed_seconds).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from behavior
 %%%------------------------------------------------------------------------
@@ -204,42 +202,12 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--type agent() :: cloudi:agent().
--type service_name() :: cloudi:service_name().
--type timeout_milliseconds() :: cloudi:timeout_milliseconds().
--type module_response(Result) ::
-    {{ok, Result}, AgentNew :: agent()} |
-    {{error, cloudi:error_reason()}, AgentNew :: agent()}.
-
--spec resume(Agent :: agent(),
-             Prefix :: service_name()) ->
-    module_response(ok | {error, any()}).
-
-resume(Agent, Prefix) ->
-    cloudi:send_sync(Agent, Prefix, resume).
-
--spec resume(Agent :: agent(),
-             Prefix :: service_name(),
-             Timeout :: timeout_milliseconds()) ->
-    module_response(ok | {error, any()}).
-
-resume(Agent, Prefix, Timeout) ->
-    cloudi:send_sync(Agent, Prefix, resume, Timeout).
-
--spec suspend(Agent :: agent(),
-              Prefix :: service_name()) ->
-    module_response(ok | {error, any()}).
-
-suspend(Agent, Prefix) ->
-    cloudi:send_sync(Agent, Prefix, suspend).
-
--spec suspend(Agent :: agent(),
-              Prefix :: service_name(),
-              Timeout :: timeout_milliseconds()) ->
-    module_response(ok | {error, any()}).
-
-suspend(Agent, Prefix, Timeout) ->
-    cloudi:send_sync(Agent, Prefix, suspend, Timeout).
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function for aspects_suspend service configuration option.===
+%% Add as {cloudi_service_map_reduce, aspect_suspend}.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec aspect_suspend(State :: #state{}) ->
     {ok, #state{}}.
@@ -255,24 +223,41 @@ aspect_suspend(#state{map_reduce_module = MapReduceModule,
               [MapReduceModule, cloudi_service_name:utf8(MapReduceName)]),
     {ok,
      State#state{suspended = true,
-                 elapsed_seconds = ElapsedSecondsNew}};
-aspect_suspend(#state{suspended = true} = State) ->
-    {ok, State}.
+                 elapsed_seconds = ElapsedSecondsNew}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function for aspects_resume service configuration option.===
+%% Add as {cloudi_service_map_reduce, aspect_resume}.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec aspect_resume(State :: #state{}) ->
     {ok, #state{}}.
 
-aspect_resume(#state{service = Service,
-                     map_reduce_module = MapReduceModule,
+aspect_resume(#state{map_reduce_module = MapReduceModule,
                      map_reduce_name = MapReduceName,
                      suspended = true} = State) ->
     TimeRunningStart = cloudi_timestamp:seconds_monotonic(),
-    Service ! cloudi_service_map_reduce_resumed,
     ?LOG_INFO("~s ~ts resumed",
               [MapReduceModule, cloudi_service_name:utf8(MapReduceName)]),
     {ok,
      State#state{time_running = TimeRunningStart,
                  suspended = false}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current elapsed seconds in a Map-Reduce callback function.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec elapsed_seconds() ->
+    cloudi_service_api:seconds().
+
+elapsed_seconds() ->
+    {TimeRunningStart,
+     ElapsedSeconds} = erlang:get(?ELAPSED_SECONDS_PDICT_KEY),
+    ElapsedSeconds + (cloudi_timestamp:seconds_monotonic() - TimeRunningStart).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -325,12 +310,6 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                           time_start = TimeStart},
     ok = cloudi_service:subscribe(Dispatcher, Name),
     {ok, #init_state{service = Service}}.
-
-cloudi_service_handle_request(_RequestType, _Name, _Pattern,
-                              _RequestInfo, Request,
-                              _Timeout, _Priority, _TransId, _Pid,
-                              State, _Dispatcher) ->
-    request(Request, State).
 
 cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
                            #init_state{} = InitState,
@@ -385,11 +364,14 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 trans_id = TransId} = Request,
                            #state{map_reduce_module = MapReduceModule,
                                   map_reduce_state = MapReduceState,
-                                  map_requests = MapRequests} = State,
+                                  map_requests = MapRequests,
+                                  time_running = TimeRunningStart,
+                                  elapsed_seconds = ElapsedSeconds} = State,
                            Dispatcher) ->
     case maps:take(TransId, MapRequests) of
         {#map_send{send_args = [_ | SendArgs]},
          MapRequestsNew} ->
+            ok = elapsed_seconds_set(TimeRunningStart, ElapsedSeconds),
             case MapReduceModule:
                  cloudi_service_map_reduce_recv([Dispatcher | SendArgs],
                                                 ResponseInfo, Response,
@@ -408,27 +390,6 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
             end;
         error ->
             map_info(Request, State, Dispatcher)
-    end;
-cloudi_service_handle_info(cloudi_service_map_reduce_resumed,
-                           #state{map_reduce_module = MapReduceModule,
-                                  map_reduce_state = MapReduceState,
-                                  map_count = MapCount,
-                                  map_requests = MapRequests,
-                                  suspended = Suspended} = State,
-                           Dispatcher) ->
-    if
-        Suspended =:= true ->
-            {noreply, State};
-        Suspended =:= false ->
-            case map_send(MapCount - maps:size(MapRequests), MapRequests,
-                          MapReduceModule, MapReduceState, Dispatcher) of
-                {ok, MapRequestsNew, MapReduceStateNew} ->
-                    {noreply,
-                     State#state{map_reduce_state = MapReduceStateNew,
-                                 map_requests = MapRequestsNew}};
-                {error, _} = Error ->
-                    {stop, Error, State}
-            end
     end;
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     map_info(Request, State, Dispatcher).
@@ -470,6 +431,7 @@ init(#init_begin{service = Service,
                  time_start = TimeStart},
      Dispatcher) ->
     MapCount = cloudi_concurrency:count(Concurrency),
+    ok = elapsed_seconds_set(TimeStart),
     case MapReduceModule:
          cloudi_service_map_reduce_new(MapReduceArgs, MapCount,
                                        Prefix, Timeout, Dispatcher) of
@@ -513,27 +475,6 @@ init_end_send([Request | InfoQueued], Service) ->
     Service ! Request,
     init_end_send(InfoQueued, Service).
 
-request(_, #init_state{} = InitState) ->
-    {reply, {error, init_pending}, InitState};
-request(suspend,
-        #state{suspended = Suspended} = State) ->
-    if
-        Suspended =:= true ->
-            {reply, {error, already_suspended}, State};
-        Suspended =:= false ->
-            {ok, StateNew} = aspect_suspend(State),
-            {reply, ok, StateNew}
-    end;
-request(resume,
-        #state{suspended = Suspended} = State) ->
-    if
-        Suspended =:= true ->
-            {ok, StateNew} = aspect_resume(State),
-            {reply, ok, StateNew};
-        Suspended =:= false ->
-            {reply, {error, already_resumed}, State}
-    end.
-
 map_retry(MapRequest, State, Dispatcher) ->
     case retry(MapRequest, State) of
         true ->
@@ -546,8 +487,11 @@ map_resend(#map_send{send_args = [_ | SendArgsTail],
                      retry_count = RetryCount},
            #state{map_reduce_module = MapReduceModule,
                   map_reduce_state = MapReduceState,
-                  map_requests = MapRequests} = State, Dispatcher) ->
+                  map_requests = MapRequests,
+                  time_running = TimeRunningStart,
+                  elapsed_seconds = ElapsedSeconds} = State, Dispatcher) ->
     SendArgs = [Dispatcher | SendArgsTail],
+    ok = elapsed_seconds_set(TimeRunningStart, ElapsedSeconds),
     case MapReduceModule:
          cloudi_service_map_reduce_resend(SendArgs, MapReduceState) of
         {ok, SendArgsNew, MapReduceStateNew} ->
@@ -565,7 +509,10 @@ map_resend(#map_send{send_args = [_ | SendArgsTail],
 
 map_info(Request, State, Dispatcher) ->
     #state{map_reduce_module = MapReduceModule,
-           map_reduce_state = MapReduceState} = State,
+           map_reduce_state = MapReduceState,
+           time_running = TimeRunningStart,
+           elapsed_seconds = ElapsedSeconds} = State,
+    ok = elapsed_seconds_set(TimeRunningStart, ElapsedSeconds),
     case MapReduceModule:
          cloudi_service_map_reduce_info(Request, MapReduceState, Dispatcher) of
         {ok, MapReduceStateNew} ->
@@ -613,8 +560,6 @@ map_send_request(SendArgs, RetryCount, MapRequests) ->
             Error
     end.
 
-map_check_continue(#state{suspended = true} = State, _Dispatcher) ->
-    {noreply, State};
 map_check_continue(#state{map_reduce_module = MapReduceModule,
                           map_reduce_state = MapReduceState,
                           map_requests = MapRequests} = State, Dispatcher) ->
@@ -696,6 +641,14 @@ retry_delay(RetryDelay, Service,
     _ = erlang:send_after(RetryDelay, Service,
                           {cloudi_service_map_reduce_retry, MapRequestNew}),
     true.
+
+elapsed_seconds_set(TimeRunningStart) ->
+    elapsed_seconds_set(TimeRunningStart, 0).
+
+elapsed_seconds_set(TimeRunningStart, ElapsedSeconds) ->
+    _ = erlang:put(?ELAPSED_SECONDS_PDICT_KEY,
+                   {TimeRunningStart, ElapsedSeconds}),
+    ok.
 
 hours_elapsed(ElapsedSeconds) ->
     erlang:round((ElapsedSeconds / (60 * 60)) * 10) / 10.
