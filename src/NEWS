@@ -1,5 +1,19 @@
 ------------------------------------------------------------------------        
 
+December 5, 2021
+  Version 2.0.4 released.
+  * backwards incompatible changes:
+    * All service name and service name patterns must be UTF-8
+    * The ATS CloudI API subscribe function now uses the
+      implement template idiom to simplify use
+  * Improved the C/C++ CloudI API backtrace information
+  * Added the cloudi_service_send service for simpler automation
+  * Fixed the service configuration options
+    aspects_suspend and aspects_resume
+  * OCaml 4.13 support was added
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 May 27, 2021
   Version 2.0.2 released.
   * Added the ATS CloudI API (ATS2/Postiats >= 0.3.13)

@@ -3,7 +3,7 @@
 
 {application, hello_world_reltool,
   [{description, "Hello World Reltool Example Application"},
-   {vsn, "2.0.2"},
+   {vsn, "2.0.4"},
    {modules, [
         hello_world_reltool]},
    {registered, []},

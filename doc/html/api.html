@@ -33,7 +33,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.2.tar.gz" rel="noopener" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.4.tar.gz" rel="noopener" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -41,8 +41,8 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <h3 style="text-align:center">version 2.0.2<br />
-  last updated on May 27<sup>th</sup> 2021</h3>
+  <h3 style="text-align:center">version 2.0.4<br />
+  last updated on December 5<sup>th</sup> 2021</h3>
 
   <h2 id="Service">CloudI API - Making a Service</h2>
   <ul class="api">
@@ -435,13 +435,13 @@ CloudI::API.new(thread_index)
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-2.0.2/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-2.0.4/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-2.0.2/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-2.0.4/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -1718,7 +1718,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-2.0.2/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-2.0.4/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre class="code">
@@ -2099,7 +2099,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-2.0.2/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-2.0.4/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre class="code">
@@ -2574,7 +2574,7 @@ CloudI::API.return_(request_type, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-2.0.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-2.0.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -2742,7 +2742,7 @@ CloudI::API.forward_(request_type, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-2.0.2/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-2.0.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -2989,7 +2989,7 @@ CloudI::API.shutdown(reason=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-2.0.2/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-2.0.4/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -3080,8 +3080,8 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
  {protocol, default | local | tcp | udp},   % default is local
  {buffer_size, default | pos_integer()},    % default is 65536 bytes
  {timeout_init, 101..4294967195},           % default is 5000 milliseconds
- {timeout_async, 499..4294967195},          % default is 5000 milliseconds
- {timeout_sync, 499..4294967195},           % default is 5000 milliseconds
+ {timeout_async, 499..4294967295},          % default is 5000 milliseconds
+ {timeout_sync, 499..4294967295},           % default is 5000 milliseconds
  {dest_list_deny, dest_list()},             % default is undefined
  {dest_list_allow, dest_list()},            % default is undefined
  {count_process, pos_integer() | float()},  % default is 1
@@ -4596,7 +4596,7 @@ fun((OldModuleVersion :: list(any()),
                          kill =&gt; boolean(),
                          error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
-       {message_queue_data, off_heap | on_heap | mixed})} |
+       {message_queue_data, off_heap | on_heap})} |
  {aspects_init_after, list(aspect_init_after_internal())} |
  {aspects_request_before, list(aspect_request_before_internal())} |
  {aspects_request_after, list(aspect_request_after_internal())} |
@@ -4615,7 +4615,7 @@ fun((OldModuleVersion :: list(any()),
                          kill =&gt; boolean(),
                          error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
-       {message_queue_data, off_heap | on_heap | mixed})} |
+       {message_queue_data, off_heap | on_heap})} |
  {request_pid_uses, infinity | pos_integer()} |
  {request_pid_options,
   list({priority, low | normal | high} |
@@ -4627,7 +4627,7 @@ fun((OldModuleVersion :: list(any()),
                          kill =&gt; boolean(),
                          error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
-       {message_queue_data, off_heap | on_heap | mixed})} |
+       {message_queue_data, off_heap | on_heap})} |
  {info_pid_uses, infinity | pos_integer()} |
  {info_pid_options,
   list({priority, low | normal | high} |
@@ -4639,7 +4639,7 @@ fun((OldModuleVersion :: list(any()),
                          kill =&gt; boolean(),
                          error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
-       {message_queue_data, off_heap | on_heap | mixed})} |
+       {message_queue_data, off_heap | on_heap})} |
  {hibernate,
   list({period, period_seconds()} |
        {rate_request_min, number()}) | boolean()} |
@@ -4681,7 +4681,7 @@ fun((OldModuleVersion :: list(any()),
                          kill =&gt; boolean(),
                          error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
-       {message_queue_data, off_heap | on_heap | mixed})} |
+       {message_queue_data, off_heap | on_heap})} |
  {aspects_init_after, list(aspect_init_after_external())} |
  {aspects_request_before, list(aspect_request_before_external())} |
  {aspects_request_after, list(aspect_request_after_external())} |
@@ -4916,20 +4916,20 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6464/cloudi/api/rpc/
   </td><td>
     undefined
   </td><td>
-    AWS Access Key ID as a string (e.g. "${AWS_ACCESS_KEY_ID}").
+    AWS Access Key ID as a string (e.g.&nbsp;"${AWS_ACCESS_KEY_ID}").
   </td></tr><tr><td>
     secret_access_key
   </td><td>
     undefined
   </td><td>
-    AWS Secret Access Key as a string (e.g. "${AWS_SECRET_ACCESS_KEY}").
+    AWS Secret Access Key as a string (e.g.&nbsp;"${AWS_SECRET_ACCESS_KEY}").
   </td></tr><tr><td>
     host
   </td><td>
     "ec2.amazonaws.com"
   </td><td>
     AWS EC2 API <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html#ec2_region" rel="noreferrer" target="_blank">endpoint</a>
-    (the default DNS string picks the closest endpoint for USA AWS regions).
+    (e.g.,&nbsp;"ec2.${AWS_DEFAULT_REGION}.amazonaws.com").
   </td></tr><tr><td>
     groups
   </td><td>
@@ -5589,6 +5589,7 @@ curl http://localhost:6464/cloudi/api/rpc/code_status.erl
  {runtime_erlang_stdlib_version, nonempty_string()},
  {runtime_erlang_sasl_version, nonempty_string()},
  {runtime_erlang_compiler_version, nonempty_string()},
+ {runtime_erlang_compilation, nonempty_string()},      % "aot" | "jit"
  {runtime_cloudi_version, nonempty_string()},
  {runtime_machine_processors, pos_integer()},          % logical processors
  {runtime_start, nonempty_string()},                   % ISO8601 timestamp

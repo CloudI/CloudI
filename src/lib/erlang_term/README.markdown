@@ -40,6 +40,12 @@ Size information should match the [Erlang Efficiency Guide memory information](h
 * Fun: 9..13 words + size of environment
 * Erlang process: 338 words when spawned (includes a heap of 233 words)
 
+Limitations
+-----------
+
+* Binaries are not tracked to avoid counting a reference more than once
+  (to avoid the extra latency and memory use)
+
 License
 -------
 
@@ -53,5 +59,5 @@ Michael Truog (mjtruog at protonmail dot com)
 Thanks
 ------
 
-* Sverker Eriksson [`erts_debug:flat_size/1` info](http://erlang.org/pipermail/erlang-bugs/2014-September/004607.html)
+* Sverker Eriksson [`erts_debug:flat_size/1` info](erlang_bugs_email.txt)
 

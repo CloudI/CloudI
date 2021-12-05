@@ -1,0 +1,69 @@
+Delivered-To: mjtruog at gmail dot com
+Return-Path: <sverker.eriksson at ericsson dot com>
+Date: Fri, 26 Sep 2014 15:46:44 +0200
+From: Sverker Eriksson <sverker.eriksson at ericsson dot com>
+To: Michael Truog <mjtruog at gmail dot com>
+CC: <erlang-bugs at erlang dot org>
+Subject: Re: [erlang-bugs] erts_debug:flat_size/1 wrong?
+Content-Type: text/plain; charset="windows-1252"; format=flowed
+Content-Transfer-Encoding: 7bit
+Return-Path: sverker.eriksson at ericsson dot com
+
+On 09/26/2014 04:19 AM, Michael Truog wrote:
+> Hi,
+>
+> I have been attempting to compare the output of erts_debug:flat_size/1 
+> to the memory info at 
+> http://www.erlang.org/doc/efficiency_guide/advanced.html#id68923 and 
+> the results show that each term's size is off-by-one (at least for 
+> pids local/remote, refs local/remote, floats, integers, bignums, 
+> binaries and atoms).  I know the function is experimental, but this is 
+> a bug, right?  The problem affects top-level terms and nested terms, 
+> so it is likely to understate the memory with large terms.  I wanted 
+> to make sure the memory info (in the efficiency guide) was accurate 
+> (it seems like it is).  I was testing with R16B03 on 64bits.
+>
+> For example:
+> 1> erts_debug:flat_size(576460752303423488).
+> 2
+> 2> erts_debug:flat_size(576460752303423487).
+> 0
+> 3> erts_debug:flat_size(undefined).
+> 0
+> 4> erts_debug:flat_size([]).
+> 0
+> 5> erts_debug:flat_size([undefined]).
+> 2
+> % 1 word for each element in the list * 2 elements including []
+> 6> erts_debug:flat_size(erlang:make_ref()).
+> 3
+> 7> erts_debug:flat_size(erlang:self()).
+> 0
+> 8> erts_debug:flat_size(1.0).
+> 2
+>
+
+
+erts_debug:flat_size/1 is undocumented and can therefor not be wrong by 
+definition :-)
+
+But no, there is no bug, erts_debug:flat_size/1 works as intended in the 
+current implementation. It returns the number of words on the _heap_ 
+occupied (*) by the term. Excluded are thus off-heap data such as 
+binaries larger than 64 bytes AND the top term word, which is kept in a 
+register or on the stack.
+
+(*) erts_debug:flat_size does not take sharing of sub-terms into account 
+while erts_debug:size/1 do.
+
+1> A = "Hello".
+"Hello"
+2> erts_debug:flat_size(A).
+10
+3> erts_debug:flat_size({A,A}).
+23
+4> erts_debug:size({A,A}).
+13
+
+
+/Sverker, Erlang/OTP

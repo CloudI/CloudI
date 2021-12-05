@@ -1,4 +1,4 @@
-# [CloudI 2.0.2](https://cloudi.org)
+# [CloudI 2.0.4](https://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI) [![CloudI IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.freenode.net?randomnick=1&channels=cloudi) [![Project Stats](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI)
 
@@ -177,7 +177,7 @@ Dynamic Configuration and Monitoring:
 
 * CloudI Service API (See [`src/service_api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme))
 * Batch CloudI Service Execution with [`cloudi_service_api_batch`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_api_batch/src/cloudi_service_api_batch.erl)
-* Service Request Sending with [`cloudi_service_send`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_send/src/cloudi_service_send.erl)
+* Service Request Sending with [`cloudi_service_send`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_send/src/cloudi_service_send.erl)
 * Monitoring to Graphite, OpenTSDB, SNMP, InfluxDB or StatsD with [`cloudi_service_monitoring`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl)
 
 Routing:

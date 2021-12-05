@@ -21,9 +21,9 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
    This Erlang trie implementation uses string (list of integers) keys and
    is able to get performance close to the process dictionary when doing key
    lookups (find or fetch, see <a href="http://okeuday.livejournal.com/16941.html" target="_top"><tt>http://okeuday.livejournal.com/16941.html</tt></a>).
-<p>Copyright © 2010-2020 Michael Truog</p>
+<p>Copyright © 2010-2021 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.1 May 26 2021 18:06:34
+<p><b>Version:</b> 2.0.3 Dec 4 2021 12:38:19
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -121,6 +121,8 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   Traverses in alphabetical order.</td></tr>
 <tr><td valign="top"><a href="#from_list-1">from_list/1</a></td><td>
   <h4><a name="Create_a_trie_from_a_list.">Create a trie from a list.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_bytestring-1">is_bytestring/1</a></td><td>
+  <h4><a name="Test_if_the_parameter_is_a_byte_string.">Test if the parameter is a byte string.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_key-2">is_key/2</a></td><td>
   <h4><a name="Determine_if_a_key_exists_in_a_trie.">Determine if a key exists in a trie.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_pattern-1">is_pattern/1</a></td><td>
@@ -129,6 +131,12 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <tr><td valign="top"><a href="#is_pattern2-1">is_pattern2/1</a></td><td>
   <h4><a name="Test_to_determine_if_a_string_is_a_pattern_(using_2_wildcard_characters).">Test to determine if a string is a pattern (using 2 wildcard characters).</a></h4>
   "*" and "?" are wildcard characters (equivalent to the ".+" regex).</td></tr>
+<tr><td valign="top"><a href="#is_pattern2_bytes-1">is_pattern2_bytes/1</a></td><td>
+  <h4><a name="Test_to_determine_if_a_byte_string_is_a_pattern_(using_2_wildcard_characters).">Test to determine if a byte string is a pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).</td></tr>
+<tr><td valign="top"><a href="#is_pattern_bytes-1">is_pattern_bytes/1</a></td><td>
+  <h4><a name="Test_to_determine_if_a_byte_string_is_a_pattern.">Test to determine if a byte string is a pattern.</a></h4>
+  "*" is the wildcard character (equivalent to the ".+" regex).</td></tr>
 <tr><td valign="top"><a href="#is_prefix-2">is_prefix/2</a></td><td>
   <h4><a name="Determine_if_the_prefix_provided_has_existed_within_a_trie.">Determine if the prefix provided has existed within a trie.</a></h4>
   The function returns true if the string supplied is a prefix
@@ -434,6 +442,14 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   <h4><a name="Create_a_trie_from_a_list.">Create a trie from a list.</a></h4>
 </p>
 
+<h3 class="function"><a name="is_bytestring-1">is_bytestring/1</a></h3>
+<div class="spec">
+<p><tt>is_bytestring(L::[byte()]) -&gt; true | false</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Test_if_the_parameter_is_a_byte_string.">Test if the parameter is a byte string.</a></h4>
+</p>
+
 <h3 class="function"><a name="is_key-2">is_key/2</a></h3>
 <div class="spec">
 <p><tt>is_key(T::nonempty_string(), Node::<a href="#type-trie">trie()</a>) -&gt; boolean()</tt><br></p>
@@ -460,6 +476,25 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   "*" and "?" are wildcard characters (equivalent to the ".+" regex).
   "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
   character in the pattern.</p>
+
+<h3 class="function"><a name="is_pattern2_bytes-1">is_pattern2_bytes/1</a></h3>
+<div class="spec">
+<p><tt>is_pattern2_bytes(Pattern::[byte()]) -&gt; true | false</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Test_to_determine_if_a_byte_string_is_a_pattern_(using_2_wildcard_characters).">Test to determine if a byte string is a pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+  "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+  character in the pattern.</p>
+
+<h3 class="function"><a name="is_pattern_bytes-1">is_pattern_bytes/1</a></h3>
+<div class="spec">
+<p><tt>is_pattern_bytes(Pattern::[byte()]) -&gt; true | false</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Test_to_determine_if_a_byte_string_is_a_pattern.">Test to determine if a byte string is a pattern.</a></h4>
+  "*" is the wildcard character (equivalent to the ".+" regex).
+  "**" is forbidden.</p>
 
 <h3 class="function"><a name="is_prefix-2">is_prefix/2</a></h3>
 <div class="spec">

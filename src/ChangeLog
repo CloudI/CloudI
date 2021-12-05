@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-12-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * CloudI version 2.0.4 released
+
 2021-11-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the cloudi_service_map_reduce elapsed_seconds function
