@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-12-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Use the message_queue_data off_heap spawn opt for
+      the CloudI logger process to provide better performance
+      when the process is in sync or overload mode
+
 2021-12-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * CloudI version 2.0.4 released

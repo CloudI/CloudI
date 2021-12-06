@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -195,7 +195,12 @@
 -spec start_link(#config{}) -> {'ok', pid()} | {'error', any()}.
 
 start_link(#config{logging = LoggingConfig}) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
+    % The logger process can have a large message queue with
+    % message_queue_len checked gradually, so it is best to keep the
+    % message queue data off of the heap to avoid extra garbage collections.
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig],
+                          [{spawn_opt,
+                            [{message_queue_data, off_heap}]}]).
 
 %%-------------------------------------------------------------------------
 %% @doc
