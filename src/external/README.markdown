@@ -10,8 +10,8 @@ C++ `backward-cpp`
 `for creating a backtrace in C++`
 
 - `https://github.com/okeuday/backward-cpp`
-- `commit c5e783c4e8914f1103d55ae891a39759cd5c9dea (CloudI)`
-- `Wed Aug 18 05:40:23 UTC 2021`
+- `commit d2286ce86a6f89ca52f6c1629f7a3bb3b1f0b231 (CloudI)`
+- `Wed Dec  8 04:23:20 UTC 2021`
 - `MIT`
 
 C++ `booster (only booster/backtrace.h)`
