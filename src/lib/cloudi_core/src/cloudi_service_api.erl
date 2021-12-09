@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -1084,6 +1084,7 @@
                   {build_operating_system, nonempty_string()} |
                   {build_erlang_otp_release, nonempty_string()} |
                   {build_cloudi_time, nonempty_string()} |
+                  {build_cloudi_version, nonempty_string()} |
                   {build_cloudi_cxx_compiler_version, nonempty_string()} |
                   {build_cloudi_cxx_dependencies_versions, nonempty_string()} |
                   {build_erts_c_compiler_version, nonempty_string()} |
