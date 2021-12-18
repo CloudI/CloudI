@@ -11,6 +11,7 @@
           a file name string to be used in a list (with file names preferred)
           for the key value
         * Now logging output has a file extension
+        * Updated the Elixir CloudILogger module
     * Fix a rare error condition in the cloudi_os_spawn Erlang port that
       would prevent cloudi_os_spawn from terminating at shutdown time
 

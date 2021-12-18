@@ -5,7 +5,7 @@
 ###
 ### MIT License
 ###
-### Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+### Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
 ###
 ### Permission is hereby granted, free of charge, to any person obtaining a
 ### copy of this software and associated documentation files (the "Software"),
@@ -38,26 +38,6 @@
 
 defmodule CloudILogger do
 
-# Convenience macros
-
-  defmacro function_name() do
-    quote do
-      case __ENV__.function do
-        nil -> :undefined;
-        {function, _} -> function
-      end
-    end
-  end
-
-  defmacro function_arity() do
-    quote do
-      case __ENV__.function do
-        nil -> :undefined;
-        {_, arity} -> arity
-      end
-    end
-  end
-
 # Logging output will log asynchronously until the logger's
 # message queue becomes too large, then use synchronous logging
 # while the message queue remains large
@@ -70,7 +50,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.fatal(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.fatal(file_name,
                                             __ENV__.line,
                                             function,
                                             arity,
@@ -87,7 +68,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.error(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.error(file_name,
                                             __ENV__.line,
                                             function,
                                             arity,
@@ -104,7 +86,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.warn(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.warn(file_name,
                                            __ENV__.line,
                                            function,
                                            arity,
@@ -121,7 +104,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.info(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.info(file_name,
                                            __ENV__.line,
                                            function,
                                            arity,
@@ -138,7 +122,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.debug(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.debug(file_name,
                                             __ENV__.line,
                                             function,
                                             arity,
@@ -155,7 +140,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.trace(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.trace(file_name,
                                             __ENV__.line,
                                             function,
                                             arity,
@@ -172,7 +158,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.log(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.log(file_name,
                                           __ENV__.line,
                                           function,
                                           arity,
@@ -194,7 +181,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.fatal_sync(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.fatal_sync(file_name,
                                                  __ENV__.line,
                                                  function,
                                                  arity,
@@ -211,7 +199,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.error_sync(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.error_sync(file_name,
                                                  __ENV__.line,
                                                  function,
                                                  arity,
@@ -228,7 +217,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.warn_sync(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.warn_sync(file_name,
                                                 __ENV__.line,
                                                 function,
                                                 arity,
@@ -245,7 +235,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.info_sync(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.info_sync(file_name,
                                                 __ENV__.line,
                                                 function,
                                                 arity,
@@ -262,7 +253,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.debug_sync(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.debug_sync(file_name,
                                                  __ENV__.line,
                                                  function,
                                                  arity,
@@ -279,7 +271,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.trace_sync(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.trace_sync(file_name,
                                                  __ENV__.line,
                                                  function,
                                                  arity,
@@ -296,7 +289,8 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      :cloudi_core_i_logger_interface.log_sync(__MODULE__,
+      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      :cloudi_core_i_logger_interface.log_sync(file_name,
                                                __ENV__.line,
                                                function,
                                                arity,

@@ -3,6 +3,8 @@
 
 defmodule HelloWorld do
 
+  require CloudILogger
+
   def cloudi_service_init(_args, _prefix, _timeout, dispatcher) do
     :cloudi_service.subscribe(dispatcher, 'hello_world_elixir/get')
     {:ok, :undefined}
@@ -12,6 +14,7 @@ defmodule HelloWorld do
                                     _request_info, _request,
                                     _timeout, _priority,
                                     _transid, _pid, state, _dispatcher) do
+    CloudILogger.log_info('Hello Elixir World!', [])
     {:reply, "Hello World!", state}
   end
 

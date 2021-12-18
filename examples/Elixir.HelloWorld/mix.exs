@@ -12,7 +12,8 @@ defmodule HelloWorld.Mixfile do
   end
 
   def application do
-    [applications: []]
+    [applications: [
+       :cloudi_core]]
   end
 
   defp deps do
