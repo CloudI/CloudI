@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2011-2021 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger_interface).
@@ -44,68 +44,68 @@
          info_apply/2, debug_apply/2, trace_apply/2, log_apply/3,
          fatal_apply/3, error_apply/3, warn_apply/3,
          info_apply/3, debug_apply/3, trace_apply/3, log_apply/4]).
-fatal(Module, Line, Function, Arity, Format, Arguments) ->
+fatal(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:fatal(async, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-error(Module, Line, Function, Arity, Format, Arguments) ->
+error(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:error(async, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-warn(Module, Line, Function, Arity, Format, Arguments) ->
+warn(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:warn(async, cloudi_core_i_logger,
-                              Module, Line, Function, Arity,
+                              FileName, Line, Function, Arity,
                               Format, Arguments).
-info(Module, Line, Function, Arity, Format, Arguments) ->
+info(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:info(async, cloudi_core_i_logger,
-                              Module, Line, Function, Arity,
+                              FileName, Line, Function, Arity,
                               Format, Arguments).
-debug(Module, Line, Function, Arity, Format, Arguments) ->
+debug(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:debug(async, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-trace(Module, Line, Function, Arity, Format, Arguments) ->
+trace(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:trace(async, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-log(Module, Line, Function, Arity, Level, Format, Arguments)
+log(FileName, Line, Function, Arity, Level, Format, Arguments)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
     cloudi_core_i_logger:Level(async, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments);
 log(_, _, _, _, Level, _, _)
     when Level =:= off ->
     ok.
-fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
+fatal_sync(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:fatal(sync, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-error_sync(Module, Line, Function, Arity, Format, Arguments) ->
+error_sync(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:error(sync, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
+warn_sync(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:warn(sync, cloudi_core_i_logger,
-                              Module, Line, Function, Arity,
+                              FileName, Line, Function, Arity,
                               Format, Arguments).
-info_sync(Module, Line, Function, Arity, Format, Arguments) ->
+info_sync(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:info(sync, cloudi_core_i_logger,
-                              Module, Line, Function, Arity,
+                              FileName, Line, Function, Arity,
                               Format, Arguments).
-debug_sync(Module, Line, Function, Arity, Format, Arguments) ->
+debug_sync(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:debug(sync, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-trace_sync(Module, Line, Function, Arity, Format, Arguments) ->
+trace_sync(FileName, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:trace(sync, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments).
-log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+log_sync(FileName, Line, Function, Arity, Level, Format, Arguments)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
     cloudi_core_i_logger:Level(sync, cloudi_core_i_logger,
-                               Module, Line, Function, Arity,
+                               FileName, Line, Function, Arity,
                                Format, Arguments);
 log_sync(_, _, _, _, Level, _, _)
     when Level =:= off ->

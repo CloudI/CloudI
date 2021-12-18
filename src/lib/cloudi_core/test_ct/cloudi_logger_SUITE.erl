@@ -29,7 +29,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger_SUITE).
@@ -171,7 +171,7 @@ set_aspect_log_after() ->
     MessagePid = self(),
     {ok, Logging} = cloudi_service_api:logging(infinity),
     AspectLogAfter = fun(_Level, _Timestamp, _Node, _Pid,
-                         _Module, _Line, _Function, _Arity,
+                         _FileName, _Line, _Function, _Arity,
                          _MetaData, LogMessage) ->
         MessagePid ! LogMessage,
         ok

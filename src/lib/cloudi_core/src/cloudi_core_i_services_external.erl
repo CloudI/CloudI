@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -285,14 +285,14 @@ port(Dispatcher, Timeout)
                     {dirty_timeout, Timeout + ?TIMEOUT_DELTA}).
 
 stdout(OSPid, Output) ->
-    % uses a fake module name and a fake line number
-    cloudi_core_i_logger_interface:info('STDOUT', OSPid,
+    % uses a fake file name and a fake line number
+    cloudi_core_i_logger_interface:info("STDOUT", OSPid,
                                         undefined, undefined,
                                         Output, undefined).
 
 stderr(OSPid, Output) ->
-    % uses a fake module name and a fake line number
-    cloudi_core_i_logger_interface:error('STDERR', OSPid,
+    % uses a fake file name and a fake line number
+    cloudi_core_i_logger_interface:error("STDERR", OSPid,
                                          undefined, undefined,
                                          Output, undefined).
 

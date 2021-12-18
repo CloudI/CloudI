@@ -930,7 +930,6 @@
         immediate_closest,
         5000, 5000, 5000, [api], undefined, 2, 5, 300,
         [{request_timeout_adjustment, true},
-         {automatic_loading, false},
          {duo_mode, true},
          {aspects_request_before,
           [{cloudi_service_test_msg_size, aspect_request}]},

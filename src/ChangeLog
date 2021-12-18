@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-12-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add Python 3.10 compatibility to the Python/C CloudI API
+    * Fix CloudI logger macro use in header files with usage of
+      ?FILE instead of ?MODULE (a string instead of an atom)
+        * Logging aspects had the Module parameter change to FileName
+        * Logging formatters now allow either a module name atom or
+          a file name string to be used in a list (with file names preferred)
+          for the key value
+        * Now logging output has a file extension
+    * Fix a rare error condition in the cloudi_os_spawn Erlang port that
+      would prevent cloudi_os_spawn from terminating at shutdown time
+
 2021-12-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_api:code_status() type

@@ -768,6 +768,44 @@ namespace
     };
 
     std::vector< copy_ptr<process_data> > processes;
+    typedef std::vector< copy_ptr<process_data> >::iterator iterator;
+
+    int processes_events(realloc_ptr<unsigned char> & erlang_buffer,
+                         realloc_ptr<unsigned char> & stream1,
+                         realloc_ptr<unsigned char> & stream2)
+    {
+        int status;
+        if ((status = GEPD::init()))
+            return status;
+        int count;
+        while ((status = GEPD::wait(count,
+                                    erlang_buffer,
+                                    stream1,
+                                    stream2)) == GEPD::ExitStatus::ready)
+        {
+            iterator itr = processes.begin();
+            while (itr != processes.end() && count > 0)
+            {
+                if ((status = (*itr)->check(count, erlang_buffer)))
+                {
+                    if (status != GEPD::ExitStatus::error_HUP)
+                        return status;
+                    if ((status = (*itr)->flush(count, erlang_buffer)))
+                        return status;
+                    iterator const dead = itr;
+                    (*dead)->close();
+                    for (++itr; itr != processes.end(); ++itr)
+                        (*itr)->shift();
+                    itr = processes.erase(dead);
+                }
+                else
+                {
+                    ++itr;
+                }
+            }
+        }
+        return status;
+    }
 
 } // anonymous namespace
 
@@ -1024,41 +1062,13 @@ int32_t spawn(char protocol,
 int main()
 {
     assert_initialize();
-    ::signal(SIGPIPE, SIG_IGN); // write to a broken socket error
-    typedef std::vector< copy_ptr<process_data> >::iterator iterator;
     assert(spawn_status::last_value == GEPD::ExitStatus::min);
-
+    ::signal(SIGPIPE, SIG_IGN); // write to a broken socket error
     realloc_ptr<unsigned char> erlang_buffer(32768, 4194304); // 4MB
     realloc_ptr<unsigned char> stream1(1, 16384);
     realloc_ptr<unsigned char> stream2(1, 16384);
-    int status;
-    if ((status = GEPD::init()))
-        return status;
-    int count;
-    while ((status = GEPD::wait(count, erlang_buffer,
-                                stream1, stream2)) == GEPD::ExitStatus::ready)
-    {
-        iterator itr = processes.begin();
-        while (itr != processes.end() && count > 0)
-        {
-            if ((status = (*itr)->check(count, erlang_buffer)))
-            {
-                if (status != GEPD::ExitStatus::error_HUP)
-                    return status;
-                if ((status = (*itr)->flush(count, erlang_buffer)))
-                    return status;
-                iterator const dead = itr;
-                (*dead)->close();
-                for (++itr; itr != processes.end(); ++itr)
-                    (*itr)->shift();
-                itr = processes.erase(dead);
-            }
-            else
-            {
-                ++itr;
-            }
-        }
-    }
+    int const status = processes_events(erlang_buffer, stream1, stream2);
+
     // kill all remaining processes with SIGKILL
     for (iterator itr = processes.begin(); itr != processes.end(); ++itr)
     {

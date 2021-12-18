@@ -282,7 +282,7 @@
      logging_syslog_port_invalid, any()}.
 -type error_reason_logging_formatters_set_configuration() ::
     {logging_formatters_invalid |
-     logging_formatter_modules_invalid |
+     logging_formatter_key_invalid |
      logging_formatter_level_invalid |
      logging_formatter_output_invalid |
      logging_formatter_output_args_invalid |
@@ -5538,35 +5538,58 @@ logging_validate_formatters([{any, Options} | L], Levels,
         {error, _} = Error ->
             Error
     end;
-logging_validate_formatters([{[_ | _] = Modules, Options} | L], Levels,
+logging_validate_formatters([{[_ | _] = KeyInput, Options} | L], Levels,
                             #config_logging_formatters{
                                 lookup = Lookup} = FormattersConfig)
     when is_list(Options) ->
-    case (lists:all(fun is_atom/1, Modules) andalso
-          (not cloudi_x_keys1value:is_key(Modules, Lookup))) of
-        true ->
-            case logging_validate_formatter(Modules, Options) of
-                {ok, #config_logging_formatter{level = Level,
-                                               output = Output} = Formatter} ->
-                    LookupNew = cloudi_x_keys1value:
-                                store(Modules, Formatter, Lookup),
-                    LevelsNew = if
-                        Output =:= undefined ->
-                            Levels;
-                        true ->
-                            [Level | Levels]
-                    end,
-                    logging_validate_formatters(L, LevelsNew,
-                        FormattersConfig#config_logging_formatters{
-                            lookup = LookupNew});
-                {error, _} = Error ->
-                    Error
-            end;
-        false ->
-            {error, {logging_formatter_modules_invalid, Modules}}
+    Key = logging_formatter_key_filenames(KeyInput),
+    if
+        Key =:= invalid ->
+            {error, {logging_formatter_key_invalid, KeyInput}};
+        is_list(Key) ->
+            case cloudi_x_keys1value:is_key(Key, Lookup) of
+                true ->
+                    {error, {logging_formatter_key_invalid, KeyInput}};
+                false ->
+                    case logging_validate_formatter(Key, Options) of
+                        {ok, Formatter} ->
+                            #config_logging_formatter{
+                                level = Level,
+                                output = Output} = Formatter,
+                            LookupNew = cloudi_x_keys1value:
+                                        store(Key, Formatter, Lookup),
+                            LevelsNew = if
+                                Output =:= undefined ->
+                                    Levels;
+                                true ->
+                                    [Level | Levels]
+                            end,
+                            logging_validate_formatters(L, LevelsNew,
+                                FormattersConfig#config_logging_formatters{
+                                    lookup = LookupNew});
+                        {error, _} = Error ->
+                            Error
+                    end
+            end
     end;
 logging_validate_formatters([Entry | _], _, _) ->
     {error, {logging_formatters_invalid, Entry}}.
+
+logging_formatter_key_filenames([], Key) ->
+    Key;
+logging_formatter_key_filenames([Module | KeyInput], Key)
+    when is_atom(Module) ->
+    logging_formatter_key_filenames(KeyInput,
+                                    [cloudi_string:format("~ts.erl",
+                                                          [Module]) | Key]);
+logging_formatter_key_filenames([[I | _] = FileName | KeyInput], Key)
+    when is_integer(I), I > 0 ->
+    logging_formatter_key_filenames(KeyInput, [FileName | Key]);
+logging_formatter_key_filenames(_, _) ->
+    invalid.
+
+logging_formatter_key_filenames(KeyInput) ->
+    logging_formatter_key_filenames(KeyInput, []).
 
 % handle a conversion from lager log levels to CloudI log levels, if necessary
 logging_formatter_level(fatal) ->

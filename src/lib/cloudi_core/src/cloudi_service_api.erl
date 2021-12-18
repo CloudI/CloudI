@@ -955,8 +955,8 @@
          Timestamp :: erlang:timestamp(),
          Node :: node(),
          Pid :: pid(),
-         Module :: module(),
-         Line :: pos_integer(),
+         FileName :: nonempty_string(),
+         Line :: non_neg_integer(),
          Function :: atom() | undefined,
          Arity :: arity() | undefined,
          MetaData :: list({atom(), any()}) | #{},
@@ -1000,7 +1000,7 @@
          {host, logging_syslog_host()} |
          {port, logging_syslog_port()}).
 -type logging_formatters_set_proplist() ::
-    list({any | nonempty_list(module()),
+    list({any | nonempty_list(module() | nonempty_string()),
           list(fatal | error | warn | info | debug | trace |
                emergency | alert | critical | warning | notice |
                {level, fatal | error | warn | info | debug | trace |
@@ -1045,7 +1045,7 @@
          {file_read_fail_count, integer_string_gt_0()} |
          {file_read_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
-    nonempty_list({file, string() | undefined} |
+    nonempty_list({file, nonempty_string() | undefined} |
                   {level, loglevel()} |
                   {redirect, node() | undefined} |
                   {syslog, logging_syslog_set_proplist() | undefined} |

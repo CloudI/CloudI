@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,37 +41,37 @@
 % while the message queue remains large
 
 -define(LOG_FATAL(Format, Args),
-    cloudi_core_i_logger_interface:fatal(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:fatal(?FILE, ?LINE,
                                          ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 -define(LOG_ERROR(Format, Args),
-    cloudi_core_i_logger_interface:error(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:error(?FILE, ?LINE,
                                          ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 -define(LOG_WARN(Format, Args),
-    cloudi_core_i_logger_interface:warn(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:warn(?FILE, ?LINE,
                                         ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                         Format, Args)).
 
 -define(LOG_INFO(Format, Args),
-    cloudi_core_i_logger_interface:info(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:info(?FILE, ?LINE,
                                         ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                         Format, Args)).
 
 -define(LOG_DEBUG(Format, Args),
-    cloudi_core_i_logger_interface:debug(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:debug(?FILE, ?LINE,
                                          ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 -define(LOG_TRACE(Format, Args),
-    cloudi_core_i_logger_interface:trace(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:trace(?FILE, ?LINE,
                                          ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 -define(LOG(Level, Format, Args),
-    cloudi_core_i_logger_interface:log(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:log(?FILE, ?LINE,
                                        ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                        Level, Format, Args)).
 
@@ -80,37 +80,37 @@
 %  assuming no filesystem errors occur when writing to the log file)
 
 -define(LOG_FATAL_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:fatal_sync(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:fatal_sync(?FILE, ?LINE,
                                               ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 -define(LOG_ERROR_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:error_sync(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:error_sync(?FILE, ?LINE,
                                               ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 -define(LOG_WARN_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:warn_sync(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:warn_sync(?FILE, ?LINE,
                                              ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                              Format, Args)).
 
 -define(LOG_INFO_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:info_sync(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:info_sync(?FILE, ?LINE,
                                              ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                              Format, Args)).
 
 -define(LOG_DEBUG_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:debug_sync(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:debug_sync(?FILE, ?LINE,
                                               ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 -define(LOG_TRACE_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:trace_sync(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:trace_sync(?FILE, ?LINE,
                                               ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 -define(LOG_SYNC(Level, Format, Args),
-    cloudi_core_i_logger_interface:log_sync(?MODULE, ?LINE,
+    cloudi_core_i_logger_interface:log_sync(?FILE, ?LINE,
                                             ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                             Level, Format, Args)).
 

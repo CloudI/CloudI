@@ -336,7 +336,7 @@ redirect_update(Node) ->
 
 -spec fatal(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            FileName :: nonempty_string(),
             Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
@@ -344,8 +344,8 @@ redirect_update(Node) ->
             Args :: list() | undefined) ->
     'ok'.
 
-fatal(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(ModeInterface, Process, fatal, Module, Line,
+fatal(ModeInterface, Process, FileName, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, fatal, FileName, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -358,7 +358,7 @@ fatal(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec error(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            FileName :: nonempty_string(),
             Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
@@ -366,8 +366,8 @@ fatal(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
             Args :: list() | undefined) ->
     'ok'.
 
-error(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(ModeInterface, Process, error, Module, Line,
+error(ModeInterface, Process, FileName, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, error, FileName, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -380,7 +380,7 @@ error(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec warn(ModeInterface :: mode_interface(),
            Process :: atom() | {atom(), node()},
-           Module :: atom(),
+           FileName :: nonempty_string(),
            Line :: non_neg_integer(),
            Function :: atom(),
            Arity :: arity() | undefined,
@@ -388,8 +388,8 @@ error(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
            Args :: list() | undefined) ->
     'ok'.
 
-warn(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(ModeInterface, Process, warn, Module, Line,
+warn(ModeInterface, Process, FileName, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, warn, FileName, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -402,7 +402,7 @@ warn(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec info(ModeInterface :: mode_interface(),
            Process :: atom() | {atom(), node()},
-           Module :: atom(),
+           FileName :: nonempty_string(),
            Line :: non_neg_integer(),
            Function :: atom(),
            Arity :: arity() | undefined,
@@ -410,8 +410,8 @@ warn(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
            Args :: list() | undefined) ->
     'ok'.
 
-info(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(ModeInterface, Process, info, Module, Line,
+info(ModeInterface, Process, FileName, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, info, FileName, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -424,7 +424,7 @@ info(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec debug(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            FileName :: nonempty_string(),
             Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
@@ -432,8 +432,8 @@ info(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
             Args :: list() | undefined) ->
     'ok'.
 
-debug(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(ModeInterface, Process, debug, Module, Line,
+debug(ModeInterface, Process, FileName, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, debug, FileName, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -446,7 +446,7 @@ debug(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec trace(ModeInterface :: mode_interface(),
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            FileName :: nonempty_string(),
             Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
@@ -454,8 +454,8 @@ debug(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
             Args :: list() | undefined) ->
     'ok'.
 
-trace(ModeInterface, Process, Module, Line, Function, Arity, Format, Args) ->
-    log_message_external(ModeInterface, Process, trace, Module, Line,
+trace(ModeInterface, Process, FileName, Line, Function, Arity, Format, Args) ->
+    log_message_external(ModeInterface, Process, trace, FileName, Line,
                          Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
@@ -555,15 +555,28 @@ format(Msg, _Config, _) ->
      Message} = Msg,
     Level = lager_severity_input(Severity),
     Defaults = [{function, undefined},
+                {arity, undefined},
                 {module, undefined},
+                {file, undefined},
                 {line, undefined},
                 {node, undefined},
                 {pid, undefined}],
-    [Function, Module, Line, Node, PidStr |
+    [Function, Arity, Module, File, Line, Node, PidStr |
      MetaDataNew] = cloudi_proplists:take_values(Defaults, MetaData),
+    FileName = if
+        File =:= undefined ->
+            if
+                Module =:= undefined ->
+                    "(undefined)";
+                is_atom(Module) ->
+                    cloudi_string:format("~ts.erl", [Module])
+            end;
+        is_list(File) ->
+            File
+    end,
     LogMessage = Message,
     format_line(Level, Timestamp, Node, PidStr,
-                Module, Line, Function, undefined,
+                FileName, Line, Function, Arity,
                 MetaDataNew, LogMessage).
 
 %%-------------------------------------------------------------------------
@@ -719,10 +732,10 @@ init([#config_logging{file = FilePath,
     end.
 
 handle_call({Level, Timestamp, Node, Pid,
-             Module, Line, Function, Arity,
+             FileName, Line, Function, Arity,
              MetaData, LogMessage}, _, State) ->
     case log_message_internal(sync, Level, Timestamp, Node, Pid,
-                              Module, Line, Function, Arity,
+                              FileName, Line, Function, Arity,
                               MetaData, LogMessage, State) of
         {ok, StateNext} ->
             case log_mode_check(Timestamp, StateNext) of
@@ -985,10 +998,10 @@ handle_cast({redirect_update, Node}, State) ->
             {stop, Reason, StateNew}
     end;
 handle_cast({Level, Timestamp, Node, Pid,
-             Module, Line, Function, Arity,
+             FileName, Line, Function, Arity,
              MetaData, LogMessage}, State) ->
     case log_message_internal(async, Level, Timestamp, Node, Pid,
-                              Module, Line, Function, Arity,
+                              FileName, Line, Function, Arity,
                               MetaData, LogMessage, State) of
         {ok, StateNext} ->
             case log_mode_check(Timestamp, StateNext) of
@@ -1289,7 +1302,7 @@ log_level_update(#state{main_level = MainLevel,
                   Timestamp :: erlang:timestamp(),
                   Node :: node(),
                   Pid :: pid() | string() | undefined,
-                  Module :: atom(),
+                  FileName :: nonempty_string(),
                   Line :: non_neg_integer(),
                   Function :: atom(),
                   Arity :: arity() | undefined,
@@ -1298,8 +1311,7 @@ log_level_update(#state{main_level = MainLevel,
     iolist(). % utf8 encoded strings
 
 format_line(Level, Timestamp, Node, Pid,
-            Module, Line, Function, Arity, MetaData, LogMessage) ->
-    ModuleBin = erlang:atom_to_binary(Module, utf8),
+            FileName, Line, Function, Arity, MetaData, LogMessage) ->
     LineStr = if
         Line =:= 0 ->
             "";
@@ -1332,7 +1344,7 @@ format_line(Level, Timestamp, Node, Pid,
     end,
     [timestamp_iso8601(Timestamp), $\s, log_level_to_string(Level), $\s,
      $(,
-     ModuleBin, $:,
+     FileName, $:,
      LineStr, $:,
      FunctionArity, $:,
      PidStr, $:,
@@ -1378,7 +1390,7 @@ datetime_iso8601({{DateYYYY, DateMM, DateDD},
      MicroSeconds4, MicroSeconds5, $Z].
 
 log_message_formatter_call(Level, Timestamp, Node, Pid,
-                           Module, Line, Function, Arity,
+                           FileName, Line, Function, Arity,
                            MetaData, LogMessage,
                            #config_logging_formatter{
                                output = undefined,
@@ -1390,7 +1402,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
     % required: format(Msg, Config)
     % optional: format(Msg, Config, Colors)
     Msg = lager_msg(Level, Timestamp, Node, Pid,
-                    Module, Line, Function, Arity,
+                    FileName, Line, Function, Arity,
                     MetaData, LogMessage),
     try Formatter:format(Msg, FormatterConfig)
     catch
@@ -1400,14 +1412,14 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
                                             [Formatter, ErrorType, Error,
                                              ErrorStackTrace]),
             [format_line(Level, Timestamp, Node, Pid,
-                         Module, Line, Function, Arity,
+                         FileName, Line, Function, Arity,
                          MetaData, LogMessage),
              format_line(error, timestamp_increment(Timestamp),
-                         ErrorNode, ErrorSelf, ?MODULE, ?LINE,
+                         ErrorNode, ErrorSelf, ?FILE, ?LINE,
                          undefined, undefined, [], ErrorMessage)]
     end;
 log_message_formatter_call(Level, Timestamp, Node, Pid,
-                           Module, Line, Function, Arity,
+                           FileName, Line, Function, Arity,
                            MetaData, LogMessage,
                            #config_logging_formatter{
                                output = Output,
@@ -1415,12 +1427,12 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
                            #state{logger_node = ErrorNode,
                                   logger_self = ErrorSelf}) ->
     Msg = lager_msg(Level, Timestamp, Node, Pid,
-                    Module, Line, Function, Arity,
+                    FileName, Line, Function, Arity,
                     MetaData, LogMessage),
     try gen_event:notify(OutputName, {log, Msg}) of
         ok ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, Function, Arity,
+                        FileName, Line, Function, Arity,
                         MetaData, LogMessage)
     catch
         error:badarg ->
@@ -1428,7 +1440,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
             % it likely exceeded the maximum restart intensity
             % (which is logged elsewhere via sasl)
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, Function, Arity,
+                        FileName, Line, Function, Arity,
                         MetaData, LogMessage);
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ErrorMessage = cloudi_string:
@@ -1436,66 +1448,67 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
                                             [Output, ErrorType, Error,
                                              ErrorStackTrace]),
             [format_line(Level, Timestamp, Node, Pid,
-                         Module, Line, Function, Arity,
+                         FileName, Line, Function, Arity,
                          MetaData, LogMessage),
              format_line(error, timestamp_increment(Timestamp),
-                         ErrorNode, ErrorSelf, ?MODULE, ?LINE,
+                         ErrorNode, ErrorSelf, ?FILE, ?LINE,
                          undefined, undefined, [], ErrorMessage)]
     end.
 
 log_message_formatter(Level, Timestamp, Node, Pid,
-                      Module, Line, Function, Arity,
+                      FileName, Line, Function, Arity,
                       MetaData, LogMessage,
                       #config_logging_formatter{
                           level = FormatterLevel} = FormatterConfig, State) ->
     case log_level_allowed(FormatterLevel, Level) of
         true ->
             log_message_formatter_call(Level, Timestamp, Node, Pid,
-                                       Module, Line, Function, Arity,
+                                       FileName, Line, Function, Arity,
                                        MetaData, LogMessage,
                                        FormatterConfig, State);
         false ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, Function, Arity,
+                        FileName, Line, Function, Arity,
                         MetaData, LogMessage)
     end.
 
 log_message_formatters(Level, Timestamp, Node, Pid,
-                       Module, Line, Function, Arity,
+                       FileName, Line, Function, Arity,
                        MetaData, LogMessage,
                        undefined, _) ->
     format_line(Level, Timestamp, Node, Pid,
-                Module, Line, Function, Arity,
+                FileName, Line, Function, Arity,
                 MetaData, LogMessage);
 log_message_formatters(Level, Timestamp, Node, Pid,
-                       Module, Line, Function, Arity,
+                       FileName, Line, Function, Arity,
                        MetaData, LogMessage,
                        #config_logging_formatters{
                            default = Default,
                            lookup = Lookup}, State) ->
-    case cloudi_x_keys1value:find(Module, Lookup) of
+    case cloudi_x_keys1value:find(FileName, Lookup) of
         {ok, FormatterConfig} ->
             log_message_formatter(Level, Timestamp, Node, Pid,
-                                  Module, Line, Function, Arity,
+                                  FileName, Line, Function, Arity,
                                   MetaData, LogMessage,
                                   FormatterConfig, State);
         error ->
             if
                 Default =:= undefined ->
                     format_line(Level, Timestamp, Node, Pid,
-                                Module, Line, Function, Arity,
+                                FileName, Line, Function, Arity,
                                 MetaData, LogMessage);
                 true ->
                     log_message_formatter(Level, Timestamp, Node, Pid,
-                                          Module, Line, Function, Arity,
+                                          FileName, Line, Function, Arity,
                                           MetaData, LogMessage,
                                           Default, State)
             end
     end.
 
 log_message_external(ModeInterface, Process,
-                     Level, Module, Line, Function, Arity, Format, Args)
-    when is_atom(Level), is_atom(Module), is_integer(Line), Line >= 0,
+                     Level, [_ | _] = FileName, Line,
+                     Function, Arity, Format, Args)
+    when is_atom(Level), is_integer(Line), Line >= 0,
          is_atom(Function),
          (Arity =:= undefined) orelse
          (is_integer(Arity) andalso (Arity >= 0)) ->
@@ -1521,12 +1534,12 @@ log_message_external(ModeInterface, Process,
                 ModeInterface =:= async ->
                     gen_server:cast(Process,
                                     {Level, Timestamp, node(), self(),
-                                     Module, Line, Function, Arity,
+                                     FileName, Line, Function, Arity,
                                      MetaData, LogMessageN});
                 ModeInterface =:= sync ->
                     gen_server:call(Process,
                                     {Level, Timestamp, node(), self(),
-                                     Module, Line, Function, Arity,
+                                     FileName, Line, Function, Arity,
                                      MetaData, LogMessageN},
                                     infinity)
             end
@@ -1610,12 +1623,12 @@ log_message_internal_t0(LevelCheck, TimestampOld,
                 Destination =:= ?MODULE ->
                     log_message_internal(sync,
                                          LevelCheck, Timestamp, Node, Self,
-                                         ?MODULE, Line, Function, Arity,
+                                         ?FILE, Line, Function, Arity,
                                          [], LogMessage, State);
                 true ->
                     ok = gen_server:cast(Destination,
                                          {LevelCheck, Timestamp, Node, Self,
-                                          ?MODULE, Line, Function, Arity,
+                                          ?FILE, Line, Function, Arity,
                                           [], LogMessage}),
                     {ok, State}
             end;
@@ -1636,7 +1649,7 @@ log_message_internal_t1(LevelCheck, Line, Function, Arity, Format, Args,
             Timestamp = cloudi_timestamp:timestamp(),
             gen_server:cast(Destination,
                             {LevelCheck, Timestamp, Node, Self,
-                             ?MODULE, Line, Function, Arity,
+                             ?FILE, Line, Function, Arity,
                              [], LogMessage});
         false ->
             ok
@@ -1646,7 +1659,7 @@ log_message_internal(async, _, _, _, _, _, _, _, _, _, _,
                      #state{mode = overload} = State) ->
     {ok, State};
 log_message_internal(_, Level, Timestamp, Node, Pid,
-                     Module, Line, Function, Arity,
+                     FileName, Line, Function, Arity,
                      MetaData, LogMessage,
                      #state{main_level = MainLevel,
                             stdout = StdoutPort,
@@ -1658,12 +1671,12 @@ log_message_internal(_, Level, Timestamp, Node, Pid,
            (Level =:= warn) orelse (Level =:= info) orelse
            (Level =:= debug) orelse (Level =:= trace),
     Message = log_message_formatters(Level, Timestamp, Node, Pid,
-                                     Module, Line, Function, Arity,
+                                     FileName, Line, Function, Arity,
                                      MetaData, LogMessage,
                                      FormattersConfig, State),
     ok = aspects_log(AspectsLogBefore,
                      Level, Timestamp, Node, Pid,
-                     Module, Line, Function, Arity,
+                     FileName, Line, Function, Arity,
                      MetaData, LogMessage),
     {FileResult, StateNew} = case log_level_allowed(MainLevel, Level) of
         true ->
@@ -1680,7 +1693,7 @@ log_message_internal(_, Level, Timestamp, Node, Pid,
     end,
     ok = aspects_log(AspectsLogAfter,
                      Level, Timestamp, Node, Pid,
-                     Module, Line, Function, Arity,
+                     FileName, Line, Function, Arity,
                      MetaData, LogMessage),
     {FileResult, StateNew}.
 
@@ -2150,28 +2163,28 @@ time_offset_to_nanoseconds(TimeOffset) ->
 aspects_log([], _, _, _, _, _, _, _, _, _, _) ->
     ok;
 aspects_log([{M, F} | L], Level, Timestamp, Node, Pid,
-            Module, Line, Function, Arity, MetaData, LogMessage) ->
+            FileName, Line, Function, Arity, MetaData, LogMessage) ->
     try M:F(Level, Timestamp, Node, Pid,
-            Module, Line, Function, Arity, MetaData, LogMessage) of
+            FileName, Line, Function, Arity, MetaData, LogMessage) of
         _ ->
             aspects_log(L, Level, Timestamp, Node, Pid,
-                        Module, Line, Function, Arity, MetaData, LogMessage)
+                        FileName, Line, Function, Arity, MetaData, LogMessage)
     catch
         _:_ ->
             aspects_log(L, Level, Timestamp, Node, Pid,
-                        Module, Line, Function, Arity, MetaData, LogMessage)
+                        FileName, Line, Function, Arity, MetaData, LogMessage)
     end;
 aspects_log([F | L], Level, Timestamp, Node, Pid,
-            Module, Line, Function, Arity, MetaData, LogMessage) ->
+            FileName, Line, Function, Arity, MetaData, LogMessage) ->
     try F(Level, Timestamp, Node, Pid,
-          Module, Line, Function, Arity, MetaData, LogMessage) of
+          FileName, Line, Function, Arity, MetaData, LogMessage) of
         _ ->
             aspects_log(L, Level, Timestamp, Node, Pid,
-                        Module, Line, Function, Arity, MetaData, LogMessage)
+                        FileName, Line, Function, Arity, MetaData, LogMessage)
     catch
         _:_ ->
             aspects_log(L, Level, Timestamp, Node, Pid,
-                        Module, Line, Function, Arity, MetaData, LogMessage)
+                        FileName, Line, Function, Arity, MetaData, LogMessage)
     end.
 
 nanoseconds_to_seconds_change_string(NanoSecondsOld, NanoSecondsNew) ->
@@ -2340,7 +2353,7 @@ lager_severity_input(debug) -> debug.
                 Timestamp :: erlang:timestamp(),
                 Node :: node(),
                 Pid :: pid(),
-                Module :: atom(),
+                FileName :: nonempty_string(),
                 Line :: non_neg_integer(),
                 Function :: atom(),
                 Arity :: non_neg_integer() | undefined,
@@ -2350,7 +2363,7 @@ lager_severity_input(debug) -> debug.
 
 % based on lager_msg:new/5
 lager_msg(Level, Timestamp, Node, Pid,
-          Module, Line, Function, _Arity,
+          FileName, Line, Function, _Arity,
           MetaData0, LogMessage) ->
     Destinations = [], % not using TraceFilters
     MetaData1 = if
@@ -2365,7 +2378,18 @@ lager_msg(Level, Timestamp, Node, Pid,
         true ->
             [{function, Function} | MetaData1]
     end,
+    Module = case cloudi_string:splitr($., FileName, input) of
+        {[], _} ->
+            undefined;
+        {ModuleStr, _} ->
+            try erlang:list_to_existing_atom(ModuleStr)
+            catch
+                error:badarg ->
+                    undefined
+            end
+    end,
     MetaDataN = [{module, Module},
+                 {file, FileName},
                  {line, Line},
                  {node, Node},
                  {pid, erlang:pid_to_list(Pid)} | MetaData2],

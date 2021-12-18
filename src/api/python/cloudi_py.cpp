@@ -32,6 +32,7 @@
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
 #endif
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #if PY_MAJOR_VERSION >= 3
 #define PYTHON_VERSION_3_COMPATIBLE
@@ -56,9 +57,6 @@
 #include <string>
 #include <cstring>
 
-#ifdef NDEBUG
-#define PY_ASSERT(X)
-#else
 #define PY_ASSERT(X)                                                       \
     if (! (X))                                                             \
     {                                                                      \
@@ -67,7 +65,6 @@
                      __FILE__, __LINE__, #X);                              \
         return NULL;                                                       \
     }
-#endif
 
 typedef struct {
     PyObject_HEAD
@@ -610,6 +607,10 @@ class callback : public CloudI::API::function_object_c
                                   char const * const pid,
                                   uint32_t const pid_size)
         {
+            Py_ssize_t const request_info_size_tmp = request_info_size;
+            Py_ssize_t const request_size_tmp = request_size;
+            assert(request_info_size_tmp == request_info_size);
+            assert(request_size_tmp == request_size);
             THREADS_END;
             PyObject * args = Py_BuildValue("(i,s,s,"
                                             BUILDVALUE_BYTES ","
@@ -617,8 +618,8 @@ class callback : public CloudI::API::function_object_c
                                             BUILDVALUE_BYTES ","
                                             BUILDVALUE_BYTES ")",
                                             request_type, name, pattern,
-                                            request_info, request_info_size,
-                                            request, request_size, timeout,
+                                            request_info, request_info_size_tmp,
+                                            request, request_size_tmp, timeout,
                                             static_cast<int>(priority),
                                             trans_id, 16, pid, pid_size);
             if (! args)
@@ -753,10 +754,10 @@ class callback : public CloudI::API::function_object_c
                         result_invalid = true;
                     }
                     else if (response_info_size_tmp < 0 ||
-                             static_cast<uint32_t>(response_info_size_tmp) >
+                             static_cast<size_t>(response_info_size_tmp) >
                              std::numeric_limits<uint32_t>::max() ||
                              response_size_tmp < 0 ||
-                             static_cast<uint32_t>(response_size_tmp) >
+                             static_cast<size_t>(response_size_tmp) >
                              std::numeric_limits<uint32_t>::max())
                     {
                         result_invalid = true;
@@ -780,7 +781,7 @@ class callback : public CloudI::API::function_object_c
                         result_invalid = true;
                     }
                     else if (response_size_tmp < 0 ||
-                             static_cast<uint32_t>(response_size_tmp) >
+                             static_cast<size_t>(response_size_tmp) >
                              std::numeric_limits<uint32_t>::max())
                     {
                         result_invalid = true;
@@ -820,7 +821,7 @@ class callback : public CloudI::API::function_object_c
                     }
 #endif
                     if (response_size_tmp < 0 ||
-                        static_cast<uint32_t>(response_size_tmp) >
+                        static_cast<size_t>(response_size_tmp) >
                         std::numeric_limits<uint32_t>::max())
                     {
                         result_invalid = true;
@@ -954,10 +955,12 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
     CloudI::API * api = object->api;
     char const * name;
     char const * request;
-    uint32_t request_size = 0;
+    Py_ssize_t request_size_tmp = 0;
+    uint32_t request_size;
     uint32_t timeout = api->timeout_async();
     char const * request_info = NULL;
-    uint32_t request_info_size = 0;
+    Py_ssize_t request_info_size_tmp = 0;
+    uint32_t request_info_size;
     int8_t priority = api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
@@ -965,12 +968,24 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
                                       "s" BUILDVALUE_BYTES "|I"
                                       BUILDVALUE_BYTES "B:send_async",
                                       const_cast<char**>(kwlist),
-                                      &name, &request, &request_size, &timeout,
-                                      &request_info, &request_info_size,
+                                      &name, &request, &request_size_tmp,
+                                      &timeout,
+                                      &request_info, &request_info_size_tmp,
                                       &priority))
     {
         return NULL;
     }
+    if (request_info_size_tmp < 0 ||
+        static_cast<size_t>(request_info_size_tmp) >
+        std::numeric_limits<uint32_t>::max() ||
+        request_size_tmp < 0 ||
+        static_cast<size_t>(request_size_tmp) >
+        std::numeric_limits<uint32_t>::max())
+    {
+        return NULL;
+    }
+    request_info_size = static_cast<uint32_t>(request_info_size_tmp);
+    request_size = static_cast<uint32_t>(request_size_tmp);
     int result;
     THREADS_BEGIN;
     result = api->send_async(name, request_info, request_info_size,
@@ -997,10 +1012,12 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
     CloudI::API * api = object->api;
     char const * name;
     char const * request;
-    uint32_t request_size = 0;
+    Py_ssize_t request_size_tmp = 0;
+    uint32_t request_size;
     uint32_t timeout = api->timeout_sync();
     char const * request_info = NULL;
-    uint32_t request_info_size = 0;
+    Py_ssize_t request_info_size_tmp = 0;
+    uint32_t request_info_size;
     int8_t priority = api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
@@ -1008,12 +1025,24 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
                                       "s" BUILDVALUE_BYTES "|I"
                                       BUILDVALUE_BYTES "B:send_sync",
                                       const_cast<char**>(kwlist),
-                                      &name, &request, &request_size, &timeout,
-                                      &request_info, &request_info_size,
+                                      &name, &request, &request_size_tmp,
+                                      &timeout,
+                                      &request_info, &request_info_size_tmp,
                                       &priority))
     {
         return NULL;
     }
+    if (request_info_size_tmp < 0 ||
+        static_cast<size_t>(request_info_size_tmp) >
+        std::numeric_limits<uint32_t>::max() ||
+        request_size_tmp < 0 ||
+        static_cast<size_t>(request_size_tmp) >
+        std::numeric_limits<uint32_t>::max())
+    {
+        return NULL;
+    }
+    request_info_size = static_cast<uint32_t>(request_info_size_tmp);
+    request_size = static_cast<uint32_t>(request_size_tmp);
     int result;
     THREADS_BEGIN;
     result = api->send_sync(name, request_info, request_info_size,
@@ -1029,13 +1058,17 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
         return NULL;
     }
     PY_ASSERT(api->get_trans_id_count() == 1);
+    Py_ssize_t const response_info_size_tmp = api->get_response_info_size();
+    Py_ssize_t const response_size_tmp = api->get_response_size();
+    PY_ASSERT(response_info_size_tmp == api->get_response_info_size());
+    PY_ASSERT(response_size_tmp == api->get_response_size());
     return Py_BuildValue("(" BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ")",
                          api->get_response_info(),
-                         api->get_response_info_size(),
+                         response_info_size_tmp,
                          api->get_response(),
-                         api->get_response_size(),
+                         response_size_tmp,
                          api->get_trans_id(0), 16);
 }
 
@@ -1047,10 +1080,12 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
     CloudI::API * api = object->api;
     char const * name;
     char const * request;
-    uint32_t request_size = 0;
+    Py_ssize_t request_size_tmp = 0;
+    uint32_t request_size;
     uint32_t timeout = api->timeout_async();
     char const * request_info = NULL;
-    uint32_t request_info_size = 0;
+    Py_ssize_t request_info_size_tmp = 0;
+    uint32_t request_info_size;
     int8_t priority = api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
@@ -1058,12 +1093,24 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
                                       "s" BUILDVALUE_BYTES "|I"
                                       BUILDVALUE_BYTES "B:mcast_async",
                                       const_cast<char**>(kwlist),
-                                      &name, &request, &request_size, &timeout,
-                                      &request_info, &request_info_size,
+                                      &name, &request, &request_size_tmp,
+                                      &timeout,
+                                      &request_info, &request_info_size_tmp,
                                       &priority))
     {
         return NULL;
     }
+    if (request_info_size_tmp < 0 ||
+        static_cast<size_t>(request_info_size_tmp) >
+        std::numeric_limits<uint32_t>::max() ||
+        request_size_tmp < 0 ||
+        static_cast<size_t>(request_size_tmp) >
+        std::numeric_limits<uint32_t>::max())
+    {
+        return NULL;
+    }
+    request_info_size = static_cast<uint32_t>(request_info_size_tmp);
+    request_size = static_cast<uint32_t>(request_size_tmp);
     int result;
     THREADS_BEGIN;
     result = api->mcast_async(name, request_info, request_info_size,
@@ -1090,9 +1137,11 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
     CloudI::API * api = object->api;
     char const * name;
     char const * request_info;
-    uint32_t request_info_size = 0;
+    Py_ssize_t request_info_size_tmp = 0;
+    uint32_t request_info_size;
     char const * request;
-    uint32_t request_size = 0;
+    Py_ssize_t request_size_tmp = 0;
+    uint32_t request_size;
     uint32_t timeout;
     int8_t priority;
     char const * trans_id;
@@ -1102,12 +1151,23 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
     if (! PyArg_ParseTuple(args,
                            "s" BUILDVALUE_BYTES BUILDVALUE_BYTES "IB"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":forward_async",
-                           &name, &request_info, &request_info_size,
-                           &request, &request_size, &timeout, &priority,
+                           &name, &request_info, &request_info_size_tmp,
+                           &request, &request_size_tmp, &timeout, &priority,
                            &trans_id, &trans_id_size, &pid, &pid_size))
     {
         return NULL;
     }
+    if (request_info_size_tmp < 0 ||
+        static_cast<size_t>(request_info_size_tmp) >
+        std::numeric_limits<uint32_t>::max() ||
+        request_size_tmp < 0 ||
+        static_cast<size_t>(request_size_tmp) >
+        std::numeric_limits<uint32_t>::max())
+    {
+        return NULL;
+    }
+    request_info_size = static_cast<uint32_t>(request_info_size_tmp);
+    request_size = static_cast<uint32_t>(request_size_tmp);
     PY_ASSERT(trans_id_size == 16);
     int result = 0;
     THREADS_BEGIN;
@@ -1139,9 +1199,11 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
     CloudI::API * api = object->api;
     char const * name;
     char const * request_info;
-    uint32_t request_info_size = 0;
+    Py_ssize_t request_info_size_tmp = 0;
+    uint32_t request_info_size;
     char const * request;
-    uint32_t request_size = 0;
+    Py_ssize_t request_size_tmp = 0;
+    uint32_t request_size;
     uint32_t timeout;
     int8_t priority;
     char const * trans_id;
@@ -1151,12 +1213,23 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
     if (! PyArg_ParseTuple(args,
                            "s" BUILDVALUE_BYTES BUILDVALUE_BYTES "IB"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":forward_sync",
-                           &name, &request_info, &request_info_size,
-                           &request, &request_size, &timeout, &priority,
+                           &name, &request_info, &request_info_size_tmp,
+                           &request, &request_size_tmp, &timeout, &priority,
                            &trans_id, &trans_id_size, &pid, &pid_size))
     {
         return NULL;
     }
+    if (request_info_size_tmp < 0 ||
+        static_cast<size_t>(request_info_size_tmp) >
+        std::numeric_limits<uint32_t>::max() ||
+        request_size_tmp < 0 ||
+        static_cast<size_t>(request_size_tmp) >
+        std::numeric_limits<uint32_t>::max())
+    {
+        return NULL;
+    }
+    request_info_size = static_cast<uint32_t>(request_info_size_tmp);
+    request_size = static_cast<uint32_t>(request_size_tmp);
     PY_ASSERT(trans_id_size == 16);
     int result = 0;
     THREADS_BEGIN;
@@ -1189,9 +1262,11 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
     char const * name;
     char const * pattern;
     char const * response_info;
-    uint32_t response_info_size = 0;
+    Py_ssize_t response_info_size_tmp = 0;
+    uint32_t response_info_size;
     char const * response;
-    uint32_t response_size = 0;
+    Py_ssize_t response_size_tmp = 0;
+    uint32_t response_size;
     uint32_t timeout;
     char const * trans_id;
     uint32_t trans_id_size = 0;
@@ -1200,12 +1275,24 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
     if (! PyArg_ParseTuple(args,
                            "ss" BUILDVALUE_BYTES BUILDVALUE_BYTES "I"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":return_async",
-                           &name, &pattern, &response_info, &response_info_size,
-                           &response, &response_size, &timeout,
+                           &name, &pattern,
+                           &response_info, &response_info_size_tmp,
+                           &response, &response_size_tmp, &timeout,
                            &trans_id, &trans_id_size, &pid, &pid_size))
     {
         return NULL;
     }
+    if (response_info_size_tmp < 0 ||
+        static_cast<size_t>(response_info_size_tmp) >
+        std::numeric_limits<uint32_t>::max() ||
+        response_size_tmp < 0 ||
+        static_cast<size_t>(response_size_tmp) >
+        std::numeric_limits<uint32_t>::max())
+    {
+        return NULL;
+    }
+    response_info_size = static_cast<uint32_t>(response_info_size_tmp);
+    response_size = static_cast<uint32_t>(response_size_tmp);
     PY_ASSERT(trans_id_size == 16);
     int result = 0;
     THREADS_BEGIN;
@@ -1237,9 +1324,11 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
     char const * name;
     char const * pattern;
     char const * response_info;
-    uint32_t response_info_size = 0;
+    Py_ssize_t response_info_size_tmp = 0;
+    uint32_t response_info_size;
     char const * response;
-    uint32_t response_size = 0;
+    Py_ssize_t response_size_tmp = 0;
+    uint32_t response_size;
     uint32_t timeout;
     char const * trans_id;
     uint32_t trans_id_size = 0;
@@ -1248,12 +1337,24 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
     if (! PyArg_ParseTuple(args,
                            "ss" BUILDVALUE_BYTES BUILDVALUE_BYTES "I"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":return_sync",
-                           &name, &pattern, &response_info, &response_info_size,
-                           &response, &response_size, &timeout,
+                           &name, &pattern,
+                           &response_info, &response_info_size_tmp,
+                           &response, &response_size_tmp, &timeout,
                            &trans_id, &trans_id_size, &pid, &pid_size))
     {
         return NULL;
     }
+    if (response_info_size_tmp < 0 ||
+        static_cast<size_t>(response_info_size_tmp) >
+        std::numeric_limits<uint32_t>::max() ||
+        response_size_tmp < 0 ||
+        static_cast<size_t>(response_size_tmp) >
+        std::numeric_limits<uint32_t>::max())
+    {
+        return NULL;
+    }
+    response_info_size = static_cast<uint32_t>(response_info_size_tmp);
+    response_size = static_cast<uint32_t>(response_size_tmp);
     PY_ASSERT(trans_id_size == 16);
     int result = 0;
     THREADS_BEGIN;
@@ -1310,14 +1411,18 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
         python_error(object, result);
         return NULL;
     }
+    Py_ssize_t const response_info_size_tmp = api->get_response_info_size();
+    Py_ssize_t const response_size_tmp = api->get_response_size();
+    PY_ASSERT(response_info_size_tmp == api->get_response_info_size());
+    PY_ASSERT(response_size_tmp == api->get_response_size());
     PY_ASSERT(api->get_trans_id_count() == 1);
     return Py_BuildValue("(" BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ")",
                          api->get_response_info(),
-                         api->get_response_info_size(),
+                         response_info_size_tmp,
                          api->get_response(),
-                         api->get_response_size(),
+                         response_size_tmp,
                          api->get_trans_id(0), 16);
 }
 

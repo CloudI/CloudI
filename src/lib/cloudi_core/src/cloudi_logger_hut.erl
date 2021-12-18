@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2017-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger_hut).
@@ -51,21 +51,22 @@
           Fmt :: string(),
           Args :: list(),
           Opts0 :: list({module, atom()} |
+                        {file, nonempty_string()} |
                         {line, pos_integer()} |
                         {function_name, atom()} |
                         {function_arity, arity()})) ->
     ok.
 
 log(Level, Fmt, Args, Opts0) ->
-    {Module, Line, Opts3} = case lists:keytake(module, 1, Opts0) of
+    {FileName, Line, Opts3} = case lists:keytake(file, 1, Opts0) of
         false ->
-            {'HUT', 0, Opts0};
-        {value, {module, ModuleValue}, Opts1} ->
+            {"HUT", 0, Opts0};
+        {value, {file, FileNameValue}, Opts1} ->
             case lists:keytake(line, 1, Opts1) of
                 false ->
-                    {ModuleValue, 0, Opts1};
+                    {FileNameValue, 0, Opts1};
                 {value, {line, LineValue}, Opts2} ->
-                    {ModuleValue, LineValue, Opts2}
+                    {FileNameValue, LineValue, Opts2}
             end
     end,
     {FunctionName, FunctionArity,
@@ -81,7 +82,7 @@ log(Level, Fmt, Args, Opts0) ->
             end
     end,
     ok = cloudi_core_i_logger:metadata_set(maps:from_list(OptsN)),
-    log_output(log_level(Level), Module, Line,
+    log_output(log_level(Level), FileName, Line,
                FunctionName, FunctionArity, Fmt, Args).
 
 %%-------------------------------------------------------------------------
@@ -97,23 +98,23 @@ log(Level, Fmt, Args, Opts0) ->
     ok.
 
 slog(Level, Data, Meta0) ->
-    {Module,
-     FunctionName,
-     FunctionArity,
-     Meta2} = case maps:take(mfa, Meta0) of
-        {{ModuleValue, FunctionNameValue, FunctionArityValue}, Meta1} ->
-            {ModuleValue, FunctionNameValue, FunctionArityValue, Meta1};
+    {FileName, Line, Meta3} = case maps:take(file, Meta0) of
         error ->
-            {'HUT', undefined, undefined, Meta0}
+            {"HUT", 0, Meta0};
+        {FileNameValue, Meta1} ->
+            case maps:take(line, Meta1) of
+                error ->
+                    {FileNameValue, 0, Meta1};
+                {LineValue, Meta2} ->
+                    {FileNameValue, LineValue, Meta2}
+            end
     end,
-    {Line,
-     Meta4} = case maps:take(line, Meta2) of
-        {LineValue, Meta3} ->
-            {LineValue, Meta3};
+    {FunctionName, FunctionArity, MetaN} = case maps:take(mfa, Meta3) of
         error ->
-            {0, Meta2}
+            {undefined, undefined, Meta3};
+        {{_, FunctionNameValue, FunctionArityValue}, Meta4} ->
+            {FunctionNameValue, FunctionArityValue, Meta4}
     end,
-    MetaN = maps:remove(file, Meta4),
     Format = case Data of
         [{_, _} | _] = Report ->
             cloudi_string:format("~tp", [Report]);
@@ -123,7 +124,7 @@ slog(Level, Data, Meta0) ->
             FormatValue
     end,
     ok = cloudi_core_i_logger:metadata_set(MetaN),
-    log_output(log_level(Level), Module, Line,
+    log_output(log_level(Level), FileName, Line,
                FunctionName, FunctionArity, Format, undefined).
 
 %%%------------------------------------------------------------------------
@@ -144,15 +145,15 @@ log_level(info) -> info;
 log_level(debug) -> debug;
 log_level(_) -> undefined.
 
-log_output(undefined, _Module, _Line,
+log_output(undefined, _FileName, _Line,
            FunctionName, FunctionArity, Format, Args) ->
-    cloudi_core_i_logger_interface:error('HUT(invalid_level)', 0,
+    cloudi_core_i_logger_interface:error("HUT(invalid_level)", 0,
                                          FunctionName,
                                          FunctionArity,
                                          Format, Args);
-log_output(LogLevel, Module, Line,
+log_output(LogLevel, FileName, Line,
            FunctionName, FunctionArity, Format, Args) ->
-    cloudi_core_i_logger_interface:LogLevel(Module, Line,
+    cloudi_core_i_logger_interface:LogLevel(FileName, Line,
                                             FunctionName,
                                             FunctionArity,
                                             Format, Args).

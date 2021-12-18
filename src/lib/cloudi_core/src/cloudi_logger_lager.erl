@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2017-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_logger_lager).
@@ -45,7 +45,7 @@
 
 -record(state,
         {
-            module = undefined :: module() | undefined,
+            file_name = undefined :: nonempty_string() | undefined,
             function_name = undefined :: atom() | undefined,
             function_arity = undefined :: arity() | undefined
         }).
@@ -177,23 +177,19 @@ log_level(debug) -> debug;
 log_level(_) -> undefined.
 
 log_output(undefined, Format, Args) ->
-    cloudi_core_i_logger_interface:error('LAGER(invalid_level)', 0,
+    cloudi_core_i_logger_interface:error("LAGER(invalid_level)", 0,
                                          undefined, undefined,
                                          Format, Args);
 log_output(LogLevel, Format, Args) ->
-    cloudi_core_i_logger_interface:LogLevel('LAGER', 0,
+    cloudi_core_i_logger_interface:LogLevel("LAGER", 0,
                                             undefined, undefined,
                                             Format, Args).
 
 forms_process([{eof, _} = EOF], L, _) ->
     lists:reverse([EOF | L]);
-forms_process([{attribute, _, module, {Module, _}} = Attribute | Forms],
+forms_process([{attribute, _, file, {FileName, _}} = Attribute | Forms],
               L, State) ->
-    % still handle parameterized modules
-    forms_process(Forms, [Attribute | L], State#state{module = Module});
-forms_process([{attribute, _, module, Module} = Attribute | Forms],
-              L, State) ->
-    forms_process(Forms, [Attribute | L], State#state{module = Module});
+    forms_process(Forms, [Attribute | L], State#state{file_name = FileName});
 forms_process([#'function'{function_name = FunctionName,
                            function_arity = FunctionArity,
                            clauses = Clauses} = Form | Forms], L, State) ->
@@ -224,7 +220,7 @@ body_process([#'call'{anno = Anno,
                                            function_name = {atom, _, Level}},
                       args = Args} = Call |
               Statements], L,
-             #state{module = Module,
+             #state{file_name = FileName,
                     function_name = FunctionName,
                     function_arity = FunctionArity} = State) ->
     case log_level(Level) of
@@ -241,7 +237,7 @@ body_process([#'call'{anno = Anno,
                 [_Attrs, {string, _, _} = LagerFormat, LagerArgs] ->
                     [LagerFormat, lager_args_process(LagerArgs)]
             end,
-            NewArgs = [{atom, Anno, Module},
+            NewArgs = [{string, Anno, FileName},
                        {integer, Anno, erl_anno:line(Anno)},
                        {atom, Anno, FunctionName},
                        {integer, Anno, FunctionArity} | NewArgsSuffix],
