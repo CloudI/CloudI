@@ -38,9 +38,9 @@
 
 defmodule CloudILogger do
 
-# Logging output will log asynchronously until the logger's
-# message queue becomes too large, then use synchronous logging
-# while the message queue remains large
+  # Logging output will log asynchronously until the logger's
+  # message queue becomes too large, then use synchronous logging
+  # while the message queue remains large
 
   defmacro log_fatal(format, args) do
     quote do
@@ -50,7 +50,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.fatal(file_name,
                                             __ENV__.line,
                                             function,
@@ -68,7 +68,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.error(file_name,
                                             __ENV__.line,
                                             function,
@@ -86,7 +86,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.warn(file_name,
                                            __ENV__.line,
                                            function,
@@ -104,7 +104,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.info(file_name,
                                            __ENV__.line,
                                            function,
@@ -122,7 +122,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.debug(file_name,
                                             __ENV__.line,
                                             function,
@@ -140,7 +140,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.trace(file_name,
                                             __ENV__.line,
                                             function,
@@ -158,7 +158,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.log(file_name,
                                           __ENV__.line,
                                           function,
@@ -169,9 +169,9 @@ defmodule CloudILogger do
     end
   end
 
-# Force the logging to be done synchronously
-# (use if you need to be sure the data is written to the log,
-#  assuming no filesystem errors occur when writing to the log file)
+  # Force the logging to be done synchronously
+  # (use if you need to be sure the data is written to the log,
+  #  assuming no filesystem errors occur when writing to the log file)
 
   defmacro log_fatal_sync(format, args) do
     quote do
@@ -181,7 +181,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.fatal_sync(file_name,
                                                  __ENV__.line,
                                                  function,
@@ -199,7 +199,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.error_sync(file_name,
                                                  __ENV__.line,
                                                  function,
@@ -217,7 +217,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.warn_sync(file_name,
                                                 __ENV__.line,
                                                 function,
@@ -235,7 +235,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.info_sync(file_name,
                                                 __ENV__.line,
                                                 function,
@@ -253,7 +253,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.debug_sync(file_name,
                                                  __ENV__.line,
                                                  function,
@@ -271,7 +271,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.trace_sync(file_name,
                                                  __ENV__.line,
                                                  function,
@@ -289,7 +289,7 @@ defmodule CloudILogger do
         {_, _} = function_arity ->
             function_arity
       end
-      file_name = Atom.to_charlist(__MODULE__) ++ '.ex'
+      file_name = String.to_charlist(Path.basename(__ENV__.file))
       :cloudi_core_i_logger_interface.log_sync(file_name,
                                                __ENV__.line,
                                                function,
@@ -300,7 +300,7 @@ defmodule CloudILogger do
     end
   end
 
-# Apply an anonymous function if allowed by the current logging level setting
+  # Apply an anonymous function if allowed by the current logging level setting
 
   defmacro log_fatal_apply(f, a) do
     quote do
@@ -352,7 +352,7 @@ defmodule CloudILogger do
     end
   end
 
-# Apply a module function if allowed by the current logging level setting
+  # Apply a module function if allowed by the current logging level setting
 
   defmacro log_fatal_apply(m, f, a) do
     quote do
@@ -411,7 +411,7 @@ defmodule CloudILogger do
     end
   end
 
-# Get/Set lager-compatible logging metadata
+  # Get/Set lager-compatible logging metadata
 
   defmacro log_metadata_get() do
     quote do
