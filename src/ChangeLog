@@ -3,9 +3,12 @@
 
 2021-12-21 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Fix cloudi_service_api_requests JSON output
+        * Fix the internal service module value when a string is configured
+        * Improve UTF8 handling of service string data
     * Increase the queue_mode_async/queue_mode_sync logging
       configuration values in the integration tests configuration
-      for slower disk writes (e.g., RAID with a journaling filesystem)
+      for slower disk writes (e.g., RAID 1 with a journaling filesystem)
 
 2021-12-18 Michael Truog   <mjtruog at protonmail dot com>
 

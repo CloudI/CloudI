@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -713,7 +713,7 @@ convert_term_to_json_service(#internal{prefix = Prefix,
             Service0;
         is_list(DestListAllow) ->
             [{<<"dest_list_allow">>,
-              [erlang:list_to_binary(DestAllow)
+              [cloudi_service_name:utf8(DestAllow)
                || DestAllow <- DestListAllow]} | Service0]
     end,
     Service2 = if
@@ -721,7 +721,7 @@ convert_term_to_json_service(#internal{prefix = Prefix,
             Service1;
         is_list(DestListDeny) ->
             [{<<"dest_list_deny">>,
-              [erlang:list_to_binary(DestDeny)
+              [cloudi_service_name:utf8(DestDeny)
                || DestDeny <- DestListDeny]} | Service1]
     end,
     Service3 = [{<<"timeout_init">>, TimeoutInit},
@@ -734,10 +734,16 @@ convert_term_to_json_service(#internal{prefix = Prefix,
             [{<<"dest_refresh">>,
               erlang:atom_to_binary(DestRefresh, utf8)} | Service3]
     end,
+    ModuleValue = if
+        is_atom(Module) ->
+            erlang:atom_to_binary(Module, utf8);
+        is_list(Module) ->
+            unicode:characters_to_binary(Module)
+    end,
     [{<<"id">>, erlang:list_to_binary(Id)},
      {<<"type">>, <<"internal">>},
-     {<<"prefix">>, erlang:list_to_binary(Prefix)},
-     {<<"module">>, erlang:atom_to_binary(Module, utf8)},
+     {<<"prefix">>, cloudi_service_name:utf8(Prefix)},
+     {<<"module">>, ModuleValue},
      {<<"args">>, cloudi_string:term_to_binary_compact(Args)} | ServiceN];
 convert_term_to_json_service(#external{prefix = Prefix,
                                        file_path = FilePath,
@@ -766,7 +772,7 @@ convert_term_to_json_service(#external{prefix = Prefix,
             Service0;
         is_list(DestListAllow) ->
             [{<<"dest_list_allow">>,
-              [erlang:list_to_binary(DestAllow)
+              [cloudi_service_name:utf8(DestAllow)
                || DestAllow <- DestListAllow]} | Service0]
     end,
     Service2 = if
@@ -774,7 +780,7 @@ convert_term_to_json_service(#external{prefix = Prefix,
             Service1;
         is_list(DestListDeny) ->
             [{<<"dest_list_deny">>,
-              [erlang:list_to_binary(DestDeny)
+              [cloudi_service_name:utf8(DestDeny)
                || DestDeny <- DestListDeny]} | Service1]
     end,
     Service3 = [{<<"protocol">>, erlang:atom_to_binary(Protocol, utf8)},
@@ -791,11 +797,11 @@ convert_term_to_json_service(#external{prefix = Prefix,
     end,
     [{<<"id">>, erlang:list_to_binary(Id)},
      {<<"type">>, <<"external">>},
-     {<<"prefix">>, erlang:list_to_binary(Prefix)},
-     {<<"file_path">>, erlang:list_to_binary(FilePath)},
-     {<<"args">>, erlang:list_to_binary(Args)},
+     {<<"prefix">>, cloudi_service_name:utf8(Prefix)},
+     {<<"file_path">>, unicode:characters_to_binary(FilePath)},
+     {<<"args">>, unicode:characters_to_binary(Args)},
      {<<"env">>,
-      [erlang:list_to_binary(Key ++ "=" ++ Value)
+      [unicode:characters_to_binary(Key ++ "=" ++ Value)
        || {Key, Value} <- Env]} | ServiceN].
 
 convert_term_to_json_service_status([]) ->
