@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2021-12-21 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Increase the queue_mode_async/queue_mode_sync logging
+      configuration values in the integration tests configuration
+      for slower disk writes (e.g., RAID with a journaling filesystem)
+
 2021-12-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Python 3.10 compatibility to the Python/C CloudI API
