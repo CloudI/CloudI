@@ -1506,6 +1506,15 @@ log_message_formatters(Level, Timestamp, Node, Pid,
     end.
 
 log_message_external(ModeInterface, Process,
+                     Level, Module, Line,
+                     Function, Arity, Format, Args)
+    when is_atom(Module) ->
+    % Compatibility with CloudI =< 2.0.4
+    FileName = erlang:atom_to_list(Module) ++ ".erl",
+    log_message_external(ModeInterface, Process,
+                         Level, FileName, Line,
+                         Function, Arity, Format, Args);
+log_message_external(ModeInterface, Process,
                      Level, [_ | _] = FileName, Line,
                      Function, Arity, Format, Args)
     when is_atom(Level), is_integer(Line), Line >= 0,
