@@ -1252,7 +1252,8 @@
     % However, the logging sync mode will always slow concurrent
     % service execution if these limits are met consistently
     % (if you see the logging_status mode as sync consistently,
-    %  it is better to set the logging level to warn to avoid the info data).
+    %  it is better to set the logging level to warn to avoid the info data
+    %  or use a RAM disk installation instead).
     {queue_mode_async, 4000},
     {queue_mode_sync, 4250}
 ]}.
