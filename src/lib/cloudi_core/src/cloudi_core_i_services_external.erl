@@ -1409,6 +1409,14 @@ terminate(Reason, _,
          process_terminate_begin(Dispatcher, OSPid, Reason),
     _ = aspects_terminate_before(Aspects, Reason, TimeoutTerm, ServiceState),
     ok = socket_close(Reason, socket_data_from_state(State)),
+    ok = terminate_pids(Reason, State),
+    ok.
+
+terminate_pids(normal,
+               #state{options = #config_service_options{
+                          monkey_chaos = MonkeyChaos}}) ->
+    ok = cloudi_core_i_runtime_testing:monkey_chaos_destroy(MonkeyChaos);
+terminate_pids(_, _) ->
     ok.
 
 code_change(_, StateName, State, _) ->

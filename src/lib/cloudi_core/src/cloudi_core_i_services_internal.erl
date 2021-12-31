@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -1498,20 +1498,9 @@ handle_info('cloudi_hibernate_rate',
                        hibernate = Hibernate} = ConfigOptions} = State) ->
     {Value, HibernateNew} = cloudi_core_i_rate_based_configuration:
                             hibernate_reinit(Hibernate),
-    if
-        is_pid(RequestPid) ->
-            RequestPid ! {'cloudi_hibernate', Value},
-            ok;
-        true ->
-            ok
-    end,
-    if
-        is_pid(InfoPid) ->
-            InfoPid ! {'cloudi_hibernate', Value},
-            ok;
-        true ->
-            ok
-    end,
+    HibernateMessage = {'cloudi_hibernate', Value},
+    ok = pid_send(RequestPid, HibernateMessage),
+    ok = pid_send(InfoPid, HibernateMessage),
     hibernate_check({noreply,
                      State#state{
                          options = ConfigOptions#config_service_options{
@@ -1840,15 +1829,27 @@ terminate(Reason,
                  timeout_term = TimeoutTerm,
                  duo_mode_pid = undefined,
                  options = #config_service_options{
-                     aspects_terminate_before = Aspects}}) ->
+                     aspects_terminate_before = Aspects}} = State) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(Dispatcher, Reason),
     ServiceStateNew = aspects_terminate_before(Aspects, Reason, TimeoutTerm,
                                                ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
+    ok = terminate_pids(Reason, State),
     ok;
 
 terminate(_, _) ->
+    ok.
+
+terminate_pids(normal,
+               #state{request_pid = RequestPid,
+                      info_pid = InfoPid,
+                      options = #config_service_options{
+                          monkey_chaos = MonkeyChaos}}) ->
+    ok = pid_send(RequestPid, 'cloudi_service_request_loop_exit'),
+    ok = pid_send(InfoPid, 'cloudi_service_info_loop_exit'),
+    ok = cloudi_core_i_runtime_testing:monkey_chaos_destroy(MonkeyChaos);
+terminate_pids(_, _) ->
     ok.
 
 code_change(_, State, _) ->
@@ -3066,7 +3067,8 @@ process_queues(State) ->
     end.
 
 -compile({inline,
-          [{hibernate_check, 1}]}).
+          [{hibernate_check, 1},
+           {pid_send, 2}]}).
 
 hibernate_check({nohibernate, NoHibernate}) ->
     NoHibernate;
@@ -3117,6 +3119,13 @@ hibernate_check({noreply,
         true ->
             {noreply, State, hibernate}
     end.
+
+pid_send(undefined, _) ->
+    ok;
+pid_send(Pid, Message)
+    when is_pid(Pid) ->
+    Pid ! Message,
+    ok.
 
 handle_module_request_loop_pid(RequestPidOld, ModuleRequest,
                                #config_service_options{
@@ -3472,6 +3481,12 @@ system_terminate(Reason, _Dispatcher, _Debug, State) ->
 system_code_change(State, _Module, _VsnOld, _Extra) ->
     {ok, State}.
 
+duo_mode_dispatcher_options(ConfigOptions) ->
+    ConfigOptions#config_service_options{
+        rate_request_max = undefined,
+        count_process_dynamic = false,
+        hibernate = false}.
+
 -ifdef(VERBOSE_STATE).
 duo_mode_format_state(State) ->
     State.
@@ -3493,20 +3508,28 @@ duo_mode_loop_terminate(Reason,
                                    service_state = ServiceState,
                                    timeout_term = TimeoutTerm,
                                    options = #config_service_options{
-                                       aspects_terminate_before = Aspects}}) ->
+                                       aspects_terminate_before = Aspects}
+                                   } = State) ->
     ok = cloudi_core_i_services_monitor:
          process_terminate_begin(DuoModePid, Reason),
     ServiceStateNew = aspects_terminate_before(Aspects, Reason, TimeoutTerm,
                                                ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, ServiceStateNew),
+    ok = duo_terminate_pids(Reason, State),
     _ = erlang:process_flag(trap_exit, false),
     erlang:exit(DuoModePid, Reason).
 
-duo_mode_dispatcher_options(ConfigOptions) ->
-    ConfigOptions#config_service_options{
-        rate_request_max = undefined,
-        count_process_dynamic = false,
-        hibernate = false}.
+duo_terminate_pids(normal,
+                   #state_duo{dispatcher = Dispatcher,
+                              request_pid = RequestPid,
+                              options = #config_service_options{
+                                  monkey_chaos = MonkeyChaos}}) ->
+    Dispatcher ! {'cloudi_service_info_failure',
+                  stop, normal, undefined, undefined},
+    ok = pid_send(RequestPid, 'cloudi_service_request_loop_exit'),
+    ok = cloudi_core_i_runtime_testing:monkey_chaos_destroy(MonkeyChaos);
+duo_terminate_pids(_, _) ->
+    ok.
 
 duo_handle_info({'cloudi_service_return_async',
                  _, _, _, _, _, _, Source} = T,
@@ -3781,14 +3804,9 @@ duo_handle_info('cloudi_hibernate_rate',
                            } = State) ->
     {Value, HibernateNew} = cloudi_core_i_rate_based_configuration:
                             hibernate_reinit(Hibernate),
-    Dispatcher ! {'cloudi_hibernate', Value},
-    if
-        is_pid(RequestPid) ->
-            RequestPid ! {'cloudi_hibernate', Value},
-            ok;
-        true ->
-            ok
-    end,
+    HibernateMessage = {'cloudi_hibernate', Value},
+    Dispatcher ! HibernateMessage,
+    ok = pid_send(RequestPid, HibernateMessage),
     {noreply,
      State#state_duo{options = ConfigOptions#config_service_options{
                          hibernate = HibernateNew}}};

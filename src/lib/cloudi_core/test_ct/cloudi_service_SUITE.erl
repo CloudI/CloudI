@@ -69,6 +69,22 @@
          t_service_internal_update_1/1,
          t_service_internal_log_1/1,
          t_service_internal_idle_1/1,
+         t_service_internal_stop_error_1/1,
+         t_service_internal_stop_error_2/1,
+         t_service_internal_stop_error_3/1,
+         t_service_internal_stop_error_4/1,
+         t_service_internal_stop_shutdown_1/1,
+         t_service_internal_stop_shutdown_2/1,
+         t_service_internal_stop_shutdown_3/1,
+         t_service_internal_stop_shutdown_4/1,
+         t_service_internal_stop_shutdown_5/1,
+         t_service_internal_stop_shutdown_6/1,
+         t_service_internal_stop_shutdown_7/1,
+         t_service_internal_stop_shutdown_8/1,
+         t_service_internal_stop_normal_1/1,
+         t_service_internal_stop_normal_2/1,
+         t_service_internal_stop_normal_3/1,
+         t_service_internal_stop_normal_4/1,
          t_cloudi_args_type_1/1,
          t_cloudi_service_name_1/1]).
 
@@ -96,6 +112,7 @@
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service_api.hrl").
 
 -ifndef(CLOUDI_TEST_TIMEOUT).
 -define(CLOUDI_TEST_TIMEOUT, 10). % seconds
@@ -130,19 +147,23 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, _Timeout, Dispatcher) ->
         {mode,                             undefined}],
     [Mode] = cloudi_proplists:take_values(Defaults, Args),
     NewMode = if
-        Mode =:= reply ->
-            cloudi_service:subscribe(Dispatcher,
-                                     ?SERVICE_SUFFIX1),
-            reply;
+        Mode =:= idle ->
+            idle;
+        Mode =:= reply;
+        Mode =:= terminate_sleep;
+        Mode =:= pid ->
+            ok = cloudi_service:subscribe(Dispatcher,
+                                          ?SERVICE_SUFFIX1),
+            Mode;
         Mode =:= reply_x4 ->
-            cloudi_service:subscribe(Dispatcher,
-                                     ?SERVICE_SUFFIX1),
-            cloudi_service:subscribe(Dispatcher,
-                                     ?SERVICE_SUFFIX1),
-            cloudi_service:subscribe(Dispatcher,
-                                     ?SERVICE_SUFFIX1),
-            cloudi_service:subscribe(Dispatcher,
-                                     ?SERVICE_SUFFIX1),
+            ok = cloudi_service:subscribe(Dispatcher,
+                                          ?SERVICE_SUFFIX1),
+            ok = cloudi_service:subscribe(Dispatcher,
+                                          ?SERVICE_SUFFIX1),
+            ok = cloudi_service:subscribe(Dispatcher,
+                                          ?SERVICE_SUFFIX1),
+            ok = cloudi_service:subscribe(Dispatcher,
+                                          ?SERVICE_SUFFIX1),
             reply;
         Mode =:= init_send_sync ->
             {ok, _, _} = cloudi_service:send_sync(Dispatcher,
@@ -158,13 +179,7 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, _Timeout, Dispatcher) ->
                                                       ?REQUEST_INFO4, ?REQUEST4,
                                                       undefined, undefined),
             {ok, _, _} = cloudi_service:recv_async(Dispatcher, TransId),
-            undefined;
-        Mode =:= idle ->
-            idle;
-        Mode =:= terminate_sleep ->
-            cloudi_service:subscribe(Dispatcher,
-                                     ?SERVICE_SUFFIX1),
-            terminate_sleep
+            undefined
     end,
     {ok, #state{mode = NewMode}}.
 
@@ -181,7 +196,8 @@ cloudi_service_handle_request(RequestType, Name, Pattern,
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO2, ?REQUEST2,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{requests = Requests} = State,
+                              #state{mode = reply,
+                                     requests = Requests} = State,
                               _Dispatcher) ->
     {reply, <<>>, lists:reverse(Requests), State#state{requests = []}};
 cloudi_service_handle_request(_RequestType, Name, _Pattern,
@@ -197,8 +213,10 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO4, ?REQUEST4,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{} = State,
-                              _Dispatcher) ->
+                              #state{mode = Mode} = State,
+                              _Dispatcher)
+    when (Mode =:= reply) orelse
+         (Mode =:= terminate_sleep) ->
     {reply, ?RESPONSE_INFO1, ?RESPONSE1, State};
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO5, ?REQUEST5,
@@ -211,9 +229,22 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO6, ?REQUEST6,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{count = Count} = State,
+                              #state{mode = reply,
+                                     count = Count} = State,
                               _Dispatcher) ->
     {reply, Count, State};
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              <<>>, <<>>,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{mode = pid} = State,
+                              _Dispatcher) ->
+    {reply, self(), State};
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              <<>>, {stop, Reason},
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{mode = pid} = State,
+                              _Dispatcher) ->
+    {stop, Reason, State};
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO7, ?REQUEST7,
                               _Timeout, _Priority, _TransId, _Pid,
@@ -223,8 +254,16 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
     {noreply, State}.
 
 cloudi_service_handle_info(increment,
-                           #state{count = Count} = State, _Dispatcher) ->
+                           #state{mode = reply,
+                                  count = Count} = State, _Dispatcher) ->
     {noreply, State#state{count = Count + 2}};
+cloudi_service_handle_info({pid, Pid},
+                           #state{mode = pid} = State, _Dispatcher) ->
+    Pid ! {pid, self()},
+    {noreply, State};
+cloudi_service_handle_info({stop, Reason},
+                           #state{mode = pid} = State, _Dispatcher) ->
+    {stop, Reason, State};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
@@ -248,15 +287,17 @@ cloudi_service_terminate(terminate_sleep_test_2, _Timeout,
     ?LOG_INFO("terminate_sleep_test_2 finished the terminate function", []),
     ok;
 cloudi_service_terminate(_Reason, _Timeout,
-                         #state{count = 0}) ->
-    ok;
-cloudi_service_terminate(_Reason, _Timeout,
-                         #state{count = 60}) ->
+                         #state{mode = reply,
+                                count = 60}) ->
     % t_service_internal_aspects_1/1 result
     ok;
 cloudi_service_terminate(_Reason, _Timeout,
-                         #state{count = 100}) ->
+                         #state{mode = reply,
+                                count = 100}) ->
     % t_service_internal_update_1/1 result
+    ok;
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{count = 0}) ->
     ok.
 
 %%%------------------------------------------------------------------------
@@ -285,7 +326,23 @@ groups() ->
        t_service_internal_terminate_4,
        t_service_internal_update_1,
        t_service_internal_log_1,
-       t_service_internal_idle_1]},
+       t_service_internal_idle_1,
+       t_service_internal_stop_error_1,
+       t_service_internal_stop_error_2,
+       t_service_internal_stop_error_3,
+       t_service_internal_stop_error_4,
+       t_service_internal_stop_shutdown_1,
+       t_service_internal_stop_shutdown_2,
+       t_service_internal_stop_shutdown_3,
+       t_service_internal_stop_shutdown_4,
+       t_service_internal_stop_shutdown_5,
+       t_service_internal_stop_shutdown_6,
+       t_service_internal_stop_shutdown_7,
+       t_service_internal_stop_shutdown_8,
+       t_service_internal_stop_normal_1,
+       t_service_internal_stop_normal_2,
+       t_service_internal_stop_normal_3,
+       t_service_internal_stop_normal_4]},
      {cloudi_modules_1, [parallel],
       [t_cloudi_args_type_1,
        t_cloudi_service_name_1]}].
@@ -295,9 +352,6 @@ suite() ->
      {timetrap, {seconds, ?CLOUDI_TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
-    ok = cloudi_x_reltool_util:application_start(sasl,
-                                                 [{sasl_error_logger, false}],
-                                                 infinity),
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     Config.
 
@@ -341,7 +395,7 @@ init_per_testcase(TestCase, Config)
          (TestCase =:= t_service_internal_sync_2) orelse
          (TestCase =:= t_service_internal_async_1) orelse
          (TestCase =:= t_service_internal_update_1) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -356,7 +410,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_sync_3) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -371,7 +425,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_async_2) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -385,7 +439,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_async_3) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -400,7 +454,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_aspects_1) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     InitAfter1 = fun(_, _, _, #state{count = Count} = State, _) ->
         {ok, State#state{count = Count + 3}}
     end,
@@ -429,7 +483,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_1) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -444,7 +498,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_2) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -460,7 +514,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_3) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -475,7 +529,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_4) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -491,7 +545,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_idle_1) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -501,12 +555,53 @@ init_per_testcase(TestCase, Config)
           [{automatic_loading, false}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_stop_error_1) orelse
+         (TestCase =:= t_service_internal_stop_error_2) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_1) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_2) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_5) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_6) orelse
+         (TestCase =:= t_service_internal_stop_normal_1) orelse
+         (TestCase =:= t_service_internal_stop_normal_2) ->
+    ok = init_per_testcase(TestCase),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using the record configuration format (from cloudi_service_api.hrl)
+        #internal{prefix = ?SERVICE_PREFIX1,
+                  module = ?MODULE,
+                  args = [{mode, pid}],
+                  options = [{automatic_loading, false},
+                             {request_pid_uses, infinity},
+                             {info_pid_uses, infinity}]}
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_stop_error_3) orelse
+         (TestCase =:= t_service_internal_stop_error_4) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_3) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_4) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_7) orelse
+         (TestCase =:= t_service_internal_stop_shutdown_8) orelse
+         (TestCase =:= t_service_internal_stop_normal_3) orelse
+         (TestCase =:= t_service_internal_stop_normal_4) ->
+    ok = init_per_testcase(TestCase),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using the record configuration format (from cloudi_service_api.hrl)
+        #internal{prefix = ?SERVICE_PREFIX1,
+                  module = ?MODULE,
+                  args = [{mode, pid}],
+                  options = [{automatic_loading, false},
+                             {duo_mode, true},
+                             {request_pid_uses, infinity},
+                             {info_pid_uses, infinity}]}
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config) ->
-    init_per_testcase(TestCase),
+    ok = init_per_testcase(TestCase),
     Config.
 
 end_per_testcase(TestCase, Config) ->
-    end_per_testcase(TestCase),
+    ok = end_per_testcase(TestCase),
     case lists:keytake(service_ids, 1, Config) of
         {value, {_, ServiceIds}, NewConfig} ->
             ok = cloudi_service_api:services_remove(ServiceIds, infinity),
@@ -601,7 +696,7 @@ t_service_internal_sync_2(_Config) ->
     ok.
 
 t_service_internal_sync_3(Config) ->
-    t_service_internal_sync_2(Config).
+    ok = t_service_internal_sync_2(Config).
 
 t_service_internal_async_1(_Config) ->
     % make sure asynchronous sends work normally, that recv_async
@@ -855,7 +950,7 @@ t_service_internal_terminate_1(_Config) ->
     ok.
 
 t_service_internal_terminate_2(Config) ->
-    t_service_internal_terminate_1(Config).
+    ok = t_service_internal_terminate_1(Config).
 
 t_service_internal_terminate_3(_Config) ->
     % verify the cloudi_service_terminate/2 function execution
@@ -877,7 +972,7 @@ t_service_internal_terminate_3(_Config) ->
     ok.
 
 t_service_internal_terminate_4(Config) ->
-    t_service_internal_terminate_3(Config).
+    ok = t_service_internal_terminate_3(Config).
 
 t_service_internal_update_1(Config) ->
     % update state
@@ -945,6 +1040,98 @@ t_service_internal_idle_1(Config) ->
                service_subscriptions(ServiceId, infinity),
     {error, not_found} = cloudi_service_api:
                          service_subscriptions(<<0:128>>, infinity),
+    ok.
+
+t_service_internal_stop_error_1(_Config) ->
+    ok = service_internal_stop(request, error_unique_and_special).
+
+t_service_internal_stop_error_2(_Config) ->
+    ok = service_internal_stop(info, error_unique_and_special).
+
+t_service_internal_stop_error_3(_Config) ->
+    ok = service_internal_stop(request, error_unique_and_special).
+
+t_service_internal_stop_error_4(_Config) ->
+    ok = service_internal_stop(info, error_unique_and_special).
+
+t_service_internal_stop_shutdown_1(_Config) ->
+    ok = service_internal_stop(request, shutdown).
+
+t_service_internal_stop_shutdown_2(_Config) ->
+    ok = service_internal_stop(info, shutdown).
+
+t_service_internal_stop_shutdown_3(_Config) ->
+    ok = service_internal_stop(request, shutdown).
+
+t_service_internal_stop_shutdown_4(_Config) ->
+    ok = service_internal_stop(info, shutdown).
+
+t_service_internal_stop_shutdown_5(_Config) ->
+    ok = service_internal_stop(request, {shutdown, shutdown_unique_reason}).
+
+t_service_internal_stop_shutdown_6(_Config) ->
+    ok = service_internal_stop(info, {shutdown, shutdown_unique_reason}).
+
+t_service_internal_stop_shutdown_7(_Config) ->
+    ok = service_internal_stop(request, {shutdown, shutdown_unique_reason}).
+
+t_service_internal_stop_shutdown_8(_Config) ->
+    ok = service_internal_stop(info, {shutdown, shutdown_unique_reason}).
+
+t_service_internal_stop_normal_1(_Config) ->
+    ok = service_internal_stop(request, normal).
+
+t_service_internal_stop_normal_2(_Config) ->
+    ok = service_internal_stop(info, normal).
+
+t_service_internal_stop_normal_3(_Config) ->
+    ok = service_internal_stop(request, normal).
+
+t_service_internal_stop_normal_4(_Config) ->
+    ok = service_internal_stop(info, normal).
+
+service_internal_stop(StopType, Reason) ->
+    Context0 = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {{ok, RequestPid},
+     Context1} = cloudi:send_sync(Context0,
+                                  ServiceName,
+                                  <<>>),
+    {{ok, {_, Service}},
+     Context2} = cloudi:get_pid(Context1,
+                                ServiceName,
+                                limit_min),
+    Service ! {pid, self()},
+    InfoPid = receive
+        {pid, InfoPidValue} ->
+            InfoPidValue
+    end,
+    ServiceMonitor = erlang:monitor(process, Service),
+    RequestPidMonitor = erlang:monitor(process, RequestPid),
+    InfoPidMonitor = erlang:monitor(process, InfoPid),
+    if
+        StopType =:= request ->
+            {{ok, _},
+             _Context3} = cloudi:send_async(Context2,
+                                            ServiceName,
+                                            {stop, Reason}),
+            ok;
+        StopType =:= info ->
+            Service ! {stop, Reason},
+            ok
+    end,
+    receive
+        {'DOWN', ServiceMonitor, process, Service, Reason} ->
+            ok
+    end,
+    receive
+        {'DOWN', RequestPidMonitor, process, RequestPid, Reason} ->
+            ok
+    end,
+    receive
+        {'DOWN', InfoPidMonitor, process, InfoPid, Reason} ->
+            ok
+    end,
     ok.
 
 t_cloudi_args_type_1(_Config) ->
