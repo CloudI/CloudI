@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-01-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_monitoring cloudi_core state use
+    * Improve cloudi_core logger support for internal services
+      compiled with CloudI =< 2.0.4
+    * Improve cloudi_core Erlang type specifications
+    * Update epgsql
+    * Update hut
+
 2021-12-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix service process leak when stop reason 'normal' is used

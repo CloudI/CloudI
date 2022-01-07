@@ -75,9 +75,9 @@
 -define(log_type, "custom").
 
 -define(log(__Level, __Fmt),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, [], []) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, [], maps:to_list(?__hut_logger_metadata)) end)).
 -define(log(__Level, __Fmt, __Args),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, []) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, maps:to_list(?__hut_logger_metadata)) end)).
 -define(log(__Level, __Fmt, __Args, __Opts),
         ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, __Opts) end)).
 

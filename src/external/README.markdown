@@ -114,8 +114,8 @@ Erlang `epgsql`
 `Erlang PostgreSQL (native) Driver (epgsql community fork)`
 
 - `https://github.com/epgsql/epgsql`
-- `commit f811a09926892dbd1359afe44a9bfa8f6907b322 (devel)`
-- `Fri Apr 16 02:47:47 UTC 2021`
+- `commit f7530f63ae40ea2b81bae7d4a33292212349b761 (4.6.0)`
+- `Fri Jan  7 03:39:19 UTC 2022`
 - `BSD`
 
 Erlang `exometer`
@@ -168,8 +168,8 @@ Erlang `hut`
 `helper library for making Erlang libraries logging framework agnostic`
 
 - `https://github.com/tolbrino/hut`
-- `commit 9a9ac53401524548d6b6079d07e010ddb5cb15a1 (v1.3.0)`
-- `Fri Apr 16 04:03:35 UTC 2021`
+- `commit cd3e5b05c1efe6cd0351c435fbca1343702f1564`
+- `Fri Jan  7 03:39:19 UTC 2022`
 - `MIT`
 
 Erlang `idna`

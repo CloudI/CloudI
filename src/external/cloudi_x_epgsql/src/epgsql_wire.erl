@@ -2,7 +2,7 @@
 %%% Interface to encoder/decoder for postgresql
 %%% <a href="https://www.postgresql.org/docs/current/protocol-message-formats.html">wire-protocol</a>
 %%%
-%%% See also `include/protocol.hrl'.
+%%% See also `include/epgsql_protocol.hrl'.
 %%% @end
 %%% Copyright (C) 2009 - Will Glozer.  All rights reserved.
 %%% Copyright (C) 2011 - Anton Lebedevich.  All rights reserved.
@@ -44,7 +44,7 @@
 -include("epgsql_protocol.hrl").
 
 -opaque row_decoder() :: {[epgsql_binary:decoder()], [epgsql:column()], epgsql_binary:codec()}.
--type packet_type() :: byte().                 % see protocol.hrl
+-type packet_type() :: byte().                 % see epgsql_protocol.hrl
 %% -type packet_type(Exact) :: Exact.   % TODO: uncomment when OTP-18 is dropped
 
 %% @doc tries to extract single postgresql packet from TCP stream

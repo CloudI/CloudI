@@ -72,7 +72,7 @@ connect(Opts) -> {ok, Connection :: epgsql:connection()} | {error, Reason :: epg
       database => iodata(),
       port =>     inet:port_number(),
       ssl =>      boolean() | required,
-      ssl_opts => [ssl:ssl_option()],    % @see OTP ssl app, ssl_api.hrl
+      ssl_opts => [ssl:tls_client_option()], % @see OTP ssl documentation
       tcp_opts => [gen_tcp:option()],    % @see OTP gen_tcp module documentation
       timeout =>  timeout(),             % socket connect timeout, default: 5000 ms
       async =>    pid() | atom(),        % process to receive LISTEN/NOTIFY msgs
@@ -715,5 +715,4 @@ NOTE 2: It's possible to run tests on exact postgres version by changing $PATH l
 
    `PATH=$PATH:/usr/lib/postgresql/9.5/bin/ make test`
 
-[![Build Status Master](https://travis-ci.org/epgsql/epgsql.svg?branch=master)](https://travis-ci.org/epgsql/epgsql)
-[![Build Status Devel](https://travis-ci.org/epgsql/epgsql.svg?branch=devel)](https://travis-ci.org/epgsql/epgsql)
+[![CI](https://github.com/epgsql/epgsql/actions/workflows/ci.yml/badge.svg)](https://github.com/epgsql/epgsql/actions/workflows/ci.yml)

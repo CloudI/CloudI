@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2021 Michael Truog
+%%% @copyright 2009-2022 Michael Truog
 %%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -566,10 +566,8 @@ format(Msg, _Config, _) ->
     FileName = if
         File =:= undefined ->
             if
-                Module =:= undefined ->
-                    "(undefined)";
-                is_atom(Module) ->
-                    cloudi_string:format("~ts.erl", [Module])
+                is_atom(Module), Module /= undefined ->
+                    erlang:atom_to_list(Module)
             end;
         is_list(File) ->
             File
@@ -1510,7 +1508,7 @@ log_message_external(ModeInterface, Process,
                      Function, Arity, Format, Args)
     when is_atom(Module) ->
     % Compatibility with CloudI =< 2.0.4
-    FileName = erlang:atom_to_list(Module) ++ ".erl",
+    FileName = erlang:atom_to_list(Module),
     log_message_external(ModeInterface, Process,
                          Level, FileName, Line,
                          Function, Arity, Format, Args);

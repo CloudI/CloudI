@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2021 Michael Truog
+%%% @copyright 2017-2022 Michael Truog
 %%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -70,18 +70,18 @@ log(Level, Fmt, Args, Opts0) ->
             end
     end,
     {FunctionName, FunctionArity,
-     OptsN} = case lists:keytake(function_name, 1, Opts3) of
+     OptsN} = case lists:keytake(mfa, 1, Opts3) of
         false ->
             {undefined, undefined, Opts3};
-        {value, {function_name, FunctionNameValue}, Opts4} ->
-            case lists:keytake(function_arity, 1, Opts4) of
-                false ->
-                    {FunctionNameValue, undefined, Opts4};
-                {value, {function_arity, FunctionArityValue}, Opts5} ->
-                    {FunctionNameValue, FunctionArityValue, Opts5}
-            end
+        {value, {mfa, {_, FunctionNameValue, FunctionArityValue}}, Opts4} ->
+            {FunctionNameValue, FunctionArityValue, Opts4}
     end,
-    ok = cloudi_core_i_logger:metadata_set(maps:from_list(OptsN)),
+    if
+        OptsN == [] ->
+            ok;
+        is_list(OptsN) ->
+            ok = cloudi_core_i_logger:metadata_set(maps:from_list(OptsN))
+    end,
     log_output(log_level(Level), FileName, Line,
                FunctionName, FunctionArity, Fmt, Args).
 
@@ -123,7 +123,12 @@ slog(Level, Data, Meta0) ->
         FormatValue when is_list(FormatValue) ->
             FormatValue
     end,
-    ok = cloudi_core_i_logger:metadata_set(MetaN),
+    if
+        MetaN == #{} ->
+            ok;
+        is_map(MetaN) ->
+            ok = cloudi_core_i_logger:metadata_set(MetaN)
+    end,
     log_output(log_level(Level), FileName, Line,
                FunctionName, FunctionArity, Format, undefined).
 

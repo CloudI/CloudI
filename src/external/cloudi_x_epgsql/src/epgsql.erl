@@ -41,7 +41,8 @@
 
 -export_type([connection/0, connect_option/0, connect_opts/0,
               connect_error/0, query_error/0, sql_query/0, column/0,
-              type_name/0, epgsql_type/0, statement/0]).
+              type_name/0, epgsql_type/0, statement/0,
+              transaction_option/0, transaction_opts/0]).
 
 %% Deprecated types
 -export_type([bind_param/0, typed_param/0,
@@ -49,6 +50,12 @@
               pg_time/0, pg_date/0, pg_datetime/0, pg_interval/0]).
 
 -include("epgsql.hrl").
+
+-ifdef(OTP_RELEASE).
+-type ssl_options() :: [ssl:tls_client_option()].
+-else.
+-type ssl_options() :: list().
+-endif.
 
 -type sql_query() :: iodata(). % SQL query text
 -type host() :: inet:ip_address() | inet:hostname().
@@ -61,9 +68,9 @@
     {database, DBName     :: string()}             |
     {port,     PortNum    :: inet:port_number()}   |
     {ssl,      IsEnabled  :: boolean() | required} |
-    {ssl_opts, SslOptions :: [ssl:ssl_option()]}   | % see OTP ssl app, ssl_api.hrl
-    {tcp_opts, TcpOptions :: [gen_tcp:option()]}   | % see OTP ssl app, ssl_api.hrl
-    {timeout,  TimeoutMs  :: timeout()}            | % default: 5000 ms
+    {ssl_opts, SslOptions :: ssl_options()}        | % see OTP ssl app documentation
+    {tcp_opts, TcpOptions :: [gen_tcp:option()]}   | % see OTP gen_tcp module documentation
+    {timeout,  TimeoutMs  :: timeout()}            | % connect timeout, default: 5000 ms
     {async,    Receiver   :: pid() | atom()}       | % process to receive LISTEN/NOTIFY msgs
     {codecs,   Codecs     :: [{epgsql_codec:codec_mod(), any()}]} |
     {nulls,    Nulls      :: [any(), ...]} |    % terms to be used as NULL
@@ -78,7 +85,7 @@
           database => string(),
           port => inet:port_number(),
           ssl => boolean() | required,
-          ssl_opts => [ssl:ssl_option()],
+          ssl_opts => ssl_options(),
           tcp_opts => [gen_tcp:option()],
           timeout => timeout(),
           async => pid() | atom(),
@@ -86,6 +93,19 @@
           nulls => [any(), ...],
           replication => string(),
           application_name => string()
+          }.
+
+-type transaction_option() ::
+    {reraise, boolean()}          |
+    {ensure_committed, boolean()} |
+    {begin_opts, iodata()}.
+
+
+-type transaction_opts() ::
+        [transaction_option()]
+      | #{reraise => boolean(),
+          ensure_committed => boolean(),
+          begin_opts => iodata()
           }.
 
 -type connect_error() :: epgsql_cmd_connect:connect_error().
@@ -411,11 +431,8 @@ with_transaction(C, F) ->
 %%   Beware of SQL injections! No escaping is made on begin_opts! Default: `""'</dd>
 %% </dl>
 -spec with_transaction(
-        connection(), fun((connection()) -> Reply), Opts) -> Reply | {rollback, any()} | no_return() when
-      Reply :: any(),
-      Opts :: [{reraise, boolean()} |
-               {ensure_committed, boolean()} |
-               {begin_opts, iodata()}].
+        connection(), fun((connection()) -> Reply), transaction_opts()) -> Reply | {rollback, any()} | no_return() when
+      Reply :: any().
 with_transaction(C, F, Opts0) ->
     Opts = to_map(Opts0),
     Begin = case Opts of

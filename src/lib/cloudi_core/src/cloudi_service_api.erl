@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2021 Michael Truog
+%%% @copyright 2011-2022 Michael Truog
 %%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -363,6 +363,9 @@
 -export_type([max_heap_size_options/0]).
 
 -type file_path() :: nonempty_string().
+-type args_internal() :: list().
+-type args_external() :: string().
+-type env_external() :: list({string(), string()}).
 -type limit_external_key() ::
     as | core | cpu | data | fsize | memlock | msgqueue | nice | nofile |
     nproc | rss | rtprio | rttime | sigpending | stack | vmem.
@@ -395,6 +398,9 @@
 -type directory_external() ::
     file_path() | undefined.
 -export_type([file_path/0,
+              args_internal/0,
+              args_external/0,
+              env_external/0,
               limit_external_key/0,
               limit_external_value/0,
               limit_external/0,
@@ -574,8 +580,8 @@
                   {prefix, cloudi:service_name_pattern()} |
                   {module, atom() | file_path()} |
                   {file_path, file_path()} |
-                  {args, list()} |
-                  {env, list({string(), string()})} |
+                  {args, args_internal() | args_external()} |
+                  {env, env_external()} |
                   {dest_refresh, dest_refresh()} |
                   {protocol, 'default' | 'local' | 'tcp' | 'udp'} |
                   {buffer_size, 'default' | pos_integer()} |

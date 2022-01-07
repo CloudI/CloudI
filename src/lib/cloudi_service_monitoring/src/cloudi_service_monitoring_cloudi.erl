@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -103,10 +103,6 @@
         scopes = #{} :: #{atom() := #scope_data{}},
         metrics = [] :: metric_list()
     }).
-
-% cloudi_core_i_service_internal and cloudi_core_i_service_external
-% use maps when available/stable
--define(MAP_SIZE(M),         maps:size(M)).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -201,7 +197,7 @@ basic_update(ProcessInfo0) ->
 services_state(Timeout) ->
     try sys:get_state(cloudi_core_i_services_monitor, Timeout) of
         State ->
-            5 = erlang:tuple_size(State),
+            8 = erlang:tuple_size(State),
             state = erlang:element(1, State),
             {ok, erlang:element(2, State)}
     catch
@@ -581,7 +577,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         is_pid(InfoPid) ->
                             process_info_update(InfoPid, ProcessInfo1)
                     end,
-                    {?MAP_SIZE(erlang:element(3, State)),  % send_timeouts
+                    {maps:size(erlang:element(3, State)),  % send_timeouts
                      erlang:element(10, State),            % queued
                      erlang:element(11, State),            % queued_size
                      erlang:element(12, State),            % queued_word_size
@@ -611,7 +607,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         {ok, DispatcherState} -> % gen_server/proc_lib
                             31 = erlang:tuple_size(DispatcherState),
                             state = erlang:element(1, DispatcherState),
-                            ?MAP_SIZE(erlang:element(3, DispatcherState));
+                            maps:size(erlang:element(3, DispatcherState));
                         {error, _} ->
                             undefined
                     end,
@@ -746,7 +742,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
         {ok, {_, State}} -> % gen_statem
             41 = erlang:tuple_size(State),
             state = erlang:element(1, State),
-            Outgoing = ?MAP_SIZE(erlang:element(3, State)),  % send_timeouts
+            Outgoing = maps:size(erlang:element(3, State)),  % send_timeouts
             QueuedRequests = erlang:element(10, State),      % queued
             QueuedRequestsSize0 = erlang:element(11, State), % queued_size
             WordSize = erlang:element(12, State),            % queued_word_size
@@ -1163,7 +1159,7 @@ aspect_terminate_before_external_f() ->
 aspect_log_f(OutputTime)
     when OutputTime =:= 'before'; OutputTime =:= 'after' ->
     fun(Level, _Timestamp, _Node, _Pid,
-        _Module, _Line, _Function, _Arity, _MetaData, _LogMessage) ->
+        _FileName, _Line, _Function, _Arity, _MetaData, _LogMessage) ->
         % only remote function calls here to allow a module reload
         case ?MODULE:aspect_cloudi() of
             {_, MetricPrefix, Driver} ->

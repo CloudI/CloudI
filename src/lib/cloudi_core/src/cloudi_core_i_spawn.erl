@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -77,9 +77,92 @@
 -export_type([error_reason_start_internal/0,
               error_reason_start_external/0]).
 
+% Service execution arguments that are constant across all
+% service instance processes (used for each start/restart).
+% Some argument values could be explicitly changed with an update.
+-type arguments_execution_internal() ::
+    nonempty_list(pid() | % GroupLeader
+                  atom() | % Module
+                  cloudi_service_api:args_internal() | % Args
+                  cloudi_service_api:
+                  timeout_initialize_milliseconds() | % Timeout
+                  cloudi:service_name_pattern() | % Prefix
+                  cloudi_service_api:
+                  timeout_send_async_value_milliseconds() | % TimeoutAsync
+                  cloudi_service_api:
+                  timeout_send_sync_value_milliseconds() | % TimeoutSync
+                  cloudi_service_api:
+                  timeout_terminate_milliseconds() | % TimeoutTerm
+                  cloudi_service_api:dest_refresh() | % DestRefresh
+                  list(cloudi:service_name_pattern()) |
+                  undefined | % DestListDeny
+                  list(cloudi:service_name_pattern()) |
+                  undefined | % DestListAllow
+                  #config_service_options{} | % ConfigOptions
+                  cloudi_service_api:service_id()). % ID
+-type arguments_execution_external() ::
+    nonempty_list(pos_integer() | % ThreadsPerProcess
+                  cloudi_service_api:file_path() | % Filename
+                  cloudi_service_api:args_external() | % Arguments
+                  cloudi_service_api:env_external() | % Environment
+                  'local' | 'tcp' | 'udp' | % Protocol
+                  pos_integer() | % BufferSize
+                  cloudi_service_api:
+                  timeout_initialize_milliseconds() | % Timeout
+                  cloudi:service_name_pattern() | % Prefix
+                  cloudi_service_api:
+                  timeout_send_async_value_milliseconds() | % TimeoutAsync
+                  cloudi_service_api:
+                  timeout_send_sync_value_milliseconds() | % TimeoutSync
+                  cloudi_service_api:
+                  timeout_terminate_milliseconds() | % TimeoutTerm
+                  cloudi_service_api:dest_refresh() | % DestRefresh
+                  list(cloudi:service_name_pattern()) |
+                  undefined | % DestListDeny
+                  list(cloudi:service_name_pattern()) |
+                  undefined | % DestListAllow
+                  #config_service_options{} | % ConfigOptions
+                  cloudi_service_api:service_id()). % ID
+-type arguments_execution() ::
+    arguments_execution_internal() |
+    arguments_execution_external().
+-export_type([arguments_execution_internal/0,
+              arguments_execution_external/0,
+              arguments_execution/0]).
+
 %%%------------------------------------------------------------------------
 %%% External interface
 %%%------------------------------------------------------------------------
+
+-spec start_internal(ProcessIndex :: non_neg_integer(),
+                     ProcessCount :: pos_integer(),
+                     TimeStart :: cloudi_timestamp:native_monotonic(),
+                     TimeRestart :: undefined |
+                                    cloudi_timestamp:native_monotonic(),
+                     Restarts :: non_neg_integer(),
+                     GroupLeader :: pid(),
+                     Module :: atom(),
+                     Args :: list(),
+                     Timeout ::
+                         cloudi_service_api:timeout_initialize_milliseconds(),
+                     Prefix :: cloudi:service_name_pattern(),
+                     TimeoutAsync ::
+                         cloudi_service_api:
+                         timeout_send_async_value_milliseconds(),
+                     TimeoutSync ::
+                         cloudi_service_api:
+                         timeout_send_sync_value_milliseconds(),
+                     TimeoutTerm ::
+                         cloudi_service_api:timeout_terminate_milliseconds(),
+                     DestRefresh :: cloudi_service_api:dest_refresh(),
+                     DestListDeny :: list(cloudi:service_name_pattern()) |
+                                     undefined,
+                     DestListAllow :: list(cloudi:service_name_pattern()) |
+                                      undefined,
+                     ConfigOptions :: #config_service_options{},
+                     ID :: cloudi_service_api:service_id()) ->
+    {ok, cloudi_service:source()} |
+    {error, error_reason_start_internal() | any()}.
 
 start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                GroupLeader, Module, Args, Timeout, Prefix,
@@ -134,6 +217,39 @@ start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
             ?LOG_ERROR("loading ~p failed: ~tp", [Module, Reason]),
             {error, {service_internal_module_not_loaded, Module}}
     end.
+
+-spec start_external(ProcessIndex :: non_neg_integer(),
+                     ProcessCount :: pos_integer(),
+                     TimeStart :: cloudi_timestamp:native_monotonic(),
+                     TimeRestart :: undefined |
+                                    cloudi_timestamp:native_monotonic(),
+                     Restarts :: non_neg_integer(),
+                     ThreadsPerProcess :: pos_integer(),
+                     Filename :: cloudi_service_api:file_path(),
+                     Arguments :: cloudi_service_api:args_external(),
+                     Environment :: cloudi_service_api:env_external(),
+                     Protocol :: 'local' | 'tcp' | 'udp',
+                     BufferSize :: pos_integer(),
+                     Timeout ::
+                         cloudi_service_api:timeout_initialize_milliseconds(),
+                     Prefix :: cloudi:service_name_pattern(),
+                     TimeoutAsync ::
+                         cloudi_service_api:
+                         timeout_send_async_value_milliseconds(),
+                     TimeoutSync ::
+                         cloudi_service_api:
+                         timeout_send_sync_value_milliseconds(),
+                     TimeoutTerm ::
+                         cloudi_service_api:timeout_terminate_milliseconds(),
+                     DestRefresh :: cloudi_service_api:dest_refresh(),
+                     DestListDeny :: list(cloudi:service_name_pattern()) |
+                                     undefined,
+                     DestListAllow :: list(cloudi:service_name_pattern()) |
+                                      undefined,
+                     ConfigOptions :: #config_service_options{},
+                     ID :: cloudi_service_api:service_id()) ->
+    {ok, nonempty_list(cloudi_service:source())} |
+    {error, error_reason_start_external() | any()}.
 
 start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                ThreadsPerProcess, Filename, Arguments, Environment,
@@ -192,6 +308,12 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
             Error
     end.
 
+-spec status_internal(CountProcess :: pos_integer(),
+                      PidsOrdered :: list(pid()),
+                      arguments_execution_internal(),
+                      Status :: nonempty_list()) ->
+    cloudi_service_api:service_status_internal().
+
 status_internal(CountProcess, PidsOrdered,
                 [_GroupLeader,
                  Module, _Args, _TimeoutInit, Prefix,
@@ -204,6 +326,14 @@ status_internal(CountProcess, PidsOrdered,
      {module, Module},
      {count_process, CountProcess},
      {pids_erlang, PidsOrdered} | Status].
+
+-spec status_external(CountProcess :: pos_integer(),
+                      CountThread :: pos_integer(),
+                      OSPidsOrdered :: list(pos_integer()),
+                      PidsOrdered :: list(pid()),
+                      arguments_execution_external(),
+                      Status :: nonempty_list()) ->
+    cloudi_service_api:service_status_external().
 
 status_external(CountProcess, CountThread, OSPidsOrdered, PidsOrdered,
                 [_ThreadsPerProcess,
@@ -220,6 +350,12 @@ status_external(CountProcess, CountThread, OSPidsOrdered, PidsOrdered,
      {count_thread, CountThread},
      {pids_os, OSPidsOrdered},
      {pids_erlang, PidsOrdered} | Status].
+
+-spec update_external(Pids :: nonempty_list(pid()),
+                      Ports :: nonempty_list(pos_integer()),
+                      arguments_execution_external()) ->
+    ok |
+    {error, error_reason_start_external() | any()}.
 
 update_external(Pids, Ports,
                 [ProcessIndex, ProcessCount, ThreadsPerProcess,
@@ -255,6 +391,26 @@ update_external(Pids, Ports,
         {error, _} = Error ->
             Error
     end.
+
+-spec update_internal_f(DestRefreshNew ::
+                            cloudi_service_api:dest_refresh() | undefined,
+                        TimeoutInitNew ::
+                            cloudi_service_api:
+                            timeout_initialize_milliseconds() | undefined,
+                        TimeoutAsyncNew ::
+                            cloudi_service_api:
+                            timeout_send_async_value_milliseconds() | undefined,
+                        TimeoutSyncNew ::
+                            cloudi_service_api:
+                            timeout_send_sync_value_milliseconds() | undefined,
+                        DestListDenyNew ::
+                            list(cloudi:service_name_pattern()) | undefined,
+                        DestListAllowNew ::
+                            list(cloudi:service_name_pattern()) | undefined,
+                        OptionsKeys :: list(atom()),
+                        ConfigOptionsNew :: #config_service_options{},
+                        arguments_execution_internal()) ->
+    arguments_execution_internal().
 
 update_internal_f(DestRefreshNew, TimeoutInitNew,
                   TimeoutAsyncNew, TimeoutSyncNew,
@@ -309,6 +465,32 @@ update_internal_f(DestRefreshNew, TimeoutInitNew,
                                                       ConfigOptionsOld,
                                                       ConfigOptionsNew),
      ID].
+
+-spec update_external_f(FilenameNew ::
+                            cloudi_service_api:file_path() | undefined,
+                        ArgumentsNew ::
+                            cloudi_service_api:args_external() | undefined,
+                        EnvironmentNew ::
+                            cloudi_service_api:env_external() | undefined,
+                        DestRefreshNew ::
+                            cloudi_service_api:dest_refresh() | undefined,
+                        TimeoutInitNew ::
+                            cloudi_service_api:
+                            timeout_initialize_milliseconds() | undefined,
+                        TimeoutAsyncNew ::
+                            cloudi_service_api:
+                            timeout_send_async_value_milliseconds() | undefined,
+                        TimeoutSyncNew ::
+                            cloudi_service_api:
+                            timeout_send_sync_value_milliseconds() | undefined,
+                        DestListDenyNew ::
+                            list(cloudi:service_name_pattern()) | undefined,
+                        DestListAllowNew ::
+                            list(cloudi:service_name_pattern()) | undefined,
+                        OptionsKeys :: list(atom()),
+                        ConfigOptionsNew :: #config_service_options{},
+                        arguments_execution_external()) ->
+    arguments_execution_external().
 
 update_external_f(FilenameNew, ArgumentsNew, EnvironmentNew,
                   DestRefreshNew,

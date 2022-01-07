@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,7 @@
         module
             :: atom() | cloudi_service_api:file_path(),
         args = []
-            :: list(),
+            :: cloudi_service_api:args_internal(),
         dest_refresh = immediate_closest
             :: cloudi_service_api:dest_refresh(),
         timeout_init = 5000
@@ -71,9 +71,9 @@
         file_path
             :: cloudi_service_api:file_path(),
         args = ""
-            :: string(),
+            :: cloudi_service_api:args_external(),
         env = []
-            :: list({string(), string()}),
+            :: cloudi_service_api:env_external(),
         dest_refresh = immediate_closest
             :: cloudi_service_api:dest_refresh(),
         protocol = default
