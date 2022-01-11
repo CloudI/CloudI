@@ -1436,7 +1436,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
         error:badarg ->
             % output module is not currently running,
             % it likely exceeded the maximum restart intensity
-            % (which is logged elsewhere via sasl)
+            % (which is logged elsewhere via the Erlang/OTP kernel logger)
             format_line(Level, Timestamp, Node, Pid,
                         FileName, Line, Function, Arity,
                         MetaData, LogMessage);
@@ -2288,35 +2288,6 @@ lager_metadata_set(L) when is_list(L) ->
 lager_metadata_set(_) ->
     erlang:error(badarg).
 
-% based on lager_util:maybe_utc/1
-lager_datetime({_, _, MicroSeconds} = Timestamp) ->
-    UTC = case application:get_env(sasl, utc_log) of
-        {ok, Val} ->
-            Val;
-        undefined ->
-            case application:get_env(stdlib, utc_log) of
-                {ok, Val} ->
-                    Val;
-                undefined ->
-                    false
-            end
-    end,
-    TimeMS = MicroSeconds div 1000 rem 1000,
-    if
-        UTC =:= true ->
-            {Date,
-             {TimeHH,
-              TimeMM,
-              TimeSS}} = calendar:now_to_universal_time(Timestamp),
-            {utc, {Date, {TimeHH, TimeMM, TimeSS, TimeMS}}};
-        true ->
-            {Date,
-             {TimeHH,
-              TimeMM,
-              TimeSS}} = calendar:now_to_local_time(Timestamp),
-            {Date, {TimeHH, TimeMM, TimeSS, TimeMS}}
-    end.
-
 % from lager_util:i2l/1
 lager_i2l(I) when I < 10 -> [$0, $0 + I];
 lager_i2l(I) -> erlang:integer_to_list(I).
@@ -2324,14 +2295,19 @@ lager_i2l(I) -> erlang:integer_to_list(I).
 lager_i3l(I) when I < 100 -> [$0 | lager_i2l(I)];
 lager_i3l(I) -> erlang:integer_to_list(I).
 
-% based on lager_util:format_time/1
-lager_datetime_format({utc, {{Y, M, D}, {H, Mi, S, Ms}}}) ->
-    {[erlang:integer_to_list(Y), $-, lager_i2l(M), $-, lager_i2l(D)],
-     [lager_i2l(H), $:, lager_i2l(Mi), $:,
-      lager_i2l(S), $., lager_i3l(Ms), $ , $U, $T, $C]};
-lager_datetime_format({{Y, M, D}, {H, Mi, S, Ms}}) ->
-    {[erlang:integer_to_list(Y), $-, lager_i2l(M), $-, lager_i2l(D)],
-     [lager_i2l(H), $:, lager_i2l(Mi), $:, lager_i2l(S), $., lager_i3l(Ms)]}.
+% based on lager_util:maybe_utc/1 and lager_util:format_time/1
+lager_datetime_format({_, _, MicroSeconds} = Timestamp) ->
+    TimeMS = MicroSeconds div 1000 rem 1000,
+    {{DateYY,
+      DateMM,
+      DateDD},
+     {TimeHH,
+      TimeMM,
+      TimeSS}} = calendar:now_to_universal_time(Timestamp),
+    {[erlang:integer_to_list(DateYY), $-,
+      lager_i2l(DateMM), $-, lager_i2l(DateDD)],
+     [lager_i2l(TimeHH), $:, lager_i2l(TimeMM), $:,
+      lager_i2l(TimeSS), $., lager_i3l(TimeMS), $ , $U, $T, $C]}.
 
 % CloudI levels mapped to lager severity for formatters
 lager_severity_output(fatal) -> emergency;
@@ -2351,7 +2327,7 @@ lager_severity_input(debug) -> debug.
         destinations :: list(),
         metadata :: list({any(), any()}),
         severity :: debug | emergency | error | info | warning,
-        datetime :: {string(), string()},
+        datetime :: {iolist(), iolist()},
         timestamp :: erlang:timestamp(),
         message :: list()
     }).
@@ -2401,7 +2377,7 @@ lager_msg(Level, Timestamp, Node, Pid,
                  {node, Node},
                  {pid, erlang:pid_to_list(Pid)} | MetaData2],
     Severity = lager_severity_output(Level),
-    DateTime = lager_datetime_format(lager_datetime(Timestamp)),
+    DateTime = lager_datetime_format(Timestamp),
     Message = if
         is_list(LogMessage) ->
             LogMessage;

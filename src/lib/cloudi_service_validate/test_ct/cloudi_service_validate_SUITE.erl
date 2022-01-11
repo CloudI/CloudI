@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_validate_SUITE).
@@ -145,9 +145,6 @@ suite() ->
      {timetrap, {seconds, ?CLOUDI_TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
-    ok = cloudi_x_reltool_util:application_start(sasl,
-                                                 [{sasl_error_logger, false}],
-                                                 infinity),
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     Config.
 

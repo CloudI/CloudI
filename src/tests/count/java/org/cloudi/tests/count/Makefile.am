@@ -3,7 +3,7 @@
 
 jardir = $(top_builddir)/tests/count/java/jar
 classpath = $(top_builddir)/api/java/jar/cloudi.jar
-JAVACFLAGS = -Xlint -Werror
+JAVACFLAGS = -Xlint -Werror -encoding UTF-8
 CLEANFILES = built
 FILES = $(srcdir)/Main.java \
         $(srcdir)/Task.java

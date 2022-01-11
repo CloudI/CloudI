@@ -10,24 +10,19 @@
     {net_ticktime, 60}, % seconds
     {dist_nodelay, true},
     {dist_auto_connect, never},
-    % based on TIMEOUT_TERMINATE_MAX in cloudi_core_i_constants.hrl
-    {shutdown_timeout, 61000}, % milliseconds
-    % Erlang/OTP >= 24.0 socket interface
-    %{inet_backend, socket},
-    % Erlang/OTP >= 21.0 kernel logger
-    % (new configuration, current with Erlang/OTP >= 22.0)
-    %{logger,
-    % [{handler,default,logger_std_h,#{config=>#{file=>"erlang_kernel.log"}}}]},
-    % (old configuration)
-    {error_logger, {file, "erlang_kernel.log"}},
+    {logger,
+     [{handler, default, logger_std_h,
+       #{config => #{file => "erlang_kernel.log"},
+         formatter => {logger_formatter,
+                       #{legacy_header => false,
+                         single_line => false,
+                         template => ["=",level," report==== ",time," ===\n",
+                                      msg,"\n"],
+                         time_offset => "Z"}}}}]},
     {logger_level, debug},
-    {logger_sasl_compatible, false}
-  ]},
- {sasl, [
-    % deprecated by Erlang/OTP 21.0 kernel logger
-    {sasl_error_logger, {file, "sasl.log"}},
-    {error_logger_mf_dir, false},
-    {utc_log, true}
+    {logger_sasl_compatible, false},
+    % based on TIMEOUT_TERMINATE_MAX in cloudi_core_i_constants.hrl
+    {shutdown_timeout, 61000} % milliseconds
   ]},
  {cloudi_x_setup, [
     {verify_directories, false},

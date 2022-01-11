@@ -2,7 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 jardir = $(top_builddir)/api/java/jar
-JAVACFLAGS = -Xlint -Werror
+JAVACFLAGS = -Xlint -Werror -encoding UTF-8
 CLEANFILES = built
 FILES = $(srcdir)/API.java \
         $(srcdir)/Function9.java \

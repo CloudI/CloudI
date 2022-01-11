@@ -97,8 +97,6 @@ suite() ->
      {timetrap, {minutes, ?CLOUDI_LONG_TEST_TIMEOUT}}].
 
 init_per_suite(Config) ->
-    ok = cloudi_x_reltool_util:
-         application_start(sasl, [{sasl_error_logger, false}], infinity),
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     [{numtests, ?NUMTESTS} | Config].
 

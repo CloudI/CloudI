@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2014-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_environment).
@@ -83,7 +83,6 @@ status() ->
                               "ebin", "erts.app"]),
     FileKernel = [_ | _] = code:where_is_file("kernel.app"),
     FileStdlib = [_ | _] = code:where_is_file("stdlib.app"),
-    FileSasl = [_ | _] = code:where_is_file("sasl.app"),
     FileCompiler = [_ | _] = code:where_is_file("compiler.app"),
     FileCloudI = [_ | _] = code:where_is_file("cloudi_core.app"),
     ApplicationVersions0 = application:loaded_applications(),
@@ -91,12 +90,10 @@ status() ->
      ApplicationVersions1} = lists:keytake(kernel, 1, ApplicationVersions0),
     {value, {stdlib, _, RuntimeErlangStdlibVersion},
      ApplicationVersions2} = lists:keytake(stdlib, 1, ApplicationVersions1),
-    {value, {sasl, _, RuntimeErlangSaslVersion},
-     ApplicationVersions3} = lists:keytake(sasl, 1, ApplicationVersions2),
     {value, {compiler, _, RuntimeErlangCompilerVersion},
-     ApplicationVersions4} = lists:keytake(compiler, 1, ApplicationVersions3),
+     ApplicationVersions3} = lists:keytake(compiler, 1, ApplicationVersions2),
     {value, {cloudi_core, _, RuntimeCloudIVersion},
-     _} = lists:keytake(cloudi_core, 1, ApplicationVersions4),
+     _} = lists:keytake(cloudi_core, 1, ApplicationVersions3),
     RuntimeErlangCompilation = erlang_compilation(),
     RuntimeMachineProcessors = erlang:system_info(schedulers),
     ?CODE_STATUS_STATIC ++
@@ -104,13 +101,11 @@ status() ->
      {install_erlang_erts_time, status_file_time(FileErts)},
      {install_erlang_kernel_time, status_file_time(FileKernel)},
      {install_erlang_stdlib_time, status_file_time(FileStdlib)},
-     {install_erlang_sasl_time, status_file_time(FileSasl)},
      {install_erlang_compiler_time, status_file_time(FileCompiler)},
      {install_cloudi_time, status_file_time(FileCloudI)},
      {runtime_erlang_erts_version, RuntimeErtsVersion},
      {runtime_erlang_kernel_version, RuntimeErlangKernelVersion},
      {runtime_erlang_stdlib_version, RuntimeErlangStdlibVersion},
-     {runtime_erlang_sasl_version, RuntimeErlangSaslVersion},
      {runtime_erlang_compiler_version, RuntimeErlangCompilerVersion},
      {runtime_erlang_compilation, RuntimeErlangCompilation},
      {runtime_cloudi_version, RuntimeCloudIVersion},

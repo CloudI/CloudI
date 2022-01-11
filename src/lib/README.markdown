@@ -73,8 +73,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit f281cd178a76b1fa80dd57efec3210708fbeaaa2 (v2.0.4)`
-- `Sun Dec  5 01:53:52 UTC 2021`
+- `commit bcc1f57d9b1ec98fc18097818093881d79a40c0c`
+- `Tue Jan 11 02:10:43 UTC 2022`
 - `MIT`
 
 `supool`
@@ -118,7 +118,7 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pools as a Local Variable`
 
 - `https://github.com/okeuday/varpool`
-- `commit 7fc28f571cd99976f32a25a9e8d4cb2bca76f283 (v2.0.4)`
-- `Sun Dec  5 01:53:52 UTC 2021`
+- `commit ee43817684ee11a5a116b44e32a141b64dc02022`
+- `Tue Jan 11 02:10:43 UTC 2022`
 - `MIT`
 

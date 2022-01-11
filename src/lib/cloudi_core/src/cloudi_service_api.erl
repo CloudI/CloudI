@@ -1097,13 +1097,11 @@
                   {install_erlang_erts_time, iso8601_seconds()} |
                   {install_erlang_kernel_time, iso8601_seconds()} |
                   {install_erlang_stdlib_time, iso8601_seconds()} |
-                  {install_erlang_sasl_time, iso8601_seconds()} |
                   {install_erlang_compiler_time, iso8601_seconds()} |
                   {install_cloudi_time, iso8601_seconds()} |
                   {runtime_erlang_erts_version, nonempty_string()} |
                   {runtime_erlang_kernel_version, nonempty_string()} |
                   {runtime_erlang_stdlib_version, nonempty_string()} |
-                  {runtime_erlang_sasl_version, nonempty_string()} |
                   {runtime_erlang_compiler_version, nonempty_string()} |
                   {runtime_erlang_compilation, nonempty_string()} |
                   {runtime_cloudi_version, nonempty_string()} |

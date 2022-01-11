@@ -87,7 +87,6 @@
         cloudi_x_syslog_socket,
         syntax_tools,
         compiler,
-        sasl,
         stdlib,
         kernel
         ]},

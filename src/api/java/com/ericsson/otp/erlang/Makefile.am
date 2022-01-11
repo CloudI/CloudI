@@ -2,7 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 jardir = $(top_builddir)/api/java/jar
-JAVACFLAGS = -Xlint
+JAVACFLAGS = -Xlint -encoding UTF-8
 CLEANFILES = built
 FILES = $(srcdir)/AbstractConnection.java \
         $(srcdir)/AbstractNode.java \

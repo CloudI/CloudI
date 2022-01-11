@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-01-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Require Erlang/OTP >= 22.0 for depending on the Erlang/OTP kernel logger
+      instead of previous usage of sasl (for logging supervisor progress)
+        * Remove sasl from the cloudi_core dependencies
+        * Remove install_erlang_sasl_time and runtime_erlang_sasl_version
+          from the CloudI Service API code_status result
+    * Java CloudI API compilation now uses javac -encoding UTF-8
+    * Update reltool_util
+    * Update varpool
+
 2022-01-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_monitoring cloudi_core state use

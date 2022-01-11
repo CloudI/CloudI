@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2013-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -86,6 +86,10 @@
 
 -define(IS_MODULE_LOADED_DELTA, 100).
 -define(MODULES_PURGED_DELTA, 100).
+-ifdef(OTP_RELEASE).
+% able to use -if/-elif here
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
 
 -compile({no_auto_import, [{module_loaded, 1}]}).
 
@@ -1268,6 +1272,26 @@ applications_purged([Application | Applications], Timeout) ->
             Error
     end.
 
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+applications_dependencies(A) ->
+    Included = case application:get_key(A, included_applications) of
+        undefined ->
+            ok;
+        {ok, LoadAs} ->
+            applications_dependencies_load(LoadAs)
+    end,
+    if
+        Included =:= ok ->
+            case application:get_key(A, applications) of
+                undefined ->
+                    {error, {undefined_dependencies, A}};
+                {ok, As} ->
+                    applications_dependencies(As, As)
+            end;
+        true ->
+            Included
+    end.
+-else.
 applications_dependencies(A) ->
     Included = case application:get_key(A, included_applications) of
         undefined ->
@@ -1318,6 +1342,7 @@ applications_dependencies(A) ->
         true ->
             Included
     end.
+-endif.
 
 applications_dependencies_load([]) ->
     ok;

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(varpool_test_server).
@@ -83,7 +83,6 @@ module_test_() ->
     ]}.
 
 t_basic() ->
-    %application:start(sasl),
     application:start(varpool),
     P0 = varpool:new([{groups,
                        [{group_0, {varpool_test_server, start_link, []}, 
