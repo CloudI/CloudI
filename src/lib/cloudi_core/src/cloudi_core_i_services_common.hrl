@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -578,7 +578,7 @@ aspects_terminate_before([{M, F} = Aspect | L],
         {ok, ServiceStateNew} ->
             aspects_terminate_before(L, Reason, TimeoutTerm, ServiceStateNew)
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
             ServiceState
@@ -589,7 +589,7 @@ aspects_terminate_before([F | L],
         {ok, ServiceStateNew} ->
             aspects_terminate_before(L, Reason, TimeoutTerm, ServiceStateNew)
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
             ServiceState
@@ -602,7 +602,7 @@ aspects_suspend_resume([{M, F} = Aspect | L], ServiceState) ->
         {ok, ServiceStateNew} ->
             aspects_suspend_resume(L, ServiceStateNew)
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
             ServiceState
@@ -612,7 +612,7 @@ aspects_suspend_resume([F | L], ServiceState) ->
         {ok, ServiceStateNew} ->
             aspects_suspend_resume(L, ServiceStateNew)
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
             ServiceState

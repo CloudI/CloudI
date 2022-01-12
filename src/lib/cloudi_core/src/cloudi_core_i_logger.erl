@@ -1404,7 +1404,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
                     MetaData, LogMessage),
     try Formatter:format(Msg, FormatterConfig)
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ErrorMessage = cloudi_string:
                            format_to_binary("formatter(~tp) ~tp ~tp~n~tp",
                                             [Formatter, ErrorType, Error,
@@ -1440,7 +1440,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
             format_line(Level, Timestamp, Node, Pid,
                         FileName, Line, Function, Arity,
                         MetaData, LogMessage);
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ErrorMessage = cloudi_string:
                            format_to_binary("output(~tp) ~tp ~tp~n~tp",
                                             [Output, ErrorType, Error,
@@ -2155,17 +2155,10 @@ filepath_exists(FilePath) ->
             Error
     end.
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 time_offset_nanoseconds() ->
     erlang:time_offset(nanosecond).
 time_offset_to_nanoseconds(TimeOffset) ->
     erlang:convert_time_unit(TimeOffset, native, nanosecond).
--else.
-time_offset_nanoseconds() ->
-    erlang:time_offset(nano_seconds).
-time_offset_to_nanoseconds(TimeOffset) ->
-    erlang:convert_time_unit(TimeOffset, native, nano_seconds).
--endif.
 
 aspects_log([], _, _, _, _, _, _, _, _, _, _) ->
     ok;

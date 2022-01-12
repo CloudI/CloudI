@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2021 Michael Truog
+%%% @copyright 2011-2022 Michael Truog
 %%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -2514,7 +2514,7 @@ aspects_init_after([{M, F} = Aspect | L], CommandLine, Prefix, Timeout,
         {stop, _, _} = Stop ->
             Stop
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR_SYNC("aspect ~tp ~tp ~tp~n~tp",
                             [Aspect, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
@@ -2528,7 +2528,7 @@ aspects_init_after([F | L], CommandLine, Prefix, Timeout,
         {stop, _, _} = Stop ->
             Stop
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR_SYNC("aspect ~tp ~tp ~tp~n~tp",
                             [F, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
@@ -2550,7 +2550,7 @@ aspects_request_before([{M, F} = Aspect | L],
         {stop, _, _} = Stop ->
             Stop
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
@@ -2569,7 +2569,7 @@ aspects_request_before([F | L],
         {stop, _, _} = Stop ->
             Stop
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
@@ -2591,7 +2591,7 @@ aspects_request_after([{M, F} = Aspect | L],
         {stop, _, _} = Stop ->
             Stop
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
@@ -2610,7 +2610,7 @@ aspects_request_after([F | L],
         {stop, _, _} = Stop ->
             Stop
     catch
-        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+        ErrorType:Error:ErrorStackTrace ->
             ?LOG_ERROR("aspect ~tp ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}

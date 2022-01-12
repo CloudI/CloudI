@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -131,37 +131,8 @@
               ToUnit :: time_unit()) ->
     integer().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 convert(Time, FromUnit, ToUnit) ->
     erlang:convert_time_unit(Time, FromUnit, ToUnit).
--else.
-convert(Time, FromUnit, ToUnit) ->
-    FromUnitDeprecated = if
-        FromUnit =:= second ->
-            seconds;
-        FromUnit =:= millisecond ->
-            milli_seconds;
-        FromUnit =:= microsecond ->
-            micro_seconds;
-        FromUnit =:= nanosecond ->
-            nano_seconds;
-        true ->
-            FromUnit
-    end,
-    ToUnitDeprecated = if
-        ToUnit =:= second ->
-            seconds;
-        ToUnit =:= millisecond ->
-            milli_seconds;
-        ToUnit =:= microsecond ->
-            micro_seconds;
-        ToUnit =:= nanosecond ->
-            nano_seconds;
-        true ->
-            ToUnit
-    end,
-    erlang:convert_time_unit(Time, FromUnitDeprecated, ToUnitDeprecated).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -172,18 +143,8 @@ convert(Time, FromUnit, ToUnit) ->
 -spec datetime_utc(TimeNativeNow :: integer()) ->
     calendar:datetime().
 
--ifdef(ERLANG_OTP_VERSION_21_FEATURES).
 datetime_utc(TimeNativeNow) ->
     calendar:system_time_to_universal_time(TimeNativeNow, native).
--else.
-datetime_utc(TimeNativeNow) ->
-    TotalMicroSeconds = convert(TimeNativeNow, native, microsecond),
-    TotalSeconds = TotalMicroSeconds div 1000000,
-    MegaSeconds = TotalSeconds div 1000000,
-    Seconds = TotalSeconds - MegaSeconds * 1000000,
-    MicroSeconds = TotalMicroSeconds - TotalSeconds * 1000000,
-    calendar:now_to_universal_time({MegaSeconds, Seconds, MicroSeconds}).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -255,13 +216,8 @@ native_os() ->
 
 -spec seconds() -> seconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds() ->
     erlang:system_time(second).
--else.
-seconds() ->
-    erlang:system_time(seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -284,13 +240,8 @@ seconds_epoch_to_string(Seconds) ->
 
 -spec seconds_monotonic() -> seconds_monotonic().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds_monotonic() ->
     erlang:monotonic_time(second).
--else.
-seconds_monotonic() ->
-    erlang:monotonic_time(seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -302,13 +253,8 @@ seconds_monotonic() ->
 
 -spec seconds_os() -> seconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds_os() ->
     os:system_time(second).
--else.
-seconds_os() ->
-    os:system_time(seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -383,13 +329,8 @@ seconds_to_string(TotalSeconds, signed)
 
 -spec milliseconds() -> milliseconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 milliseconds() ->
     erlang:system_time(millisecond).
--else.
-milliseconds() ->
-    erlang:system_time(milli_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -412,13 +353,8 @@ milliseconds_epoch_to_string(MilliSeconds) ->
 
 -spec milliseconds_monotonic() -> milliseconds_monotonic().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 milliseconds_monotonic() ->
     erlang:monotonic_time(millisecond).
--else.
-milliseconds_monotonic() ->
-    erlang:monotonic_time(milli_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -430,13 +366,8 @@ milliseconds_monotonic() ->
 
 -spec milliseconds_os() -> milliseconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 milliseconds_os() ->
     os:system_time(millisecond).
--else.
-milliseconds_os() ->
-    os:system_time(milli_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -447,13 +378,8 @@ milliseconds_os() ->
 
 -spec microseconds() -> microseconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 microseconds() ->
     erlang:system_time(microsecond).
--else.
-microseconds() ->
-    erlang:system_time(micro_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -476,13 +402,8 @@ microseconds_epoch_to_string(MicroSeconds) ->
 
 -spec microseconds_monotonic() -> microseconds_monotonic().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 microseconds_monotonic() ->
     erlang:monotonic_time(microsecond).
--else.
-microseconds_monotonic() ->
-    erlang:monotonic_time(micro_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -494,13 +415,8 @@ microseconds_monotonic() ->
 
 -spec microseconds_os() -> microseconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 microseconds_os() ->
     os:system_time(microsecond).
--else.
-microseconds_os() ->
-    os:system_time(micro_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -592,13 +508,8 @@ microseconds_to_string(_, _) ->
 
 -spec nanoseconds() -> nanoseconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 nanoseconds() ->
     erlang:system_time(nanosecond).
--else.
-nanoseconds() ->
-    erlang:system_time(nano_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -608,13 +519,8 @@ nanoseconds() ->
 
 -spec nanoseconds_monotonic() -> nanoseconds_monotonic().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 nanoseconds_monotonic() ->
     erlang:monotonic_time(nanosecond).
--else.
-nanoseconds_monotonic() ->
-    erlang:monotonic_time(nano_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -626,13 +532,8 @@ nanoseconds_monotonic() ->
 
 -spec nanoseconds_os() -> nanoseconds_epoch().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 nanoseconds_os() ->
     os:system_time(nanosecond).
--else.
-nanoseconds_os() ->
-    os:system_time(nano_seconds).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc

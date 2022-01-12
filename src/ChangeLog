@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-01-12 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Remove Erlang/OTP < 22.0 compatibility
+
 2022-01-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Require Erlang/OTP >= 22.0 for depending on the Erlang/OTP kernel logger

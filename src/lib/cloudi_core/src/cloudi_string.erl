@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2009-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_string).
@@ -78,13 +78,7 @@
 % based on unicode_util:whitespace/0
 -define(WHITESPACE, [13,9,10,11,12,13,32,133,8206,8207,8232,8233]).
 % keep output in a single line when using ~p (printable) formatting
--ifdef(ERLANG_OTP_VERSION_21_FEATURES).
 -define(COMPACT_LIMIT, "0").
--else.
--define(COMPACT_LIMIT, "1000000000000").
--endif.
-
--include("cloudi_core_i_constants.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -355,7 +349,6 @@ compare_constant_binary(<<C1:8, Test/binary>>, <<C2:8, Correct/binary>>,
             String :: string() | binary()) ->
     string() | binary() | false.
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 findl(SearchPattern, String) ->
     case string:find(String, SearchPattern, leading) of
         nomatch ->
@@ -363,34 +356,6 @@ findl(SearchPattern, String) ->
         Result ->
             Result
     end.
--else.
-findl(SearchPattern, String)
-    when is_list(SearchPattern) ->
-    StringList = if
-        is_binary(String) ->
-            erlang:binary_to_list(String);
-        is_list(String) ->
-            lists:flatten(String)
-    end,
-    SearchPatternList = if
-        is_binary(SearchPattern) ->
-            erlang:binary_to_list(SearchPattern);
-        is_list(SearchPattern) ->
-            lists:flatten(SearchPattern)
-    end,
-    case string:str(StringList, SearchPatternList) of
-        0 ->
-            false;
-        Index ->
-            Result = lists:nthtail(Index - 1, StringList),
-            if
-                is_binary(String) ->
-                    erlang:list_to_binary(Result);
-                is_list(String) ->
-                    Result
-            end
-    end.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -402,7 +367,6 @@ findl(SearchPattern, String)
             String :: string() | binary()) ->
     string() | binary() | false.
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 findr(SearchPattern, String) ->
     case string:find(String, SearchPattern, trailing) of
         nomatch ->
@@ -410,33 +374,6 @@ findr(SearchPattern, String) ->
         Result ->
             Result
     end.
--else.
-findr(SearchPattern, String) ->
-    StringList = if
-        is_binary(String) ->
-            erlang:binary_to_list(String);
-        is_list(String) ->
-            lists:flatten(String)
-    end,
-    SearchPatternList = if
-        is_binary(SearchPattern) ->
-            erlang:binary_to_list(SearchPattern);
-        is_list(SearchPattern) ->
-            lists:flatten(SearchPattern)
-    end,
-    case string:rstr(StringList, SearchPatternList) of
-        0 ->
-            false;
-        Index ->
-            Result = lists:nthtail(Index - 1, StringList),
-            if
-                is_binary(String) ->
-                    erlang:list_to_binary(Result);
-                is_list(String) ->
-                    Result
-            end
-    end.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -540,17 +477,8 @@ list_to_term(L) ->
 -spec lowercase(String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 lowercase(String) ->
     string:lowercase(String).
--else.
-lowercase(String)
-    when is_list(String) ->
-    string:to_lower(String);
-lowercase(String)
-    when is_binary(String) ->
-    erlang:list_to_binary(string:to_lower(erlang:binary_to_list(String))).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -562,26 +490,8 @@ lowercase(String)
             String :: string() | binary()) ->
     list(string() | binary()).
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 split(SearchPattern, String) ->
     string:split(String, SearchPattern, all).
--else.
-split(SearchPattern, String)
-    when is_list(String) ->
-    [erlang:binary_to_list(S)
-     || S <- split(SearchPattern, erlang:list_to_binary(String))];
-split(SearchPattern, String)
-    when is_binary(String) ->
-    Pattern = if
-        is_binary(SearchPattern) ->
-            [SearchPattern];
-        is_integer(hd(SearchPattern)) ->
-            [erlang:list_to_binary(SearchPattern)];
-        is_list(SearchPattern) ->
-            [unicode:characters_to_binary(S) || S <- SearchPattern]
-    end,
-    binary:split(String, Pattern, [global]).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -687,13 +597,8 @@ splitr_input(L1, L2, Char, [C | Rest], Input) ->
 -spec term_to_binary(T :: any()) ->
     binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 term_to_binary(T) ->
     unicode:characters_to_binary(io_lib:format("~tw", [T])).
--else.
-term_to_binary(T) ->
-    unicode:characters_to_binary(io_lib:format("~w", [T])).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -717,13 +622,8 @@ term_to_binary_compact(T) ->
 -spec term_to_list(T :: any()) ->
     string().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 term_to_list(T) ->
     format("~tw", [T]).
--else.
-term_to_list(T) ->
-    format("~w", [T]).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -746,14 +646,8 @@ term_to_list_compact(T) ->
 -spec titlecase(String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 titlecase(String) ->
     string:titlecase(String).
--else.
-titlecase(String) ->
-    % functionality was not present in any form
-    String.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -764,13 +658,8 @@ titlecase(String) ->
 -spec trim(String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 trim(String) ->
     string:trim(String).
--else.
-trim(String) ->
-    trim(?WHITESPACE, String).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -782,23 +671,8 @@ trim(String) ->
            String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 trim(Characters, String) ->
     string:trim(String, both, Characters).
--else.
-trim(Characters, String)
-    when is_list(String) ->
-    trim_list(lists:flatten(Characters), String);
-trim(Characters, String)
-    when is_binary(String) ->
-    erlang:list_to_binary(trim_list(lists:flatten(Characters),
-                                    erlang:binary_to_list(String))).
-
-trim_list([], String) ->
-    String;
-trim_list([H | T], String) ->
-    trim_list(T, string:strip(String, both, H)).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -809,13 +683,8 @@ trim_list([H | T], String) ->
 -spec triml(String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 triml(String) ->
     string:trim(String, leading).
--else.
-triml(String) ->
-    triml(?WHITESPACE, String).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -827,23 +696,8 @@ triml(String) ->
             String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 triml(Characters, String) ->
     string:trim(String, leading, Characters).
--else.
-triml(Characters, String)
-    when is_list(String) ->
-    triml_list(lists:flatten(Characters), String);
-triml(Characters, String)
-    when is_binary(String) ->
-    erlang:list_to_binary(triml_list(lists:flatten(Characters),
-                                     erlang:binary_to_list(String))).
-
-triml_list([], String) ->
-    String;
-triml_list([H | T], String) ->
-    triml_list(T, string:strip(String, left, H)).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -854,13 +708,8 @@ triml_list([H | T], String) ->
 -spec trimr(String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 trimr(String) ->
     string:trim(String, trailing).
--else.
-trimr(String) ->
-    trimr(?WHITESPACE, String).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -872,23 +721,8 @@ trimr(String) ->
             String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 trimr(Characters, String) ->
     string:trim(String, trailing, Characters).
--else.
-trimr(Characters, String)
-    when is_list(String) ->
-    trimr_list(lists:flatten(Characters), String);
-trimr(Characters, String)
-    when is_binary(String) ->
-    erlang:list_to_binary(trimr_list(lists:flatten(Characters),
-                                     erlang:binary_to_list(String))).
-
-trimr_list([], String) ->
-    String;
-trimr_list([H | T], String) ->
-    trimr_list(T, string:strip(String, right, H)).
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -899,17 +733,8 @@ trimr_list([H | T], String) ->
 -spec uppercase(String :: string() | binary()) ->
     string() | binary().
 
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 uppercase(String) ->
     string:uppercase(String).
--else.
-uppercase(String)
-    when is_list(String) ->
-    string:to_upper(String);
-uppercase(String)
-    when is_binary(String) ->
-    erlang:list_to_binary(string:to_upper(erlang:binary_to_list(String))).
--endif.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
