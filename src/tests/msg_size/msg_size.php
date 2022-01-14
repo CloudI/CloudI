@@ -4,7 +4,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@ require 'CloudI.php';
 
 define('DESTINATION', '/tests/msg_size/erlang');
 
-class Task //extends \Thread
+class Task
 {
     private $api;
     private $thread_index;
@@ -83,20 +83,26 @@ $main_thread = new Task(0);
 $main_thread->run();
 
 /*
-// commented out due to PHP threads not having
+// commented out due to PHP ZTS (Zend Thread Safety) not having
 // readily available installation packages
+assert(PHP_ZTS == 1);
+use parallel\Runtime;
+
 $thread_count = \CloudI\API::thread_count();
 assert($thread_count >= 1);
 
 $threads = array();
 for ($thread_index = 0; $thread_index < $thread_count; $thread_index++)
 {
-    $threads[$thread_index] = new Task($thread_index);
+    $t = new Runtime();
+    $t->run(function () use ($thread_index) {
+        $task = new Task($thread_index);
+        $task->run();
+    });
+    $threads[$thread_index] = $t;
 }
 foreach ($threads as $t)
-    $t->start();
-foreach ($threads as $t)
-    $t->join();
+    $t->close();
 */
 
 ?>
