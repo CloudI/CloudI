@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2021 Michael Truog
+%%% @copyright 2011-2022 Michael Truog
 %%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -192,7 +192,7 @@ format_erlang_call(Method, 2, Request, Timeout) ->
             convert_term_to_erlang(Result)
     catch
         exit:invalid_input ->
-            <<>>;
+            convert_term_to_erlang({error, timeout});
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
             <<>>
@@ -217,7 +217,7 @@ format_json_call(Method, 2, Request, Timeout) ->
             convert_term_to_json(Result, Method, true)
     catch
         exit:invalid_input ->
-            <<>>;
+            convert_term_to_json({error, timeout}, Method, true);
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
             <<>>

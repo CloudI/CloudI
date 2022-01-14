@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-01-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Provide {error, timeout} response in cloudi_service_api_requests
+      when an invalid argument is provided (unparsable)
+
 2022-01-13 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update PHP integration tests threading-related comments
