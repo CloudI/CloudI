@@ -3,6 +3,9 @@
 
 2022-01-14 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Improve filepath normalization validation in cloudi_core configuration
+      for the CloudI Service API functions services_update,
+      code_path_add and code_path_remove
     * Provide {error, timeout} response in cloudi_service_api_requests
       when an invalid argument is provided (unparsable)
 

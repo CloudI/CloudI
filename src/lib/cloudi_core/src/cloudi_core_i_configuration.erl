@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2009-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -4095,34 +4095,28 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
          _, _, _,
          _, ModulesLoad, _, _, _,
          _, _, _, _, _, _, _]
-        when not (is_list(ModulesLoad) andalso
-                  is_atom(hd(ModulesLoad))) ->
+        when not is_list(ModulesLoad) ->
             {error, {service_update_modules_load_invalid,
                      ModulesLoad}};
         [_, _, _,
          _, _, _,
          _, _, ModulesUnload, _, _,
          _, _, _, _, _, _, _]
-        when not (is_list(ModulesUnload) andalso
-                  is_atom(hd(ModulesUnload))) ->
+        when not is_list(ModulesUnload) ->
             {error, {service_update_modules_unload_invalid,
                      ModulesUnload}};
         [_, _, _,
          _, _, _,
          _, _, _, CodePathsAdd, _,
          _, _, _, _, _, _, _]
-        when not (is_list(CodePathsAdd) andalso
-                  is_list(hd(CodePathsAdd)) andalso
-                  is_integer(hd(hd(CodePathsAdd)))) ->
+        when not is_list(CodePathsAdd) ->
             {error, {service_update_code_paths_add_invalid,
                      CodePathsAdd}};
         [_, _, _,
          _, _, _,
          _, _, _, _, CodePathsRemove,
          _, _, _, _, _, _, _]
-        when not (is_list(CodePathsRemove) andalso
-                  is_list(hd(CodePathsRemove)) andalso
-                  is_integer(hd(hd(CodePathsRemove)))) ->
+        when not is_list(CodePathsRemove) ->
             {error, {service_update_code_paths_remove_invalid,
                      CodePathsRemove}};
         [_, _, _,
@@ -4287,34 +4281,50 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
             TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
             TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
             case services_update_plan_internal(Module, ModuleState,
-                                               DestListDeny, DestListAllow,
-                                               Options, ID, Services, ACL) of
-                {ok, UpdateModule, IDs, ModuleStateNew,
-                 DestListDenyNew, DestListAllowNew,
-                 OptionsKeys, OptionsNew, ModuleVersion, ReloadStop} ->
-                    UpdatePlansNew =
-                        [UpdatePlan#config_service_update{
-                             type = internal,
-                             module = UpdateModule,
-                             module_state = ModuleStateNew,
-                             sync = Sync,
-                             modules_load = ModulesLoad,
-                             modules_unload = ModulesUnload,
-                             code_paths_add = CodePathsAdd,
-                             code_paths_remove = CodePathsRemove,
-                             dest_refresh = DestRefresh,
-                             timeout_init = TimeoutInitValue,
-                             timeout_async = TimeoutAsyncValue,
-                             timeout_sync = TimeoutSyncValue,
-                             dest_list_deny = DestListDenyNew,
-                             dest_list_allow = DestListAllowNew,
-                             options_keys = OptionsKeys,
-                             options = OptionsNew,
-                             uuids = IDs,
-                             module_version_old = ModuleVersion,
-                             reload_stop = ReloadStop} |
-                         UpdatePlans],
-                    services_update_plan(L, UpdatePlansNew, Config, Timeout);
+                                               ID, Services) of
+                {ok, UpdateModule, IDs,
+                 ModuleStateNew, ModuleVersion, ReloadStop} ->
+                    case accum([{ModulesLoad,
+                                 fun services_update_plan_modules_load/2},
+                                {ModulesUnload,
+                                 fun services_update_plan_modules_unload/2},
+                                {CodePathsAdd,
+                                 fun services_update_plan_code_paths_add/2},
+                                {CodePathsRemove,
+                                 fun services_update_plan_code_paths_remove/2},
+                                {DestListDeny,
+                                 fun(Value, State) ->
+                                     services_update_plan_dest_list_deny(Value,
+                                                                         State,
+                                                                         ACL)
+                                 end},
+                                {DestListAllow,
+                                 fun(Value, State) ->
+                                     services_update_plan_dest_list_allow(Value,
+                                                                          State,
+                                                                          ACL)
+                                 end},
+                                {Options,
+                                 fun services_update_plan_options_internal/2}],
+                               UpdatePlan#config_service_update{
+                                   type = internal,
+                                   module = UpdateModule,
+                                   module_state = ModuleStateNew,
+                                   sync = Sync,
+                                   dest_refresh = DestRefresh,
+                                   timeout_init = TimeoutInitValue,
+                                   timeout_async = TimeoutAsyncValue,
+                                   timeout_sync = TimeoutSyncValue,
+                                   uuids = IDs,
+                                   module_version_old = ModuleVersion,
+                                   reload_stop = ReloadStop}) of
+                        {ok, UpdatePlanNew} ->
+                            services_update_plan(L,
+                                                 [UpdatePlanNew | UpdatePlans],
+                                                 Config, Timeout);
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
@@ -4331,33 +4341,49 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
             TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
             TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
             case services_update_plan_external(FilePath, Args, Env,
-                                               DestListDeny, DestListAllow,
-                                               Options, ID, Services, ACL) of
-                {ok, DestListDenyNew, DestListAllowNew,
-                 OptionsKeys, OptionsNew, SpawnOsProcess} ->
-                    UpdatePlansNew =
-                        [UpdatePlan#config_service_update{
-                             type = external,
-                             file_path = FilePath,
-                             args = Args,
-                             env = Env,
-                             sync = Sync,
-                             modules_load = ModulesLoad,
-                             modules_unload = ModulesUnload,
-                             code_paths_add = CodePathsAdd,
-                             code_paths_remove = CodePathsRemove,
-                             dest_refresh = DestRefresh,
-                             timeout_init = TimeoutInitValue,
-                             timeout_async = TimeoutAsyncValue,
-                             timeout_sync = TimeoutSyncValue,
-                             dest_list_deny = DestListDenyNew,
-                             dest_list_allow = DestListAllowNew,
-                             options_keys = OptionsKeys,
-                             options = OptionsNew,
-                             uuids = [ID],
-                             spawn_os_process = SpawnOsProcess} |
-                         UpdatePlans],
-                    services_update_plan(L, UpdatePlansNew, Config, Timeout);
+                                               ID, Services) of
+                {ok, SpawnOsProcess} ->
+                    case accum([{ModulesLoad,
+                                 fun services_update_plan_modules_load/2},
+                                {ModulesUnload,
+                                 fun services_update_plan_modules_unload/2},
+                                {CodePathsAdd,
+                                 fun services_update_plan_code_paths_add/2},
+                                {CodePathsRemove,
+                                 fun services_update_plan_code_paths_remove/2},
+                                {DestListDeny,
+                                 fun(Value, State) ->
+                                     services_update_plan_dest_list_deny(Value,
+                                                                         State,
+                                                                         ACL)
+                                 end},
+                                {DestListAllow,
+                                 fun(Value, State) ->
+                                     services_update_plan_dest_list_allow(Value,
+                                                                          State,
+                                                                          ACL)
+                                 end},
+                                {Options,
+                                 fun services_update_plan_options_external/2}],
+                               UpdatePlan#config_service_update{
+                                   type = external,
+                                   file_path = FilePath,
+                                   args = Args,
+                                   env = Env,
+                                   sync = Sync,
+                                   dest_refresh = DestRefresh,
+                                   timeout_init = TimeoutInitValue,
+                                   timeout_async = TimeoutAsyncValue,
+                                   timeout_sync = TimeoutSyncValue,
+                                   uuids = [ID],
+                                   spawn_os_process = SpawnOsProcess}) of
+                        {ok, UpdatePlanNew} ->
+                            services_update_plan(L,
+                                                 [UpdatePlanNew | UpdatePlans],
+                                                 Config, Timeout);
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
@@ -4371,9 +4397,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
 services_update_plan([{ID, _} | _], _, _, _) ->
     {error, {update_invalid, ID}}.
 
-services_update_plan_internal(Module, ModuleState,
-                              DestListDeny, DestListAllow,
-                              Options, UpdateID, Services, ACL) ->
+services_update_plan_internal(Module, ModuleState, UpdateID, Services) ->
     UpdateModule = if
         Module =:= undefined ->
             case lists:keyfind(UpdateID, #config_service_internal.uuid,
@@ -4413,27 +4437,10 @@ services_update_plan_internal(Module, ModuleState,
         UpdateValid =:= true ->
             case services_update_plan_module_state(ModuleState) of
                 {ok, ModuleStateNew} ->
-                    case service_acl_expand_lists(DestListDeny,
-                                                  DestListAllow,
-                                                  ACL) of
-                        {ok, DestListDenyNew, DestListAllowNew} ->
-                            case services_update_plan_options_internal(Options) of
-                                {ok, OptionsNew} ->
-                                    OptionsKeys = [Key || {Key, _} <- Options],
-                                    ModuleVersion =
-                                        cloudi_x_reltool_util:
-                                        module_version(UpdateModule),
-                                    {ok, UpdateModule, UpdateIDs,
-                                     ModuleStateNew,
-                                     DestListDenyNew, DestListAllowNew,
-                                     OptionsKeys, OptionsNew,
-                                     ModuleVersion, ReloadStop};
-                                {error, _} = Error ->
-                                    Error
-                            end;
-                        {error, _} = Error ->
-                            Error
-                    end;
+                    ModuleVersion = cloudi_x_reltool_util:
+                                    module_version(UpdateModule),
+                    {ok, UpdateModule, UpdateIDs,
+                     ModuleStateNew, ModuleVersion, ReloadStop};
                 {error, _} = Error ->
                     Error
             end;
@@ -4441,9 +4448,7 @@ services_update_plan_internal(Module, ModuleState,
             {error, {update_invalid, UpdateID}}
     end.
 
-services_update_plan_external(FilePath, Args, Env,
-                              DestListDeny, DestListAllow,
-                              Options, UpdateID, Services, ACL) ->
+services_update_plan_external(FilePath, Args, Env, UpdateID, Services) ->
     UpdateValid = if
         UpdateID == <<>> ->
             false;
@@ -4458,30 +4463,99 @@ services_update_plan_external(FilePath, Args, Env,
     end,
     if
         UpdateValid =:= true ->
-            case service_acl_expand_lists(DestListDeny,
-                                          DestListAllow,
-                                          ACL) of
-                {ok, DestListDenyNew, DestListAllowNew} ->
-                    case services_update_plan_options_external(Options) of
-                        {ok, OptionsNew} ->
-                            OptionsKeys = [Key || {Key, _} <- Options],
-                            SpawnOsProcess =
-                                not ((FilePath =:= undefined) andalso
-                                     (Args =:= undefined) andalso
-                                     (Env =:= undefined)),
-                            {ok, DestListDenyNew, DestListAllowNew,
-                             OptionsKeys, OptionsNew, SpawnOsProcess};
-                        {error, _} = Error ->
-                            Error
-                    end;
-                {error, _} = Error ->
-                    Error
-            end;
+            SpawnOsProcess = not ((FilePath =:= undefined) andalso
+                                  (Args =:= undefined) andalso
+                                  (Env =:= undefined)),
+            {ok, SpawnOsProcess};
         UpdateValid =:= false ->
             {error, {update_invalid, UpdateID}}
     end.
 
-services_update_plan_options_internal(OptionsList) ->
+services_update_plan_modules_load(ModulesLoad, UpdatePlan) ->
+    case services_update_plan_modules_valid(ModulesLoad) of
+        ok ->
+            {ok,
+             UpdatePlan#config_service_update{
+                 modules_load = ModulesLoad}};
+        {error, Reason} ->
+            {error, {service_update_modules_load_invalid, Reason}}
+    end.
+
+services_update_plan_modules_unload(ModulesUnload, UpdatePlan) ->
+    case services_update_plan_modules_valid(ModulesUnload) of
+        ok ->
+            {ok,
+             UpdatePlan#config_service_update{
+                 modules_unload = ModulesUnload}};
+        {error, Reason} ->
+            {error, {service_update_modules_unload_invalid, Reason}}
+    end.
+
+services_update_plan_modules_valid([]) ->
+    ok;
+services_update_plan_modules_valid([Module | Modules]) ->
+    if
+        is_atom(Module) ->
+            services_update_plan_modules_valid(Modules);
+        true ->
+            {error, {not_module, Module}}
+    end.
+
+services_update_plan_code_paths_add(CodePathsAdd, UpdatePlan) ->
+    case services_update_plan_code_paths_normalize(CodePathsAdd) of
+        {ok, CodePathsAddNew} ->
+            {ok,
+             UpdatePlan#config_service_update{
+                 code_paths_add = CodePathsAddNew}};
+        {error, Reason} ->
+            {error, {service_update_code_paths_add_invalid, Reason}}
+    end.
+
+services_update_plan_code_paths_remove(CodePathsRemove, UpdatePlan) ->
+    case services_update_plan_code_paths_normalize(CodePathsRemove) of
+        {ok, CodePathsRemoveNew} ->
+            {ok,
+             UpdatePlan#config_service_update{
+                 code_paths_remove = CodePathsRemoveNew}};
+        {error, Reason} ->
+            {error, {service_update_code_paths_remove_invalid, Reason}}
+    end.
+
+services_update_plan_code_paths_normalize(CodePaths) ->
+    services_update_plan_code_paths_normalize(CodePaths, []).
+
+services_update_plan_code_paths_normalize([], Output) ->
+    {ok, lists:reverse(Output)};
+services_update_plan_code_paths_normalize([Path | CodePaths], Output) ->
+    case path_normalize(Path) of
+        {ok, PathNew} ->
+            services_update_plan_code_paths_normalize(CodePaths,
+                                                      [PathNew | Output]);
+        {error, Reason} ->
+            {error, {Reason, Path}}
+    end.
+
+services_update_plan_dest_list_deny(DestListDeny, UpdatePlan, ACL) ->
+    case service_acl_expand_list(DestListDeny, ACL) of
+        {ok, DestListDenyNew} ->
+            {ok,
+             UpdatePlan#config_service_update{
+                 dest_list_deny = DestListDenyNew}};
+        {error, _} = Error ->
+            Error
+    end.
+
+services_update_plan_dest_list_allow(DestListAllow, UpdatePlan, ACL) ->
+    case service_acl_expand_list(DestListAllow, ACL) of
+        {ok, DestListAllowNew} ->
+            {ok,
+             UpdatePlan#config_service_update{
+                 dest_list_allow = DestListAllowNew}};
+        {error, _} = Error ->
+            Error
+    end.
+
+services_update_plan_options_internal(OptionsList, UpdatePlan) ->
     ValidKeys = [priority_default, queue_limit, queue_size,
                  rate_request_max, dest_refresh_start, dest_refresh_delay,
                  request_name_lookup,
@@ -4504,7 +4578,11 @@ services_update_plan_options_internal(OptionsList) ->
                                                     undefined,
                                                     undefined, undefined) of
                 {ok, _, Options} ->
-                    {ok, Options};
+                    OptionsKeys = [Key || {Key, _} <- OptionsList],
+                    {ok,
+                     UpdatePlan#config_service_update{
+                         options_keys = OptionsKeys,
+                         options = Options}};
                 {error, _} = Error ->
                     Error
             end;
@@ -4513,7 +4591,7 @@ services_update_plan_options_internal(OptionsList) ->
                      InvalidOptions}}
     end.
 
-services_update_plan_options_external(OptionsList) ->
+services_update_plan_options_external(OptionsList, UpdatePlan) ->
     ValidKeys = [priority_default, queue_limit, queue_size,
                  rate_request_max, dest_refresh_start, dest_refresh_delay,
                  request_name_lookup,
@@ -4531,7 +4609,11 @@ services_update_plan_options_external(OptionsList) ->
                                                     undefined,
                                                     undefined, undefined) of
                 {ok, _, Options} ->
-                    {ok, Options};
+                    OptionsKeys = [Key || {Key, _} <- OptionsList],
+                    {ok,
+                     UpdatePlan#config_service_update{
+                         options_keys = OptionsKeys,
+                         options = Options}};
                 {error, _} = Error ->
                     Error
             end;
@@ -4585,11 +4667,17 @@ services_update_all([UpdatePlan | UpdatePlans], ServiceIdLists,
             services_update_all(UpdatePlans, [ServiceIdList | ServiceIdLists],
                                 service_update_done(UpdatePlan, ConfigNew),
                                 Timeout);
-        {error, ServiceIdList, Reason} ->
+        {Failure, ServiceIdList, Reason} ->
             Error = {error,
                      {ServiceIdList, Reason},
                      lists:reverse(ServiceIdLists)},
-            {ok, Error, service_update_done(UpdatePlan, Config)}
+            ConfigNew = if
+                Failure =:= aborted ->
+                    Config;
+                Failure =:= error ->
+                    service_update_done(UpdatePlan, Config)
+            end,
+            {ok, Error, ConfigNew}
     end.
 
 service_update_done(#config_service_update{
@@ -4601,10 +4689,8 @@ service_update_done(#config_service_update{
     #config_code{paths = CodePaths0} = Code,
     % code_paths_add uses code:add_patha/1
     % code_paths_remove uses code:del_path/1 (path may not exist in config)
-    PathsAddNormalized = [path_normalize(Path) || Path <- PathsAdd],
-    PathsRemoveNormalized = [path_normalize(Path) || Path <- PathsRemove],
-    CodePaths1 = lists:reverse(PathsAddNormalized, CodePaths0),
-    CodePathsN = CodePaths1 -- PathsRemoveNormalized,
+    CodePaths1 = lists:reverse(PathsAdd, CodePaths0),
+    CodePathsN = CodePaths1 -- PathsRemove,
     CodeNew = Code#config_code{paths = CodePathsN},
     Config#config{code = CodeNew}.
 
@@ -4801,9 +4887,9 @@ service_acl_expand(#config_service_external{
     .
 
 service_acl_expand_lists(DestListDeny, DestListAllow, ACL) ->
-    case service_acl_expand_list(DestListDeny, [], ACL) of
+    case service_acl_expand_list(DestListDeny, ACL) of
         {ok, DestListDenyNew} ->
-            case service_acl_expand_list(DestListAllow, [], ACL) of
+            case service_acl_expand_list(DestListAllow, ACL) of
                 {ok, DestListAllowNew} ->
                     {ok, DestListDenyNew, DestListAllowNew};
                 {error, _} = Error ->
@@ -4812,6 +4898,9 @@ service_acl_expand_lists(DestListDeny, DestListAllow, ACL) ->
         {error, _} = Error ->
             Error
     end.
+
+service_acl_expand_list(DestList, ACL) ->
+    service_acl_expand_list(DestList, [], ACL).
 
 service_acl_expand_list(invalid, _, _) ->
     {ok, invalid};
@@ -5884,33 +5973,42 @@ code_proplist(Value) ->
     end.
 
 code_load_path_add(Path, PathsNormalized) ->
-    PathNormalized = path_normalize(Path),
-    case lists:member(PathNormalized, PathsNormalized) of
-        true ->
-            {error, already_exists, PathNormalized};
-        false ->
-            case code:add_pathz(PathNormalized) of
+    case path_normalize(Path) of
+        {ok, PathNormalized} ->
+            case lists:member(PathNormalized, PathsNormalized) of
                 true ->
-                    {ok, PathNormalized};
-                {error, Reason} ->
-                    {error, Reason, PathNormalized}
-            end
+                    {error, already_exists, PathNormalized};
+                false ->
+                    case code:add_pathz(PathNormalized) of
+                        true ->
+                            {ok, PathNormalized};
+                        {error, Reason} ->
+                            {error, Reason, PathNormalized}
+                    end
+            end;
+        {error, Reason} ->
+            {error, Reason, Path}
     end.
 
 code_load_path_remove(Path, PathsNormalized) ->
-    PathNormalized = path_normalize(Path),
-    case cloudi_lists:delete_checked(PathNormalized, PathsNormalized) of
-        false ->
-            {error, does_not_exist};
-        PathsNormalizedNew ->
-            case code:del_path(PathNormalized) of
-                true ->
-                    {ok, PathsNormalizedNew};
+    case path_normalize(Path) of
+        {ok, PathNormalized} ->
+            case cloudi_lists:delete_checked(PathNormalized,
+                                             PathsNormalized) of
                 false ->
                     {error, does_not_exist};
-                {error, _} = Error ->
-                    Error
-            end
+                PathsNormalizedNew ->
+                    case code:del_path(PathNormalized) of
+                        true ->
+                            {ok, PathsNormalizedNew};
+                        false ->
+                            {error, does_not_exist};
+                        {error, _} = Error ->
+                            Error
+                    end
+            end;
+        {error, _} = Error ->
+            Error
     end.
 
 code_load_path([], PathsNormalized) ->
@@ -6032,7 +6130,13 @@ code_load_releases(Releases, CodeConfig) ->
     end.
 
 path_normalize(Path) ->
-    filename:join([Path]).
+    try filename:join([Path]) of
+        PathNormalized ->
+            {ok, PathNormalized}
+    catch
+        _:_ ->
+            {error, bad_directory}
+    end.
 
 uuid_generator() ->
     Variant = application:get_env(cloudi_core, uuid_v1_variant,

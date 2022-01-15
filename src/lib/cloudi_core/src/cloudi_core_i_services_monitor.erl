@@ -478,7 +478,7 @@ handle_call({update,
                            durations_store(ServiceIdList, {T0, T1}, Durations),
             {reply, Reply, StateNew#state{durations_update = DurationsNew}};
         {error, Reason} ->
-            {reply, {error, [Reason]}, State}
+            {reply, {aborted, [Reason]}, State}
     end;
 
 handle_call({search, PidList}, _,

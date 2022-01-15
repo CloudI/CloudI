@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -372,7 +372,7 @@ service_resume(#config_service_external{} = Service, Timeout) ->
 -spec service_update(#config_service_update{},
                      Timeout :: pos_integer() | infinity) ->
     {ok, nonempty_list(cloudi_service_api:service_id())} |
-    {error, nonempty_list(cloudi_service_api:service_id()),
+    {aborted | error, nonempty_list(cloudi_service_api:service_id()),
      error_reason_service_update()}.
 
 service_update(#config_service_update{
@@ -387,6 +387,8 @@ service_update(#config_service_update{
     case cloudi_core_i_services_monitor:update(UpdatePlan, Timeout) of
         ok ->
             {ok, ServiceIdList};
+        {aborted, Reason} ->
+            {aborted, ServiceIdList, {ErrorReasonType, Reason}};
         {error, Reason} ->
             {error, ServiceIdList, {ErrorReasonType, Reason}}
     end.
