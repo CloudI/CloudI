@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-01-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Simplify Erlang compiler warning options (based on Erlang/OTP 24.2)
+
 2022-01-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve filepath normalization validation in cloudi_core configuration

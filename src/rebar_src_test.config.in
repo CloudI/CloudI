@@ -57,23 +57,10 @@
   {i, "@abs_top_srcdir@/external"},
   deterministic,
   debug_info,
-  warnings_as_errors,
-  strict_validation,
-  warn_bif_clash,
-  warn_deprecated_function,
-  warn_export_all,
   warn_export_vars,
-  warn_exported_vars,
-  warn_obsolete_guard,
-  warn_shadow_vars,
   %warn_unused_import, % using proper's automatic imports
-  warn_unused_function,
-  warn_unused_record,
-  warn_unused_vars]}.
-{xref_checks,
- [exports_not_used,
-  undefined_function_calls]}.
-{xref_warnings, true}.
+  %warn_missing_spec,
+  warnings_as_errors]}.
 {cover_enabled, true}.
 {cover_print_enabled, true}.
 {cover_export_enabled, true}.
