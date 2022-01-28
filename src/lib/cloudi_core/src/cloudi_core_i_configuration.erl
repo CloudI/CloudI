@@ -295,7 +295,8 @@
     bad_directory.
 -type error_reason_code_path_remove_configuration() ::
     does_not_exist |
-    bad_name.
+    bad_name |
+    bad_directory.
 -type error_reason_acl_add() ::
     error_reason_acl_add_configuration().
 -type error_reason_acl_remove() ::
@@ -6013,9 +6014,6 @@ code_load_path_remove(Path, PathsNormalized) ->
 
 code_load_path([], PathsNormalized) ->
     {ok, lists:reverse(PathsNormalized)};
-code_load_path([Path | _], _)
-    when not is_integer(hd(Path)) ->
-    {error, {code_paths_invalid, Path}};
 code_load_path([Path | Paths], PathsNormalized) ->
     case code_load_path_add(Path, PathsNormalized) of
         {ok, PathNormalized} ->
@@ -6129,14 +6127,17 @@ code_load_releases(Releases, CodeConfig) ->
             Error
     end.
 
-path_normalize(Path) ->
+path_normalize([I | _] = Path)
+    when is_integer(I) ->
     try filename:join([Path]) of
         PathNormalized ->
             {ok, PathNormalized}
     catch
         _:_ ->
             {error, bad_directory}
-    end.
+    end;
+path_normalize(_) ->
+    {error, bad_directory}.
 
 uuid_generator() ->
     Variant = application:get_env(cloudi_core, uuid_v1_variant,
@@ -6147,11 +6148,12 @@ uuid_generator() ->
                                {variant, Variant}]).
 
 -type eval_value() :: number() | atom() | list().
--spec eval(L :: list({eval_value(),
-                      fun((eval_value()) -> {ok, any()} | {error, any()})})) ->
+-spec eval(L :: nonempty_list({eval_value(),
+                               fun((eval_value()) ->
+                                   {ok, any()} | {error, any()})})) ->
     tuple().
 
-eval(L) ->
+eval([_ | _] = L) ->
     eval(L, []).
 
 eval([], Output) ->
@@ -6166,8 +6168,9 @@ eval([{Value, F} | L], Output)
     end.
 
 -type accum_value() :: any().
--spec accum(list({accum_value(),
-                  fun((accum_value(), any()) -> {ok, any()} | {error, any()})}),
+-spec accum(nonempty_list({accum_value(),
+                           fun((accum_value(), any()) ->
+                               {ok, any()} | {error, any()})}),
             State :: any()) ->
     {ok, StateNew :: any()} | {error, any()}.
 

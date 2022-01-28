@@ -23,7 +23,10 @@
    [{incl_cond, derived}, {mod_cond, all}, {app_file, keep}]},
   {app, hipe,
    [{incl_cond, exclude}]},
-  % sometimes services need the debug_info within OTP applications
+  % beam files must not be stripped due to:
+  %   reltool_util:module_version/1 (cloudi_core, services_update)
+  %   reltool_util:module_behaviours/1 (varpool)
+  %   any debug_info usage with debugger
   {debug_info, keep},
   %{app, debugger,
   % [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
