@@ -245,7 +245,7 @@ func TermToBinary(term interface{}, compressed int) ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// Elixir use can set to "nil"
+// SetUndefined assigns the undefined atom name, Elixir use can set to "nil"
 func SetUndefined(value string) {
 	undefined = value
 }
