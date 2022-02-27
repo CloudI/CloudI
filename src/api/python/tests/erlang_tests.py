@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 # Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -26,7 +26,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 """
-Erlang Binary Term Format Encoding/Decoding Tests
+Erlang External Term Format Encoding/Decoding Tests
 """
 
 import sys
@@ -133,8 +133,11 @@ class DecodeTestCase(unittest.TestCase):
     def test_binary_to_term_predefined_atoms(self):
         self.assertEqual(True, erlang.binary_to_term(b'\x83s\4true'))
         self.assertEqual(False, erlang.binary_to_term(b'\x83s\5false'))
-        self.assertEqual(erlang.OtpErlangAtom(b'undefined'),
-                         erlang.binary_to_term(b'\x83d\0\11undefined'))
+        self.assertEqual(False, erlang.binary_to_term(b'\x83w\5false'))
+        self.assertEqual(None, erlang.binary_to_term(b'\x83s\11undefined'))
+        self.assertEqual(None, erlang.binary_to_term(b'\x83w\11undefined'))
+        self.assertEqual(None, erlang.binary_to_term(b'\x83d\0\11undefined'))
+        self.assertEqual(None, erlang.binary_to_term(b'\x83v\0\11undefined'))
     def test_binary_to_term_empty_list(self):
         self.assertEqual([], erlang.binary_to_term(b'\x83j'))
     def test_binary_to_term_string_list(self):
@@ -517,9 +520,10 @@ class EncodeTestCase(unittest.TestCase):
     def test_term_to_binary_string(self):
         self.assertEqual(b'\x83j', erlang.term_to_binary(''))
         self.assertEqual(b'\x83k\0\4test', erlang.term_to_binary('test'))
-    def test_term_to_binary_boolean(self):
-        self.assertEqual(b'\x83s\4true', erlang.term_to_binary(True))
-        self.assertEqual(b'\x83s\5false', erlang.term_to_binary(False))
+    def test_term_to_binary_predefined_atom(self):
+        self.assertEqual(b'\x83w\4true', erlang.term_to_binary(True))
+        self.assertEqual(b'\x83w\5false', erlang.term_to_binary(False))
+        self.assertEqual(b'\x83w\11undefined', erlang.term_to_binary(None))
     def test_term_to_binary_short_integer(self):
         self.assertEqual(b'\x83a\0', erlang.term_to_binary(0))
         self.assertEqual(b'\x83a\xff', erlang.term_to_binary(255))

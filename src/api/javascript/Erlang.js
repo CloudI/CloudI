@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -26,8 +26,11 @@
 
 exports.Erlang = new function() {
 var Erlang = this; // namespace
+'use strict';
 
 var zlib = require('zlib');
+
+var UNDEFINED = 'undefined'; // Change with set_undefined
 
 // tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
 var TAG_VERSION = 131;
@@ -182,7 +185,7 @@ var uncompress = function(buffer_in, callback) {
 
 Erlang.OtpErlangAtom = function OtpErlangAtom (value, utf8) {
     this.value = value;
-    this.utf8 = typeof utf8 !== 'undefined' ? utf8 : false;
+    this.utf8 = typeof utf8 !== 'undefined' ? utf8 : true;
 };
 Erlang.OtpErlangAtom.prototype.binary = function() {
     if (typeof this.value == 'number') {
@@ -213,6 +216,8 @@ Erlang.OtpErlangAtom.prototype.binary = function() {
             }
         }
         else {
+            // deprecated
+            // (not used in Erlang/OTP 26, i.e., minor_version 2)
             if (length <= 255) {
                 var buffer = new bufferAlloc(2 + length);
                 buffer[0] = TAG_SMALL_ATOM_EXT;
@@ -238,6 +243,48 @@ Erlang.OtpErlangAtom.prototype.binary = function() {
 };
 Erlang.OtpErlangAtom.prototype.toString = function() {
     return 'OtpErlangAtom(' + this.value + ',' + this.utf8 + ')';
+};
+
+Erlang.OtpErlangAtomLarge = function OtpErlangAtomLarge (value, utf8) {
+    this.value = value;
+    this.utf8 = typeof utf8 !== 'undefined' ? utf8 : true;
+};
+Erlang.OtpErlangAtomLarge.prototype.binary = function() {
+    if (typeof this.value == 'string') {
+        var length = this.value.length;
+        if (this.utf8) {
+            if (length <= 65535) {
+                var buffer = new bufferAlloc(3 + length);
+                buffer[0] = TAG_ATOM_UTF8_EXT;
+                packUint16(length, 1, buffer);
+                buffer.write(this.value, 3, length, 'binary');
+                return buffer;
+            }
+            else {
+                throw new OutputException('uint16 overflow');
+            }
+        }
+        else {
+            // deprecated
+            // (not used in Erlang/OTP 26, i.e., minor_version 2)
+            if (length <= 65535) {
+                var buffer = new bufferAlloc(3 + length);
+                buffer[0] = TAG_ATOM_EXT;
+                packUint16(length, 1, buffer);
+                buffer.write(this.value, 3, length, 'binary');
+                return buffer;
+            }
+            else {
+                throw new OutputException('uint16 overflow');
+            }
+        }
+    }
+    else {
+        throw new OutputException('unknown atom type');
+    }
+};
+Erlang.OtpErlangAtomLarge.prototype.toString = function() {
+    return 'OtpErlangAtomLarge(' + this.value + ',' + this.utf8 + ')';
 };
 
 Erlang.OtpErlangBinary = function OtpErlangBinary (value, bits) {
@@ -627,11 +674,6 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             return [i + 4, value];
         case TAG_FLOAT_EXT:
             return [i + 31, parseFloat(data.toString('binary', i, i + 31))];
-        case TAG_ATOM_EXT:
-            var j = unpackUint16(i, data);
-            i += 2;
-            return [i + j, new Erlang.OtpErlangAtom(data.toString('binary',
-                                                                  i, i + j))];
         case TAG_NEW_PORT_EXT:
         case TAG_REFERENCE_EXT:
         case TAG_PORT_EXT:
@@ -776,21 +818,6 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             return [i + j,
                     new Erlang.OtpErlangReference(node, data.slice(i, i + j),
                                                   creation)]
-        case TAG_SMALL_ATOM_EXT:
-            var j = data[i];
-            i += 1;
-            var atom_name = data.toString('binary', i, i + j);
-            var tmp;
-            if (atom_name == 'true') {
-                tmp = true;
-            }
-            else if (atom_name == 'false') {
-                tmp = false;
-            }
-            else {
-                tmp = new Erlang.OtpErlangAtom(atom_name);
-            }
-            return [i + j, tmp];
         case TAG_MAP_EXT:
             var length = unpackUint32(i, data);
             i += 4;
@@ -827,15 +854,45 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             return [i,
                     new Erlang.OtpErlangFunction(tag, data.slice(old_i, i))];
         case TAG_ATOM_UTF8_EXT:
+        case TAG_ATOM_EXT:
             var j = unpackUint16(i, data);
             i += 2;
             var atom_name = data.toString('binary', i, i + j);
-            return [i + j, new Erlang.OtpErlangAtom(atom_name, true)];
+            var tmp;
+            if (atom_name == 'true') {
+                tmp = true;
+            }
+            else if (atom_name == 'false') {
+                tmp = false;
+            }
+            else if (atom_name == UNDEFINED) {
+                tmp = null;
+            }
+            else {
+                var utf8 = (tag == TAG_ATOM_UTF8_EXT);
+                tmp = new Erlang.OtpErlangAtom(atom_name, utf8);
+            }
+            return [i + j, tmp];
         case TAG_SMALL_ATOM_UTF8_EXT:
+        case TAG_SMALL_ATOM_EXT:
             var j = data[i];
             i += 1;
             var atom_name = data.toString('binary', i, i + j);
-            return [i + j, new Erlang.OtpErlangAtom(atom_name, true)];
+            var tmp;
+            if (atom_name == 'true') {
+                tmp = true;
+            }
+            else if (atom_name == 'false') {
+                tmp = false;
+            }
+            else if (atom_name == UNDEFINED) {
+                tmp = null;
+            }
+            else {
+                var utf8 = (tag == TAG_SMALL_ATOM_UTF8_EXT);
+                tmp = new Erlang.OtpErlangAtom(atom_name, utf8);
+            }
+            return [i + j, tmp];
         case TAG_COMPRESSED_ZLIB:
             // never happens with Erlang output
             // (not handled here to avoid going to callback hell)
@@ -915,7 +972,7 @@ Erlang._binary_to_atom = function _binary_to_atom (i, data) {
             i += 2;
             return [i + j,
                     new Erlang.OtpErlangAtom(data.toString('binary',
-                                                           i, i + j))];
+                                                           i, i + j), false)];
         case TAG_ATOM_CACHE_REF:
             return [i + 1, new Erlang.OtpErlangAtom(data[i])];
         case TAG_SMALL_ATOM_EXT:
@@ -923,19 +980,19 @@ Erlang._binary_to_atom = function _binary_to_atom (i, data) {
             i += 1;
             return [i + j,
                     new Erlang.OtpErlangAtom(data.toString('binary',
-                                                           i, i + j))];
+                                                           i, i + j), false)];
         case TAG_ATOM_UTF8_EXT:
             var j = unpackUint16(i, data);
             i += 2;
             return [i + j,
                     new Erlang.OtpErlangAtom(data.toString('binary',
-                                                           i, i + j), true)];
+                                                           i, i + j))];
         case TAG_SMALL_ATOM_UTF8_EXT:
             var j = data[i];
             i += 1;
             return [i + j,
                     new Erlang.OtpErlangAtom(data.toString('binary',
-                                                           i, i + j), true)];
+                                                           i, i + j))];
         default:
             throw new ParseException('invalid atom tag');
     }
@@ -962,15 +1019,16 @@ Erlang._term_to_binary = function _term_to_binary (term) {
                 term = new Erlang.OtpErlangAtom('false');
             }
             return term.binary();
-        case 'undefined':
-            term = new Erlang.OtpErlangAtom('undefined');
-            return term.binary();
         case 'object':
             switch (toNativeString.call(term)) {
+                case '[object Null]':
+                    term = new Erlang.OtpErlangAtom(UNDEFINED);
+                    return term.binary();
                 case '[object Array]':
                     return Erlang._tuple_to_binary(term);
                 case '[object Object]':
                     if (term instanceof Erlang.OtpErlangAtom ||
+                        term instanceof Erlang.OtpErlangAtomLarge ||
                         term instanceof Erlang.OtpErlangList ||
                         term instanceof Erlang.OtpErlangBinary ||
                         term instanceof Erlang.OtpErlangFunction ||
@@ -1012,7 +1070,7 @@ Erlang._string_to_binary = function _string_to_binary (term) {
             var j = 5 + 2 * i;
             buffer[j] = TAG_SMALL_INTEGER_EXT;
             buffer[j + 1] = term.charCodeAt(i);
-        } 
+        }
         buffer[5 + 2 * length] = TAG_NIL_EXT;
         return buffer;
     }
@@ -1040,7 +1098,7 @@ Erlang._tuple_to_binary = function _tuple_to_binary (term) {
     var buffers = [header];
     for (var i = 0; i < length; i++) {
         buffers.push(Erlang._term_to_binary(term[i]));
-    } 
+    }
     return Buffer.concat(buffers);
 };
 
@@ -1131,6 +1189,11 @@ Erlang._float_to_binary = function _float_to_binary (term) {
         buffer_out[1 + i] = view[i];
     }
     return buffer_out;
+};
+
+// Elixir use can set to 'nil'
+Erlang.set_undefined = function set_undefined (value) {
+    UNDEFINED = value;
 };
 
 // Exception objects listed alphabetically

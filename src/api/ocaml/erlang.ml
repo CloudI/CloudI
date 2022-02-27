@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -295,10 +295,6 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
     let float_data = try (String.sub data 0 (String.index data '\000'))
     with Not_found -> data in
     Ok2 (i0 + 31, OtpErlangFloat (float_of_string float_data))
-  else if tag = tag_atom_ext then
-    let j = unpack_uint16 i0 binary
-    and i1 = i0 + 2 in
-    Ok2 (i1 + j, OtpErlangAtom (String.sub binary i1 j))
   else if tag = tag_new_port_ext ||
           tag = tag_reference_ext || tag = tag_port_ext then
     match binary_to_atom i0 binary with
@@ -454,16 +450,6 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
       Ok2 (i3 + j, OtpErlangReference(
         Reference.make
           ~node_tag:node_tag ~node:node ~id:id ~creation:creation))
-  else if tag = tag_small_atom_ext then
-    let j = int_of_char binary.[i0]
-    and i1 = i0 + 1 in
-    let atom_name = String.sub binary i1 j in
-    if atom_name = "true" then
-      Ok2 (i1 + j, OtpErlangAtomBool (true))
-    else if atom_name = "false" then
-      Ok2 (i1 + j, OtpErlangAtomBool (false))
-    else
-      Ok2 (i1 + j, OtpErlangAtom (atom_name))
   else if tag = tag_map_ext then
     match unpack_uint32 i0 binary with
     | Error2 (error) ->
@@ -515,14 +501,32 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
                 Ok2 (i6, OtpErlangFunction (
                   Function.make
                     ~tag:tag ~value:value))
-  else if tag = tag_atom_utf8_ext then
+  else if tag = tag_atom_utf8_ext || tag = tag_atom_ext then
     let j = unpack_uint16 i0 binary
     and i1 = i0 + 2 in
-    Ok2 (i1 + j, OtpErlangAtomUTF8 (String.sub binary i1 j))
-  else if tag = tag_small_atom_utf8_ext then
+    let atom_name = String.sub binary i1 j
+    and i2 = i1 + j in
+    if atom_name = "true" then
+      Ok2 (i2, OtpErlangAtomBool (true))
+    else if atom_name = "false" then
+      Ok2 (i2, OtpErlangAtomBool (false))
+    else if tag = tag_atom_utf8_ext then
+      Ok2 (i2, OtpErlangAtomUTF8 (atom_name))
+    else
+      Ok2 (i2, OtpErlangAtom (atom_name))
+  else if tag = tag_small_atom_utf8_ext || tag = tag_small_atom_ext then
     let j = int_of_char binary.[i0]
     and i1 = i0 + 1 in
-    Ok2 (i1 + j, OtpErlangAtomUTF8 (String.sub binary i1 j))
+    let atom_name = String.sub binary i1 j
+    and i2 = i1 + j in
+    if atom_name = "true" then
+      Ok2 (i2, OtpErlangAtomBool (true))
+    else if atom_name = "false" then
+      Ok2 (i2, OtpErlangAtomBool (false))
+    else if tag = tag_small_atom_utf8_ext then
+      Ok2 (i2, OtpErlangAtomUTF8 (atom_name))
+    else
+      Ok2 (i2, OtpErlangAtom (atom_name))
   else if tag = tag_compressed_zlib then
     Error2 (parse_error "ocaml doesn't provide zlib")
   else
@@ -629,9 +633,9 @@ let rec term_to_binary_ term buffer : (Buffer.t, string) result =
     Ok (buffer)
   | OtpErlangAtomBool (value) ->
     if value then
-      atom_to_binary "true" buffer
+      atom_utf8_to_binary "true" buffer
     else
-      atom_to_binary "false" buffer
+      atom_utf8_to_binary "false" buffer
   | OtpErlangString (value) ->
     string_to_binary value buffer
   | OtpErlangBinary (value) ->
@@ -801,6 +805,9 @@ and float_to_binary value buffer =
   Ok (buffer)
 
 and atom_to_binary value buffer =
+  (* deprecated
+   * (not used in Erlang/OTP 26, i.e., minor_version 2)
+   *)
   let length = String.length value in
   if length <= 255 then (
     Buffer.add_char buffer (char_of_int tag_small_atom_ext) ;
@@ -1060,7 +1067,7 @@ let register_printers () =
 
   MIT LICENSE (of tests below)
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
   Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 
   Permission is hereby granted, free of charge, to any person obtaining a
@@ -1217,6 +1224,15 @@ let test_decode_predefined_atom () =
   assert (
     (term_ok (binary_to_term "\x83s\x09undefined")) =
     OtpErlangAtom ("undefined")) ;
+  assert (
+    (term_ok (binary_to_term "\x83w\x04true")) =
+    OtpErlangAtomBool (true)) ;
+  assert (
+    (term_ok (binary_to_term "\x83w\x05false")) =
+    OtpErlangAtomBool (false)) ;
+  assert (
+    (term_ok (binary_to_term "\x83w\x09undefined")) =
+    OtpErlangAtomUTF8 ("undefined")) ;
   true
 
 let test_decode_empty_list () =
@@ -1672,6 +1688,12 @@ let test_encode_atom () =
   assert (
     (binary_ok (term_to_binary (OtpErlangAtom ("test")))) =
     "\x83s\x04test") ;
+  assert (
+    (binary_ok (term_to_binary (OtpErlangAtomUTF8 ("")))) =
+    "\x83w\x00") ;
+  assert (
+    (binary_ok (term_to_binary (OtpErlangAtomUTF8 ("test")))) =
+    "\x83w\x04test") ;
   true
 
 let test_encode_string_basic () =
@@ -1727,10 +1749,10 @@ let test_encode_string () =
 let test_encode_boolean () =
   assert (
     (binary_ok (term_to_binary (OtpErlangAtomBool (true)))) =
-    "\x83s\x04true") ;
+    "\x83w\x04true") ;
   assert (
     (binary_ok (term_to_binary (OtpErlangAtomBool (false)))) =
-    "\x83s\x05false") ;
+    "\x83w\x05false") ;
   true
 
 let test_encode_small_integer () =

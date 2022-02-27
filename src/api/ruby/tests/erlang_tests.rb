@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 # Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -119,18 +119,26 @@ class DecodeTestCase < Test::Unit::TestCase
         assert_raise(Erlang::ParseException){
             Erlang::binary_to_term("\x83d\0\1")
         }
-        assert_equal(:'', Erlang::binary_to_term("\x83d\0\0"))
-        assert_equal(:'', Erlang::binary_to_term("\x83s\0"))
-        assert_equal(:test, Erlang::binary_to_term("\x83d\0\4test"))
-        assert_equal(:test, Erlang::binary_to_term("\x83s\4test"))
+        assert_equal(:'', Erlang::binary_to_term("\x83v\0\0"))
+        assert_equal(:'', Erlang::binary_to_term("\x83w\0"))
+        assert_equal(:test, Erlang::binary_to_term("\x83v\0\4test"))
+        assert_equal(:test, Erlang::binary_to_term("\x83w\4test"))
     end
     def test_binary_to_term_predefined_atoms
         assert_equal(true,
                      Erlang::binary_to_term("\x83s\4true"))
         assert_equal(false,
                      Erlang::binary_to_term("\x83s\5false"))
-        assert_equal(:undefined,
+        assert_equal(false,
+                     Erlang::binary_to_term("\x83w\5false"))
+        assert_equal(nil,
+                     Erlang::binary_to_term("\x83s\11undefined"))
+        assert_equal(nil,
+                     Erlang::binary_to_term("\x83w\11undefined"))
+        assert_equal(nil,
                      Erlang::binary_to_term("\x83d\0\11undefined"))
+        assert_equal(nil,
+                     Erlang::binary_to_term("\x83v\0\11undefined"))
     end
     def test_binary_to_term_empty_list
         assert_equal(Erlang::OtpErlangList.new([]),
@@ -175,7 +183,7 @@ class DecodeTestCase < Test::Unit::TestCase
         assert_raise(Erlang::ParseException){
             Erlang::binary_to_term("\x83l\0\0\0\0k")
         }
-        lst = Erlang::binary_to_term("\x83l\0\0\0\1jd\0\4tail")
+        lst = Erlang::binary_to_term("\x83l\0\0\0\1jv\0\4tail")
         assert(lst.kind_of?(Erlang::OtpErlangList))
         assert_equal([Erlang::OtpErlangList.new([]), :tail], lst.value)
         assert_equal(true, lst.improper)
@@ -586,9 +594,9 @@ class EncodeTestCase < Test::Unit::TestCase
                      Erlang::term_to_binary('test'))
     end
     def test_term_to_binary_predefined_atom
-        assert_equal("\x83s\4true", Erlang::term_to_binary(true))
-        assert_equal("\x83s\5false", Erlang::term_to_binary(false))
-        assert_equal("\x83s\x09undefined", Erlang::term_to_binary(nil))
+        assert_equal("\x83w\4true", Erlang::term_to_binary(true))
+        assert_equal("\x83w\5false", Erlang::term_to_binary(false))
+        assert_equal("\x83w\x09undefined", Erlang::term_to_binary(nil))
     end
     def test_term_to_binary_short_integer
         assert_equal("\x83a\0", Erlang::term_to_binary(0))

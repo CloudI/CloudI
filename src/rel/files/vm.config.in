@@ -8,8 +8,10 @@
     %{inet_dist_use_interface,"127.0.0.1"},
     %{net_setuptime, 7}, % seconds
     {net_ticktime, 60}, % seconds
+    {net_tickintensity, 4}, % T = TickTime ± TickTime / TickIntensity
     {dist_nodelay, true},
     {dist_auto_connect, never},
+    {prevent_overlapping_partitions, false}, % global dist_auto_disconnect
     {logger,
      [{handler, default, logger_std_h,
        #{config => #{file => "erlang_kernel.log"},

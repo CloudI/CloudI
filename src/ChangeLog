@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-02-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update Erlang External Term Format encoding used by the
+      Go/Haskell/JavaScript/OCaml/Perl/PHP/Python/Ruby CloudI API
+      to prepare for Erlang/OTP 26 deprecating latin1 atoms
+
 2022-01-28 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve filepath normalization validation in cloudi_core configuration
@@ -1847,7 +1853,7 @@
 
 2018-08-25 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Convert the CloudI Service API dashboard code_path.html 
+    * Convert the CloudI Service API dashboard code_path.html
       and log_settings.html to utilize JSON responses from
       cloudi_service_api_requests
     * Fix the CloudI Service API functions logging_syslog_set and
@@ -2305,7 +2311,7 @@
 2018-01-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Add check to cause an internal or external service to crash
-      if the CloudI API functions subscribe/subscribe_count/unsubscribe 
+      if the CloudI API functions subscribe/subscribe_count/unsubscribe
       are passed a pattern that includes the character sequence "**"
 
 2018-01-19 Michael Truog   <mjtruog at gmail dot com>
@@ -3361,7 +3367,7 @@
 
 2016-06-28 Michael Truog   <mjtruog at gmail dot com>
 
-    * Add directory external service configuration option to set the 
+    * Add directory external service configuration option to set the
       current working directory for the external service OS process
 
 2016-06-26 Michael Truog   <mjtruog at gmail dot com>
@@ -3991,7 +3997,7 @@
 2015-06-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix service configuration option request_timeout_immediate_max usage
-      in combination with queue_limit, queue_size, and/or rate_request_max 
+      in combination with queue_limit, queue_size, and/or rate_request_max
 
 2015-06-08 Francisco Marchal   <marchal.francisco at gmail dot com>
 
@@ -4234,7 +4240,7 @@
        math/gmp misc/e2fsprogs-libuuid
        configure command line arguments:
        --with-cxx-backtrace --with-zeromq --disable-javascript-support
-       --disable-php-support --disable-ruby-support --disable-java-support 
+       --disable-php-support --disable-ruby-support --disable-java-support
        --with-integration-tests-ran=no)
 
 2014-12-03 Michael Truog   <mjtruog at gmail dot com>
@@ -5705,7 +5711,7 @@
     * Add the process_metadata option to cloudi_service_zeromq for
       tunneling RequestInfo and ResponseInfo within ZeroMQ requests
       automatically
-    * Add endian configuration to cloudi_service_db_pgsql 
+    * Add endian configuration to cloudi_service_db_pgsql
       for binary request responses
     * Add endian configuration to cloudi_service_zeromq
       for ZeroMQ service request metadata size integer encoding
@@ -6073,7 +6079,7 @@
 
     * Add a more flexible interal service configuration that provides
       better support for OTP applications and allows OTP release loading
-    * Fix issues with the CloudI Services API (timeouts added, 
+    * Fix issues with the CloudI Services API (timeouts added,
       restart/shutdown handling for internal services and
       fix requests that don't reference a running service)
     * Move key2value.erl into a separate application
@@ -6381,7 +6387,7 @@
     * Fix the ZeroMQ CloudI job termination so that sockets are always closed
     * Fix an error in the ZeroMQ tests configuration
     * Update epgsql to latest version
-    * Add ZeroMQ 3 along with a configuration parameter to specify which 
+    * Add ZeroMQ 3 along with a configuration parameter to specify which
       version of ZeroMQ to use and compile the proper version of erlzmq to
       provide the same ZeroMQ interface
     * Add nodefinder as a dependency
@@ -6549,7 +6555,7 @@
       avoid garbage collection latency
     * The hexpi test Erlang service was partially re-written to be more
       event-driven (avoiding problems with accumulated timeout latency)
-    * Add the node to all log lines (important when using 
+    * Add the node to all log lines (important when using
       log redirect configuration)
     * Delay node reconnect attempts to allow for normal startup time
 

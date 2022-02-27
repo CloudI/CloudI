@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -209,12 +209,6 @@ sub _binary_to_term
     {
         return ($i + 31, substr($data, $i, 31));
     }
-    elsif ($tag == TAG_ATOM_EXT)
-    {
-        my ($j) = unpack('n', substr($data, $i, 2));
-        $i += 2;
-        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j)));
-    }
     elsif ($tag == TAG_NEW_PORT_EXT or
            $tag == TAG_REFERENCE_EXT or $tag == TAG_PORT_EXT)
     {
@@ -390,13 +384,6 @@ sub _binary_to_term
         return ($i + $j,
                 Erlang::OtpErlangReference->new($node, $id, $creation));
     }
-    elsif ($tag == TAG_SMALL_ATOM_EXT)
-    {
-        my $j = ord(substr($data, $i, 1));
-        $i += 1;
-        my $atom_name = substr($data, $i, $j);
-        return ($i + $j, Erlang::OtpErlangAtom->new($atom_name));
-    }
     elsif ($tag == TAG_MAP_EXT)
     {
         my ($length) = unpack('N', substr($data, $i, 4));
@@ -434,19 +421,35 @@ sub _binary_to_term
                                                    substr($data, $old_i,
                                                           $i - $old_i)));
     }
-    elsif ($tag == TAG_ATOM_UTF8_EXT)
+    elsif ($tag == TAG_ATOM_UTF8_EXT or $tag == TAG_ATOM_EXT)
     {
         my ($j) = unpack('n', substr($data, $i, 2));
         $i += 2;
         my $atom_name = substr($data, $i, $j);
-        return ($i + $j, Erlang::OtpErlangAtom->new($atom_name, 1));
+        $i = $i + $j;
+        if ($tag == TAG_ATOM_UTF8_EXT)
+        {
+            return ($i, Erlang::OtpErlangAtom->new($atom_name));
+        }
+        else
+        {
+            return ($i, Erlang::OtpErlangAtom->new($atom_name, 0));
+        }
     }
-    elsif ($tag == TAG_SMALL_ATOM_UTF8_EXT)
+    elsif ($tag == TAG_SMALL_ATOM_UTF8_EXT or $tag == TAG_SMALL_ATOM_EXT)
     {
         my $j = ord(substr($data, $i, 1));
         $i += 1;
         my $atom_name = substr($data, $i, $j);
-        return ($i + $j, Erlang::OtpErlangAtom->new($atom_name, 1));
+        $i = $i + $j;
+        if ($tag == TAG_SMALL_ATOM_UTF8_EXT)
+        {
+            return ($i, Erlang::OtpErlangAtom->new($atom_name));
+        }
+        else
+        {
+            return ($i, Erlang::OtpErlangAtom->new($atom_name, 0));
+        }
     }
     elsif ($tag == TAG_COMPRESSED_ZLIB)
     {
@@ -567,7 +570,7 @@ sub _binary_to_atom
     {
         my ($j) = unpack('n', substr($data, $i, 2));
         $i += 2;
-        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j)));
+        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j), 0));
     }
     elsif ($tag == TAG_ATOM_CACHE_REF)
     {
@@ -577,19 +580,19 @@ sub _binary_to_atom
     {
         my $j = ord(substr($data, $i, 1));
         $i += 1;
-        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j)));
+        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j), 0));
     }
     elsif ($tag == TAG_ATOM_UTF8_EXT)
     {
         my ($j) = unpack('n', substr($data, $i, 2));
         $i += 2;
-        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j), 1));
+        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j)));
     }
     elsif ($tag == TAG_SMALL_ATOM_UTF8_EXT)
     {
         my $j = ord(substr($data, $i, 1));
         $i += 1;
-        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j), 1));
+        return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j)));
     }
     else
     {

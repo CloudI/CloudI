@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -98,10 +98,12 @@ func encode(t *testing.T, term interface{}, compressed int) string {
 }
 
 func TestAtom(t *testing.T) {
-	atom1 := OtpErlangAtom("test")
-	assertEqual(t, OtpErlangAtom("test"), atom1, "")
-	assertEqual(t, strings.Repeat("X", 255), string(OtpErlangAtom(strings.Repeat("X", 255))), "")
-	assertEqual(t, strings.Repeat("X", 256), string(OtpErlangAtom(strings.Repeat("X", 256))), "")
+	atom1 := OtpErlangAtomUTF8("test")
+	assertEqual(t, OtpErlangAtomUTF8("test"), atom1, "")
+	atom2 := OtpErlangAtom("test")
+	assertEqual(t, OtpErlangAtom("test"), atom2, "")
+	assertEqual(t, strings.Repeat("X", 255), string(OtpErlangAtomUTF8(strings.Repeat("X", 255))), "")
+	assertEqual(t, strings.Repeat("X", 256), string(OtpErlangAtomUTF8(strings.Repeat("X", 256))), "")
 }
 
 func TestPid(t *testing.T) {
@@ -159,15 +161,19 @@ func TestDecodeBinaryToTermAtom(t *testing.T) {
 	assertDecodeError(t, "unexpected EOF", "\x83d\x00", "")
 	assertDecodeError(t, "EOF", "\x83d\x00\x01", "")
 	assertDecodeError(t, "EOF", "\x83s\x01", "")
+	assertEqual(t, OtpErlangAtomUTF8(""), decode(t, "\x83v\x00\x00"), "")
 	assertEqual(t, OtpErlangAtom(""), decode(t, "\x83d\x00\x00"), "")
+	assertEqual(t, OtpErlangAtomUTF8(""), decode(t, "\x83w\x00"), "")
 	assertEqual(t, OtpErlangAtom(""), decode(t, "\x83s\x00"), "")
+	assertEqual(t, OtpErlangAtomUTF8("test"), decode(t, "\x83v\x00\x04test"), "")
 	assertEqual(t, OtpErlangAtom("test"), decode(t, "\x83d\x00\x04test"), "")
+	assertEqual(t, OtpErlangAtomUTF8("test"), decode(t, "\x83w\x04test"), "")
 	assertEqual(t, OtpErlangAtom("test"), decode(t, "\x83s\x04test"), "")
 }
 func TestDecodeBinaryToTermPredefinedAtom(t *testing.T) {
-	assertEqual(t, OtpErlangAtom("true"), decode(t, "\x83s\x04true"), "")
-	assertEqual(t, OtpErlangAtom("false"), decode(t, "\x83s\x05false"), "")
-	assertEqual(t, OtpErlangAtom("undefined"), decode(t, "\x83d\x00\x09undefined"), "")
+	assertEqual(t, OtpErlangAtomUTF8("true"), decode(t, "\x83w\x04true"), "")
+	assertEqual(t, OtpErlangAtomUTF8("false"), decode(t, "\x83w\x05false"), "")
+	assertEqual(t, OtpErlangAtomUTF8("undefined"), decode(t, "\x83v\x00\x09undefined"), "")
 }
 func TestDecodeBinaryToTermEmptyList(t *testing.T) {
 	assertEqual(t, OtpErlangList{Value: make([]interface{}, 0), Improper: false}, decode(t, "\x83j"), "")
@@ -193,10 +199,10 @@ func TestDecodeBinaryToTermList(t *testing.T) {
 }
 func TestDecodeBinaryToTermImproperList(t *testing.T) {
 	assertDecodeError(t, "EOF", "\x83l\x00\x00\x00k", "")
-	lst := decode(t, "\x83l\x00\x00\x00\x01jd\x00\x04tail")
+	lst := decode(t, "\x83l\x00\x00\x00\x01jv\x00\x04tail")
 	lstCmp := make([]interface{}, 2)
 	lstCmp[0] = OtpErlangList{Value: make([]interface{}, 0), Improper: false}
-	lstCmp[1] = OtpErlangAtom("tail")
+	lstCmp[1] = OtpErlangAtomUTF8("tail")
 	assertEqual(t, OtpErlangList{Value: lstCmp, Improper: true}, lst, "")
 }
 func TestDecodeBinaryToTermSmallTuple(t *testing.T) {
@@ -383,9 +389,9 @@ func TestEncodeTermToBinaryString(t *testing.T) {
 	assertEqual(t, "\x83k\x00\x04test", encode(t, "test", -1), "")
 }
 func TestEncodeTermToBinaryPredefinedAtoms(t *testing.T) {
-	assertEqual(t, "\x83s\x04true", encode(t, true, -1), "")
-	assertEqual(t, "\x83s\x05false", encode(t, false, -1), "")
-	assertEqual(t, "\x83s\x09undefined", encode(t, nil, -1), "")
+	assertEqual(t, "\x83w\x04true", encode(t, true, -1), "")
+	assertEqual(t, "\x83w\x05false", encode(t, false, -1), "")
+	assertEqual(t, "\x83w\x09undefined", encode(t, nil, -1), "")
 }
 func TestEncodeTermToBinaryShortInteger(t *testing.T) {
 	assertEqual(t, "\x83a\x00", encode(t, 0, -1), "")

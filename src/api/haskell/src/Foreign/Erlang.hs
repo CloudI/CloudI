@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -27,7 +27,7 @@
 
  -}
 
--- | Erlang Binary Term Format Encoding/Decoding
+-- | Erlang External Term Format Encoding/Decoding
 
 module Foreign.Erlang
     ( OtpErlangTerm(..)
@@ -266,10 +266,6 @@ binaryToTerms = do
             str <- Get.getByteString 31
             let value = Char8.unpack $ Char8.takeWhile (\c -> c /= '\0') str
             return $ OtpErlangFloat (read value :: Double)
-        | tag == tagAtomExt -> do
-            j <- Get.getWord16be
-            value <- Get.getByteString $ getUnsignedInt16 j
-            return $ OtpErlangAtom value
         | tag == tagNewPortExt ||
           tag == tagReferenceExt || tag == tagPortExt -> do
             (nodeTag, node) <- binaryToAtom
@@ -340,15 +336,6 @@ binaryToTerms = do
             eid <- Get.getByteString $ (getUnsignedInt16 j) * 4
             return $ OtpErlangReference $ E.Reference
                 nodeTag node eid creation
-        | tag == tagSmallAtomExt -> do
-            j <- Get.getWord8
-            value <- Get.getByteString $ getUnsignedInt8 j
-            if value == boolTrue then
-                return $ OtpErlangAtomBool True
-            else if value == boolFalse then
-                return $ OtpErlangAtomBool False
-            else
-                return $ OtpErlangAtom value
         | tag == tagMapExt -> do
             length <- Get.getWord32be
             pairs <- replicateM (getUnsignedInt32 length) binaryToMapPair
@@ -358,14 +345,28 @@ binaryToTerms = do
             value <- Get.getByteString length
             return $ OtpErlangFunction $ E.Function
                 tag value
-        | tag == tagAtomUtf8Ext -> do
+        | tag == tagAtomUtf8Ext || tag == tagAtomExt -> do
             j <- Get.getWord16be
             value <- Get.getByteString $ getUnsignedInt16 j
-            return $ OtpErlangAtomUTF8 value
-        | tag == tagSmallAtomUtf8Ext -> do
+            if value == boolTrue then
+                return $ OtpErlangAtomBool True
+            else if value == boolFalse then
+                return $ OtpErlangAtomBool False
+            else if tag == tagAtomUtf8Ext then
+                return $ OtpErlangAtomUTF8 value
+            else
+                return $ OtpErlangAtom value
+        | tag == tagSmallAtomUtf8Ext || tag == tagSmallAtomExt -> do
             j <- Get.getWord8
             value <- Get.getByteString $ getUnsignedInt8 j
-            return $ OtpErlangAtomUTF8 value
+            if value == boolTrue then
+                return $ OtpErlangAtomBool True
+            else if value == boolFalse then
+                return $ OtpErlangAtomBool False
+            else if tag == tagSmallAtomUtf8Ext then
+                return $ OtpErlangAtomUTF8 value
+            else
+                return $ OtpErlangAtom value
         | tag == tagCompressedZlib -> do
             sizeUncompressed <- Get.getWord32be
             compressed <- Get.getRemainingLazyByteString
@@ -520,6 +521,8 @@ termsToBinary (OtpErlangFloat value) =
         Builder.word8 tagNewFloatExt <>
         Builder.doubleBE value
 termsToBinary (OtpErlangAtom value) =
+    -- deprecated
+    -- (not used in Erlang/OTP 26, i.e., minor_version 2)
     let length = ByteString.length value in
     if length <= 255 then
         ok $ Builder.toLazyByteString $
@@ -553,9 +556,9 @@ termsToBinary (OtpErlangAtomCacheRef value) =
         Builder.word8 (fromIntegral value)
 termsToBinary (OtpErlangAtomBool value) =
     if value then
-        termsToBinary $ OtpErlangAtom $ Char8.pack "true"
+        termsToBinary $ OtpErlangAtomUTF8 $ Char8.pack "true"
     else
-        termsToBinary $ OtpErlangAtom $ Char8.pack "false"
+        termsToBinary $ OtpErlangAtomUTF8 $ Char8.pack "false"
 termsToBinary (OtpErlangString value) =
     let length = ByteString.length value in
     if length == 0 then
@@ -667,7 +670,7 @@ termsToBinary (OtpErlangMap value) =
         errorType $ OutputError "uint32 overflow"
 termsToBinary (OtpErlangPid (E.Pid nodeTag node eid serial creation)) =
     let tag =
-            if (ByteString.length creation) == 4 then 
+            if (ByteString.length creation) == 4 then
                 tagNewPidExt
             else
                 tagPidExt in
@@ -680,7 +683,7 @@ termsToBinary (OtpErlangPid (E.Pid nodeTag node eid serial creation)) =
         Builder.byteString creation
 termsToBinary (OtpErlangPort (E.Port nodeTag node eid creation)) =
     let tag =
-            if (ByteString.length creation) == 4 then 
+            if (ByteString.length creation) == 4 then
                 tagNewPortExt
             else
                 tagPortExt in
@@ -701,7 +704,7 @@ termsToBinary (OtpErlangReference (E.Reference nodeTag node eid creation)) =
             Builder.byteString creation
     else if length <= 65535 then
         let tag =
-                if (ByteString.length creation) == 4 then 
+                if (ByteString.length creation) == 4 then
                     tagNewerReferenceExt
                 else
                     tagNewReferenceExt in

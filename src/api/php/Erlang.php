@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -25,6 +25,8 @@
 //
 
 namespace Erlang;
+
+$UNDEFINED = 'undefined'; // Change with set_undefined
 
 // tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
 define(__NAMESPACE__ . '\TAG_VERSION', 131);
@@ -65,7 +67,7 @@ class OtpErlangAtom
 {
     public $value;
     public $utf8;
-    public function __construct($value, $utf8 = false)
+    public function __construct($value, $utf8 = true)
     {
         $this->value = $value;
         $this->utf8 = $utf8;
@@ -98,6 +100,8 @@ class OtpErlangAtom
             }
             else
             {
+                // deprecated
+                // (not used in Erlang/OTP 26, i.e., minor_version 2)
                 if ($length <= 255)
                 {
                     return pack('CC', TAG_SMALL_ATOM_EXT, $length) .
@@ -477,10 +481,6 @@ function _binary_to_term($i, $data)
             return array($i + 4, $value);
         case TAG_FLOAT_EXT:
             return array($i + 31, floatval(substr($data, $i, 31)));
-        case TAG_ATOM_EXT:
-            list(, $j) = unpack('n', substr($data, $i, 2));
-            $i += 2;
-            return array($i + $j, new OtpErlangAtom(substr($data, $i, $j)));
         case TAG_NEW_PORT_EXT:
         case TAG_REFERENCE_EXT:
         case TAG_PORT_EXT:
@@ -617,17 +617,6 @@ function _binary_to_term($i, $data)
             $id = substr($data, $i, $j);
             return array($i + $j,
                          new OtpErlangReference($node, $id, $creation));
-        case TAG_SMALL_ATOM_EXT:
-            $j = ord($data[$i]);
-            $i += 1;
-            $atom_name = substr($data, $i, $j);
-            if ($atom_name == 'true')
-                $tmp = true;
-            elseif ($atom_name == 'false')
-                $tmp = false;
-            else
-                $tmp = new OtpErlangAtom($atom_name);
-            return array($i + $j, $tmp);
         case TAG_MAP_EXT:
             list(, $length) = unpack('N', substr($data, $i, 4));
             $i += 4;
@@ -656,15 +645,45 @@ function _binary_to_term($i, $data)
                                                substr($data,
                                                       $old_i, $i - $old_i)));
         case TAG_ATOM_UTF8_EXT:
+        case TAG_ATOM_EXT:
             list(, $j) = unpack('n', substr($data, $i, 2));
             $i += 2;
             $atom_name = substr($data, $i, $j);
-            return array($i + $j, new OtpErlangAtom($atom_name, true));
+            global $UNDEFINED;
+            if ($atom_name == 'true') {
+                $tmp = true;
+            }
+            elseif ($atom_name == 'false') {
+                $tmp = false;
+            }
+            elseif ($atom_name == $UNDEFINED) {
+                $tmp = null;
+            }
+            else {
+                $utf8 = ($tag == TAG_ATOM_UTF8_EXT);
+                $tmp = new OtpErlangAtom($atom_name, $utf8);
+            }
+            return array($i + $j, $tmp);
         case TAG_SMALL_ATOM_UTF8_EXT:
+        case TAG_SMALL_ATOM_EXT:
             $j = ord($data[$i]);
             $i += 1;
             $atom_name = substr($data, $i, $j);
-            return array($i + $j, new OtpErlangAtom($atom_name, true));
+            global $UNDEFINED;
+            if ($atom_name == 'true') {
+                $tmp = true;
+            }
+            elseif ($atom_name == 'false') {
+                $tmp = false;
+            }
+            elseif ($atom_name == $UNDEFINED) {
+                $tmp = null;
+            }
+            else {
+                $utf8 = ($tag == TAG_SMALL_ATOM_UTF8_EXT);
+                $tmp = new OtpErlangAtom($atom_name, $utf8);
+            }
+            return array($i + $j, $tmp);
         case TAG_COMPRESSED_ZLIB:
             list(, $size_uncompressed) = unpack('N', substr($data, $i, 4));
             if ($size_uncompressed == 0)
@@ -759,23 +778,23 @@ function _binary_to_atom($i, $data)
         case TAG_ATOM_EXT:
             list(, $j) = unpack('n', substr($data, $i, 2));
             $i += 2;
-            return array($i + $j, new OtpErlangAtom(substr($data, $i, $j)));
+            return array($i + $j,
+                         new OtpErlangAtom(substr($data, $i, $j), false));
         case TAG_ATOM_CACHE_REF:
             return array($i + 1, new OtpErlangAtom(ord($data[$i])));
         case TAG_SMALL_ATOM_EXT:
             $j = ord($data[$i]);
             $i += 1;
-            return array($i + $j, new OtpErlangAtom(substr($data, $i, $j)));
+            return array($i + $j,
+                         new OtpErlangAtom(substr($data, $i, $j), false));
         case TAG_ATOM_UTF8_EXT:
             list(, $j) = unpack('n', substr($data, $i, 2));
             $i += 2;
-            return array($i + $j,
-                         new OtpErlangAtom(substr($data, $i, $j), true));
+            return array($i + $j, new OtpErlangAtom(substr($data, $i, $j)));
         case TAG_SMALL_ATOM_UTF8_EXT:
             $j = ord($data[$i]);
             $i += 1;
-            return array($i + $j,
-                         new OtpErlangAtom(substr($data, $i, $j), true));
+            return array($i + $j, new OtpErlangAtom(substr($data, $i, $j)));
         default:
             throw new ParseException('invalid atom tag');
     }
@@ -803,7 +822,8 @@ function _term_to_binary($term)
     }
     elseif (is_null($term))
     {
-        $object = new OtpErlangAtom('undefined');
+        global $UNDEFINED;
+        $object = new OtpErlangAtom($UNDEFINED);
         return $object->binary();
     }
     elseif (is_object($term))
@@ -915,6 +935,13 @@ function _float_to_binary($term)
         return chr(TAG_NEW_FLOAT_EXT) . strrev(pack('d', $term));
     else
         return chr(TAG_NEW_FLOAT_EXT) . pack('d', $term);
+}
+
+// Elixir use can set to 'nil'
+function set_undefined($value)
+{
+    global $UNDEFINED;
+    $UNDEFINED = $value;
 }
 
 // Exception classes listed alphabetically

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -25,7 +25,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
-var Erlang = require('./../Erlang.js').Erlang; 
+var Erlang = require('./../Erlang.js').Erlang;
 var assert = require('assert');
 
 // many of the test cases were adapted
@@ -73,7 +73,7 @@ var hex = function hex(buffer) {
         var atom1 = new Erlang.OtpErlangAtom('test');
         assert.equal(toNativeString.call(atom1), '[object Object]');
         assert.deepEqual(new Erlang.OtpErlangAtom('test'), atom1);
-        assert.equal('OtpErlangAtom(test,false)', '' + atom1);
+        assert.equal('OtpErlangAtom(test,true)', '' + atom1);
         assert.ok(atom1 instanceof Erlang.OtpErlangAtom);
         var atom2 = new Erlang.OtpErlangAtom('test2');
         var atom1_new = new Erlang.OtpErlangAtom('test');
@@ -156,35 +156,51 @@ var hex = function hex(buffer) {
             assert.ok(err instanceof Erlang.ParseException);
             assert.strictEqual(term, undefined);
         });
+        Erlang.binary_to_term('\x83v\0\0', function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.deepEqual(term, new Erlang.OtpErlangAtom(''));
+        });
         Erlang.binary_to_term('\x83d\0\0', function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.deepEqual(term, new Erlang.OtpErlangAtom('', false));
+        });
+        Erlang.binary_to_term('\x83w\0', function(err, term) {
             assert.strictEqual(err, undefined);
             assert.deepEqual(term, new Erlang.OtpErlangAtom(''));
         });
         Erlang.binary_to_term('\x83s\0', function(err, term) {
             assert.strictEqual(err, undefined);
-            assert.deepEqual(term, new Erlang.OtpErlangAtom(''));
+            assert.deepEqual(term, new Erlang.OtpErlangAtom('', false));
+        });
+        Erlang.binary_to_term('\x83v\0\4test', function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.deepEqual(term, new Erlang.OtpErlangAtom('test'));
         });
         Erlang.binary_to_term('\x83d\0\4test', function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.deepEqual(term, new Erlang.OtpErlangAtom('test', false));
+        });
+        Erlang.binary_to_term('\x83w\4test', function(err, term) {
             assert.strictEqual(err, undefined);
             assert.deepEqual(term, new Erlang.OtpErlangAtom('test'));
         });
         Erlang.binary_to_term('\x83s\4test', function(err, term) {
             assert.strictEqual(err, undefined);
-            assert.deepEqual(term, new Erlang.OtpErlangAtom('test'));
+            assert.deepEqual(term, new Erlang.OtpErlangAtom('test', false));
         });
     }).call(this);
     (function test_binary_to_term_predefined_atom () {
-        Erlang.binary_to_term('\x83s\4true', function(err, term) {
+        Erlang.binary_to_term('\x83w\4true', function(err, term) {
             assert.strictEqual(err, undefined);
             assert.strictEqual(term, true);
         });
-        Erlang.binary_to_term('\x83s\5false', function(err, term) {
+        Erlang.binary_to_term('\x83w\5false', function(err, term) {
             assert.strictEqual(err, undefined);
             assert.strictEqual(term, false);
         });
-        Erlang.binary_to_term('\x83d\0\11undefined', function(err, term) {
+        Erlang.binary_to_term('\x83v\0\11undefined', function(err, term) {
             assert.strictEqual(err, undefined);
-            assert.deepEqual(term, new Erlang.OtpErlangAtom('undefined'));
+            assert.deepEqual(term, null);
         });
     }).call(this);
     (function test_binary_to_term_empty_list () {
@@ -252,7 +268,7 @@ var hex = function hex(buffer) {
             assert.ok(err instanceof Erlang.ParseException);
             assert.strictEqual(term, undefined);
         });
-        Erlang.binary_to_term('\x83l\0\0\0\1jd\0\4tail', function(err, lst) {
+        Erlang.binary_to_term('\x83l\0\0\0\1jv\0\4tail', function(err, lst) {
             assert.strictEqual(err, undefined);
             assert.ok(lst instanceof Erlang.OtpErlangList);
             assert.deepEqual([new Erlang.OtpErlangList([]),
@@ -878,11 +894,16 @@ var hex = function hex(buffer) {
             assert.strictEqual(err, undefined);
             assert.equal(binary.toString('binary'),
                 '\x83l\x00\x02\x00\x00' + 'a\xd0a\x90'.repeat(65536) + 'j');
-                         
+
         });
     }).call(this);
     (function test_term_to_binary_atom () {
         Erlang.term_to_binary(new Erlang.OtpErlangAtom(''),
+                              function(err, binary) {
+            assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'), '\x83w\0');
+        });
+        Erlang.term_to_binary(new Erlang.OtpErlangAtom('', false),
                               function(err, binary) {
             assert.strictEqual(err, undefined);
             assert.equal(binary.toString('binary'), '\x83s\0');
@@ -890,7 +911,22 @@ var hex = function hex(buffer) {
         Erlang.term_to_binary(new Erlang.OtpErlangAtom('test'),
                               function(err, binary) {
             assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'), '\x83w\4test');
+        });
+        Erlang.term_to_binary(new Erlang.OtpErlangAtom('test', false),
+                              function(err, binary) {
+            assert.strictEqual(err, undefined);
             assert.equal(binary.toString('binary'), '\x83s\4test');
+        });
+        Erlang.term_to_binary(new Erlang.OtpErlangAtomLarge('test'),
+                              function(err, binary) {
+            assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'), '\x83v\0\4test');
+        });
+        Erlang.term_to_binary(new Erlang.OtpErlangAtomLarge('test', false),
+                              function(err, binary) {
+            assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'), '\x83d\0\4test');
         });
     }).call(this);
     (function test_term_to_binary_string_basic () {
@@ -963,15 +999,15 @@ var hex = function hex(buffer) {
     (function test_term_to_binary_predefined_atom () {
         Erlang.term_to_binary(true, function(err, binary) {
             assert.strictEqual(err, undefined);
-            assert.equal(binary.toString('binary'), '\x83s\4true');
+            assert.equal(binary.toString('binary'), '\x83w\4true');
         });
         Erlang.term_to_binary(false, function(err, binary) {
             assert.strictEqual(err, undefined);
-            assert.equal(binary.toString('binary'), '\x83s\5false');
+            assert.equal(binary.toString('binary'), '\x83w\5false');
         });
-        Erlang.term_to_binary(undefined, function(err, binary) {
+        Erlang.term_to_binary(null, function(err, binary) {
             assert.strictEqual(err, undefined);
-            assert.equal(binary.toString('binary'), '\x83s\x09undefined');
+            assert.equal(binary.toString('binary'), '\x83w\x09undefined');
         });
     }).call(this);
     (function test_term_to_binary_short_integer () {

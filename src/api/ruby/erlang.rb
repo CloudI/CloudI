@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -25,10 +25,13 @@
 #
 
 require 'zlib'
+require 'set'
 
 # Erlang term classes listed alphabetically
 
 module Erlang
+
+    @@UNDEFINED = 'undefined' # Change with set_undefined
 
     class OtpErlangAtom
         def initialize(value)
@@ -52,6 +55,8 @@ module Erlang
                         raise OutputException, 'uint16 overflow', caller
                     end
                 else
+                    # deprecated
+                    # (not used in Erlang/OTP 26, i.e., minor_version 2)
                     if length <= 255
                         return "#{TAG_SMALL_ATOM_EXT.chr}#{length.chr}#{@value}"
                     elsif length <= 65535
@@ -76,7 +81,7 @@ module Erlang
         end
         alias eql? ==
     end
-    
+
     class OtpErlangBinary
         def initialize(value, bits = 8)
             @value = value
@@ -112,7 +117,7 @@ module Erlang
         end
         alias eql? ==
     end
-    
+
     class OtpErlangFunction
         def initialize(tag, value)
             @tag = tag
@@ -134,7 +139,7 @@ module Erlang
         end
         alias eql? ==
     end
-    
+
     class OtpErlangList
         def initialize(value, improper = false)
             @value = value
@@ -216,7 +221,7 @@ module Erlang
         end
         alias eql? ==
     end
-    
+
     class OtpErlangPort
         def initialize(node, id, creation)
             @node = node
@@ -250,7 +255,7 @@ module Erlang
         end
         alias eql? ==
     end
-    
+
     class OtpErlangReference
         def initialize(node, id, creation)
             @node = node
@@ -295,7 +300,7 @@ module Erlang
     end
 
     # core functionality
-    
+
     def self.binary_to_term(data)
         size = data.bytesize
         if size <= 1
@@ -318,7 +323,7 @@ module Erlang
             raise ParseException, 'missing data', e.backtrace
         end
     end
-    
+
     def self.term_to_binary(term, compressed = false)
         data_uncompressed = term_to_binary_(term)
         if compressed == false
@@ -341,11 +346,16 @@ module Erlang
                    "#{size_uncompressed_packed}#{data_compressed}"
         end
     end
-    
+
+    # Elixir use can set to 'nil'
+    def self.set_undefined(value)
+        @@UNDEFINED = value
+    end
+
     private
-    
+
     # binary_to_term implementation functions
-    
+
     def self.binary_to_term_(i, data)
         tag = data[i].ord
         i += 1
@@ -370,17 +380,7 @@ module Erlang
         elsif tag == TAG_FLOAT_EXT
             value = data[i,31].partition(0.chr)[0].to_f
             return [i + 31, value]
-        elsif tag == TAG_ATOM_EXT
-            j = data[i,2].unpack('n')[0]
-            i += 2
-            atom_name = data[i,j].force_encoding('ISO-8859-1')
-            if atom_name.valid_encoding?
-                return [i + j, atom_name.to_sym]
-            else
-                raise ParseException, 'invalid atom_name latin1', caller
-            end
-        elsif tag == TAG_NEW_PORT_EXT or \
-              tag == TAG_REFERENCE_EXT or tag == TAG_PORT_EXT
+        elsif Set[TAG_NEW_PORT_EXT,TAG_REFERENCE_EXT,TAG_PORT_EXT].include?(tag)
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
             id = data[i,4]
@@ -397,7 +397,7 @@ module Erlang
             end
             # tag == TAG_NEW_PORT_EXT or tag == TAG_PORT_EXT
             return [i, OtpErlangPort.new(node, id, creation)]
-        elsif tag == TAG_NEW_PID_EXT or tag == TAG_PID_EXT
+        elsif Set[TAG_NEW_PID_EXT, TAG_PID_EXT].include?(tag)
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
             id = data[i,4]
@@ -412,7 +412,7 @@ module Erlang
                 i += 1
             end
             return [i, OtpErlangPid.new(node, id, serial, creation)]
-        elsif tag == TAG_SMALL_TUPLE_EXT or tag == TAG_LARGE_TUPLE_EXT
+        elsif Set[TAG_SMALL_TUPLE_EXT, TAG_LARGE_TUPLE_EXT].include?(tag)
             if tag == TAG_SMALL_TUPLE_EXT
                 length = data[i].ord
                 i += 1
@@ -447,7 +447,7 @@ module Erlang
             j = data[i,4].unpack('N')[0]
             i += 4
             return [i + j, OtpErlangBinary.new(data[i,j], 8)]
-        elsif tag == TAG_SMALL_BIG_EXT or tag == TAG_LARGE_BIG_EXT
+        elsif Set[TAG_SMALL_BIG_EXT, TAG_LARGE_BIG_EXT].include?(tag)
             if tag == TAG_SMALL_BIG_EXT
                 j = data[i].ord
                 i += 1
@@ -482,7 +482,7 @@ module Erlang
             #arity = data[i].ord
             i += 1
             return [i, OtpErlangFunction.new(tag, data[old_i,i - old_i])]
-        elsif tag == TAG_NEWER_REFERENCE_EXT or tag == TAG_NEW_REFERENCE_EXT
+        elsif Set[TAG_NEWER_REFERENCE_EXT, TAG_NEW_REFERENCE_EXT].include?(tag)
             j = data[i,2].unpack('n')[0] * 4
             i += 2
             result = binary_to_atom(i, data)
@@ -496,22 +496,6 @@ module Erlang
             end
             id = data[i,j]
             return [i + j, OtpErlangReference.new(node, id, creation)]
-        elsif tag == TAG_SMALL_ATOM_EXT
-            j = data[i,1].ord
-            i += 1
-            atom_name = data[i,j].force_encoding('ISO-8859-1')
-            if atom_name.valid_encoding?
-                if atom_name == 'true'
-                    tmp = true
-                elsif atom_name == 'false'
-                    tmp = false
-                else
-                    tmp = atom_name.to_sym
-                end
-                return [i + j, tmp]
-            else
-                raise ParseException, 'invalid atom_name latin1', caller
-            end
         elsif tag == TAG_MAP_EXT
             length = data[i,4].unpack('N')[0]
             i += 4
@@ -539,23 +523,61 @@ module Erlang
             result = binary_to_term_sequence(i, numfree, data)
             i = result[0]#; free = result[1]
             return [i, OtpErlangFunction.new(tag, data[old_i,i - old_i])]
-        elsif tag == TAG_ATOM_UTF8_EXT
+        elsif Set[TAG_ATOM_UTF8_EXT, TAG_ATOM_EXT].include?(tag)
             j = data[i,2].unpack('n')[0]
             i += 2
-            atom_name = data[i,j].force_encoding('UTF-8')
-            if atom_name.valid_encoding?
-                return [i + j, OtpErlangAtom.new(atom_name)]
+            atom_name = data[i,j]
+            i = i + j
+            if atom_name == 'true'
+                return [i, true]
+            elsif atom_name == 'false'
+                return [i, false]
+            elsif atom_name == @@UNDEFINED
+                return [i, nil]
             else
-                raise ParseException, 'invalid atom_name unicode', caller
+                if tag == TAG_ATOM_UTF8_EXT
+                    atom_name = atom_name.force_encoding('UTF-8')
+                    if atom_name.valid_encoding?
+                        return [i, atom_name.to_sym]
+                    else
+                        raise ParseException, 'invalid atom_name unicode', caller
+                    end
+                else
+                    atom_name = atom_name.force_encoding('ISO-8859-1')
+                    if atom_name.valid_encoding?
+                        return [i, OtpErlangAtom.new(atom_name)]
+                    else
+                        raise ParseException, 'invalid atom_name latin1', caller
+                    end
+                end
             end
-        elsif tag == TAG_SMALL_ATOM_UTF8_EXT
+        elsif Set[TAG_SMALL_ATOM_UTF8_EXT, TAG_SMALL_ATOM_EXT].include?(tag)
             j = data[i,1].ord
             i += 1
-            atom_name = data[i,j].force_encoding('UTF-8')
-            if atom_name.valid_encoding?
-                return [i + j, OtpErlangAtom.new(atom_name)]
+            atom_name = data[i,j]
+            i = i + j
+            if atom_name == 'true'
+                return [i, true]
+            elsif atom_name == 'false'
+                return [i, false]
+            elsif atom_name == @@UNDEFINED
+                return [i, nil]
             else
-                raise ParseException, 'invalid atom_name unicode', caller
+                if tag == TAG_SMALL_ATOM_UTF8_EXT
+                    atom_name = atom_name.force_encoding('UTF-8')
+                    if atom_name.valid_encoding?
+                        return [i, atom_name.to_sym]
+                    else
+                        raise ParseException, 'invalid atom_name unicode', caller
+                    end
+                else
+                    atom_name = atom_name.force_encoding('ISO-8859-1')
+                    if atom_name.valid_encoding?
+                        return [i, OtpErlangAtom.new(atom_name)]
+                    else
+                        raise ParseException, 'invalid atom_name latin1', caller
+                    end
+                end
             end
         elsif tag == TAG_COMPRESSED_ZLIB
             size_uncompressed = data[i,4].unpack('N')[0]
@@ -579,7 +601,7 @@ module Erlang
             raise ParseException, 'invalid tag', caller
         end
     end
-    
+
     def self.binary_to_term_sequence(i, length, data)
         sequence = []
         (0...length).each do |length_index|
@@ -591,7 +613,7 @@ module Erlang
     end
 
     # (binary_to_term Erlang term primitive type functions)
-            
+
     def self.binary_to_integer(i, data)
         tag = data[i].ord
         i += 1
@@ -607,7 +629,7 @@ module Erlang
             raise ParseException, 'invalid integer tag', caller
         end
     end
-    
+
     def self.binary_to_pid(i, data)
         tag = data[i].ord
         i += 1
@@ -635,7 +657,7 @@ module Erlang
             raise ParseException, 'invalid pid tag', caller
         end
     end
-    
+
     def self.binary_to_atom(i, data)
         tag = data[i].ord
         i += 1
@@ -671,9 +693,9 @@ module Erlang
             raise ParseException, 'invalid atom tag', caller
         end
     end
-    
+
     # term_to_binary implementation functions
-    
+
     def self.term_to_binary_(term)
         if term.kind_of?(String)
             return string_to_binary(term)
@@ -689,15 +711,15 @@ module Erlang
             return OtpErlangAtom.new(term.to_s).binary
         elsif term.kind_of?(TrueClass)
             return OtpErlangAtom.new(
-                'true'.force_encoding('ISO-8859-1')
+                'true'.force_encoding('UTF-8')
             ).binary
         elsif term.kind_of?(FalseClass)
             return OtpErlangAtom.new(
-                'false'.force_encoding('ISO-8859-1')
+                'false'.force_encoding('UTF-8')
             ).binary
         elsif term.nil?
             return OtpErlangAtom.new(
-                'undefined'.force_encoding('ISO-8859-1')
+                @@UNDEFINED.force_encoding('UTF-8')
             ).binary
         elsif term.kind_of?(OtpErlangAtom)
             return term.binary
@@ -719,7 +741,7 @@ module Erlang
     end
 
     # (term_to_binary Erlang term composite type functions)
-    
+
     def self.string_to_binary(term)
         length = term.bytesize
         if length == 0
@@ -738,7 +760,7 @@ module Erlang
             raise OutputException, 'uint32 overflow', caller
         end
     end
-    
+
     def self.tuple_to_binary(term)
         length = term.length
         term_packed = term.map{ |element|
@@ -753,7 +775,7 @@ module Erlang
             raise OutputException, 'uint32 overflow', caller
         end
     end
-    
+
     def self.hash_to_binary(term)
         length = term.length
         if length <= 4294967295
@@ -781,7 +803,7 @@ module Erlang
             return bignum_to_binary(term)
         end
     end
-    
+
     def self.bignum_to_binary(term)
         bignum = term.abs
         if term < 0
@@ -811,7 +833,7 @@ module Erlang
     end
 
     # Exception classes listed alphabetically
-    
+
     class InputException < ArgumentError
     end
 
@@ -820,7 +842,7 @@ module Erlang
 
     class ParseException < SyntaxError
     end
-    
+
     # tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
     TAG_VERSION = 131
     TAG_COMPRESSED_ZLIB = 80

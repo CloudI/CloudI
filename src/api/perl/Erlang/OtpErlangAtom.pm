@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -45,7 +45,7 @@ sub new
     my ($value, $utf8) = @_;
     if (! defined($utf8))
     {
-        $utf8 = 0;
+        $utf8 = 1;
     }
     my $self = bless {
         value => $value,
@@ -82,6 +82,8 @@ sub binary
         }
         else
         {
+            # deprecated
+            # (not used in Erlang/OTP 26, i.e., minor_version 2)
             if ($length <= 255)
             {
                 return pack('CC', TAG_SMALL_ATOM_EXT, $length) . $value;

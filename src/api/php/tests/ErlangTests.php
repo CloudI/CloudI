@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -61,7 +61,7 @@ class AtomTestCase extends PHPUnit\Framework\TestCase
         $atom1 = new \Erlang\OtpErlangAtom('test');
         $this->assertEquals(get_class($atom1), 'Erlang\OtpErlangAtom');
         $this->assertEquals(new \Erlang\OtpErlangAtom('test'), $atom1);
-        $this->assertEquals('Erlang\OtpErlangAtom(test,utf8=false)',
+        $this->assertEquals('Erlang\OtpErlangAtom(test,utf8=true)',
                             (string) $atom1);
         $atom2 = new \Erlang\OtpErlangAtom('test2');
         $atom1_new = new \Erlang\OtpErlangAtom('test');
@@ -167,22 +167,30 @@ class DecodeTestCase extends PHPUnit\Framework\TestCase
     public function test_binary_to_term_atom()
     {
         $this->assertEquals(new \Erlang\OtpErlangAtom(''),
+                            \Erlang\binary_to_term("\x83v\0\0"));
+        $this->assertEquals(new \Erlang\OtpErlangAtom('', false),
                             \Erlang\binary_to_term("\x83d\0\0"));
         $this->assertEquals(new \Erlang\OtpErlangAtom(''),
+                            \Erlang\binary_to_term("\x83w\0"));
+        $this->assertEquals(new \Erlang\OtpErlangAtom('', false),
                             \Erlang\binary_to_term("\x83s\0"));
         $this->assertEquals(new \Erlang\OtpErlangAtom('test'),
+                            \Erlang\binary_to_term("\x83v\0\4test"));
+        $this->assertEquals(new \Erlang\OtpErlangAtom('test', false),
                             \Erlang\binary_to_term("\x83d\0\4test"));
         $this->assertEquals(new \Erlang\OtpErlangAtom('test'),
+                            \Erlang\binary_to_term("\x83w\4test"));
+        $this->assertEquals(new \Erlang\OtpErlangAtom('test', false),
                             \Erlang\binary_to_term("\x83s\4test"));
     }
     public function test_binary_to_term_predefined_atoms()
     {
         $this->assertEquals(true,
-                            \Erlang\binary_to_term("\x83s\4true"));
+                            \Erlang\binary_to_term("\x83w\4true"));
         $this->assertEquals(false,
-                            \Erlang\binary_to_term("\x83s\5false"));
-        $this->assertEquals(new \Erlang\OtpErlangAtom('undefined'),
-                            \Erlang\binary_to_term("\x83d\0\11undefined"));
+                            \Erlang\binary_to_term("\x83w\5false"));
+        $this->assertEquals(null,
+                            \Erlang\binary_to_term("\x83v\0\11undefined"));
     }
     public function test_binary_to_term_empty_list()
     {
@@ -230,7 +238,7 @@ class DecodeTestCase extends PHPUnit\Framework\TestCase
     }
     public function test_binary_to_term_improper_list()
     {
-        $lst = \Erlang\binary_to_term("\x83l\0\0\0\1jd\0\4tail");
+        $lst = \Erlang\binary_to_term("\x83l\0\0\0\1jv\0\4tail");
         $this->assertEquals(get_class($lst), 'Erlang\OtpErlangList');
         $this->assertEquals(array(new \Erlang\OtpErlangList(array()),
                                   new \Erlang\OtpErlangAtom('tail')),
@@ -697,10 +705,14 @@ class EncodeTestCase extends PHPUnit\Framework\TestCase
     }
     public function test_term_to_binary_atom()
     {
-        $this->assertEquals("\x83s\0",
+        $this->assertEquals("\x83w\0",
             \Erlang\term_to_binary(new \Erlang\OtpErlangAtom('')));
-        $this->assertEquals("\x83s\4test",
+        $this->assertEquals("\x83s\0",
+            \Erlang\term_to_binary(new \Erlang\OtpErlangAtom('', false)));
+        $this->assertEquals("\x83w\4test",
             \Erlang\term_to_binary(new \Erlang\OtpErlangAtom('test')));
+        $this->assertEquals("\x83s\4test",
+            \Erlang\term_to_binary(new \Erlang\OtpErlangAtom('test', false)));
     }
     public function test_term_to_binary_string_basic()
     {
@@ -744,9 +756,9 @@ class EncodeTestCase extends PHPUnit\Framework\TestCase
     }
     public function test_term_to_binary_predefined_atoms()
     {
-        $this->assertEquals("\x83s\4true", \Erlang\term_to_binary(true));
-        $this->assertEquals("\x83s\5false", \Erlang\term_to_binary(false));
-        $this->assertEquals("\x83s\x09undefined", \Erlang\term_to_binary(null));
+        $this->assertEquals("\x83w\4true", \Erlang\term_to_binary(true));
+        $this->assertEquals("\x83w\5false", \Erlang\term_to_binary(false));
+        $this->assertEquals("\x83w\x09undefined", \Erlang\term_to_binary(null));
     }
     public function test_term_to_binary_short_integer()
     {

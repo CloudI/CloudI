@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -175,7 +175,7 @@ func (e *ParseError) Error() string {
 
 // core functionality
 
-// BinaryToTerm decodes the Erlang Binary Term Format into Go types
+// BinaryToTerm decodes the Erlang External Term Format into Go types
 func BinaryToTerm(data []byte) (interface{}, error) {
 	size := len(data)
 	if size <= 1 {
@@ -201,7 +201,7 @@ func BinaryToTerm(data []byte) (interface{}, error) {
 	return term, nil
 }
 
-// TermToBinary encodes Go types into the Erlang Binary Term Format
+// TermToBinary encodes Go types into the Erlang External Term Format
 func TermToBinary(term interface{}, compressed int) ([]byte, error) {
 	if compressed < -1 || compressed > 9 {
 		return nil, inputErrorNew("compressed in [-1..9]")
@@ -314,21 +314,6 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, err
 		}
 		return i + 31, value, nil
-	case tagAtomExt:
-		var j uint16
-		err = binary.Read(reader, binary.BigEndian, &j)
-		if err != nil {
-			return i, nil, err
-		}
-		i += 2
-		value := make([]byte, j)
-		if j > 0 {
-			_, err = reader.Read(value)
-			if err != nil {
-				return i, nil, err
-			}
-		}
-		return i + int(j), OtpErlangAtom(value), nil
 	case tagNewPortExt:
 		fallthrough
 	case tagReferenceExt:
@@ -632,21 +617,6 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			}
 		}
 		return i + int(j), OtpErlangReference{NodeTag: nodeTag, Node: node, ID: id, Creation: creation}, nil
-	case tagSmallAtomExt:
-		var j uint8
-		j, err = reader.ReadByte()
-		if err != nil {
-			return i, nil, err
-		}
-		i += 1
-		value := make([]byte, j)
-		if j > 0 {
-			_, err = reader.Read(value)
-			if err != nil {
-				return i, nil, err
-			}
-		}
-		return i + int(j), OtpErlangAtom(value), nil
 	case tagMapExt:
 		var length uint32
 		err = binary.Read(reader, binary.BigEndian, &length)
@@ -709,6 +679,8 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 		}
 		return i, OtpErlangFunction{Tag: tag, Value: value}, nil
 	case tagAtomUtf8Ext:
+		fallthrough
+	case tagAtomExt:
 		var j uint16
 		err = binary.Read(reader, binary.BigEndian, &j)
 		if err != nil {
@@ -722,8 +694,17 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 				return i, nil, err
 			}
 		}
-		return i + int(j), OtpErlangAtomUTF8(value), nil
+		switch tag {
+		case tagAtomUtf8Ext:
+			return i + int(j), OtpErlangAtomUTF8(value), nil
+		case tagAtomExt:
+			return i + int(j), OtpErlangAtom(value), nil
+		default:
+			return i, nil, parseErrorNew("invalid tag case")
+		}
 	case tagSmallAtomUtf8Ext:
+		fallthrough
+	case tagSmallAtomExt:
 		var j uint8
 		j, err = reader.ReadByte()
 		if err != nil {
@@ -737,7 +718,14 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 				return i, nil, err
 			}
 		}
-		return i + int(j), OtpErlangAtomUTF8(value), nil
+		switch tag {
+		case tagSmallAtomUtf8Ext:
+			return i + int(j), OtpErlangAtomUTF8(value), nil
+		case tagSmallAtomExt:
+			return i + int(j), OtpErlangAtom(value), nil
+		default:
+			return i, nil, parseErrorNew("invalid tag case")
+		}
 	case tagCompressedZlib:
 		var sizeUncompressed uint32
 		err = binary.Read(reader, binary.BigEndian, &sizeUncompressed)
@@ -892,9 +880,9 @@ func binaryToAtom(i int, reader *bytes.Reader) (int, uint8, []byte, error) {
 	}
 	i += 1
 	switch tag {
-	case tagAtomExt:
-		fallthrough
 	case tagAtomUtf8Ext:
+		fallthrough
+	case tagAtomExt:
 		var j uint16
 		err = binary.Read(reader, binary.BigEndian, &j)
 		if err != nil {
@@ -911,9 +899,9 @@ func binaryToAtom(i int, reader *bytes.Reader) (int, uint8, []byte, error) {
 			return i, tag, nil, err
 		}
 		return i + int(j), tag, value, nil
-	case tagSmallAtomExt:
-		fallthrough
 	case tagSmallAtomUtf8Ext:
+		fallthrough
+	case tagSmallAtomExt:
 		var j uint8
 		j, err = reader.ReadByte()
 		if err != nil {
@@ -982,11 +970,11 @@ func termsToBinary(termI interface{}, buffer *bytes.Buffer) (*bytes.Buffer, erro
 		return floatToBinary(term, buffer)
 	case bool:
 		if term {
-			return atomToBinary("true", buffer)
+			return atomUtf8ToBinary("true", buffer)
 		}
-		return atomToBinary("false", buffer)
+		return atomUtf8ToBinary("false", buffer)
 	case nil:
-		return atomToBinary("undefined", buffer)
+		return atomUtf8ToBinary("undefined", buffer)
 	case OtpErlangAtom:
 		return atomToBinary(string(term), buffer)
 	case OtpErlangAtomUTF8:
@@ -1224,6 +1212,8 @@ func floatToBinary(term float64, buffer *bytes.Buffer) (*bytes.Buffer, error) {
 }
 
 func atomToBinary(term string, buffer *bytes.Buffer) (*bytes.Buffer, error) {
+	// deprecated
+	// (not used in Erlang/OTP 26, i.e., minor_version 2)
 	switch length := len(term); {
 	case length <= math.MaxUint8:
 		_, err := buffer.Write([]byte{tagSmallAtomExt, uint8(length)})
