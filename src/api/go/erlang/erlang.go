@@ -37,6 +37,8 @@ import (
 	"strconv"
 )
 
+var undefined = "undefined" // Change with SetUndefined
+
 const (
 	// tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
 	tagVersion           = 131
@@ -70,8 +72,6 @@ const (
 	tagFunExt            = 117
 	tagAtomUtf8Ext       = 118
 	tagSmallAtomUtf8Ext  = 119
-
-	bufferSize = 65536
 )
 
 // Erlang term structs listed alphabetically
@@ -206,8 +206,6 @@ func TermToBinary(term interface{}, compressed int) ([]byte, error) {
 	if compressed < -1 || compressed > 9 {
 		return nil, inputErrorNew("compressed in [-1..9]")
 	}
-	var dataBuffer = new(bytes.Buffer)
-	dataBuffer.Grow(bufferSize)
 	dataUncompressed, err := termsToBinary(term, new(bytes.Buffer))
 	if err != nil {
 		return nil, err
@@ -245,6 +243,11 @@ func TermToBinary(term interface{}, compressed int) ([]byte, error) {
 		return nil, err
 	}
 	return result.Bytes(), nil
+}
+
+// Elixir use can set to "nil"
+func SetUndefined(value string) {
+	undefined = value
 }
 
 // BinaryToTerm implementation functions
@@ -694,6 +697,15 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 				return i, nil, err
 			}
 		}
+		if string(value) == "true" {
+			return i + int(j), true, nil
+		}
+		if string(value) == "false" {
+			return i + int(j), false, nil
+		}
+		if string(value) == undefined {
+			return i + int(j), nil, nil
+		}
 		switch tag {
 		case tagAtomUtf8Ext:
 			return i + int(j), OtpErlangAtomUTF8(value), nil
@@ -717,6 +729,15 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			if err != nil {
 				return i, nil, err
 			}
+		}
+		if string(value) == "true" {
+			return i + int(j), true, nil
+		}
+		if string(value) == "false" {
+			return i + int(j), false, nil
+		}
+		if string(value) == undefined {
+			return i + int(j), nil, nil
 		}
 		switch tag {
 		case tagSmallAtomUtf8Ext:
@@ -974,7 +995,7 @@ func termsToBinary(termI interface{}, buffer *bytes.Buffer) (*bytes.Buffer, erro
 		}
 		return atomUtf8ToBinary("false", buffer)
 	case nil:
-		return atomUtf8ToBinary("undefined", buffer)
+		return atomUtf8ToBinary(undefined, buffer)
 	case OtpErlangAtom:
 		return atomToBinary(string(term), buffer)
 	case OtpErlangAtomUTF8:

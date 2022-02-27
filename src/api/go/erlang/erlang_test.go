@@ -171,9 +171,9 @@ func TestDecodeBinaryToTermAtom(t *testing.T) {
 	assertEqual(t, OtpErlangAtom("test"), decode(t, "\x83s\x04test"), "")
 }
 func TestDecodeBinaryToTermPredefinedAtom(t *testing.T) {
-	assertEqual(t, OtpErlangAtomUTF8("true"), decode(t, "\x83w\x04true"), "")
-	assertEqual(t, OtpErlangAtomUTF8("false"), decode(t, "\x83w\x05false"), "")
-	assertEqual(t, OtpErlangAtomUTF8("undefined"), decode(t, "\x83v\x00\x09undefined"), "")
+	assertEqual(t, true, decode(t, "\x83w\x04true"), "")
+	assertEqual(t, false, decode(t, "\x83w\x05false"), "")
+	assertEqual(t, nil, decode(t, "\x83v\x00\x09undefined"), "")
 }
 func TestDecodeBinaryToTermEmptyList(t *testing.T) {
 	assertEqual(t, OtpErlangList{Value: make([]interface{}, 0), Improper: false}, decode(t, "\x83j"), "")
