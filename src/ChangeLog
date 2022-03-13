@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-03-12 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_service_router
+        * Add destinations http_redirect configuration argument to
+          provide a HTTP 301 redirect response
+        * Fix destination configuration argument validation
+
 2022-02-27 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update Go CloudI API Erlang External Term Format encoding

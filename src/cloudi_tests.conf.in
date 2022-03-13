@@ -32,7 +32,7 @@
         % a 'lazy' prefix destination refresh (otherwise, if sending to
         % short-lived provesses, use an 'immediate' prefix destination refresh).
         % The 'lazy' prefix makes the service cache service name lookup data
-        % while the 'immediate' prefix uses a central local process to do 
+        % while the 'immediate' prefix uses a central local process to do
         % service name lookups.
         % A 'closest' suffix destination refresh always prefers local
         % processes rather than using remote processes
@@ -127,7 +127,7 @@
         % a 'lazy' prefix destination refresh (otherwise, if sending to
         % short-lived provesses, use an 'immediate' prefix destination refresh).
         % The 'lazy' prefix makes the service cache service name lookup data
-        % while the 'immediate' prefix uses a central local process to do 
+        % while the 'immediate' prefix uses a central local process to do
         % service name lookups.
         % A 'closest' suffix destination refresh always prefers local
         % processes rather than using remote processes
@@ -251,7 +251,7 @@
      {options, [{response_timeout_immediate_max, limit_min}]}],
     [{prefix, "/tests/websockets/"},
      {module, cloudi_service_http_cowboy},
-     {args, 
+     {args,
       [{port, 6464}, {output, external}, {use_websockets, true},
        {query_get_format, text_pairs},
        {websocket_connect_sync,
@@ -792,7 +792,10 @@
         "/tests/",
         cloudi_service_router,
         [{destinations,
-          [{"http_req/any.xml/get",
+          [{"http_req/redirect/?/get",
+            [{parameters_selected, [1]},
+             {http_redirect, "http://127.0.0.1:6464/tests/http_req/*"}]},
+           {"http_req/any.xml/get",
             [{mode, round_robin},
              {service_names,
               ["http_req/c.xml/get",

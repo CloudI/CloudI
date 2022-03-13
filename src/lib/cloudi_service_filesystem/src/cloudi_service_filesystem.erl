@@ -534,7 +534,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         end, undefined, Files20),
         if
             Files23 =:= undefined ->
-                ?LOG_ERROR("redirect pattern does not match: \"~s\"",
+                ?LOG_ERROR("redirect pattern does not match: \"~s\" "
+                           "(add empty files)",
                            [Pattern]),
                 erlang:exit({enoent, Pattern});
             true ->
@@ -2269,7 +2270,7 @@ content_range_read([I | RangeList], Output, Boundary,
     when is_integer(I) ->
     content_range_read([{I, infinity} | RangeList], Output, Boundary,
                        ContentLengthBin, ContentLength, Contents).
-    
+
 content_range_list_check([_ | L] = RangeList, Contents) ->
     ContentLength = erlang:byte_size(Contents),
     ContentLengthBin = erlang:integer_to_binary(ContentLength),
