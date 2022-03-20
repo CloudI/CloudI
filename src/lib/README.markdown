@@ -100,8 +100,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
-- `commit a6e0909e359e5215c176d11d227302008c891f0f (v2.0.4)`
-- `Sun Dec  5 01:53:52 UTC 2021`
+- `commit 244f63b5df58b8dac8eeecd32cc7856b54592b30`
+- `Sun Mar 20 08:28:47 UTC 2022`
 - `MIT`
 
 `uuid`
