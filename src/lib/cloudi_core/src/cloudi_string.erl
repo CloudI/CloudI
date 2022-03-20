@@ -73,7 +73,11 @@
          triml/2,
          trimr/1,
          trimr/2,
-         uppercase/1]).
+         uppercase/1,
+         uri_encode/1,
+         uri_decode/1]).
+
+-include("cloudi_core_i_constants.hrl").
 
 % based on unicode_util:whitespace/0
 -define(WHITESPACE, [13,9,10,11,12,13,32,133,8206,8207,8232,8233]).
@@ -735,6 +739,44 @@ trimr(Characters, String) ->
 
 uppercase(String) ->
     string:uppercase(String).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the string with URI encoding.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uri_encode(URI :: string() | binary()) ->
+    string() | binary().
+
+-ifdef(ERLANG_OTP_VERSION_25_FEATURES).
+uri_encode(URI) ->
+    uri_string:quote(URI).
+-else.
+-compile({nowarn_deprecated_function,
+          [{http_uri, encode, 1}]}).
+uri_encode(URI) ->
+    http_uri:encode(URI).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the string without URI encoding.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uri_decode(String :: string() | binary()) ->
+    string() | binary().
+
+-ifdef(ERLANG_OTP_VERSION_25_FEATURES).
+uri_decode(String) ->
+    uri_string:unquote(String).
+-else.
+-compile({nowarn_deprecated_function,
+          [{http_uri, decode, 1}]}).
+uri_decode(String) ->
+    http_uri:decode(String).
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

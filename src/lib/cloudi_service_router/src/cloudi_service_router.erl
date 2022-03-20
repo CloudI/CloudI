@@ -49,7 +49,7 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
--define(DEFAULT_SSH,                    undefined).
+-define(DEFAULT_SSH,                           undefined).
         % Enable a ssh server for receiving remote service requests.
         % The user_dir and system_dir options are required options.
         % The ip option and port option will likely need to be set
@@ -64,15 +64,23 @@
         % (user_dir could be the path to ${HOME}/.ssh and
         %  system_dir could be /etc/ssh
         %  if permissions and configuration files are correct there)
--define(DEFAULT_ADD_PREFIX,                  true).
+-define(DEFAULT_ADD_PREFIX,                         true).
         % The service configuration prefix is automatically added
         % as a prefix for each of the destinations (all service_names strings).
--define(DEFAULT_VALIDATE_REQUEST_INFO,  undefined).
--define(DEFAULT_VALIDATE_REQUEST,       undefined).
--define(DEFAULT_FAILURES_SOURCE_DIE,        false).
--define(DEFAULT_FAILURES_SOURCE_MAX_COUNT,      2). % see below:
+-define(DEFAULT_PARAMETERS_ALLOWED_DEFAULT,         true).
+        % Parameters (strings matching the wildcard characters * and ?)
+        % are allowed to be used for constructing destination service names.
+-define(DEFAULT_PARAMETERS_STRICT_MATCHING_DEFAULT, true).
+        % All * and ? wildcard characters must be used to create exact
+        % service names.  That means the parameters_selected list must have
+        % indexes to select each parameter
+        % (each wildcard character in the incoming service name pattern).
+-define(DEFAULT_VALIDATE_REQUEST_INFO,         undefined).
+-define(DEFAULT_VALIDATE_REQUEST,              undefined).
+-define(DEFAULT_FAILURES_SOURCE_DIE,               false).
+-define(DEFAULT_FAILURES_SOURCE_MAX_COUNT,             2). % see below:
         % (similar to the MaxR configuration value for services)
--define(DEFAULT_FAILURES_SOURCE_MAX_PERIOD,    60). % seconds, see below:
+-define(DEFAULT_FAILURES_SOURCE_MAX_PERIOD,           60). % seconds, see below:
         % (similar to the MaxT configuration value for services)
         % If you want the source service to eventually fail,
         % use the service's MaxT/MaxR as the failures_source_max_period value
@@ -80,29 +88,25 @@
         % to accumulate a failure count indefinitely.
 
 % destinations configuration arguments
--define(DEFAULT_REMOTE,                 undefined).
+-define(DEFAULT_REMOTE,                        undefined).
         % Should the service request be routed to a remote host?
         % Takes a list of options, with only the host_name option required.
         % Defaults are taken from the ssh server configuration,
         % if it was configured.
--define(DEFAULT_MODE,                 round_robin).
+-define(DEFAULT_MODE,                        round_robin).
         % Load-balance among separate service names with
         % 'round_robin' order or 'random' order.
--define(DEFAULT_PARAMETERS_ALLOWED,          true).
-        % Parameters (strings matching the wildcard characters * and ?)
-        % are allowed to be used for constructing destination service names.
--define(DEFAULT_PARAMETERS_STRICT_MATCHING,  true).
-        % All * and ? wildcard characters must be used to create exact
-        % service names.  That means the parameters_selected list must have
-        % indexes to select each parameter
-        % (each wildcard character in the incoming service name pattern).
--define(DEFAULT_PARAMETERS_SELECTED,           []).
+% DEFAULT_PARAMETERS_ALLOWED is set based on
+% DEFAULT_PARAMETERS_ALLOWED_DEFAULT
+% DEFAULT_PARAMETERS_STRICT_MATCHING is set based on
+% DEFAULT_PARAMETERS_STRICT_MATCHING_DEFAULT
+-define(DEFAULT_PARAMETERS_SELECTED,                  []).
         % A list of parameter indexes (1-based index) to be used when
         % constructing destination service names.  That means that the first
         % instance of * or ? is index 1.  If [2] was provided, the second
         % instance of * or ? would be used to substitute the first * or ?
         % in all the destination service_names strings.
--define(DEFAULT_HTTP_REDIRECT,          undefined).
+-define(DEFAULT_HTTP_REDIRECT,                 undefined).
         % A HTTP 301 redirect response will be provided.
         % The incoming service request may have been sent from the
         % HTTP/HTTPS server services cloudi_service_http_cowboy or
@@ -111,33 +115,43 @@
         % The destination URL string will be provided as the
         % "Location" HTTP header value.  If http_redirect is used,
         % remote, mode and service_names are not used.
--define(DEFAULT_SERVICE_NAMES,                 []).
+-define(DEFAULT_SERVICE_NAMES,                        []).
         % The destination service names to be used for forwarding
         % service requests.  If * or ? wildcard characters are used
         % in the service name strings, parameters_allowed needs to be true.
         % The destination service name strings may have consecutive
         % wildcard characters for substitution.
 
--record(destination,
+-record(destination_forward,
     {
-        index = 1
-            :: pos_integer(),
-        length = 0
-            :: non_neg_integer(),
+        parameters_allowed
+            :: boolean(),
+        parameters_strict_matching
+            :: boolean(),
+        parameters_selected
+            :: list(pos_integer()),
         remote
             :: undefined | cloudi_service_router_client:state(),
-        mode = ?DEFAULT_MODE
+        index = 1
+            :: pos_integer(),
+        length
+            :: pos_integer(),
+        mode
             :: random | round_robin,
-        parameters_allowed = ?DEFAULT_PARAMETERS_ALLOWED
+        service_names
+            :: tuple()
+    }).
+
+-record(destination_return,
+    {
+        parameters_allowed
             :: boolean(),
-        parameters_strict_matching = ?DEFAULT_PARAMETERS_STRICT_MATCHING
+        parameters_strict_matching
             :: boolean(),
-        parameters_selected = []
+        parameters_selected
             :: list(pos_integer()),
-        http_redirect = ?DEFAULT_HTTP_REDIRECT
-            :: undefined | string(),
-        service_names = []
-            :: list(string())
+        http_redirect
+            :: nonempty_string()
     }).
 
 -record(state,
@@ -150,8 +164,9 @@
         failures_source_max_period :: infinity | pos_integer(),
         failures_source = #{}
             :: #{pid() := list(cloudi_timestamp:seconds_monotonic())},
+        % pattern -> #destination_forward{} | #destination_return{}
         destinations
-            :: cloudi_x_trie:cloudi_x_trie() % pattern -> #destination{}
+            :: cloudi_x_trie:cloudi_x_trie()
     }).
 
 %%%------------------------------------------------------------------------
@@ -166,6 +181,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {ssh,                           ?DEFAULT_SSH},
         {add_prefix,                    ?DEFAULT_ADD_PREFIX},
+        {parameters_allowed_default,    ?DEFAULT_PARAMETERS_ALLOWED_DEFAULT},
+        {parameters_strict_matching_default,
+         ?DEFAULT_PARAMETERS_STRICT_MATCHING_DEFAULT},
         {validate_request_info,         ?DEFAULT_VALIDATE_REQUEST_INFO},
         {validate_request,              ?DEFAULT_VALIDATE_REQUEST},
         {failures_source_die,           ?DEFAULT_FAILURES_SOURCE_DIE},
@@ -173,6 +191,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {failures_source_max_period,    ?DEFAULT_FAILURES_SOURCE_MAX_PERIOD},
         {destinations,                  []}],
     [SSHOptions, AddPrefix,
+     ParametersAllowedDefault, ParametersStrictMatchingDefault,
      ValidateRequestInfo0, ValidateRequest0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod,
      DestinationsL] = cloudi_proplists:take_values(Defaults, Args),
@@ -181,6 +200,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                                Environment,
                                                Dispatcher),
     true = is_boolean(AddPrefix),
+    true = is_boolean(ParametersAllowedDefault),
+    true = is_boolean(ParametersStrictMatchingDefault),
     ValidateRequestInfo1 = cloudi_args_type:
                            function_optional(ValidateRequestInfo0, 1),
     ValidateRequest1 = cloudi_args_type:
@@ -194,8 +215,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     ConfigDefaults = [
         {remote,                        ?DEFAULT_REMOTE},
         {mode,                          ?DEFAULT_MODE},
-        {parameters_allowed,            ?DEFAULT_PARAMETERS_ALLOWED},
-        {parameters_strict_matching,    ?DEFAULT_PARAMETERS_STRICT_MATCHING},
+        {parameters_allowed,            ParametersAllowedDefault},
+        {parameters_strict_matching,    ParametersStrictMatchingDefault},
         {parameters_selected,           ?DEFAULT_PARAMETERS_SELECTED},
         {http_redirect,                 ?DEFAULT_HTTP_REDIRECT},
         {service_names,                 ?DEFAULT_SERVICE_NAMES}],
@@ -225,39 +246,37 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                          ParametersSelected),
         true = is_list(Names0),
         Length = erlang:length(Names0),
-        NamesN = if
-            AddPrefix =:= true ->
-                [Prefix ++ Suffix || Suffix <- Names0];
-            AddPrefix =:= false ->
-                Names0
-        end,
-        if
+        Destination = if
             HttpRedirect =:= undefined ->
                 true = (Length > 0),
-                true = ((ParametersAllowed =:= true) orelse
-                        ((ParametersAllowed =:= false) andalso
-                         (lists:any(fun cloudi_service_name:pattern/1,
-                                    NamesN) =:= false))),
-                ok;
+                NamesN = if
+                    AddPrefix =:= true ->
+                        [Prefix ++ Suffix || Suffix <- Names0];
+                    AddPrefix =:= false ->
+                        Names0
+                end,
+                true = lists:all(fun cloudi_x_trie:is_bytestring_nonempty/1,
+                                 NamesN),
+                #destination_forward{parameters_allowed = ParametersAllowed,
+                                     parameters_strict_matching =
+                                         ParametersStrictMatching,
+                                     parameters_selected =
+                                         ParametersSelected,
+                                     remote = Remote,
+                                     length = Length,
+                                     mode = Mode,
+                                     service_names =
+                                         erlang:list_to_tuple(NamesN)};
             is_integer(hd(HttpRedirect)) ->
                 undefined = Remote,
                 true = (Length == 0),
-                true = ((ParametersAllowed =:= true) orelse
-                        ((ParametersAllowed =:= false) andalso
-                         cloudi_service_name:pattern(HttpRedirect))),
-                ok
+                #destination_return{parameters_allowed = ParametersAllowed,
+                                    parameters_strict_matching =
+                                        ParametersStrictMatching,
+                                    parameters_selected =
+                                        ParametersSelected,
+                                    http_redirect = HttpRedirect}
         end,
-        Destination = #destination{length = Length,
-                                   remote = Remote,
-                                   mode = Mode,
-                                   parameters_allowed =
-                                       ParametersAllowed,
-                                   parameters_strict_matching =
-                                       ParametersStrictMatching,
-                                   parameters_selected =
-                                       ParametersSelected,
-                                   http_redirect = HttpRedirect,
-                                   service_names = NamesN},
         cloudi_x_trie:store(Prefix ++ PatternSuffix, Destination, D)
     end, cloudi_x_trie:new(), DestinationsL),
     {ok, #state{ssh = SSH,
@@ -278,44 +297,16 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                   RequestInfo, Request) of
         true ->
             case cloudi_x_trie:find(Pattern, Destinations) of
-                {ok,
-                 #destination{http_redirect = undefined} = Destination} ->
-                    {NameNext, DestinationNew} = destination_pick(Destination),
-                    Parameters = cloudi_service_name:parse(Name, Pattern),
-                    case name_parameters(NameNext, Parameters,
-                                         DestinationNew) of
-                        {ok, NameNew} ->
-                            DestinationsNew = cloudi_x_trie:
-                                              store(Pattern,
-                                                    DestinationNew,
-                                                    Destinations),
-                            forward(RequestType, Name, Pattern, NameNew,
-                                    RequestInfo, Request,
-                                    Timeout, Priority, TransId, SrcPid,
-                                    DestinationNew,
-                                    State#state{
-                                        destinations = DestinationsNew});
-                        {error, Reason} ->
-                            ?LOG_ERROR("(~p -> ~p) error: ~p",
-                                       [Name, NameNext, Reason]),
-                            request_failed(SrcPid, State)
-                    end;
-                {ok,
-                 #destination{http_redirect = HttpRedirect} = Destination} ->
-                    Parameters = cloudi_service_name:parse(Name, Pattern),
-                    case name_parameters(HttpRedirect, Parameters,
-                                         Destination) of
-                        {ok, HttpRedirectNew} ->
-                            {reply,
-                             [{<<"status">>, <<"301">>},
-                              {<<"location">>,
-                               erlang:list_to_binary(HttpRedirectNew)}],
-                             <<>>, State};
-                        {error, Reason} ->
-                            ?LOG_ERROR("(~p http_redirect ~p) error: ~p",
-                                       [Name, HttpRedirect, Reason]),
-                            request_failed(SrcPid, State)
-                    end;
+                {ok, #destination_forward{} = Destination} ->
+                    destination_forward(RequestType, Name, Pattern,
+                                        RequestInfo, Request,
+                                        Timeout, Priority, TransId, SrcPid,
+                                        Destination, State);
+                {ok, #destination_return{} = Destination} ->
+                    destination_return(RequestType, Name, Pattern,
+                                       RequestInfo, Request,
+                                       Timeout, Priority, TransId, SrcPid,
+                                       Destination, State);
                 error ->
                     request_failed(SrcPid, State)
             end;
@@ -349,47 +340,101 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-destination_pick(#destination{service_names = [Name]} = Destination) ->
+destination_forward(RequestType, Name, Pattern, RequestInfo, Request,
+                    Timeout, Priority, TransId, SrcPid,
+                    Destination,
+                    #state{destinations = Destinations} = State) ->
+    {NameNext, DestinationNew} = destination_pick(Destination),
+    Parameters = cloudi_service_name:parse(Name, Pattern),
+    case name_parameters(NameNext, Parameters,
+                         DestinationNew) of
+        {ok, NameNew} ->
+            DestinationsNew = cloudi_x_trie:
+                              store(Pattern,
+                                    DestinationNew,
+                                    Destinations),
+            forward(RequestType, Name, Pattern, NameNew,
+                    RequestInfo, Request,
+                    Timeout, Priority, TransId, SrcPid,
+                    DestinationNew,
+                    State#state{
+                        destinations = DestinationsNew});
+        {error, Reason} ->
+            ?LOG_ERROR("(~p -> ~p) error: ~p",
+                       [Name, NameNext, Reason]),
+            request_failed(SrcPid, State)
+    end.
+
+destination_return(_RequestType, Name, Pattern, _RequestInfo, _Request,
+                   _Timeout, _Priority, _TransId, SrcPid,
+                   #destination_return{
+                       http_redirect = HttpRedirect} = Destination,
+                   State) ->
+    Parameters = cloudi_service_name:parse(Name, Pattern),
+    case name_parameters(HttpRedirect, Parameters,
+                         Destination) of
+        {ok, HttpRedirectNew} ->
+            {reply,
+             [{<<"status">>, <<"301">>},
+              {<<"location">>, erlang:list_to_binary(HttpRedirectNew)}],
+             <<>>, State};
+        {error, Reason} ->
+            ?LOG_ERROR("(~p http_redirect ~p) error: ~p",
+                       [Name, HttpRedirect, Reason]),
+            request_failed(SrcPid, State)
+    end.
+
+destination_pick(#destination_forward{service_names = {Name}} = Destination) ->
     {Name, Destination};
-destination_pick(#destination{index = Index,
-                              length = Length,
-                              mode = round_robin,
-                              service_names = Names} = Destination) ->
+destination_pick(#destination_forward{index = Index,
+                                      length = Length,
+                                      mode = round_robin,
+                                      service_names = Names} = Destination) ->
     IndexNew = if
         Index == Length ->
             1;
         true ->
             Index + 1
     end,
-    Name = lists:nth(Index, Names),
-    {Name, Destination#destination{index = IndexNew}};
-destination_pick(#destination{length = Length,
-                              mode = random,
-                              service_names = Names} = Destination) ->
+    Name = element(Index, Names),
+    {Name, Destination#destination_forward{index = IndexNew}};
+destination_pick(#destination_forward{length = Length,
+                                      mode = random,
+                                      service_names = Names} = Destination) ->
     Index = cloudi_x_quickrand:uniform(Length),
-    Name = lists:nth(Index, Names),
-    {Name, Destination#destination{index = Index}}.
+    Name = element(Index, Names),
+    {Name, Destination}.
 
-name_parameters(Name, [], #destination{}) ->
+name_parameters(Name, [], _) ->
     {ok, Name};
 name_parameters(_, [_ | _],
-                #destination{parameters_allowed = false}) ->
+                #destination_forward{parameters_allowed = false}) ->
+    {error, parameters_not_allowed};
+name_parameters(_, [_ | _],
+                #destination_return{parameters_allowed = false}) ->
     {error, parameters_not_allowed};
 name_parameters(Pattern, Parameters,
-                #destination{parameters_strict_matching =
-                                 ParametersStrictMatching,
-                             parameters_selected =
-                                 ParametersSelected}) ->
+                #destination_forward{parameters_strict_matching =
+                                         ParametersStrictMatching,
+                                     parameters_selected =
+                                         ParametersSelected}) ->
+    cloudi_service_name:new(Pattern, Parameters, ParametersSelected,
+                            ParametersStrictMatching);
+name_parameters(Pattern, Parameters,
+                #destination_return{parameters_strict_matching =
+                                        ParametersStrictMatching,
+                                    parameters_selected =
+                                        ParametersSelected}) ->
     cloudi_service_name:new(Pattern, Parameters, ParametersSelected,
                             ParametersStrictMatching).
 
 forward(_, _, _, NameNew, RequestInfo, Request,
         Timeout, Priority, _, _,
-        #destination{remote = undefined}, State) ->
+        #destination_forward{remote = undefined}, State) ->
     {forward, NameNew, RequestInfo, Request, Timeout, Priority, State};
 forward(RequestType, Name, Pattern, NameNew, RequestInfo, Request,
         Timeout, Priority, TransId, SrcPid,
-        #destination{remote = Remote}, State) ->
+        #destination_forward{remote = Remote}, State) ->
     Forward = cloudi_service_router_client:
               forward(RequestType, Name, Pattern, NameNew, RequestInfo, Request,
                       Timeout, Priority, TransId, SrcPid, Remote),

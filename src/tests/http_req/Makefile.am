@@ -83,6 +83,8 @@ install-exec-hook: $(JAVASCRIPT_INSTALL_HOOK) \
 	$(MKDIR_P) $(instdir)/public_html
 	$(INSTALL_DATA) $(srcdir)/public_html/index.html \
                     $(instdir)/public_html
+	$(INSTALL_DATA) $(srcdir)/public_html/redirect.html \
+                    $(instdir)/public_html
 	$(INSTALL_DATA) $(srcdir)/public_html/websockets.html \
                     $(instdir)/public_html
 	$(INSTALL_DATA) $(srcdir)/public_html/style.css \

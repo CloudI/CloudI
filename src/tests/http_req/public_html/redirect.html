@@ -1,0 +1,16 @@
+<html>
+  <head>
+    <!-- Do not allow search engines to index this -->
+    <meta name="robots" content="noindex">
+    <!-- Redirect to the new destination -->
+    <meta http-equiv="Refresh" content="0; url=index.html">
+  </head>
+  <body>
+    <!-- If http-equiv="Refresh" and JavaScript fail, use a link -->
+    <p>If you are not automatically redirected please <a href="index.html">click here</a></p>
+    <script>
+       // If http-equiv="Refresh" is not supported or allowed use JavaScript
+       window.location = 'index.html'
+    </script>
+  </body>
+</html>

@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -43,8 +43,9 @@
          function_optional/2,
          priority/1,
          service_name/1,
-         service_name_suffix/2,
+         service_name_pattern/1,
          service_name_pattern_suffix/2,
+         service_name_suffix/2,
          timeout_milliseconds/1]).
 
 -include("cloudi_logger.hrl").
@@ -169,6 +170,42 @@ service_name(Name) ->
     ?LOG_ERROR_SYNC("invalid service name: ~tp", [Name]),
     erlang:exit(badarg).
 
+-spec service_name_pattern(Pattern :: cloudi:service_name_pattern()) ->
+    true.
+
+service_name_pattern([PatternC | _] = Pattern)
+    when is_integer(PatternC) ->
+    _ = cloudi_x_trie:is_pattern2_bytes(Pattern),
+    true;
+service_name_pattern(Pattern) ->
+    ?LOG_ERROR_SYNC("invalid service name pattern: ~tp", [Pattern]),
+    erlang:exit(badarg).
+
+-spec service_name_pattern_suffix(Prefix :: cloudi:service_name_pattern(),
+                                  Pattern :: cloudi:service_name_pattern()) ->
+    cloudi:service_name_pattern_suffix().
+
+service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
+    when is_integer(PrefixC), is_integer(PatternC) ->
+    case suffix_pattern_parse(Prefix, Pattern) of
+        error ->
+            ?LOG_ERROR_SYNC("prefix service name pattern mismatch: "
+                            "\"~ts\" \"~ts\"",
+                            [cloudi_service_name:utf8_forced(Prefix),
+                             cloudi_service_name:utf8_forced(Pattern)]),
+            erlang:exit(badarg);
+        Suffix ->
+            Suffix
+    end;
+service_name_pattern_suffix([PrefixC | _], Pattern)
+    when is_integer(PrefixC) ->
+    ?LOG_ERROR_SYNC("invalid service name pattern: ~tp", [Pattern]),
+    erlang:exit(badarg);
+service_name_pattern_suffix(Prefix, [PatternC | _])
+    when is_integer(PatternC) ->
+    ?LOG_ERROR_SYNC("invalid prefix: ~tp", [Prefix]),
+    erlang:exit(badarg).
+
 -spec service_name_suffix(Prefix :: cloudi:service_name_pattern(),
                           Name :: cloudi:service_name()) ->
     string().
@@ -198,31 +235,6 @@ service_name_suffix([PrefixC | _], Name)
     erlang:exit(badarg);
 service_name_suffix(Prefix, [NameC | _])
     when is_integer(NameC) ->
-    ?LOG_ERROR_SYNC("invalid prefix: ~tp", [Prefix]),
-    erlang:exit(badarg).
-
--spec service_name_pattern_suffix(Prefix :: cloudi:service_name_pattern(),
-                                  Pattern :: cloudi:service_name_pattern()) ->
-    cloudi:service_name_pattern_suffix().
-
-service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
-    when is_integer(PrefixC), is_integer(PatternC) ->
-    case suffix_pattern_parse(Prefix, Pattern) of
-        error ->
-            ?LOG_ERROR_SYNC("prefix service name pattern mismatch: "
-                            "\"~ts\" \"~ts\"",
-                            [cloudi_service_name:utf8_forced(Prefix),
-                             cloudi_service_name:utf8_forced(Pattern)]),
-            erlang:exit(badarg);
-        Suffix ->
-            Suffix
-    end;
-service_name_pattern_suffix([PrefixC | _], Pattern)
-    when is_integer(PrefixC) ->
-    ?LOG_ERROR_SYNC("invalid service name pattern: ~tp", [Pattern]),
-    erlang:exit(badarg);
-service_name_pattern_suffix(Prefix, [PatternC | _])
-    when is_integer(PatternC) ->
     ?LOG_ERROR_SYNC("invalid prefix: ~tp", [Prefix]),
     erlang:exit(badarg).
 

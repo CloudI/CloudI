@@ -20,7 +20,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,8 +41,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2010-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -74,6 +74,7 @@
          foreach/2,
          from_list/1,
          is_bytestring/1,
+         is_bytestring_nonempty/1,
          is_key/2,
          is_pattern/1,
          is_pattern_bytes/1,
@@ -736,6 +737,21 @@ is_bytestring([C | L])
     is_bytestring(L);
 
 is_bytestring(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Test if the parameter is a nonempty byte string.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_bytestring_nonempty(L :: nonempty_list(byte())) -> 'true' | 'false'.
+
+is_bytestring_nonempty([C | L])
+    when C >= 0 andalso C =< 255 ->
+    is_bytestring(L);
+
+is_bytestring_nonempty(_) ->
     false.
 
 %%-------------------------------------------------------------------------
