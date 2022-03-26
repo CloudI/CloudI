@@ -23,7 +23,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2021-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -44,8 +44,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2021-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_send).
@@ -173,15 +173,15 @@ send_args_valid({Name, Request}) ->
     {Name, <<>>, Request, undefined, undefined};
 send_args_valid({Name, Request, Timeout}) ->
     true = cloudi_args_type:service_name(Name),
-    true = cloudi_args_type:timeout_milliseconds(Timeout),
+    true = cloudi_args_type:timeout_period(Timeout),
     {Name, <<>>, Request, Timeout, undefined};
 send_args_valid({Name, RequestInfo, Request, Timeout}) ->
     true = cloudi_args_type:service_name(Name),
-    true = cloudi_args_type:timeout_milliseconds(Timeout),
+    true = cloudi_args_type:timeout_period(Timeout),
     {Name, RequestInfo, Request, Timeout, undefined};
 send_args_valid({Name, _RequestInfo, _Request, Timeout, Priority} = Args) ->
     true = cloudi_args_type:service_name(Name),
-    true = cloudi_args_type:timeout_milliseconds(Timeout),
+    true = cloudi_args_type:timeout_period(Timeout),
     true = cloudi_args_type:priority(Priority),
     Args.
 

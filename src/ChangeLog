@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-03-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Support the "period" timeout format in the Timeout parameters of
+      cloudi and cloudi_service Erlang module functions and in
+      service configuration millisecond values
+      ("period" format is {pos_integer(), seconds | minutes | hours | days})
+        * Anything that supports the "period" timeout format also supports the
+          use of the atoms limit_max and limit_min for the value's extremes
+    * Update quickrand
+    * Update cpg
+
 2022-03-20 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the cloudi_service_router configuration arguments

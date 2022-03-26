@@ -92,83 +92,230 @@
     ?PRIORITY_HIGH..?PRIORITY_LOW.
 -export_type([priority/0]).
 
--type dest_refresh_delay_milliseconds() ::
-    ?DEST_REFRESH_DELAY_MIN..?DEST_REFRESH_DELAY_MAX.
--export_type([dest_refresh_delay_milliseconds/0]).
-
 -type timeout_initialize_value_milliseconds() ::
     ?TIMEOUT_INITIALIZE_MIN..?TIMEOUT_INITIALIZE_MAX.
 -type timeout_initialize_milliseconds() ::
     limit_min | limit_max | timeout_initialize_value_milliseconds().
+-type timeout_initialize_period() ::
+    {1..(?TIMEOUT_INITIALIZE_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_INITIALIZE_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_INITIALIZE_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_INITIALIZE_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    timeout_initialize_milliseconds().
 -export_type([timeout_initialize_value_milliseconds/0,
-              timeout_initialize_milliseconds/0]).
+              timeout_initialize_milliseconds/0,
+              timeout_initialize_period/0]).
 
 -type timeout_send_async_value_milliseconds() ::
     ?TIMEOUT_SEND_ASYNC_MIN..?TIMEOUT_SEND_ASYNC_MAX.
 -type timeout_send_async_milliseconds() ::
     limit_min | limit_max | timeout_send_async_value_milliseconds().
+-type timeout_send_async_period() ::
+    {1..(?TIMEOUT_SEND_ASYNC_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_SEND_ASYNC_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_SEND_ASYNC_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_SEND_ASYNC_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    timeout_send_async_milliseconds().
 -export_type([timeout_send_async_value_milliseconds/0,
-              timeout_send_async_milliseconds/0]).
+              timeout_send_async_milliseconds/0,
+              timeout_send_async_period/0]).
 
 -type timeout_send_sync_value_milliseconds() ::
     ?TIMEOUT_SEND_SYNC_MIN..?TIMEOUT_SEND_SYNC_MAX.
 -type timeout_send_sync_milliseconds() ::
     limit_min | limit_max | timeout_send_sync_value_milliseconds().
+-type timeout_send_sync_period() ::
+    {1..(?TIMEOUT_SEND_SYNC_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_SEND_SYNC_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_SEND_SYNC_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_SEND_SYNC_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    timeout_send_sync_milliseconds().
 -export_type([timeout_send_sync_value_milliseconds/0,
-              timeout_send_sync_milliseconds/0]).
+              timeout_send_sync_milliseconds/0,
+              timeout_send_sync_period/0]).
 
 -type timeout_terminate_value_milliseconds() ::
     ?TIMEOUT_TERMINATE_MIN..?TIMEOUT_TERMINATE_MAX.
 -type timeout_terminate_milliseconds() ::
     limit_min | limit_max | timeout_terminate_value_milliseconds().
+-type timeout_terminate_period() ::
+    {1..(?TIMEOUT_TERMINATE_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    timeout_terminate_milliseconds().
 -export_type([timeout_terminate_value_milliseconds/0,
-              timeout_terminate_milliseconds/0]).
+              timeout_terminate_milliseconds/0,
+              timeout_terminate_period/0]).
+
+-type dest_refresh_start_value_milliseconds() ::
+    ?DEST_REFRESH_START_MIN..?DEST_REFRESH_START_MAX.
+-type dest_refresh_start_milliseconds() ::
+    limit_min | limit_max | dest_refresh_start_value_milliseconds().
+-type dest_refresh_start_period() ::
+    {1..(?DEST_REFRESH_START_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?DEST_REFRESH_START_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?DEST_REFRESH_START_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?DEST_REFRESH_START_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    dest_refresh_start_milliseconds().
+-export_type([dest_refresh_start_value_milliseconds/0,
+              dest_refresh_start_milliseconds/0,
+              dest_refresh_start_period/0]).
+
+-type dest_refresh_delay_value_milliseconds() ::
+    ?DEST_REFRESH_DELAY_MIN..?DEST_REFRESH_DELAY_MAX.
+-type dest_refresh_delay_milliseconds() ::
+    limit_min | limit_max | dest_refresh_delay_value_milliseconds().
+-type dest_refresh_delay_period() ::
+    {1..(?DEST_REFRESH_DELAY_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?DEST_REFRESH_DELAY_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?DEST_REFRESH_DELAY_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?DEST_REFRESH_DELAY_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    dest_refresh_delay_milliseconds().
+-export_type([dest_refresh_delay_value_milliseconds/0,
+              dest_refresh_delay_milliseconds/0,
+              dest_refresh_delay_period/0]).
 
 -type request_timeout_immediate_max_value_milliseconds() ::
-    0..?TIMEOUT_MAX_ERLANG.
+    ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MIN..?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX.
 -type request_timeout_immediate_max_milliseconds() ::
     limit_min | limit_max | request_timeout_immediate_max_value_milliseconds().
+-type request_timeout_immediate_max_period() ::
+    {1..(?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    request_timeout_immediate_max_milliseconds().
 -export_type([request_timeout_immediate_max_value_milliseconds/0,
-              request_timeout_immediate_max_milliseconds/0]).
+              request_timeout_immediate_max_milliseconds/0,
+              request_timeout_immediate_max_period/0]).
 
 -type response_timeout_immediate_max_value_milliseconds() ::
-    0..?TIMEOUT_MAX_ERLANG.
+    ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MIN..?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX.
 -type response_timeout_immediate_max_milliseconds() ::
     limit_min | limit_max | response_timeout_immediate_max_value_milliseconds().
+-type response_timeout_immediate_max_period() ::
+    {1..(?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    response_timeout_immediate_max_milliseconds().
 -export_type([response_timeout_immediate_max_value_milliseconds/0,
-              response_timeout_immediate_max_milliseconds/0]).
+              response_timeout_immediate_max_milliseconds/0,
+              response_timeout_immediate_max_period/0]).
 
 -type restart_delay_value_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
 -type restart_delay_milliseconds() ::
     limit_min | limit_max | restart_delay_value_milliseconds().
+-type restart_delay_period() ::
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    restart_delay_milliseconds().
 -export_type([restart_delay_value_milliseconds/0,
-              restart_delay_milliseconds/0]).
+              restart_delay_milliseconds/0,
+              restart_delay_period/0]).
 
 -type latency_mean_time_value_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
 -type latency_mean_time_milliseconds() ::
     limit_min | limit_max | latency_mean_time_value_milliseconds().
+-type latency_mean_time_period() ::
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    latency_mean_time_milliseconds().
 -type latency_min_time_value_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
 -type latency_min_time_milliseconds() ::
     limit_min | limit_max | latency_min_time_value_milliseconds().
+-type latency_min_time_period() ::
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    latency_min_time_milliseconds().
 -type latency_max_time_value_milliseconds() ::
     1..?TIMEOUT_MAX_ERLANG.
 -type latency_max_time_milliseconds() ::
     limit_min | limit_max | latency_max_time_value_milliseconds().
+-type latency_max_time_period() ::
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    latency_max_time_milliseconds().
 -type latency_time_value_milliseconds() ::
     1..?TIMEOUT_MAX_ERLANG.
 -type latency_time_milliseconds() ::
     limit_min | limit_max | latency_time_value_milliseconds().
+-type latency_time_period() ::
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    latency_time_milliseconds().
 -export_type([latency_mean_time_value_milliseconds/0,
               latency_mean_time_milliseconds/0,
+              latency_mean_time_period/0,
               latency_min_time_value_milliseconds/0,
               latency_min_time_milliseconds/0,
+              latency_min_time_period/0,
               latency_max_time_value_milliseconds/0,
               latency_max_time_milliseconds/0,
+              latency_max_time_period/0,
               latency_time_value_milliseconds/0,
-              latency_time_milliseconds/0]).
+              latency_time_milliseconds/0,
+              latency_time_period/0]).
 
 -type acl() ::
     list(atom() | cloudi:service_name_pattern()).
@@ -422,18 +569,18 @@
          {count_max, number()} |
          {count_min, number()}).
 -type service_options_restart_delay_options() ::
-    list({time_exponential_min, restart_delay_milliseconds()} |
-         {time_exponential_max, restart_delay_milliseconds()} |
-         {time_linear_min, restart_delay_milliseconds()} |
-         {time_linear_slope, restart_delay_milliseconds()} |
-         {time_linear_max, restart_delay_milliseconds()} |
-         {time_absolute, restart_delay_milliseconds()}).
+    list({time_exponential_min, restart_delay_period()} |
+         {time_exponential_max, restart_delay_period()} |
+         {time_linear_min, restart_delay_period()} |
+         {time_linear_slope, restart_delay_period()} |
+         {time_linear_max, restart_delay_period()} |
+         {time_absolute, restart_delay_period()}).
 -type service_options_monkey_latency_options() ::
-    list({time_uniform_min, latency_min_time_milliseconds()} |
-         {time_uniform_max, latency_max_time_milliseconds()} |
-         {time_gaussian_mean, latency_mean_time_milliseconds()} |
+    list({time_uniform_min, latency_min_time_period()} |
+         {time_uniform_max, latency_max_time_period()} |
+         {time_gaussian_mean, latency_mean_time_period()} |
          {time_gaussian_stddev, float() | pos_integer()} |
-         {time_absolute, latency_time_milliseconds()}).
+         {time_absolute, latency_time_period()}).
 -type service_options_monkey_chaos_options() ::
     list({probability_request, float()} |
          {probability_day, float()}).
@@ -446,19 +593,19 @@
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
           service_options_rate_request_max_options() | number() | undefined} |
-         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
-         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_start, dest_refresh_start_period()} |
+         {dest_refresh_delay, dest_refresh_delay_period()} |
          {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,
-          request_timeout_immediate_max_milliseconds()} |
+          request_timeout_immediate_max_period()} |
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
-          response_timeout_immediate_max_milliseconds()} |
+          response_timeout_immediate_max_period()} |
          {count_process_dynamic,
           service_options_count_process_dynamic_options() | false} |
          {timeout_terminate,
-          undefined | timeout_terminate_milliseconds()} |
+          undefined | timeout_terminate_period()} |
          {restart_all, boolean()} |
          {restart_delay,
           service_options_restart_delay_options() | false} |
@@ -521,19 +668,19 @@
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
           service_options_rate_request_max_options() | number() | undefined} |
-         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
-         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_start, dest_refresh_start_period()} |
+         {dest_refresh_delay, dest_refresh_delay_period()} |
          {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,
-          request_timeout_immediate_max_milliseconds()} |
+          request_timeout_immediate_max_period()} |
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
-          response_timeout_immediate_max_milliseconds()} |
+          response_timeout_immediate_max_period()} |
          {count_process_dynamic,
           service_options_count_process_dynamic_options() | false} |
          {timeout_terminate,
-          undefined | timeout_terminate_milliseconds()} |
+          undefined | timeout_terminate_period()} |
          {restart_all, boolean()} |
          {restart_delay,
           service_options_restart_delay_options() | false} |
@@ -585,9 +732,9 @@
                   {dest_refresh, dest_refresh()} |
                   {protocol, 'default' | 'local' | 'tcp' | 'udp'} |
                   {buffer_size, 'default' | pos_integer()} |
-                  {timeout_init, timeout_initialize_value_milliseconds()} |
-                  {timeout_async, timeout_send_async_value_milliseconds()} |
-                  {timeout_sync, timeout_send_sync_value_milliseconds()} |
+                  {timeout_init, timeout_initialize_period()} |
+                  {timeout_async, timeout_send_async_period()} |
+                  {timeout_sync, timeout_send_sync_period()} |
                   {dest_list_deny, dest_list()} |
                   {dest_list_allow, dest_list()} |
                   {count_process, pos_integer() | float()} |
@@ -755,9 +902,9 @@
                   {code_paths_add, list(string())} |
                   {code_paths_remove, list(string())} |
                   {dest_refresh, dest_refresh()} |
-                  {timeout_init, timeout_initialize_milliseconds()} |
-                  {timeout_async, timeout_send_async_milliseconds()} |
-                  {timeout_sync, timeout_send_sync_milliseconds()} |
+                  {timeout_init, timeout_initialize_period()} |
+                  {timeout_async, timeout_send_async_period()} |
+                  {timeout_sync, timeout_send_sync_period()} |
                   {dest_list_deny, dest_list()} |
                   {dest_list_allow, dest_list()} |
                   {options, service_update_plan_options_internal()}).
@@ -772,9 +919,9 @@
                   {code_paths_add, list(string())} |
                   {code_paths_remove, list(string())} |
                   {dest_refresh, dest_refresh()} |
-                  {timeout_init, timeout_initialize_milliseconds()} |
-                  {timeout_async, timeout_send_async_milliseconds()} |
-                  {timeout_sync, timeout_send_sync_milliseconds()} |
+                  {timeout_init, timeout_initialize_period()} |
+                  {timeout_async, timeout_send_async_period()} |
+                  {timeout_sync, timeout_send_sync_period()} |
                   {dest_list_deny, dest_list()} |
                   {dest_list_allow, dest_list()} |
                   {options, service_update_plan_options_external()}).
@@ -784,15 +931,15 @@
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
           service_options_rate_request_max_options() | number() | undefined} |
-         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
-         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_start, dest_refresh_start_period()} |
+         {dest_refresh_delay, dest_refresh_delay_period()} |
          {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,
-          request_timeout_immediate_max_milliseconds()} |
+          request_timeout_immediate_max_period()} |
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
-          response_timeout_immediate_max_milliseconds()} |
+          response_timeout_immediate_max_period()} |
          {monkey_latency,
           service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,
@@ -849,15 +996,15 @@
          {queue_size, undefined | pos_integer()} |
          {rate_request_max,
           service_options_rate_request_max_options() | number() | undefined} |
-         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
-         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_start, dest_refresh_start_period()} |
+         {dest_refresh_delay, dest_refresh_delay_period()} |
          {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,
-          request_timeout_immediate_max_milliseconds()} |
+          request_timeout_immediate_max_period()} |
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
-          response_timeout_immediate_max_milliseconds()} |
+          response_timeout_immediate_max_period()} |
          {monkey_latency,
           service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,

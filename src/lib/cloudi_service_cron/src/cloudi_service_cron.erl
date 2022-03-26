@@ -27,7 +27,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -48,8 +48,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2019-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_cron).
@@ -536,7 +536,7 @@ send_args_valid([Name, Request] = SendArgs,
 send_args_valid([Name, Request, Timeout] = SendArgs,
                 SendArgsInfo, RequestInfoDefault) ->
     true = cloudi_args_type:service_name(Name),
-    true = cloudi_args_type:timeout_milliseconds(Timeout),
+    true = cloudi_args_type:timeout_period(Timeout),
     if
         SendArgsInfo =:= true ->
             [Name, RequestInfoDefault, Request, Timeout, undefined];
@@ -546,7 +546,7 @@ send_args_valid([Name, Request, Timeout] = SendArgs,
 send_args_valid([Name, RequestInfo, Request, Timeout, Priority],
                 SendArgsInfo, RequestInfoDefault) ->
     true = cloudi_args_type:service_name(Name),
-    true = cloudi_args_type:timeout_milliseconds(Timeout),
+    true = cloudi_args_type:timeout_period(Timeout),
     true = cloudi_args_type:priority(Priority),
     RequestInfoNew = if
         RequestInfo =:= default ->
@@ -610,21 +610,22 @@ send_args_call_timeout(Timeout,
                  1000,
     send_args_call_timeout(Timeout, TimeoutMax, Description).
 
-send_args_call_timeout(Timeout, TimeoutMax, _)
-    when is_atom(Timeout) ->
+send_args_call_timeout(undefined, TimeoutMax, _) ->
+    TimeoutMax;
+send_args_call_timeout(Timeout, TimeoutMax, Description) ->
+    TimeoutMilliSeconds = cloudi_args_type:
+                          timeout_period_to_milliseconds(Timeout),
     if
-        Timeout =:= undefined ->
-            TimeoutMax;
+        TimeoutMilliSeconds =:= limit_max;
+        is_integer(TimeoutMilliSeconds) andalso
+        TimeoutMilliSeconds > TimeoutMax ->
+            ?LOG_WARN("\"~ts\" event timeout ~w > ~w milliseconds: "
+                      "overlaps next event",
+                      [Description, Timeout, TimeoutMax]);
         true ->
-            Timeout
-    end;
-send_args_call_timeout(Timeout, TimeoutMax, Description)
-    when Timeout > TimeoutMax ->
-    ?LOG_WARN("\"~ts\" event timeout ~w > ~w overlaps next event",
-              [Description, Timeout, TimeoutMax]),
-    Timeout;
-send_args_call_timeout(Timeout, _, _) ->
-    Timeout.
+            ok
+    end,
+    TimeoutMilliSeconds.
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 time_offset_milliseconds() ->

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2020 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2012-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -61,6 +61,12 @@
 -endif.
 -endif.
 -endif.
+-endif.
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+-define(TIME_UNIT_MICROSECOND, microsecond).
+-else.
+-define(TIME_UNIT_MICROSECOND, micro_seconds).
 -endif.
 
 -include("quickrand_internal.hrl").
@@ -113,9 +119,9 @@ uniform(1) ->
     1;
 
 uniform(N) when is_integer(N), N < 1000000 ->
-    % os:timestamp/0 is currently the quickest source of uniform randomness
-    {_, _, MicroSecs} = os:timestamp(),
-    (MicroSecs rem N) + 1;
+    % os:system_time(microsecond) is a quicker call path when compared to
+    % os:timestamp() for usage of microseconds
+    (os:system_time(?TIME_UNIT_MICROSECOND) rem N) + 1;
 
 uniform(N) when is_integer(N), N =< 16#ffffffff ->
     (erlang:abs(erlang:monotonic_time() bxor
@@ -179,9 +185,9 @@ uniform_cache(1) ->
     1;
 
 uniform_cache(N) when is_integer(N), N < 1000000 ->
-    % os:timestamp/0 is currently the quickest source of uniform randomness
-    {_, _, MicroSecs} = os:timestamp(),
-    (MicroSecs rem N) + 1;
+    % os:system_time(microsecond) is a quicker call path when compared to
+    % os:timestamp() for usage of microseconds
+    (os:system_time(?TIME_UNIT_MICROSECOND) rem N) + 1;
 
 uniform_cache(N) when is_integer(N), N =< 16#ffffffff ->
     (erlang:abs(erlang:monotonic_time() bxor
@@ -228,9 +234,9 @@ uniform_cache(1, State) ->
     {1, State};
 
 uniform_cache(N, State) when is_integer(N), N < 1000000 ->
-    % os:timestamp/0 is currently the quickest source of uniform randomness
-    {_, _, MicroSecs} = os:timestamp(),
-    {(MicroSecs rem N) + 1, State};
+    % os:system_time(microsecond) is a quicker call path when compared to
+    % os:timestamp() for usage of microseconds
+    {(os:system_time(?TIME_UNIT_MICROSECOND) rem N) + 1, State};
 
 uniform_cache(N, State) when is_integer(N), N =< 16#ffffffff ->
     {(erlang:abs(erlang:monotonic_time() bxor

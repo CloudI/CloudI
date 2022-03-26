@@ -63,7 +63,7 @@
 
 -define(FORMAT_ERLANG, "erl").
 -define(FORMAT_JSON, "json").
- 
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -392,7 +392,7 @@ convert_json_to_term(Method, Request)
     case json_decode(Request) of
         Binary when is_binary(Binary) ->
             erlang:binary_to_list(Binary);
-        [{ScopeBinary, NameBinary}] 
+        [{ScopeBinary, NameBinary}]
             when is_binary(ScopeBinary),
                  is_binary(NameBinary) ->
             {erlang:binary_to_existing_atom(ScopeBinary, utf8),
@@ -532,11 +532,14 @@ convert_json_to_term_service([{<<"buffer_size">>, Value} | Service], L) ->
     end,
     convert_json_to_term_service(Service, [{buffer_size, BufferSize} | L]);
 convert_json_to_term_service([{<<"timeout_init">>, Value} | Service], L) ->
-    convert_json_to_term_service(Service, [{timeout_init, Value} | L]);
+    TimeoutInit = convert_json_to_term_period(Value),
+    convert_json_to_term_service(Service, [{timeout_init, TimeoutInit} | L]);
 convert_json_to_term_service([{<<"timeout_async">>, Value} | Service], L) ->
-    convert_json_to_term_service(Service, [{timeout_async, Value} | L]);
+    TimeoutAsync = convert_json_to_term_period(Value),
+    convert_json_to_term_service(Service, [{timeout_async, TimeoutAsync} | L]);
 convert_json_to_term_service([{<<"timeout_sync">>, Value} | Service], L) ->
-    convert_json_to_term_service(Service, [{timeout_sync, Value} | L]);
+    TimeoutSync = convert_json_to_term_period(Value),
+    convert_json_to_term_service(Service, [{timeout_sync, TimeoutSync} | L]);
 convert_json_to_term_service([{<<"dest_list_deny">>, DenyL} | Service], L) ->
     Deny = if
         is_binary(DenyL) ->
@@ -633,6 +636,23 @@ convert_json_to_term_atoms([H | L])
 convert_json_to_term_atoms([_ | _]) ->
     invalid.
 
+convert_json_to_term_period(<<"limit_max">>) ->
+    limit_max;
+convert_json_to_term_period(<<"limit_min">>) ->
+    limit_min;
+convert_json_to_term_period(<<"{", _/binary>> = Value) ->
+    cloudi_string:binary_to_term(Value);
+convert_json_to_term_period([{Unit, Multiplier}])
+    when is_integer(Multiplier),
+         Unit == <<"seconds">> orelse Unit == <<"minutes">> orelse
+         Unit == <<"hours">> orelse Unit == <<"days">> orelse
+         Unit == <<"second">> orelse Unit == <<"minute">> orelse
+         Unit == <<"hour">> orelse Unit == <<"day">> ->
+    {Multiplier, erlang:binary_to_existing_atom(Unit, utf8)};
+convert_json_to_term_period(Value)
+    when is_integer(Value) ->
+    Value.
+
 convert_term_to_json(ok, _, Space) ->
     json_encode([{<<"success">>, true}], Space);
 convert_term_to_json({error, Reason}, _, Space) ->
@@ -724,9 +744,12 @@ convert_term_to_json_service(#internal{prefix = Prefix,
               [cloudi_service_name:utf8(DestDeny)
                || DestDeny <- DestListDeny]} | Service1]
     end,
-    Service3 = [{<<"timeout_init">>, TimeoutInit},
-                {<<"timeout_async">>, TimeoutAsync},
-                {<<"timeout_sync">>, TimeoutSync} | Service2],
+    Service3 = [{<<"timeout_init">>,
+                 convert_term_to_json_period(TimeoutInit)},
+                {<<"timeout_async">>,
+                 convert_term_to_json_period(TimeoutAsync)},
+                {<<"timeout_sync">>,
+                 convert_term_to_json_period(TimeoutSync)} | Service2],
     ServiceN = if
         DestRefresh =:= none ->
             Service3;
@@ -785,9 +808,12 @@ convert_term_to_json_service(#external{prefix = Prefix,
     end,
     Service3 = [{<<"protocol">>, erlang:atom_to_binary(Protocol, utf8)},
                 {<<"buffer_size">>, BufferSize},
-                {<<"timeout_init">>, TimeoutInit},
-                {<<"timeout_async">>, TimeoutAsync},
-                {<<"timeout_sync">>, TimeoutSync} | Service2],
+                {<<"timeout_init">>,
+                 convert_term_to_json_period(TimeoutInit)},
+                {<<"timeout_async">>,
+                 convert_term_to_json_period(TimeoutAsync)},
+                {<<"timeout_sync">>,
+                 convert_term_to_json_period(TimeoutSync)} | Service2],
     ServiceN = if
         DestRefresh =:= none ->
             Service3;
@@ -871,6 +897,13 @@ convert_term_to_json_atoms([]) ->
 convert_term_to_json_atoms([A | L]) ->
     [erlang:atom_to_binary(A, utf8) |
      convert_term_to_json_atoms(L)].
+
+convert_term_to_json_period(limit_max) ->
+    <<"limit_max">>;
+convert_term_to_json_period(limit_min) ->
+    <<"limit_min">>;
+convert_term_to_json_period(Timeout) ->
+    cloudi_args_type:timeout_period_to_milliseconds(Timeout).
 
 json_encode(Term, true) ->
     cloudi_x_jsx:encode(Term, [{indent, 1}]);

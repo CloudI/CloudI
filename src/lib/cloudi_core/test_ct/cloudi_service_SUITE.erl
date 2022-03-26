@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2021 Michael Truog
+%%% @copyright 2014-2022 Michael Truog
 %%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -208,7 +208,8 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
     {ok, TransIds} = cloudi_service:mcast_async(Dispatcher, Name,
                                                 ?REQUEST_INFO1, ?REQUEST1,
                                                 undefined, undefined),
-    {ok, Responses} = cloudi_service:recv_asyncs(Dispatcher, TransIds),
+    {ok, Responses} = cloudi_service:recv_asyncs(Dispatcher,
+                                                 {5, seconds}, TransIds),
     {reply, Responses, State};
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO4, ?REQUEST4,
@@ -632,13 +633,14 @@ t_service_internal_sync_1(_Config) ->
      Context1} = cloudi:send_sync(Context0,
                                   ServiceName,
                                   ?REQUEST_INFO1, ?REQUEST1,
-                                  undefined, undefined),
+                                  {5, seconds}, undefined),
     {{ok,
       [{'send_sync', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
-        _Timeout1, 0, TransId1, Self}]},
+        Timeout1, 0, TransId1, Self}]},
      Context2} = cloudi:send_sync(Context1,
                                   ServiceName,
                                   ?REQUEST2),
+    true = Timeout1 =< 5000,
     true = cloudi_x_uuid:is_v1(TransId1),
     {error,
      {service_internal_start_failed,

@@ -44,11 +44,11 @@
         dest_refresh = immediate_closest
             :: cloudi_service_api:dest_refresh(),
         timeout_init = 5000
-            :: cloudi_service_api:timeout_initialize_milliseconds(),
+            :: cloudi_service_api:timeout_initialize_period(),
         timeout_async = 5000
-            :: cloudi_service_api:timeout_send_async_milliseconds(),
+            :: cloudi_service_api:timeout_send_async_period(),
         timeout_sync = 5000
-            :: cloudi_service_api:timeout_send_sync_milliseconds(),
+            :: cloudi_service_api:timeout_send_sync_period(),
         dest_list_deny = undefined
             :: cloudi_service_api:dest_list(),
         dest_list_allow = undefined
@@ -62,7 +62,7 @@
         options = []
             :: cloudi_service_api:service_options_internal()
     }).
-    
+
 % external service parameters
 -record(external,
     {
@@ -81,11 +81,11 @@
         buffer_size = default
             :: 'default' | pos_integer(),
         timeout_init = 5000
-            :: cloudi_service_api:timeout_initialize_milliseconds(),
+            :: cloudi_service_api:timeout_initialize_period(),
         timeout_async = 5000
-            :: cloudi_service_api:timeout_send_async_milliseconds(),
+            :: cloudi_service_api:timeout_send_async_period(),
         timeout_sync = 5000
-            :: cloudi_service_api:timeout_send_sync_milliseconds(),
+            :: cloudi_service_api:timeout_send_sync_period(),
         dest_list_deny = undefined
             :: cloudi_service_api:dest_list(),
         dest_list_allow = undefined

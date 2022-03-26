@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2013-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -128,6 +128,84 @@
         blocking = false :: boolean()
     }).
 
+% macros used to simplify source code in this file
+
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_MIN, 1).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MAX_MIN, 1).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(RESTART_DELAY_LINEAR_TIME_MIN_MIN, 0).
+-define(RESTART_DELAY_LINEAR_TIME_MIN_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(RESTART_DELAY_LINEAR_TIME_MAX_MIN, 1).
+-define(RESTART_DELAY_LINEAR_TIME_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(RESTART_DELAY_ABSOLUTE_TIME_MIN, 1).
+-define(RESTART_DELAY_ABSOLUTE_TIME_MAX, ?TIMEOUT_MAX_ERLANG).
+
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_ASSIGN(TimeMin),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeMin,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_MIN,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_MAX)).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_FORMAT(TimeMin),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeMin,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_MIN,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_MAX)).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_GUARD(TimeMin),
+        ?LIMIT_GUARD_MILLISECONDS(TimeMin,
+                                  ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_MIN,
+                                  ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_MAX)).
+
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MAX_ASSIGN(TimeMax),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeMax,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_MIN,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_MAX)).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MAX_FORMAT(TimeMax),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeMax,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_MIN,
+                                   ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_MAX)).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MAX_GUARD(TimeMax),
+        ?LIMIT_GUARD_MILLISECONDS(TimeMax,
+                                  ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_MIN,
+                                  ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_MAX)).
+
+-define(RESTART_DELAY_LINEAR_TIME_MIN_ASSIGN(TimeMin),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeMin,
+                                   ?RESTART_DELAY_LINEAR_TIME_MIN_MIN,
+                                   ?RESTART_DELAY_LINEAR_TIME_MIN_MAX)).
+-define(RESTART_DELAY_LINEAR_TIME_MIN_FORMAT(TimeMin),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeMin,
+                                   ?RESTART_DELAY_LINEAR_TIME_MIN_MIN,
+                                   ?RESTART_DELAY_LINEAR_TIME_MIN_MAX)).
+-define(RESTART_DELAY_LINEAR_TIME_MIN_GUARD(TimeMin),
+        ?LIMIT_GUARD_MILLISECONDS(TimeMin,
+                                  ?RESTART_DELAY_LINEAR_TIME_MIN_MIN,
+                                  ?RESTART_DELAY_LINEAR_TIME_MIN_MAX)).
+
+-define(RESTART_DELAY_LINEAR_TIME_MAX_ASSIGN(TimeMax),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeMax,
+                                   ?RESTART_DELAY_LINEAR_TIME_MAX_MIN,
+                                   ?RESTART_DELAY_LINEAR_TIME_MAX_MAX)).
+-define(RESTART_DELAY_LINEAR_TIME_MAX_FORMAT(TimeMax),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeMax,
+                                   ?RESTART_DELAY_LINEAR_TIME_MAX_MIN,
+                                   ?RESTART_DELAY_LINEAR_TIME_MAX_MAX)).
+-define(RESTART_DELAY_LINEAR_TIME_MAX_GUARD(TimeMax),
+        ?LIMIT_GUARD_MILLISECONDS(TimeMax,
+                                  ?RESTART_DELAY_LINEAR_TIME_MAX_MIN,
+                                  ?RESTART_DELAY_LINEAR_TIME_MAX_MAX)).
+
+-define(RESTART_DELAY_ABSOLUTE_TIME_ASSIGN(TimeValue),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeValue,
+                                   ?RESTART_DELAY_ABSOLUTE_TIME_MIN,
+                                   ?RESTART_DELAY_ABSOLUTE_TIME_MAX)).
+-define(RESTART_DELAY_ABSOLUTE_TIME_FORMAT(TimeValue),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeValue,
+                                   ?RESTART_DELAY_ABSOLUTE_TIME_MIN,
+                                   ?RESTART_DELAY_ABSOLUTE_TIME_MAX)).
+-define(RESTART_DELAY_ABSOLUTE_TIME_GUARD(TimeValue),
+        ?LIMIT_GUARD_MILLISECONDS(TimeValue,
+                                  ?RESTART_DELAY_ABSOLUTE_TIME_MIN,
+                                  ?RESTART_DELAY_ABSOLUTE_TIME_MAX)).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -183,13 +261,13 @@ hibernate_reinit(#hibernate{method = rate_request,
                             period = Period,
                             count = Count,
                             rate_min = RateMin,
-                            hibernate = OldValue} = State) ->
+                            hibernate = ValueOld} = State) ->
     RateCurrent = Count / Period,
     erlang:send_after(Period * 1000, self(),
                       'cloudi_hibernate_rate'),
     Value = (RateCurrent < RateMin),
     if
-        Value /= OldValue ->
+        Value /= ValueOld ->
             Direction = if
                 Value =:= true ->
                     "below";
@@ -238,19 +316,21 @@ restart_delay_format(false) ->
 restart_delay_format(#restart_delay{method = exponential,
                                     time_min = TimeMin,
                                     time_max = TimeMax}) ->
-    [{time_exponential_min, ?LIMIT_FORMAT(TimeMin, 1, ?TIMEOUT_MAX_ERLANG)},
-     {time_exponential_max, ?LIMIT_FORMAT(TimeMax, 1, ?TIMEOUT_MAX_ERLANG)}];
+    [{time_exponential_min,
+      ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_FORMAT(TimeMin)},
+     {time_exponential_max,
+      ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_FORMAT(TimeMax)}];
 restart_delay_format(#restart_delay{method = linear,
                                     time_min = TimeMin,
                                     time_max = TimeMax,
                                     time_slope = TimeSlope}) ->
-    [{time_linear_min, ?LIMIT_FORMAT(TimeMin, 0, ?TIMEOUT_MAX_ERLANG)},
+    [{time_linear_min, ?RESTART_DELAY_LINEAR_TIME_MIN_FORMAT(TimeMin)},
      {time_linear_slope, TimeSlope},
-     {time_linear_max, ?LIMIT_FORMAT(TimeMax, 1, ?TIMEOUT_MAX_ERLANG)}];
+     {time_linear_max, ?RESTART_DELAY_LINEAR_TIME_MAX_FORMAT(TimeMax)}];
 restart_delay_format(#restart_delay{method = absolute,
                                     time_min = TimeValue,
                                     time_max = TimeValue}) ->
-    [{time_absolute, ?LIMIT_FORMAT(TimeValue, 1, ?TIMEOUT_MAX_ERLANG)}].
+    [{time_absolute, ?RESTART_DELAY_ABSOLUTE_TIME_FORMAT(TimeValue)}].
 
 %% convert the configuration format to internal state
 
@@ -270,8 +350,8 @@ restart_delay_validate(Options) ->
                           MaxT :: non_neg_integer(),
                           State :: #restart_delay{} | false) ->
     false |
-    {NewRestartCount :: non_neg_integer(),
-     NewRestartTimes :: list(cloudi_timestamp:seconds_monotonic()),
+    {RestartCountNew :: non_neg_integer(),
+     RestartTimesNew :: list(cloudi_timestamp:seconds_monotonic()),
      Value :: 0..?TIMEOUT_MAX_ERLANG}.
 
 restart_delay_value(_, _, false) ->
@@ -279,12 +359,12 @@ restart_delay_value(_, _, false) ->
 restart_delay_value(RestartTimes, MaxT,
                     #restart_delay{} = State) ->
     SecondsNow = cloudi_timestamp:seconds_monotonic(),
-    {NewRestartCount,
-     NewRestartTimes} = cloudi_timestamp:seconds_filter_monotonic(RestartTimes,
+    {RestartCountNew,
+     RestartTimesNew} = cloudi_timestamp:seconds_filter_monotonic(RestartTimes,
                                                                   SecondsNow,
                                                                   MaxT),
-    Value = restart_delay_value_now(NewRestartCount, State),
-    {NewRestartCount, NewRestartTimes, Value}.
+    Value = restart_delay_value_now(RestartCountNew, State),
+    {RestartCountNew, RestartTimesNew, Value}.
 
 %% convert internal state to the configuration format
 
@@ -499,15 +579,15 @@ rate_request_request(#rate_request{blocking = true} = State) ->
 rate_request_request(#rate_request{period = Period,
                                    count = Count,
                                    rate_max = RateMax} = State) ->
-    NewCount = Count + 1,
-    NewBlocking = (NewCount / Period) > RateMax,
-    NewState = if
-        NewBlocking =:= true ->
+    CountNew = Count + 1,
+    BlockingNew = (CountNew / Period) > RateMax,
+    StateNew = if
+        BlockingNew =:= true ->
             State#rate_request{blocking = true};
-        NewBlocking =:= false ->
-            State#rate_request{count = NewCount}
+        BlockingNew =:= false ->
+            State#rate_request{count = CountNew}
     end,
-    {not NewBlocking, NewState}.
+    {not BlockingNew, StateNew}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -517,27 +597,27 @@ hibernate_validate([],
                    #hibernate{method = Method,
                               period = Period,
                               rate_min = RateMin} = State) ->
-    NewMethod = if
+    MethodNew = if
         Method =:= undefined ->
             ?HIBERNATE_METHOD_DEFAULT;
         Method =/= undefined ->
             Method
     end,
-    NewPeriod = if
+    PeriodNew = if
         Period =:= undefined ->
             ?HIBERNATE_PERIOD_DEFAULT;
         Period =/= undefined ->
             Period
     end,
-    NewRateMin = if
+    RateMinNew = if
         RateMin =:= undefined ->
             ?HIBERNATE_RATE_REQUEST_MIN_DEFAULT;
         RateMin =/= undefined ->
             RateMin
     end,
-    {ok, State#hibernate{method = NewMethod,
-                         period = NewPeriod,
-                         rate_min = NewRateMin}};
+    {ok, State#hibernate{method = MethodNew,
+                         period = PeriodNew,
+                         rate_min = RateMinNew}};
 hibernate_validate([{rate_request_min, RateMin} | Options],
                    #hibernate{method = Method} = State)
     when ((Method =:= undefined) orelse (Method =:= rate_request)),
@@ -560,96 +640,92 @@ restart_delay_validate([],
                                       time_min = TimeMin,
                                       time_max = TimeMax,
                                       time_slope = TimeSlope} = State) ->
-    NewMethod = if
+    MethodNew = if
         Method =:= undefined ->
             ?RESTART_DELAY_METHOD_DEFAULT;
         Method =/= undefined ->
             Method
     end,
-    NewTimeMin = if
+    TimeMinNew = if
         TimeMin =:= undefined ->
             if
-                NewMethod =:= exponential ->
+                MethodNew =:= exponential ->
                     ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT;
-                NewMethod =:= linear ->
+                MethodNew =:= linear ->
                     ?RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT
             end;
         TimeMin =/= undefined ->
             TimeMin
     end,
-    NewTimeMax = if
+    TimeMaxNew = if
         TimeMax =:= undefined ->
             if
-                NewMethod =:= exponential ->
+                MethodNew =:= exponential ->
                     ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT;
-                NewMethod =:= linear ->
+                MethodNew =:= linear ->
                     ?RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT
             end;
         TimeMax =/= undefined ->
             TimeMax
     end,
-    NewTimeSlope = if
-        TimeSlope =:= undefined, NewMethod =:= linear ->
+    TimeSlopeNew = if
+        TimeSlope =:= undefined, MethodNew =:= linear ->
             ?RESTART_DELAY_LINEAR_TIME_SLOPE_DEFAULT;
         true ->
             TimeSlope
     end,
     if
-        ((NewMethod =:= exponential) orelse (NewMethod =:= linear)) andalso
-        (NewTimeMin == NewTimeMax) ->
+        ((MethodNew =:= exponential) orelse (MethodNew =:= linear)) andalso
+        (TimeMinNew == TimeMaxNew) ->
             {error, {service_options_restart_delay_invalid,
                      time_absolute}};
         true ->
-            {ok, State#restart_delay{method = NewMethod,
-                                     time_min = NewTimeMin,
-                                     time_max = NewTimeMax,
-                                     time_slope = NewTimeSlope}}
+            {ok, State#restart_delay{method = MethodNew,
+                                     time_min = TimeMinNew,
+                                     time_max = TimeMaxNew,
+                                     time_slope = TimeSlopeNew}}
     end;
 restart_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
                        #restart_delay{method = Method,
                                       time_max = TimeMax} = State)
-    when ((Method =:= undefined) orelse (Method =:= exponential)),
-         (is_integer(TimeMin) andalso
-          (TimeMin >= 1) andalso (TimeMin =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (TimeMin =:= limit_min) orelse (TimeMin =:= limit_max) ->
-    NewTimeMin = ?LIMIT_ASSIGN(TimeMin, 1, ?TIMEOUT_MAX_ERLANG),
-    NewTimeMax = if
+    when (Method =:= undefined) orelse (Method =:= exponential),
+         ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_GUARD(TimeMin) ->
+    TimeMinNew = ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_ASSIGN(TimeMin),
+    TimeMaxNew = if
         TimeMax =:= undefined ->
-            erlang:max(NewTimeMin, ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT);
+            erlang:max(TimeMinNew, ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT);
         TimeMax =/= undefined ->
             TimeMax
     end,
     if
-        NewTimeMin =< NewTimeMax ->
+        TimeMinNew =< TimeMaxNew ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = exponential,
-                                       time_min = NewTimeMin,
-                                       time_max = NewTimeMax});
+                                       time_min = TimeMinNew,
+                                       time_max = TimeMaxNew});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
     end;
 restart_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
                        #restart_delay{method = Method,
                                       time_min = TimeMin} = State)
-    when ((Method =:= undefined) orelse (Method =:= exponential)),
-         (is_integer(TimeMax) andalso
-          (TimeMax >= 1) andalso (TimeMax =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (TimeMax =:= limit_min) orelse (TimeMax =:= limit_max) ->
-    NewTimeMax = ?LIMIT_ASSIGN(TimeMax, 1, ?TIMEOUT_MAX_ERLANG),
-    NewTimeMin = if
+    when (Method =:= undefined) orelse (Method =:= exponential),
+         ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_GUARD(TimeMax) ->
+    TimeMaxNew = ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_ASSIGN(TimeMax),
+    TimeMinNew = if
         TimeMin =:= undefined ->
-            erlang:min(NewTimeMax, ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT);
+            erlang:min(TimeMaxNew, ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT);
         TimeMin =/= undefined ->
             TimeMin
     end,
     if
-        NewTimeMin =< NewTimeMax ->
+        TimeMinNew =< TimeMaxNew ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = exponential,
-                                       time_max = NewTimeMax,
-                                       time_min = NewTimeMin});
+                                       time_max = TimeMaxNew,
+                                       time_min = TimeMinNew});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
     end;
@@ -664,62 +740,56 @@ restart_delay_validate([{time_linear_slope, TimeSlope} | Options],
 restart_delay_validate([{time_linear_min, TimeMin} = Option | Options],
                        #restart_delay{method = Method,
                                       time_max = TimeMax} = State)
-    when ((Method =:= undefined) orelse (Method =:= linear)),
-         (is_integer(TimeMin) andalso
-          (TimeMin >= 0) andalso (TimeMin =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (TimeMin =:= limit_min) orelse (TimeMin =:= limit_max) ->
-    NewTimeMin = ?LIMIT_ASSIGN(TimeMin, 0, ?TIMEOUT_MAX_ERLANG),
-    NewTimeMax = if
+    when (Method =:= undefined) orelse (Method =:= linear),
+         ?RESTART_DELAY_LINEAR_TIME_MIN_GUARD(TimeMin) ->
+    TimeMinNew = ?RESTART_DELAY_LINEAR_TIME_MIN_ASSIGN(TimeMin),
+    TimeMaxNew = if
         TimeMax =:= undefined ->
-            erlang:max(NewTimeMin, ?RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT);
+            erlang:max(TimeMinNew, ?RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT);
         TimeMax =/= undefined ->
             TimeMax
     end,
     if
-        NewTimeMin =< NewTimeMax ->
+        TimeMinNew =< TimeMaxNew ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = linear,
-                                       time_min = NewTimeMin,
-                                       time_max = NewTimeMax});
+                                       time_min = TimeMinNew,
+                                       time_max = TimeMaxNew});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
     end;
 restart_delay_validate([{time_linear_max, TimeMax} = Option | Options],
                        #restart_delay{method = Method,
                                       time_min = TimeMin} = State)
-    when ((Method =:= undefined) orelse (Method =:= linear)),
-         (is_integer(TimeMax) andalso
-          (TimeMax >= 1) andalso (TimeMax =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (TimeMax =:= limit_min) orelse (TimeMax =:= limit_max) ->
-    NewTimeMax = ?LIMIT_ASSIGN(TimeMax, 1, ?TIMEOUT_MAX_ERLANG),
-    NewTimeMin = if
+    when (Method =:= undefined) orelse (Method =:= linear),
+         ?RESTART_DELAY_LINEAR_TIME_MAX_GUARD(TimeMax) ->
+    TimeMaxNew = ?RESTART_DELAY_LINEAR_TIME_MAX_ASSIGN(TimeMax),
+    TimeMinNew = if
         TimeMin =:= undefined ->
-            erlang:min(NewTimeMax, ?RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT);
+            erlang:min(TimeMaxNew, ?RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT);
         TimeMin =/= undefined ->
             TimeMin
     end,
     if
-        NewTimeMin =< NewTimeMax ->
+        TimeMinNew =< TimeMaxNew ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = linear,
-                                       time_max = NewTimeMax,
-                                       time_min = NewTimeMin});
+                                       time_max = TimeMaxNew,
+                                       time_min = TimeMinNew});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
     end;
 restart_delay_validate([{time_absolute, TimeValue} | Options],
                        #restart_delay{method = Method} = State)
-    when ((Method =:= undefined) orelse (Method =:= absolute)),
-         (is_integer(TimeValue) andalso
-          (TimeValue >= 1) andalso (TimeValue =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (TimeValue =:= limit_min) orelse (TimeValue =:= limit_max) ->
-    NewTimeValue = ?LIMIT_ASSIGN(TimeValue, 1, ?TIMEOUT_MAX_ERLANG),
+    when (Method =:= undefined) orelse (Method =:= absolute),
+         ?RESTART_DELAY_ABSOLUTE_TIME_GUARD(TimeValue) ->
+    TimeValueNew = ?RESTART_DELAY_ABSOLUTE_TIME_ASSIGN(TimeValue),
     restart_delay_validate(Options,
                            State#restart_delay{method = absolute,
-                                               time_min = NewTimeValue,
-                                               time_max = NewTimeValue});
+                                               time_min = TimeValueNew,
+                                               time_max = TimeValueNew});
 restart_delay_validate([Invalid | _Options],
                        _State) ->
     {error, {service_options_restart_delay_invalid, Invalid}}.
@@ -762,38 +832,38 @@ count_process_dynamic_validate([],
                                    count_process_max = CountMax,
                                    count_process_min = CountMin} = State,
                                CountProcess) ->
-    NewMethod = if
+    MethodNew = if
         Method =:= undefined ->
             ?COUNT_PROCESS_DYNAMIC_METHOD_DEFAULT;
         Method =/= undefined ->
             Method
     end,
-    NewPeriod = if
+    PeriodNew = if
         Period =:= undefined ->
             ?COUNT_PROCESS_DYNAMIC_PERIOD_DEFAULT;
         Period =/= undefined ->
             Period
     end,
-    NewRateMax = if
+    RateMaxNew = if
         RateMax =:= undefined ->
             ?COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_DEFAULT;
         RateMax =/= undefined ->
             RateMax
     end,
-    NewRateMin = if
+    RateMinNew = if
         RateMin =:= undefined ->
             ?COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MIN_DEFAULT;
         RateMin =/= undefined ->
             RateMin
     end,
-    NewCountMax = if
+    CountMaxNew = if
         CountMax =:= undefined ->
             erlang:round(?COUNT_PROCESS_DYNAMIC_COUNT_MAX_DEFAULT *
                          CountProcess);
         CountMax =/= undefined ->
             CountMax
     end,
-    NewCountMin = if
+    CountMinNew = if
         CountMin =:= undefined ->
             erlang:max(1,
                        erlang:round(?COUNT_PROCESS_DYNAMIC_COUNT_MIN_DEFAULT *
@@ -802,21 +872,21 @@ count_process_dynamic_validate([],
             CountMin
     end,
     if
-        (NewMethod =:= rate_request) andalso (NewRateMin == NewRateMax) ->
+        (MethodNew =:= rate_request) andalso (RateMinNew == RateMaxNew) ->
             {error, {service_options_count_process_dynamic_invalid,
                      rate_request_max}};
-        (NewMethod =:= rate_request) andalso (NewCountMin == NewCountMax) ->
+        (MethodNew =:= rate_request) andalso (CountMinNew == CountMaxNew) ->
             {error, {service_options_count_process_dynamic_invalid,
                      count_max}};
         true ->
             {ok,
              State#count_process_dynamic{
-                 method = NewMethod,
-                 period = NewPeriod,
-                 rate_max = NewRateMax,
-                 rate_min = NewRateMin,
-                 count_process_max = NewCountMax,
-                 count_process_min = NewCountMin}}
+                 method = MethodNew,
+                 period = PeriodNew,
+                 rate_max = RateMaxNew,
+                 rate_min = RateMinNew,
+                 count_process_max = CountMaxNew,
+                 count_process_min = CountMinNew}}
     end;
 count_process_dynamic_validate([{rate_request_max, RateMax} = Option | Options],
                                #count_process_dynamic{
@@ -825,19 +895,19 @@ count_process_dynamic_validate([{rate_request_max, RateMax} = Option | Options],
                                CountProcess)
     when ((Method =:= undefined) orelse (Method =:= rate_request)),
          is_number(RateMax), RateMax > 0 ->
-    NewRateMin = if
+    RateMinNew = if
         RateMin =:= undefined ->
             RateMax - ?COUNT_PROCESS_DYNAMIC_RATE_REQUEST_OFFSET_DEFAULT;
         RateMin =/= undefined ->
             RateMin
     end,
     if
-        NewRateMin =< RateMax ->
+        RateMinNew =< RateMax ->
             count_process_dynamic_validate(Options,
                 State#count_process_dynamic{
                     method = rate_request,
                     rate_max = RateMax,
-                    rate_min = NewRateMin}, CountProcess);
+                    rate_min = RateMinNew}, CountProcess);
         true ->
             {error, {service_options_count_process_dynamic_invalid, Option}}
     end;
@@ -848,18 +918,18 @@ count_process_dynamic_validate([{rate_request_min, RateMin} = Option | Options],
                                CountProcess)
     when ((Method =:= undefined) orelse (Method =:= rate_request)),
          is_number(RateMin), RateMin > 0 ->
-    NewRateMax = if
+    RateMaxNew = if
         RateMax =:= undefined ->
             RateMin + ?COUNT_PROCESS_DYNAMIC_RATE_REQUEST_OFFSET_DEFAULT;
         RateMax =/= undefined ->
             RateMax
     end,
     if
-        RateMin =< NewRateMax ->
+        RateMin =< RateMaxNew ->
             count_process_dynamic_validate(Options,
                 State#count_process_dynamic{
                     method = rate_request,
-                    rate_max = NewRateMax,
+                    rate_max = RateMaxNew,
                     rate_min = RateMin}, CountProcess);
         true ->
             {error, {service_options_count_process_dynamic_invalid, Option}}
@@ -872,24 +942,24 @@ count_process_dynamic_validate([{count_max, CountMax} = Option | Options],
           (CountMax >= 1.0));
          (is_integer(CountMax) andalso
           (CountMax >= CountProcess)) ->
-    NewCountMax = if
+    CountMaxNew = if
         is_float(CountMax) ->
             erlang:round(CountMax * CountProcess);
         is_integer(CountMax) ->
             CountMax
     end,
-    NewCountMin = if
+    CountMinNew = if
         CountMin =:= undefined ->
             CountProcess;
         CountMin =/= undefined ->
             CountMin
     end,
     if
-        NewCountMin =< NewCountMax ->
+        CountMinNew =< CountMaxNew ->
             count_process_dynamic_validate(Options,
                 State#count_process_dynamic{
-                    count_process_max = NewCountMax,
-                    count_process_min = NewCountMin}, CountProcess);
+                    count_process_max = CountMaxNew,
+                    count_process_min = CountMinNew}, CountProcess);
         true ->
             {error, {service_options_count_process_dynamic_invalid, Option}}
     end;
@@ -901,24 +971,24 @@ count_process_dynamic_validate([{count_min, CountMin} = Option | Options],
           (CountMin > 0) andalso (CountMin =< 1.0));
          (is_integer(CountMin) andalso
           (CountMin > 0) andalso (CountMin =< CountProcess)) ->
-    NewCountMin = if
+    CountMinNew = if
         is_float(CountMin) ->
             erlang:max(1, erlang:round(CountMin * CountProcess));
         is_integer(CountMin) ->
             CountMin
     end,
-    NewCountMax = if
+    CountMaxNew = if
         CountMax =:= undefined ->
             CountProcess;
         CountMax =/= undefined ->
             CountMax
     end,
     if
-        NewCountMin =< NewCountMax ->
+        CountMinNew =< CountMaxNew ->
             count_process_dynamic_validate(Options,
                 State#count_process_dynamic{
-                    count_process_max = NewCountMax,
-                    count_process_min = NewCountMin}, CountProcess);
+                    count_process_max = CountMaxNew,
+                    count_process_min = CountMinNew}, CountProcess);
         true ->
             {error, {service_options_count_process_dynamic_invalid, Option}}
     end;
@@ -937,20 +1007,20 @@ count_process_dynamic_validate([Invalid | _Options],
 rate_request_validate([],
                       #rate_request{period = Period,
                                     rate_max = RateMax} = State) ->
-    NewPeriod = if
+    PeriodNew = if
         Period =:= undefined ->
             ?RATE_REQUEST_PERIOD_DEFAULT;
         Period =/= undefined ->
             Period
     end,
-    NewRateMax = if
+    RateMaxNew = if
         RateMax =:= undefined ->
             ?RATE_REQUEST_MAX_DEFAULT;
         RateMax =/= undefined ->
             RateMax
     end,
-    {ok, State#rate_request{period = NewPeriod,
-                            rate_max = NewRateMax}};
+    {ok, State#rate_request{period = PeriodNew,
+                            rate_max = RateMaxNew}};
 rate_request_validate([{value, RateMax} | Options],
                       #rate_request{} = State)
     when is_number(RateMax), RateMax > 0 ->

@@ -187,7 +187,7 @@
         % delay after startup before requesting the initial service
         % group membership (when using a lazy destination refresh method)
         dest_refresh_start = ?DEFAULT_DEST_REFRESH_START
-            :: cloudi_service_api:dest_refresh_delay_milliseconds(),
+            :: cloudi_service_api:dest_refresh_start_value_milliseconds(),
         % maximum possible time for a service death to remove service
         % group membership when using a lazy destination refresh method
         % (not an immediate destination refresh method).
@@ -196,12 +196,12 @@
         % (and an immediate destination refresh method is used when
         %  a service is mainly communicating with short-lived services).
         dest_refresh_delay = ?DEFAULT_DEST_REFRESH_DELAY
-            :: cloudi_service_api:dest_refresh_delay_milliseconds(),
+            :: cloudi_service_api:dest_refresh_delay_value_milliseconds(),
         % should the service request name lookup be a synchronous or
         % an asynchronous operation (the default is to be synchronous and
         % keep the service name lookup result decoupled from the
         % destination service's lifetime during the service request
-        % timeout period, to anticipate any number of delays a service 
+        % timeout period, to anticipate any number of delays a service
         % request may encounter, including node-splits and forwards,
         % to provide service failure isolation)
         request_name_lookup = ?DEFAULT_REQUEST_NAME_LOOKUP
@@ -227,7 +227,8 @@
         % to unresponsive services, this value will need to decrease,
         % to affect service requests of shorter duration.
         request_timeout_immediate_max = 20001 % milliseconds
-            :: cloudi_service_api:request_timeout_immediate_max_milliseconds(),
+            :: cloudi_service_api:
+               request_timeout_immediate_max_value_milliseconds(),
         % should the service use internal timeout information to provide a
         % more accurate timeout value within the response provided
         % (n.b., this only affects the response timeout of a successful
@@ -243,7 +244,8 @@
         % value will always be sent to help the sending-side avoid excessive
         % delays during the timeout period.
         response_timeout_immediate_max = 20001 % milliseconds
-            :: cloudi_service_api:response_timeout_immediate_max_milliseconds(),
+            :: cloudi_service_api:
+               response_timeout_immediate_max_value_milliseconds(),
         % should the process count be varied automatically based on the
         % rate of service processing within a specific time period.
         % the count max/min specify limits for the count_process changes
@@ -263,7 +265,7 @@
         % enforce a greater uptime constraint on the service execution.
         timeout_terminate = undefined
             :: undefined |
-               cloudi_service_api:timeout_terminate_milliseconds(),
+               cloudi_service_api:timeout_terminate_value_milliseconds(),
         % should all processes be restarted when one process restarts
         % (after one of its execution threads crashes)
         restart_all = false

@@ -270,6 +270,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             is_integer(hd(HttpRedirect)) ->
                 undefined = Remote,
                 true = (Length == 0),
+                true = cloudi_x_trie:is_bytestring_nonempty(HttpRedirect),
                 #destination_return{parameters_allowed = ParametersAllowed,
                                     parameters_strict_matching =
                                         ParametersStrictMatching,

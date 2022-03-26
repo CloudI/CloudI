@@ -46,7 +46,9 @@
          service_name_pattern/1,
          service_name_pattern_suffix/2,
          service_name_suffix/2,
-         timeout_milliseconds/1]).
+         timeout_milliseconds/1,
+         timeout_period/1,
+         timeout_period_to_milliseconds/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -253,6 +255,63 @@ timeout_milliseconds(Timeout)
 timeout_milliseconds(Timeout) ->
     ?LOG_ERROR_SYNC("invalid timeout: ~tp", [Timeout]),
     erlang:exit(badarg).
+
+-spec timeout_period(Timeout :: cloudi:timeout_period()) ->
+    true.
+
+timeout_period(undefined) ->
+    true;
+timeout_period(limit_min) ->
+    true;
+timeout_period(limit_max) ->
+    true;
+timeout_period(Timeout)
+    when is_integer(Timeout), Timeout >= 0, Timeout =< ?TIMEOUT_MAX_ERLANG ->
+    true;
+timeout_period({Multiplier, Unit} = Timeout)
+    when is_integer(Multiplier), Multiplier >= 1 ->
+    if
+        Unit =:= seconds orelse Unit =:= second,
+        Multiplier =< ?TIMEOUT_MAX_ERLANG div 1000 ->
+            true;
+        Unit =:= minutes orelse Unit =:= minute,
+        Multiplier =< ?TIMEOUT_MAX_ERLANG div 60000 ->
+            true;
+        Unit =:= hours orelse Unit =:= hour,
+        Multiplier =< ?TIMEOUT_MAX_ERLANG div 3600000 ->
+            true;
+        Unit =:= days orelse Unit =:= day,
+        Multiplier =< ?TIMEOUT_MAX_ERLANG div 86400000 ->
+            true;
+        true ->
+            ?LOG_ERROR_SYNC("invalid timeout_period: ~tp", [Timeout]),
+            erlang:exit(badarg)
+    end;
+timeout_period(Timeout) ->
+    ?LOG_ERROR_SYNC("invalid timeout: ~tp", [Timeout]),
+    erlang:exit(badarg).
+
+-spec timeout_period_to_milliseconds(Timeout :: cloudi:timeout_period()) ->
+    cloudi:timeout_milliseconds().
+
+timeout_period_to_milliseconds(Timeout)
+    when Timeout =:= undefined; Timeout =:= limit_min; Timeout =:= limit_max ->
+    Timeout;
+timeout_period_to_milliseconds(Timeout)
+    when is_integer(Timeout), Timeout >= 0, Timeout =< ?TIMEOUT_MAX_ERLANG ->
+    Timeout;
+timeout_period_to_milliseconds({Multiplier, Unit})
+    when is_integer(Multiplier), Multiplier > 0 ->
+    if
+        Unit =:= seconds orelse Unit =:= second ->
+            Multiplier * 1000;
+        Unit =:= minutes orelse Unit =:= minute ->
+            Multiplier * 60000;
+        Unit =:= hours orelse Unit =:= hour ->
+            Multiplier * 3600000;
+        Unit =:= days orelse Unit =:= day ->
+            Multiplier * 86400000
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

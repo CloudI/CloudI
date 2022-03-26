@@ -412,6 +412,112 @@
 
 -define(PID_OPTIONS_DEFAULT, [link,{message_queue_data,on_heap}]).
 
+% macros used to simplify source code in this file
+
+-define(TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeoutInit,
+                                   ?TIMEOUT_INITIALIZE_MIN,
+                                   ?TIMEOUT_INITIALIZE_MAX)).
+-define(TIMEOUT_INITIALIZE_FORMAT(TimeoutInit),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeoutInit,
+                                   ?TIMEOUT_INITIALIZE_MIN,
+                                   ?TIMEOUT_INITIALIZE_MAX)).
+-define(TIMEOUT_INITIALIZE_GUARD(TimeoutInit),
+        ?LIMIT_GUARD_MILLISECONDS(TimeoutInit,
+                                  ?TIMEOUT_INITIALIZE_MIN,
+                                  ?TIMEOUT_INITIALIZE_MAX)).
+
+-define(TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutSendAsync),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeoutSendAsync,
+                                   ?TIMEOUT_SEND_ASYNC_MIN,
+                                   ?TIMEOUT_SEND_ASYNC_MAX)).
+-define(TIMEOUT_SEND_ASYNC_FORMAT(TimeoutSendAsync),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeoutSendAsync,
+                                   ?TIMEOUT_SEND_ASYNC_MIN,
+                                   ?TIMEOUT_SEND_ASYNC_MAX)).
+-define(TIMEOUT_SEND_ASYNC_GUARD(TimeoutSendAsync),
+        ?LIMIT_GUARD_MILLISECONDS(TimeoutSendAsync,
+                                  ?TIMEOUT_SEND_ASYNC_MIN,
+                                  ?TIMEOUT_SEND_ASYNC_MAX)).
+
+-define(TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSendSync),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeoutSendSync,
+                                   ?TIMEOUT_SEND_SYNC_MIN,
+                                   ?TIMEOUT_SEND_SYNC_MAX)).
+-define(TIMEOUT_SEND_SYNC_FORMAT(TimeoutSendSync),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeoutSendSync,
+                                   ?TIMEOUT_SEND_SYNC_MIN,
+                                   ?TIMEOUT_SEND_SYNC_MAX)).
+-define(TIMEOUT_SEND_SYNC_GUARD(TimeoutSendSync),
+        ?LIMIT_GUARD_MILLISECONDS(TimeoutSendSync,
+                                  ?TIMEOUT_SEND_SYNC_MIN,
+                                  ?TIMEOUT_SEND_SYNC_MAX)).
+
+-define(DEST_REFRESH_START_ASSIGN(DestRefreshStart),
+        ?LIMIT_ASSIGN_MILLISECONDS(DestRefreshStart,
+                                   ?DEST_REFRESH_START_MIN,
+                                   ?DEST_REFRESH_START_MAX)).
+-define(DEST_REFRESH_START_FORMAT(DestRefreshStart),
+        ?LIMIT_FORMAT_MILLISECONDS(DestRefreshStart,
+                                   ?DEST_REFRESH_START_MIN,
+                                   ?DEST_REFRESH_START_MAX)).
+-define(DEST_REFRESH_START_GUARD(DestRefreshStart),
+        ?LIMIT_GUARD_MILLISECONDS(DestRefreshStart,
+                                  ?DEST_REFRESH_START_MIN,
+                                  ?DEST_REFRESH_START_MAX)).
+
+-define(DEST_REFRESH_DELAY_ASSIGN(DestRefreshDelay),
+        ?LIMIT_ASSIGN_MILLISECONDS(DestRefreshDelay,
+                                   ?DEST_REFRESH_DELAY_MIN,
+                                   ?DEST_REFRESH_DELAY_MAX)).
+-define(DEST_REFRESH_DELAY_FORMAT(DestRefreshDelay),
+        ?LIMIT_FORMAT_MILLISECONDS(DestRefreshDelay,
+                                   ?DEST_REFRESH_DELAY_MIN,
+                                   ?DEST_REFRESH_DELAY_MAX)).
+-define(DEST_REFRESH_DELAY_GUARD(DestRefreshDelay),
+        ?LIMIT_GUARD_MILLISECONDS(DestRefreshDelay,
+                                  ?DEST_REFRESH_DELAY_MIN,
+                                  ?DEST_REFRESH_DELAY_MAX)).
+
+-define(REQUEST_TIMEOUT_IMMEDIATE_MAX_ASSIGN(RequestTimeoutImmediateMax),
+        ?LIMIT_ASSIGN_MILLISECONDS(RequestTimeoutImmediateMax,
+                                   ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MIN,
+                                   ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX)).
+-define(REQUEST_TIMEOUT_IMMEDIATE_MAX_FORMAT(RequestTimeoutImmediateMax),
+        ?LIMIT_FORMAT_MILLISECONDS(RequestTimeoutImmediateMax,
+                                   ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MIN,
+                                   ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX)).
+-define(REQUEST_TIMEOUT_IMMEDIATE_MAX_GUARD(RequestTimeoutImmediateMax),
+        ?LIMIT_GUARD_MILLISECONDS(RequestTimeoutImmediateMax,
+                                  ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MIN,
+                                  ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX)).
+
+-define(RESPONSE_TIMEOUT_IMMEDIATE_MAX_ASSIGN(ResponseTimeoutImmediateMax),
+        ?LIMIT_ASSIGN_MILLISECONDS(ResponseTimeoutImmediateMax,
+                                   ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MIN,
+                                   ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX)).
+-define(RESPONSE_TIMEOUT_IMMEDIATE_MAX_FORMAT(ResponseTimeoutImmediateMax),
+        ?LIMIT_FORMAT_MILLISECONDS(ResponseTimeoutImmediateMax,
+                                   ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MIN,
+                                   ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX)).
+-define(RESPONSE_TIMEOUT_IMMEDIATE_MAX_GUARD(ResponseTimeoutImmediateMax),
+        ?LIMIT_GUARD_MILLISECONDS(ResponseTimeoutImmediateMax,
+                                  ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MIN,
+                                  ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX)).
+
+-define(TIMEOUT_TERMINATE_ASSIGN(TimeoutTerminate),
+        ?LIMIT_ASSIGN_MILLISECONDS(TimeoutTerminate,
+                                   ?TIMEOUT_TERMINATE_MIN,
+                                   ?TIMEOUT_TERMINATE_MAX)).
+-define(TIMEOUT_TERMINATE_FORMAT(TimeoutTerminate),
+        ?LIMIT_FORMAT_MILLISECONDS(TimeoutTerminate,
+                                   ?TIMEOUT_TERMINATE_MIN,
+                                   ?TIMEOUT_TERMINATE_MAX)).
+-define(TIMEOUT_TERMINATE_GUARD(TimeoutTerminate),
+        ?LIMIT_GUARD_MILLISECONDS_60000_MAX(TimeoutTerminate,
+                                            ?TIMEOUT_TERMINATE_MIN,
+                                            ?TIMEOUT_TERMINATE_MAX)).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -980,7 +1086,8 @@ services_format_options_external(Options) ->
         Options#config_service_options.dest_refresh_start /=
         Defaults#config_service_options.dest_refresh_start ->
             [{dest_refresh_start,
-              Options#config_service_options.dest_refresh_start} |
+              ?DEST_REFRESH_START_FORMAT(
+                  Options#config_service_options.dest_refresh_start)} |
              OptionsList4];
         true ->
             OptionsList4
@@ -989,7 +1096,8 @@ services_format_options_external(Options) ->
         Options#config_service_options.dest_refresh_delay /=
         Defaults#config_service_options.dest_refresh_delay ->
             [{dest_refresh_delay,
-              Options#config_service_options.dest_refresh_delay} |
+              ?DEST_REFRESH_DELAY_FORMAT(
+                  Options#config_service_options.dest_refresh_delay)} |
              OptionsList5];
         true ->
             OptionsList5
@@ -1016,9 +1124,9 @@ services_format_options_external(Options) ->
         Options#config_service_options.request_timeout_immediate_max /=
         Defaults#config_service_options.request_timeout_immediate_max ->
             [{request_timeout_immediate_max,
-              ?LIMIT_FORMAT(Options#config_service_options
-                            .request_timeout_immediate_max,
-                            0, ?TIMEOUT_MAX_ERLANG)} |
+              ?REQUEST_TIMEOUT_IMMEDIATE_MAX_FORMAT(
+                  Options#config_service_options
+                  .request_timeout_immediate_max)} |
              OptionsList8];
         true ->
             OptionsList8
@@ -1036,9 +1144,9 @@ services_format_options_external(Options) ->
         Options#config_service_options.response_timeout_immediate_max /=
         Defaults#config_service_options.response_timeout_immediate_max ->
             [{response_timeout_immediate_max,
-              ?LIMIT_FORMAT(Options#config_service_options
-                            .response_timeout_immediate_max,
-                            0, ?TIMEOUT_MAX_ERLANG)} |
+              ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_FORMAT(
+                  Options#config_service_options
+                  .response_timeout_immediate_max)} |
              OptionsList10];
         true ->
             OptionsList10
@@ -1058,8 +1166,8 @@ services_format_options_external(Options) ->
         Options#config_service_options.timeout_terminate /=
         Defaults#config_service_options.timeout_terminate ->
             [{timeout_terminate,
-              ?LIMIT_FORMAT(Options#config_service_options.timeout_terminate,
-                            ?TIMEOUT_TERMINATE_MIN, ?TIMEOUT_TERMINATE_MAX)} |
+              ?TIMEOUT_TERMINATE_FORMAT(
+                  Options#config_service_options.timeout_terminate)} |
              OptionsList12];
         true ->
             OptionsList12
@@ -1369,7 +1477,7 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                                            EC2SecretAccessKey,
                                            EC2Host, EC2Groups, EC2Tags],
                                 discover_f = ec2_discover} ->
-                                
+
             [{discovery,
               [{ec2,
                 [{access_key_id, EC2AccessKeyId},
@@ -1754,7 +1862,7 @@ logging(#config{logging = #config_logging{
                 {FormatterKeys, lists:reverse(FormatterValue7)}
             end, FormattersList0),
             [{formatters, FormattersList1} | LoggingList8]
-           
+
     end,
     LoggingList10 = if
         LogTimeOffset =:= Defaults#config_logging.log_time_offset ->
@@ -2037,25 +2145,13 @@ services_validate([#internal{dest_refresh = DestRefresh} | _], _, _, _)
                (DestRefresh =:= none))) ->
     {error, {service_internal_dest_refresh_invalid, DestRefresh}};
 services_validate([#internal{timeout_init = TimeoutInit} | _], _, _, _)
-    when not ((is_integer(TimeoutInit) andalso
-               (TimeoutInit >= ?TIMEOUT_INITIALIZE_MIN) andalso
-               (TimeoutInit =< ?TIMEOUT_INITIALIZE_MAX)) orelse
-              (TimeoutInit =:= limit_min) orelse
-              (TimeoutInit =:= limit_max)) ->
+    when not ?TIMEOUT_INITIALIZE_GUARD(TimeoutInit) ->
     {error, {service_internal_timeout_init_invalid, TimeoutInit}};
 services_validate([#internal{timeout_async = TimeoutAsync} | _], _, _, _)
-    when not ((is_integer(TimeoutAsync) andalso
-               (TimeoutAsync >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
-               (TimeoutAsync =< ?TIMEOUT_SEND_ASYNC_MAX)) orelse
-              (TimeoutAsync =:= limit_min) orelse
-              (TimeoutAsync =:= limit_max)) ->
+    when not ?TIMEOUT_SEND_ASYNC_GUARD(TimeoutAsync) ->
     {error, {service_internal_timeout_async_invalid, TimeoutAsync}};
 services_validate([#internal{timeout_sync = TimeoutSync} | _], _, _, _)
-    when not ((is_integer(TimeoutSync) andalso
-               (TimeoutSync >= ?TIMEOUT_SEND_SYNC_MIN) andalso
-               (TimeoutSync =< ?TIMEOUT_SEND_SYNC_MAX)) orelse
-              (TimeoutSync =:= limit_min) orelse
-              (TimeoutSync =:= limit_max)) ->
+    when not ?TIMEOUT_SEND_SYNC_GUARD(TimeoutSync) ->
     {error, {service_internal_timeout_sync_invalid, TimeoutSync}};
 services_validate([#internal{dest_refresh = DestRefresh,
                              dest_list_deny = DestListDeny} | _], _, _, _)
@@ -2203,25 +2299,13 @@ services_validate([#external{buffer_size = BufferSize} | _], _, _, _)
               (is_integer(BufferSize) andalso (BufferSize >= 1024))) ->
     {error, {service_external_buffer_size_invalid, BufferSize}};
 services_validate([#external{timeout_init = TimeoutInit} | _], _, _, _)
-    when not ((is_integer(TimeoutInit) andalso
-               (TimeoutInit >= ?TIMEOUT_INITIALIZE_MIN) andalso
-               (TimeoutInit =< ?TIMEOUT_INITIALIZE_MAX)) orelse
-              (TimeoutInit =:= limit_min) orelse
-              (TimeoutInit =:= limit_max)) ->
+    when not ?TIMEOUT_INITIALIZE_GUARD(TimeoutInit) ->
     {error, {service_external_timeout_init_invalid, TimeoutInit}};
 services_validate([#external{timeout_async = TimeoutAsync} | _], _, _, _)
-    when not ((is_integer(TimeoutAsync) andalso
-               (TimeoutAsync >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
-               (TimeoutAsync =< ?TIMEOUT_SEND_ASYNC_MAX)) orelse
-              (TimeoutAsync =:= limit_min) orelse
-              (TimeoutAsync =:= limit_max)) ->
+    when not ?TIMEOUT_SEND_ASYNC_GUARD(TimeoutAsync) ->
     {error, {service_external_timeout_async_invalid, TimeoutAsync}};
 services_validate([#external{timeout_sync = TimeoutSync} | _], _, _, _)
-    when not ((is_integer(TimeoutSync) andalso
-               (TimeoutSync >= ?TIMEOUT_SEND_SYNC_MIN) andalso
-               (TimeoutSync =< ?TIMEOUT_SEND_SYNC_MAX)) orelse
-              (TimeoutSync =:= limit_min) orelse
-              (TimeoutSync =:= limit_max)) ->
+    when not ?TIMEOUT_SEND_SYNC_GUARD(TimeoutSync) ->
     {error, {service_external_timeout_sync_invalid, TimeoutSync}};
 services_validate([#external{dest_refresh = DestRefresh,
                              dest_list_deny = DestListDeny} | _], _, _, _)
@@ -2439,12 +2523,8 @@ timeout_terminate(TimeoutTerminate, _, 0) ->
     if
         TimeoutTerminate =:= undefined ->
             {ok, Default};
-        TimeoutTerminate =:= limit_min ->
-            {ok, ?TIMEOUT_TERMINATE_MIN};
-        TimeoutTerminate =:= limit_max ->
-            {ok, ?TIMEOUT_TERMINATE_MAX};
-        is_integer(TimeoutTerminate) ->
-            {ok, TimeoutTerminate}
+        true ->
+            {ok, ?TIMEOUT_TERMINATE_ASSIGN(TimeoutTerminate)}
     end;
 timeout_terminate(TimeoutTerminate, 0, MaxT)
     when is_integer(MaxT) ->
@@ -2453,28 +2533,23 @@ timeout_terminate(TimeoutTerminate, 0, MaxT)
     if
         TimeoutTerminate =:= undefined ->
             {ok, Default};
-        TimeoutTerminate =:= limit_min ->
-            {ok, ?TIMEOUT_TERMINATE_MIN};
-        TimeoutTerminate =:= limit_max ->
-            {ok, ?TIMEOUT_TERMINATE_MAX};
-        is_integer(TimeoutTerminate) ->
-            {ok, TimeoutTerminate}
+        true ->
+            {ok, ?TIMEOUT_TERMINATE_ASSIGN(TimeoutTerminate)}
     end;
 timeout_terminate(TimeoutTerminate, MaxR, MaxT)
     when is_integer(MaxR), is_integer(MaxT) ->
     Default = erlang:min(?TIMEOUT_TERMINATE_CALC1(MaxR, MaxT),
                          ?TIMEOUT_TERMINATE_MAX),
     if
-        TimeoutTerminate =:= undefined ->
-            {ok, Default};
-        TimeoutTerminate =:= limit_min ->
-            {ok, ?TIMEOUT_TERMINATE_MIN};
+        TimeoutTerminate =:= undefined;
         TimeoutTerminate =:= limit_max ->
-            {ok, ?TIMEOUT_TERMINATE_MAX};
-        is_integer(TimeoutTerminate) ->
+            {ok, Default};
+        true ->
+            % ensure the termination timeout is not greater than MaxT/MaxR
+            TimeoutTerminateNew = ?TIMEOUT_TERMINATE_ASSIGN(TimeoutTerminate),
             if
-                TimeoutTerminate =< Default ->
-                    {ok, TimeoutTerminate};
+                TimeoutTerminateNew =< Default ->
+                    {ok, TimeoutTerminateNew};
                 true ->
                     {error,
                      {service_options_timeout_terminate_decrease,
@@ -2656,17 +2731,13 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, DestRefreshStart, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
-        when not (is_integer(DestRefreshStart) andalso
-                  (DestRefreshStart > ?TIMEOUT_DELTA) andalso
-                  (DestRefreshStart =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ?DEST_REFRESH_START_GUARD(DestRefreshStart) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
         [_, _, _, _, _, DestRefreshDelay, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
-        when not (is_integer(DestRefreshDelay) andalso
-                  (DestRefreshDelay > ?TIMEOUT_DELTA) andalso
-                  (DestRefreshDelay =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ?DEST_REFRESH_DELAY_GUARD(DestRefreshDelay) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
         [_, _, _, _, _, _, RequestNameLookup, _, _, _, _, _, _,
@@ -2685,11 +2756,8 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, _, _, _, _, RequestTimeoutImmediateMax, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
-        when not ((is_integer(RequestTimeoutImmediateMax) andalso
-                   (RequestTimeoutImmediateMax >= 0) andalso
-                   (RequestTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
-                  (RequestTimeoutImmediateMax =:= limit_min) orelse
-                  (RequestTimeoutImmediateMax =:= limit_max)) ->
+        when not ?REQUEST_TIMEOUT_IMMEDIATE_MAX_GUARD(
+                     RequestTimeoutImmediateMax) ->
             {error, {service_options_request_timeout_immediate_max_invalid,
                      RequestTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, ResponseTimeoutAdjustment, _, _, _,
@@ -2701,11 +2769,8 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, _, _, _, _, _, _, ResponseTimeoutImmediateMax, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
-        when not ((is_integer(ResponseTimeoutImmediateMax) andalso
-                   (ResponseTimeoutImmediateMax >= 0) andalso
-                   (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
-                  (ResponseTimeoutImmediateMax =:= limit_min) orelse
-                  (ResponseTimeoutImmediateMax =:= limit_max)) ->
+        when not ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_GUARD(
+                     ResponseTimeoutImmediateMax) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, _, _, CountProcessDynamic, _,
@@ -2719,11 +2784,7 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
          _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _]
         when not ((TimeoutTerminate =:= undefined) orelse
-                  (is_integer(TimeoutTerminate) andalso
-                   (TimeoutTerminate >= ?TIMEOUT_TERMINATE_MIN) andalso
-                   (TimeoutTerminate =< ?TIMEOUT_TERMINATE_MAX)) orelse
-                  (TimeoutTerminate =:= limit_min) orelse
-                  (TimeoutTerminate =:= limit_max)) ->
+                  ?TIMEOUT_TERMINATE_GUARD(TimeoutTerminate)) ->
             {error, {service_options_timeout_terminate_invalid,
                      TimeoutTerminate}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _,
@@ -2909,21 +2970,21 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                          rate_request_max =
                              RateRequestMaxNew,
                          dest_refresh_start =
-                             DestRefreshStart,
+                             ?DEST_REFRESH_START_ASSIGN(DestRefreshStart),
                          dest_refresh_delay =
-                             DestRefreshDelay,
+                             ?DEST_REFRESH_DELAY_ASSIGN(DestRefreshDelay),
                          request_name_lookup =
                              RequestNameLookup,
                          request_timeout_adjustment =
                              RequestTimeoutAdjustment,
                          request_timeout_immediate_max =
-                             ?LIMIT_ASSIGN(RequestTimeoutImmediateMax,
-                                           0, ?TIMEOUT_MAX_ERLANG),
+                             ?REQUEST_TIMEOUT_IMMEDIATE_MAX_ASSIGN(
+                                 RequestTimeoutImmediateMax),
                          response_timeout_adjustment =
                              ResponseTimeoutAdjustment,
                          response_timeout_immediate_max =
-                             ?LIMIT_ASSIGN(ResponseTimeoutImmediateMax,
-                                           0, ?TIMEOUT_MAX_ERLANG),
+                             ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_ASSIGN(
+                                 ResponseTimeoutImmediateMax),
                          count_process_dynamic =
                              CountProcessDynamicNew,
                          timeout_terminate =
@@ -3244,17 +3305,13 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, DestRefreshStart, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _]
-        when not (is_integer(DestRefreshStart) andalso
-                  (DestRefreshStart > ?TIMEOUT_DELTA) andalso
-                  (DestRefreshStart =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ?DEST_REFRESH_START_GUARD(DestRefreshStart) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
         [_, _, _, _, _, DestRefreshDelay, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _]
-        when not (is_integer(DestRefreshDelay) andalso
-                  (DestRefreshDelay > ?TIMEOUT_DELTA) andalso
-                  (DestRefreshDelay =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ?DEST_REFRESH_DELAY_GUARD(DestRefreshDelay) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
         [_, _, _, _, _, _, RequestNameLookup, _, _, _, _, _, _, _, _,
@@ -3273,11 +3330,8 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, _, _, _, _, RequestTimeoutImmediateMax, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _]
-        when not ((is_integer(RequestTimeoutImmediateMax) andalso
-                   (RequestTimeoutImmediateMax >= 0) andalso
-                   (RequestTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
-                  (RequestTimeoutImmediateMax =:= limit_min) orelse
-                  (RequestTimeoutImmediateMax =:= limit_max)) ->
+        when not ?REQUEST_TIMEOUT_IMMEDIATE_MAX_GUARD(
+                     RequestTimeoutImmediateMax) ->
             {error, {service_options_request_timeout_immediate_max_invalid,
                      RequestTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _, _,
@@ -3289,11 +3343,8 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, _, _, _, _, _, _, ResponseTimeoutImmediateMax, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _]
-        when not ((is_integer(ResponseTimeoutImmediateMax) andalso
-                   (ResponseTimeoutImmediateMax >= 0) andalso
-                   (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
-                  (ResponseTimeoutImmediateMax =:= limit_min) orelse
-                  (ResponseTimeoutImmediateMax =:= limit_max)) ->
+        when not ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_GUARD(
+                     ResponseTimeoutImmediateMax) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, _, _, CountProcessDynamic, _, _, _,
@@ -3307,9 +3358,7 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
          _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _]
         when not ((TimeoutTerminate =:= undefined) orelse
-                  (is_integer(TimeoutTerminate) andalso
-                   (TimeoutTerminate >= ?TIMEOUT_TERMINATE_MIN) andalso
-                   (TimeoutTerminate =< ?TIMEOUT_TERMINATE_MAX))) ->
+                  ?TIMEOUT_TERMINATE_GUARD(TimeoutTerminate)) ->
             {error, {service_options_timeout_terminate_invalid,
                      TimeoutTerminate}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, RestartAll, _,
@@ -3461,21 +3510,23 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                                  rate_request_max =
                                      RateRequestMaxNew,
                                  dest_refresh_start =
-                                     DestRefreshStart,
+                                     ?DEST_REFRESH_START_ASSIGN(
+                                         DestRefreshStart),
                                  dest_refresh_delay =
-                                     DestRefreshDelay,
+                                     ?DEST_REFRESH_DELAY_ASSIGN(
+                                         DestRefreshDelay),
                                  request_name_lookup =
                                      RequestNameLookup,
                                  request_timeout_adjustment =
                                      RequestTimeoutAdjustment,
                                  request_timeout_immediate_max =
-                                     ?LIMIT_ASSIGN(RequestTimeoutImmediateMax,
-                                                   0, ?TIMEOUT_MAX_ERLANG),
+                                     ?REQUEST_TIMEOUT_IMMEDIATE_MAX_ASSIGN(
+                                         RequestTimeoutImmediateMax),
                                  response_timeout_adjustment =
                                      ResponseTimeoutAdjustment,
                                  response_timeout_immediate_max =
-                                     ?LIMIT_ASSIGN(ResponseTimeoutImmediateMax,
-                                                   0, ?TIMEOUT_MAX_ERLANG),
+                                     ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_ASSIGN(
+                                         ResponseTimeoutImmediateMax),
                                  count_process_dynamic =
                                      CountProcessDynamicNew,
                                  timeout_terminate =
@@ -4217,7 +4268,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
                     (Type =:= undefined)) andalso
                    (Module =/= undefined)) orelse
                   (((Type =:= external) orelse
-                    (Type =:= undefined)) andalso 
+                    (Type =:= undefined)) andalso
                    ((FilePath =/= undefined) orelse
                     (Args =/= undefined) orelse
                     (Env =/= undefined)))) ->

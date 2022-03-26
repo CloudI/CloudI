@@ -19,8 +19,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit cf134d1e74412b8af6d28060ec4bf679e822feb8 (v2.0.4)`
-- `Sun Dec  5 01:53:52 UTC 2021`
+- `commit 59e7816d1bcb57b008a7383a64953550a2c84ee3`
+- `Sat Mar 26 05:22:35 UTC 2022`
 - `MIT`
 
 `erlang_term`
@@ -64,8 +64,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit b718286e3d1fb2e41400639ca7429a4e530294e5 (v2.0.4)`
-- `Sun Dec  5 01:53:52 UTC 2021`
+- `commit 3a627197409c7398f97089d41a6696d7f945fef0`
+- `Sat Mar 26 05:22:35 UTC 2022`
 - `MIT`
 
 `reltool_util`

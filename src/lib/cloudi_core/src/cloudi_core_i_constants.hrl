@@ -30,14 +30,17 @@
 
 -ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
 % able to use -if/-elif here
--if(?OTP_RELEASE >= 24).
--define(ERLANG_OTP_VERSION_24_FEATURES, true).
 -if(?OTP_RELEASE >= 25).
 -define(ERLANG_OTP_VERSION_25_FEATURES, true).
 -endif.
+-if(?OTP_RELEASE >= 24).
+-define(ERLANG_OTP_VERSION_24_FEATURES, true).
+-endif.
+-if(?OTP_RELEASE < 22).
+-error("Erlang/OTP version >= 22.0 is required!").
 -endif.
 -else.
--error("Erlang/OTP version invalid").
+-error("Erlang/OTP version >= 22.0 is required!").
 -endif.
 
 % for using cloudi_core as an isolated Erlang application
@@ -141,8 +144,15 @@
 -define(DAYS_IN_MONTH, (?DAYS_IN_YEAR / 12)).
 -define(DAYS_IN_WEEK, 7).
 -define(HOURS_IN_DAY, 24).
--define(SECONDS_IN_HOUR, (60 * 60)).
--define(MILLISECONDS_IN_DAY, (?HOURS_IN_DAY * ?SECONDS_IN_HOUR * 1000)).
+-define(SECONDS_IN_MINUTE, 60).
+-define(SECONDS_IN_HOUR, (60 * ?SECONDS_IN_MINUTE)).
+-define(MILLISECONDS_IN_SECOND, 1000).
+-define(MILLISECONDS_IN_MINUTE,
+        (?SECONDS_IN_MINUTE * ?MILLISECONDS_IN_SECOND)).
+-define(MILLISECONDS_IN_HOUR,
+        (?SECONDS_IN_HOUR * ?MILLISECONDS_IN_SECOND)).
+-define(MILLISECONDS_IN_DAY,
+        (?HOURS_IN_DAY * ?SECONDS_IN_HOUR * ?MILLISECONDS_IN_SECOND)).
 -define(MICROSECONDS_IN_SECOND, 1000000).
 -define(NANOSECONDS_IN_SECOND, 1000000000).
 -define(NANOSECONDS_IN_HOUR,
@@ -237,15 +247,108 @@
             true ->
                 Value
         end).
+-define(LIMIT_ASSIGN_MILLISECONDS(Value, Min, Max),
+        if
+            Value =:= limit_min ->
+                Min;
+            Value =:= limit_max ->
+                Max;
+            is_tuple(Value) ->
+                if
+                    element(2, Value) =:= seconds orelse
+                    element(2, Value) =:= second ->
+                        element(1, Value) * ?MILLISECONDS_IN_SECOND;
+                    element(2, Value) =:= minutes orelse
+                    element(2, Value) =:= minute ->
+                        element(1, Value) * ?MILLISECONDS_IN_MINUTE;
+                    element(2, Value) =:= hours orelse
+                    element(2, Value) =:= hour ->
+                        element(1, Value) * ?MILLISECONDS_IN_HOUR;
+                    element(2, Value) =:= days orelse
+                    element(2, Value) =:= day ->
+                        element(1, Value) * ?MILLISECONDS_IN_DAY
+                end;
+            is_integer(Value); Value =:= undefined ->
+                Value
+        end).
 -define(LIMIT_FORMAT(Value, Min, Max),
         if
-            Value =:= Min ->
+            Value == Min ->
                 limit_min;
-            Value =:= Max ->
+            Value == Max ->
                 limit_max;
             true ->
                 Value
         end).
+-define(LIMIT_FORMAT_MILLISECONDS(Value, Min, Max),
+        if
+            Value == Min ->
+                limit_min;
+            Value == Max ->
+                limit_max;
+            Value == ?MILLISECONDS_IN_DAY ->
+                {1, day};
+            (Value div ?MILLISECONDS_IN_DAY) *
+            ?MILLISECONDS_IN_DAY == Value ->
+                {Value div ?MILLISECONDS_IN_DAY, days};
+            Value == ?MILLISECONDS_IN_HOUR ->
+                {1, hour};
+            (Value div ?MILLISECONDS_IN_HOUR) *
+            ?MILLISECONDS_IN_HOUR == Value ->
+                {Value div ?MILLISECONDS_IN_HOUR, hours};
+            Value == ?MILLISECONDS_IN_MINUTE ->
+                {1, minute};
+            (Value div ?MILLISECONDS_IN_MINUTE) *
+            ?MILLISECONDS_IN_MINUTE == Value ->
+                {Value div ?MILLISECONDS_IN_MINUTE, minutes};
+            Value == ?MILLISECONDS_IN_SECOND ->
+                {1, second};
+            (Value div ?MILLISECONDS_IN_SECOND) *
+            ?MILLISECONDS_IN_SECOND == Value ->
+                {Value div ?MILLISECONDS_IN_SECOND, seconds};
+            true ->
+                Value
+        end).
+-define(LIMIT_GUARD_INTEGER(Value, Min, Max),
+        ((is_integer(Value) andalso
+          (Value >= Min) andalso (Value =< Max)) orelse
+         (Value =:= limit_min) orelse
+         (Value =:= limit_max))).
+-define(LIMIT_GUARD_MILLISECONDS(Value, Min, Max),
+        ((is_integer(Value) andalso
+          (Value >= Min) andalso (Value =< Max)) orelse
+         (is_tuple(Value) andalso
+          (tuple_size(Value) == 2) andalso
+          is_integer(element(1, Value)) andalso
+          (Min =< ?MILLISECONDS_IN_SECOND) andalso % <-- current requirement
+          (element(1, Value) >= 1) andalso
+          ((((element(2, Value) =:= seconds) orelse
+             (element(2, Value) =:= second)) andalso
+            (element(1, Value) =< Max div ?MILLISECONDS_IN_SECOND)) orelse
+           (((element(2, Value) =:= minutes) orelse
+             (element(2, Value) =:= minute)) andalso
+            (element(1, Value) =< Max div ?MILLISECONDS_IN_MINUTE)) orelse
+           (((element(2, Value) =:= hours) orelse
+             (element(2, Value) =:= hour)) andalso
+            (element(1, Value) =< Max div ?MILLISECONDS_IN_HOUR)) orelse
+           (((element(2, Value) =:= days) orelse
+             (element(2, Value) =:= day)) andalso
+            (element(1, Value) =< Max div ?MILLISECONDS_IN_DAY)))) orelse
+         (Value =:= limit_min) orelse
+         (Value =:= limit_max))).
+-define(LIMIT_GUARD_MILLISECONDS_60000_MAX(Value, Min, Max),
+        ((is_integer(Value) andalso
+          (Value >= Min) andalso (Value =< Max)) orelse
+         (is_tuple(Value) andalso
+          (tuple_size(Value) == 2) andalso
+          is_integer(element(1, Value)) andalso
+          (Min =< ?MILLISECONDS_IN_SECOND) andalso
+          (element(1, Value) >= 1) andalso
+          ((((element(2, Value) =:= seconds) orelse
+             (element(2, Value) =:= second)) andalso
+            (element(1, Value) =< Max div ?MILLISECONDS_IN_SECOND)))) orelse
+         (Value =:= limit_min) orelse
+         (Value =:= limit_max))).
 
 % The TIMEOUT_*_MIN values below are for initialization,
 % the interface functions allow 0 as the min due to the service request
@@ -253,65 +356,47 @@
 % So, that means the 'limit_min' atom represents the TIMEOUT_*_MIN constant
 % below as the minimum limit for timeout initialization.
 
-% initialization timeout value limits
--define(TIMEOUT_INITIALIZE_MIN, ?TIMEOUT_DELTA + 1). % milliseconds
--define(TIMEOUT_INITIALIZE_MAX, ?TIMEOUT_MAX). % milliseconds
--define(TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
-        ?LIMIT_ASSIGN(TimeoutInit,
-                      ?TIMEOUT_INITIALIZE_MIN,
-                      ?TIMEOUT_INITIALIZE_MAX)).
--define(TIMEOUT_INITIALIZE_FORMAT(TimeoutInit),
-        ?LIMIT_FORMAT(TimeoutInit,
-                      ?TIMEOUT_INITIALIZE_MIN,
-                      ?TIMEOUT_INITIALIZE_MAX)).
+% initialization timeout value limits (milliseconds)
+-define(TIMEOUT_INITIALIZE_MIN, ?TIMEOUT_DELTA + 1).
+-define(TIMEOUT_INITIALIZE_MAX, ?TIMEOUT_MAX).
 
-% asynchronous send timeout value limits
--define(TIMEOUT_SEND_ASYNC_MIN, ?SEND_ASYNC_INTERVAL - 1). % milliseconds
--define(TIMEOUT_SEND_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutSendAsync),
-        ?LIMIT_ASSIGN(TimeoutSendAsync,
-                      ?TIMEOUT_SEND_ASYNC_MIN,
-                      ?TIMEOUT_SEND_ASYNC_MAX)).
--define(TIMEOUT_SEND_ASYNC_FORMAT(TimeoutSendAsync),
-        ?LIMIT_FORMAT(TimeoutSendAsync,
-                      ?TIMEOUT_SEND_ASYNC_MIN,
-                      ?TIMEOUT_SEND_ASYNC_MAX)).
+% asynchronous send timeout value limits (milliseconds)
+-define(TIMEOUT_SEND_ASYNC_MIN, ?SEND_ASYNC_INTERVAL - 1).
+-define(TIMEOUT_SEND_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG).
 
-% synchronous send timeout value limits
--define(TIMEOUT_SEND_SYNC_MIN, ?SEND_SYNC_INTERVAL - 1). % milliseconds
--define(TIMEOUT_SEND_SYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSendSync),
-        ?LIMIT_ASSIGN(TimeoutSendSync,
-                      ?TIMEOUT_SEND_SYNC_MIN,
-                      ?TIMEOUT_SEND_SYNC_MAX)).
--define(TIMEOUT_SEND_SYNC_FORMAT(TimeoutSendSync),
-        ?LIMIT_FORMAT(TimeoutSendSync,
-                      ?TIMEOUT_SEND_SYNC_MIN,
-                      ?TIMEOUT_SEND_SYNC_MAX)).
+% synchronous send timeout value limits (milliseconds)
+-define(TIMEOUT_SEND_SYNC_MIN, ?SEND_SYNC_INTERVAL - 1).
+-define(TIMEOUT_SEND_SYNC_MAX, ?TIMEOUT_MAX_ERLANG).
 
--define(TIMEOUT_GET_PID_MIN, ?TIMEOUT_SEND_SYNC_MIN). % milliseconds
--define(TIMEOUT_GET_PID_MAX, ?TIMEOUT_SEND_SYNC_MAX). % milliseconds
--define(TIMEOUT_GET_PIDS_MIN, ?TIMEOUT_SEND_SYNC_MIN). % milliseconds
--define(TIMEOUT_GET_PIDS_MAX, ?TIMEOUT_SEND_SYNC_MAX). % milliseconds
--define(TIMEOUT_MCAST_ASYNC_MIN, ?MCAST_ASYNC_INTERVAL - 1). % milliseconds
--define(TIMEOUT_MCAST_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_FORWARD_ASYNC_MIN, 0). % milliseconds
--define(TIMEOUT_FORWARD_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_FORWARD_SYNC_MIN, 0). % milliseconds
--define(TIMEOUT_FORWARD_SYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_RETURN_ASYNC_MIN, 0). % milliseconds
--define(TIMEOUT_RETURN_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_RETURN_SYNC_MIN, 0). % milliseconds
--define(TIMEOUT_RETURN_SYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_RECV_ASYNC_MIN, ?RECV_ASYNC_INTERVAL - 1). % milliseconds
--define(TIMEOUT_RECV_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(TIMEOUT_RECV_ASYNCS_MIN, ?RECV_ASYNC_INTERVAL - 1). % milliseconds
--define(TIMEOUT_RECV_ASYNCS_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+% Erlang CloudI API timeout value limits (milliseconds)
+-define(TIMEOUT_GET_PID_MIN, ?TIMEOUT_SEND_SYNC_MIN).
+-define(TIMEOUT_GET_PID_MAX, ?TIMEOUT_SEND_SYNC_MAX).
+-define(TIMEOUT_GET_PIDS_MIN, ?TIMEOUT_SEND_SYNC_MIN).
+-define(TIMEOUT_GET_PIDS_MAX, ?TIMEOUT_SEND_SYNC_MAX).
+-define(TIMEOUT_MCAST_ASYNC_MIN, ?MCAST_ASYNC_INTERVAL - 1).
+-define(TIMEOUT_MCAST_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(TIMEOUT_FORWARD_ASYNC_MIN, 0).
+-define(TIMEOUT_FORWARD_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(TIMEOUT_FORWARD_SYNC_MIN, 0).
+-define(TIMEOUT_FORWARD_SYNC_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(TIMEOUT_RETURN_ASYNC_MIN, 0).
+-define(TIMEOUT_RETURN_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(TIMEOUT_RETURN_SYNC_MIN, 0).
+-define(TIMEOUT_RETURN_SYNC_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(TIMEOUT_RECV_ASYNC_MIN, ?RECV_ASYNC_INTERVAL - 1).
+-define(TIMEOUT_RECV_ASYNC_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(TIMEOUT_RECV_ASYNCS_MIN, ?RECV_ASYNC_INTERVAL - 1).
+-define(TIMEOUT_RECV_ASYNCS_MAX, ?TIMEOUT_MAX_ERLANG).
 
--define(DEST_REFRESH_START_MIN, 0). % milliseconds
--define(DEST_REFRESH_START_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
--define(DEST_REFRESH_DELAY_MIN, ?TIMEOUT_DELTA + 1). % milliseconds
--define(DEST_REFRESH_DELAY_MAX, ?TIMEOUT_MAX_ERLANG). % milliseconds
+% service configuration options limits (milliseconds)
+-define(DEST_REFRESH_START_MIN, 0).
+-define(DEST_REFRESH_START_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(DEST_REFRESH_DELAY_MIN, ?TIMEOUT_DELTA + 1).
+-define(DEST_REFRESH_DELAY_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(REQUEST_TIMEOUT_IMMEDIATE_MAX_MIN, 0).
+-define(REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(RESPONSE_TIMEOUT_IMMEDIATE_MAX_MIN, 0).
+-define(RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
 
 % termination timeout when MaxT == 0
 % (if MaxR == 0, take MaxT as a terminate timeout value, i.e., as if MaxR == 1)

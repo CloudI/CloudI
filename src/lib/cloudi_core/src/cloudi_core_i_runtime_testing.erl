@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2013-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_runtime_testing).
@@ -73,6 +73,69 @@
         pid = undefined :: undefined | pid()
     }).
 
+% macros used to simplify source code in this file
+
+-define(MONKEY_LATENCY_TIME_UNIFORM_MIN_MIN, 0).
+-define(MONKEY_LATENCY_TIME_UNIFORM_MIN_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(MONKEY_LATENCY_TIME_UNIFORM_MAX_MIN, 1).
+-define(MONKEY_LATENCY_TIME_UNIFORM_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MIN, 0).
+-define(MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(MONKEY_LATENCY_TIME_ABSOLUTE_MIN, 1).
+-define(MONKEY_LATENCY_TIME_ABSOLUTE_MAX, ?TIMEOUT_MAX_ERLANG).
+
+-define(MONKEY_LATENCY_TIME_UNIFORM_MIN_ASSIGN(Min),
+        ?LIMIT_ASSIGN_MILLISECONDS(Min,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MIN_MIN,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MIN_MAX)).
+-define(MONKEY_LATENCY_TIME_UNIFORM_MIN_FORMAT(Min),
+        ?LIMIT_FORMAT_MILLISECONDS(Min,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MIN_MIN,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MIN_MAX)).
+-define(MONKEY_LATENCY_TIME_UNIFORM_MIN_GUARD(Min),
+        ?LIMIT_GUARD_MILLISECONDS(Min,
+                                  ?MONKEY_LATENCY_TIME_UNIFORM_MIN_MIN,
+                                  ?MONKEY_LATENCY_TIME_UNIFORM_MIN_MAX)).
+
+-define(MONKEY_LATENCY_TIME_UNIFORM_MAX_ASSIGN(Max),
+        ?LIMIT_ASSIGN_MILLISECONDS(Max,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MAX_MIN,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MAX_MAX)).
+-define(MONKEY_LATENCY_TIME_UNIFORM_MAX_FORMAT(Max),
+        ?LIMIT_FORMAT_MILLISECONDS(Max,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MAX_MIN,
+                                   ?MONKEY_LATENCY_TIME_UNIFORM_MAX_MAX)).
+-define(MONKEY_LATENCY_TIME_UNIFORM_MAX_GUARD(Max),
+        ?LIMIT_GUARD_MILLISECONDS(Max,
+                                  ?MONKEY_LATENCY_TIME_UNIFORM_MAX_MIN,
+                                  ?MONKEY_LATENCY_TIME_UNIFORM_MAX_MAX)).
+
+-define(MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_ASSIGN(Mean),
+        ?LIMIT_ASSIGN_MILLISECONDS(Mean,
+                                   ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MIN,
+                                   ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MAX)).
+-define(MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_FORMAT(Mean),
+        ?LIMIT_FORMAT_MILLISECONDS(Mean,
+                                   ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MIN,
+                                   ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MAX)).
+-define(MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_GUARD(Mean),
+        ?LIMIT_GUARD_MILLISECONDS(Mean,
+                                  ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MIN,
+                                  ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_MAX)).
+
+-define(MONKEY_LATENCY_TIME_ABSOLUTE_ASSIGN(Time),
+        ?LIMIT_ASSIGN_MILLISECONDS(Time,
+                                   ?MONKEY_LATENCY_TIME_ABSOLUTE_MIN,
+                                   ?MONKEY_LATENCY_TIME_ABSOLUTE_MAX)).
+-define(MONKEY_LATENCY_TIME_ABSOLUTE_FORMAT(Time),
+        ?LIMIT_FORMAT_MILLISECONDS(Time,
+                                   ?MONKEY_LATENCY_TIME_ABSOLUTE_MIN,
+                                   ?MONKEY_LATENCY_TIME_ABSOLUTE_MAX)).
+-define(MONKEY_LATENCY_TIME_ABSOLUTE_GUARD(Time),
+        ?LIMIT_GUARD_MILLISECONDS(Time,
+                                  ?MONKEY_LATENCY_TIME_ABSOLUTE_MIN,
+                                  ?MONKEY_LATENCY_TIME_ABSOLUTE_MAX)).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -89,16 +152,16 @@ monkey_latency_format(#monkey_latency{method = time_uniform,
                                       value1 = Min,
                                       value2 = Max}) ->
     true = (Min =< Max),
-    [{time_uniform_min, ?LIMIT_FORMAT(Min, 0, ?TIMEOUT_MAX_ERLANG)},
-     {time_uniform_max, ?LIMIT_FORMAT(Max, 1, ?TIMEOUT_MAX_ERLANG)}];
+    [{time_uniform_min, ?MONKEY_LATENCY_TIME_UNIFORM_MIN_FORMAT(Min)},
+     {time_uniform_max, ?MONKEY_LATENCY_TIME_UNIFORM_MAX_FORMAT(Max)}];
 monkey_latency_format(#monkey_latency{method = time_gaussian,
                                       value1 = Mean,
                                       value2 = StdDev}) ->
-    [{time_gaussian_mean, ?LIMIT_FORMAT(Mean, 0, ?TIMEOUT_MAX_ERLANG)},
+    [{time_gaussian_mean, ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_FORMAT(Mean)},
      {time_gaussian_stddev, StdDev}];
 monkey_latency_format(#monkey_latency{method = time_absolute,
                                       value1 = Time}) ->
-    [{time_absolute, ?LIMIT_FORMAT(Time, 1, ?TIMEOUT_MAX_ERLANG)}].
+    [{time_absolute, ?MONKEY_LATENCY_TIME_ABSOLUTE_FORMAT(Time)}].
 
 -spec monkey_latency_validate(list({atom(), any()}) | system | false) ->
     {ok, #monkey_latency{} | system | false} |
@@ -253,48 +316,44 @@ monkey_latency_validate([],
 monkey_latency_validate([{time_uniform_min, Min} = Option | Options],
                         #monkey_latency{method = Method,
                                         value2 = Max} = MonkeyLatency)
-    when ((Method =:= undefined) orelse (Method =:= time_uniform)),
-         (is_integer(Min) andalso
-          (Min >= 0) andalso (Min =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (Min =:= limit_min) orelse (Min =:= limit_max) ->
-    NewMin = ?LIMIT_ASSIGN(Min, 0, ?TIMEOUT_MAX_ERLANG),
-    NewMax = if
+    when (Method =:= undefined) orelse (Method =:= time_uniform),
+         ?MONKEY_LATENCY_TIME_UNIFORM_MIN_GUARD(Min) ->
+    MinNew = ?MONKEY_LATENCY_TIME_UNIFORM_MIN_ASSIGN(Min),
+    MaxNew = if
         Max =:= undefined ->
-            NewMin;
+            MinNew;
         Max =/= undefined ->
             Max
     end,
     if
-        NewMin =< NewMax ->
+        MinNew =< MaxNew ->
             monkey_latency_validate(Options,
                                     MonkeyLatency#monkey_latency{
                                         method = time_uniform,
-                                        value1 = NewMin,
-                                        value2 = NewMax});
+                                        value1 = MinNew,
+                                        value2 = MaxNew});
         true ->
             {error, {service_options_monkey_latency_invalid, Option}}
     end;
 monkey_latency_validate([{time_uniform_max, Max} = Option | Options],
                         #monkey_latency{method = Method,
                                         value1 = Min} = MonkeyLatency)
-    when ((Method =:= undefined) orelse (Method =:= time_uniform)),
-         (is_integer(Max) andalso
-          (Max >= 1) andalso (Max =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (Max =:= limit_min) orelse (Max =:= limit_max) ->
-    NewMax = ?LIMIT_ASSIGN(Max, 1, ?TIMEOUT_MAX_ERLANG),
-    NewMin = if
+    when (Method =:= undefined) orelse (Method =:= time_uniform),
+         ?MONKEY_LATENCY_TIME_UNIFORM_MAX_GUARD(Max) ->
+    MaxNew = ?MONKEY_LATENCY_TIME_UNIFORM_MAX_ASSIGN(Max),
+    MinNew = if
         Min =:= undefined ->
-            NewMax;
+            MaxNew;
         Min =/= undefined ->
             Min
     end,
     if
-        NewMin =< NewMax ->
+        MinNew =< MaxNew ->
             monkey_latency_validate(Options,
                                     MonkeyLatency#monkey_latency{
                                         method = time_uniform,
-                                        value1 = NewMin,
-                                        value2 = NewMax});
+                                        value1 = MinNew,
+                                        value2 = MaxNew});
         true ->
             {error, {service_options_monkey_latency_invalid, Option}}
     end;
@@ -302,30 +361,28 @@ monkey_latency_validate([{time_gaussian_mean, Mean} | Options],
                         #monkey_latency{
                             method = Method,
                             value2 = StdDev} = MonkeyLatency)
-    when ((Method =:= undefined) orelse (Method =:= time_gaussian)),
-         (is_integer(Mean) andalso
-          (Mean >= 0) andalso (Mean =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (Mean =:= limit_min) orelse (Mean =:= limit_max) ->
-    NewMean = ?LIMIT_ASSIGN(Mean, 0, ?TIMEOUT_MAX_ERLANG),
-    NewStdDev = if
+    when (Method =:= undefined) orelse (Method =:= time_gaussian),
+         ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_GUARD(Mean) ->
+    MeanNew = ?MONKEY_LATENCY_TIME_GAUSSIAN_MEAN_ASSIGN(Mean),
+    StdDevNew = if
         StdDev =:= undefined ->
             % most values are within 3-sigma,
             % so attempt to cover all values down to 0
-            NewMean / 3.0;
+            MeanNew / 3.0;
         StdDev =/= undefined ->
             StdDev
     end,
     monkey_latency_validate(Options,
                             MonkeyLatency#monkey_latency{
                                 method = time_gaussian,
-                                value1 = NewMean,
-                                value2 = NewStdDev});
+                                value1 = MeanNew,
+                                value2 = StdDevNew});
 monkey_latency_validate([{time_gaussian_stddev, StdDev} | Options],
                         #monkey_latency{method = Method,
                                         value1 = Mean} = MonkeyLatency)
-    when ((Method =:= undefined) orelse (Method =:= time_gaussian)),
+    when (Method =:= undefined) orelse (Method =:= time_gaussian),
          is_number(StdDev) andalso (StdDev > 0.0) ->
-    NewMean = if
+    MeanNew = if
         Mean =:= undefined ->
             ?MONKEY_LATENCY_MEAN_DEFAULT;
         Mean =/= undefined ->
@@ -334,19 +391,17 @@ monkey_latency_validate([{time_gaussian_stddev, StdDev} | Options],
     monkey_latency_validate(Options,
                             MonkeyLatency#monkey_latency{
                                 method = time_gaussian,
-                                value1 = NewMean,
+                                value1 = MeanNew,
                                 value2 = StdDev});
 monkey_latency_validate([{time_absolute, Time} | Options],
                         #monkey_latency{method = Method} = MonkeyLatency)
-    when ((Method =:= undefined) orelse (Method =:= time_absolute)),
-         (is_integer(Time) andalso
-          (Time >= 1) andalso (Time =< ?TIMEOUT_MAX_ERLANG)) orelse
-         (Time =:= limit_min) orelse (Time =:= limit_max) ->
-    NewTime = ?LIMIT_ASSIGN(Time, 1, ?TIMEOUT_MAX_ERLANG),
+    when (Method =:= undefined) orelse (Method =:= time_absolute),
+         ?MONKEY_LATENCY_TIME_ABSOLUTE_GUARD(Time) ->
+    TimeNew = ?MONKEY_LATENCY_TIME_ABSOLUTE_ASSIGN(Time),
     monkey_latency_validate(Options,
                             MonkeyLatency#monkey_latency{
                                 method = time_absolute,
-                                value1 = NewTime});
+                                value1 = TimeNew});
 monkey_latency_validate([Invalid | _Options],
                         _MonkeyLatency) ->
     {error, {service_options_monkey_latency_invalid, Invalid}}.

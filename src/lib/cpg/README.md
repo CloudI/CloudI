@@ -7,7 +7,7 @@
 cpg provides a process group interface that is focused on
 availability and partition tolerance (in the CAP theorem).
 The pg process group implementation added in Erlang/OTP 23 by
-WhatsApp Inc. (Facebook Inc.) is based on cpg.
+WhatsApp Inc. (Meta Platforms Inc. / Facebook Inc.) is based on cpg.
 The cpg interface is compatible with pg2 (removed in Erlang/OTP 24).
 
 ## Features (Compare and Contrast)
@@ -97,7 +97,7 @@ env value to `all` (instead of `visible`).
 ## Example
 
     $ erl -sname cpg@localhost -pz ebin/ -pz deps/*/ebin/
-    
+
     (cpg@localhost)1> reltool_util:application_start(cpg).
     ok
     (cpg@localhost)2> cpg:join(groups_scope1, "Hello", self()).
@@ -133,7 +133,7 @@ process can be added to a single process group in a single scope multiple times
 to change the probability of returning a particular Erlang process, when
 only a single process is requested from the cpg interface (e.g., from
 the `get_closest_pid` function).
-    
+
 ## Tests
 
     rebar get-deps
