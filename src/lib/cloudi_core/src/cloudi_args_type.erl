@@ -41,6 +41,8 @@
 -export([function_required/2,
          function_required_pick/2,
          function_optional/2,
+         period_to_milliseconds/3,
+         period_to_milliseconds/4,
          priority/1,
          service_name/1,
          service_name_pattern/1,
@@ -52,6 +54,13 @@
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
+
+-type period() :: non_neg_integer() | limit_min | limit_max |
+                  {pos_integer(), seconds | second} |
+                  {pos_integer(), minutes | minute} |
+                  {pos_integer(), hours | hour} |
+                  {pos_integer(), days | day}.
+-export_type([period/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -141,6 +150,79 @@ function_optional(undefined, _) ->
     undefined;
 function_optional(Function, Arity) ->
     function_required(Function, Arity).
+
+-spec period_to_milliseconds(Value :: period(),
+                             Min :: non_neg_integer(),
+                             Max :: pos_integer()) ->
+    non_neg_integer().
+
+period_to_milliseconds(_, Min, _)
+    when not is_integer(Min) ->
+    ?LOG_ERROR_SYNC("invalid period min: ~tp", [Min]),
+    erlang:exit(badarg);
+period_to_milliseconds(_, _, Max)
+    when not is_integer(Max) ->
+    ?LOG_ERROR_SYNC("invalid period max: ~tp", [Max]),
+    erlang:exit(badarg);
+period_to_milliseconds(_, Min, Max)
+    when not (Min < Max) ->
+    ?LOG_ERROR_SYNC("invalid period min/max: ~w >= ~w", [Min, Max]),
+    erlang:exit(badarg);
+period_to_milliseconds(limit_min, Min, _) ->
+    Min;
+period_to_milliseconds(limit_max, _, Max) ->
+    Max;
+period_to_milliseconds(Value, Min, Max)
+    when is_integer(Value), Value >= 0 ->
+    if
+        Value < Min ->
+            ?LOG_ERROR_SYNC("period ~w < ~w ", [Value, Min]),
+            erlang:exit(badarg);
+        Value > Max ->
+            ?LOG_ERROR_SYNC("period ~w > ~w ", [Value, Max]),
+            erlang:exit(badarg);
+        true ->
+            Value
+    end;
+period_to_milliseconds({Multiplier, Unit} = Value, Min, Max)
+    when is_integer(Multiplier), Multiplier >= 1 ->
+    ValueMilliSeconds = if
+        Unit =:= seconds orelse Unit =:= second ->
+            Multiplier * 1000;
+        Unit =:= minutes orelse Unit =:= minute ->
+            Multiplier * 60000;
+        Unit =:= hours orelse Unit =:= hour ->
+            Multiplier * 3600000;
+        Unit =:= days orelse Unit =:= day ->
+            Multiplier * 86400000;
+        true ->
+            ?LOG_ERROR_SYNC("invalid period unit: ~tp", [Unit]),
+            erlang:exit(badarg)
+    end,
+    if
+        ValueMilliSeconds < Min ->
+            ?LOG_ERROR_SYNC("period ~w < ~w ", [Value, Min]),
+            erlang:exit(badarg);
+        ValueMilliSeconds > Max ->
+            ?LOG_ERROR_SYNC("period ~w > ~w ", [Value, Max]),
+            erlang:exit(badarg);
+        true ->
+            ValueMilliSeconds
+    end;
+period_to_milliseconds(Value, _, _) ->
+    ?LOG_ERROR_SYNC("invalid period: ~tp", [Value]),
+    erlang:exit(badarg).
+
+-spec period_to_milliseconds(Value :: period() | undefined,
+                             Min :: non_neg_integer(),
+                             Max :: pos_integer(),
+                             Default :: period()) ->
+    non_neg_integer().
+
+period_to_milliseconds(undefined, Min, Max, Default) ->
+    period_to_milliseconds(Default, Min, Max);
+period_to_milliseconds(Value, Min, Max, _) ->
+    period_to_milliseconds(Value, Min, Max).
 
 -spec priority(Priority :: cloudi:priority()) ->
     true.
@@ -301,7 +383,7 @@ timeout_period_to_milliseconds(Timeout)
     when is_integer(Timeout), Timeout >= 0, Timeout =< ?TIMEOUT_MAX_ERLANG ->
     Timeout;
 timeout_period_to_milliseconds({Multiplier, Unit})
-    when is_integer(Multiplier), Multiplier > 0 ->
+    when is_integer(Multiplier), Multiplier >= 1 ->
     if
         Unit =:= seconds orelse Unit =:= second ->
             Multiplier * 1000;

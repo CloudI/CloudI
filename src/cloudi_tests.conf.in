@@ -338,6 +338,8 @@
          % fails to receive a response within the timeout period
          % (e.g., the destination service crashes without providing a response)
          {retry, 3},
+         % each retry is delayed by 1 second
+         {retry_delay, {1, second}},
          % a write ahead logging (WAL) file path for all requests
          % (n.b., for efficiency reasons all requests are also held in memory)
          {file, "@cloudi_prefix@/logs/example_queue_${I}.log"},
@@ -881,6 +883,8 @@
      {args, [{map_reduce, cloudi_service_test_hexpi}, % map-reduce module
              {map_reduce_args, [1, 65536]},  % index start, index end
              {name, "hexpi_control"}, % suspend/resume service name
+             {retry, 3}, % max_retries when timeout_max is being used
+             {retry_delay, {5, minutes}},
              {concurrency, 1.5}]},
      {timeout_init, 20000},
      {dest_list_deny, [api]},

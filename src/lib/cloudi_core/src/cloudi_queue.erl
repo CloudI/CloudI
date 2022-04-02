@@ -34,7 +34,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -55,8 +55,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -101,7 +101,7 @@
         name :: cloudi_service:service_name(),
         request_info :: cloudi_service:request_info(),
         request :: cloudi_service:request(),
-        timeout :: cloudi_service:timeout_milliseconds(),
+        timeout :: cloudi_service:timeout_period(),
         priority :: cloudi_service:priority(),
         id :: cloudi_service:trans_id(),
         pattern_pid :: cloudi_service:pattern_pid(),
@@ -115,7 +115,7 @@
         name :: cloudi_service:service_name(),
         request_info :: cloudi_service:request_info(),
         request :: cloudi_service:request(),
-        timeout :: cloudi_service:timeout_milliseconds(),
+        timeout :: cloudi_service:timeout_period(),
         priority :: cloudi_service:priority(),
         id :: cloudi_service:trans_id(),
         pattern_pid :: cloudi_service:pattern_pid() | undefined
@@ -126,7 +126,7 @@
         name :: cloudi_service:service_name(),
         request_info :: cloudi_service:request_info(),
         request :: cloudi_service:request(),
-        timeout :: cloudi_service:timeout_milliseconds(),
+        timeout :: cloudi_service:timeout_period(),
         priority :: cloudi_service:priority()
     }).
 
@@ -135,7 +135,7 @@
         name :: cloudi_service:service_name(),
         request_info :: cloudi_service:request_info(),
         request :: cloudi_service:request(),
-        timeout :: cloudi_service:timeout_milliseconds(),
+        timeout :: cloudi_service:timeout_period(),
         priority :: cloudi_service:priority(),
         id :: cloudi_service:trans_id(),
         pattern_pid :: cloudi_service:pattern_pid() | undefined
@@ -146,7 +146,7 @@
         name :: cloudi_service:service_name(),
         request_info :: cloudi_service:request_info(),
         request :: cloudi_service:request(),
-        timeout :: cloudi_service:timeout_milliseconds(),
+        timeout :: cloudi_service:timeout_period(),
         priority :: cloudi_service:priority()
     }).
 
@@ -162,7 +162,7 @@
         retry_delay :: non_neg_integer(),
         suspended :: boolean(),
         ordered :: boolean(),
-        timeout_default :: cloudi_service:timeout_milliseconds(),
+        timeout_default :: cloudi_service:timeout_period(),
         priority_default :: cloudi_service:priority(),
         word_size :: pos_integer(),
         service = undefined :: undefined | pid(),
@@ -220,10 +220,10 @@
 
 -type options() ::
     list({retry, non_neg_integer()} |
-         {retry_delay, non_neg_integer()} |
+         {retry_delay, cloudi_args_type:period()} |
          {suspended, boolean()} |
          {ordered, boolean()} |
-         {timeout_default, cloudi_service:timeout_milliseconds()} |
+         {timeout_default, cloudi_service:timeout_period()} |
          {priority_default, cloudi_service:priority()} |
          {validate_request_info,
           fun((RequestInfo :: cloudi_service:request_info()) -> boolean()) |
@@ -286,7 +286,7 @@ byte_size(Dispatcher, Name, Request, State) ->
 -spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
                 Name :: cloudi_service:service_name(),
                 Request :: cloudi_service:request(),
-                Timeout :: cloudi_service:timeout_milliseconds(),
+                Timeout :: cloudi_service:timeout_period(),
                 State :: state()) ->
     non_neg_integer().
 
@@ -303,7 +303,7 @@ byte_size(Dispatcher, Name, Request, Timeout, State) ->
 -spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
                 Name :: cloudi_service:service_name(),
                 Request :: cloudi_service:request(),
-                Timeout :: cloudi_service:timeout_milliseconds(),
+                Timeout :: cloudi_service:timeout_period(),
                 PatternPid :: cloudi_service:pattern_pid() | undefined,
                 State :: state()) ->
     non_neg_integer().
@@ -322,7 +322,7 @@ byte_size(Dispatcher, Name, Request, Timeout, PatternPid, State) ->
                 Name :: cloudi_service:service_name(),
                 RequestInfo :: cloudi_service:request_info(),
                 Request :: cloudi_service:request(),
-                Timeout :: cloudi_service:timeout_milliseconds(),
+                Timeout :: cloudi_service:timeout_period(),
                 Priority :: cloudi_service:priority(),
                 State :: state()) ->
     non_neg_integer().
@@ -341,12 +341,12 @@ byte_size(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, State) ->
                 Name :: cloudi_service:service_name(),
                 RequestInfo :: cloudi_service:request_info(),
                 Request :: cloudi_service:request(),
-                Timeout :: cloudi_service:timeout_milliseconds(),
+                Timeout :: cloudi_service:timeout_period(),
                 Priority :: cloudi_service:priority(),
                 PatternPid :: cloudi_service:pattern_pid() | undefined,
                 State :: state()) ->
     non_neg_integer().
-    
+
 byte_size(Dispatcher, Name, RequestInfo, Request,
           Timeout, Priority, PatternPid,
           #cloudi_queue{word_size = WordSize,
@@ -433,7 +433,7 @@ mcast(Dispatcher, Name, Request, State) ->
 -spec mcast(Dispatcher :: cloudi_service:dispatcher(),
             Name :: cloudi_service:service_name(),
             Request :: cloudi_service:request(),
-            Timeout :: cloudi_service:timeout_milliseconds(),
+            Timeout :: cloudi_service:timeout_period(),
             State :: state()) ->
     {ok, State :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, State :: state()}.
@@ -451,7 +451,7 @@ mcast(Dispatcher, Name, Request, Timeout, State) ->
             Name :: cloudi_service:service_name(),
             RequestInfo :: cloudi_service:request_info(),
             Request :: cloudi_service:request(),
-            Timeout :: cloudi_service:timeout_milliseconds(),
+            Timeout :: cloudi_service:timeout_period(),
             Priority :: cloudi_service:priority(),
             State :: state()) ->
     {ok, State :: state()} |
@@ -591,23 +591,20 @@ new(Options)
         {failures_source_die,           ?DEFAULT_FAILURES_SOURCE_DIE},
         {failures_source_max_count,     ?DEFAULT_FAILURES_SOURCE_MAX_COUNT},
         {failures_source_max_period,    ?DEFAULT_FAILURES_SOURCE_MAX_PERIOD}],
-    [Retry, RetryDelay, Suspended, Ordered, TimeoutDefault, PriorityDefault,
+    [Retry, RetryDelay0, Suspended, Ordered, TimeoutDefault, PriorityDefault,
      ValidateRequestInfo0, ValidateRequest0,
      ValidateResponseInfo0, ValidateResponse0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod
      ] =
         cloudi_proplists:take_values(Defaults, Options),
     true = is_integer(Retry) andalso (Retry >= 0),
-    true = is_integer(RetryDelay) andalso
-           (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
+    RetryDelayN = cloudi_args_type:
+                  period_to_milliseconds(RetryDelay0, 0, 4294967295),
+    true = ((Retry == 0) andalso (RetryDelayN == 0)) orelse
+           ((Retry > 0) andalso (RetryDelayN >= 0)),
     true = is_boolean(Suspended),
     true = is_boolean(Ordered),
-    true = (TimeoutDefault =:= undefined) orelse
-           (TimeoutDefault =:= limit_min) orelse
-           (TimeoutDefault =:= limit_max) orelse
-           (is_integer(TimeoutDefault) andalso
-            (TimeoutDefault >= 0) andalso
-            (TimeoutDefault =< ?TIMEOUT_MAX)),
+    true = cloudi_args_type:timeout_period(TimeoutDefault),
     true = (PriorityDefault =:= undefined) orelse
            (is_integer(PriorityDefault) andalso
             (PriorityDefault >= ?PRIORITY_HIGH) andalso
@@ -628,7 +625,7 @@ new(Options)
     WordSize = erlang:system_info(wordsize),
     #cloudi_queue{
         retry = Retry,
-        retry_delay = RetryDelay,
+        retry_delay = RetryDelayN,
         suspended = Suspended,
         ordered = Ordered,
         timeout_default = TimeoutDefault,
@@ -760,7 +757,7 @@ send(Dispatcher, Name, Request, State) ->
 -spec send(Dispatcher :: cloudi_service:dispatcher(),
            Name :: cloudi_service:service_name(),
            Request :: cloudi_service:request(),
-           Timeout :: cloudi_service:timeout_milliseconds(),
+           Timeout :: cloudi_service:timeout_period(),
            State :: state()) ->
     {ok, StateNew :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, StateNew :: state()}.
@@ -778,7 +775,7 @@ send(Dispatcher, Name, Request, Timeout, State) ->
 -spec send(Dispatcher :: cloudi_service:dispatcher(),
            Name :: cloudi_service:service_name(),
            Request :: cloudi_service:request(),
-           Timeout :: cloudi_service:timeout_milliseconds(),
+           Timeout :: cloudi_service:timeout_period(),
            PatternPid :: cloudi_service:pattern_pid() | undefined,
            State :: state()) ->
     {ok, StateNew :: state()} |
@@ -798,7 +795,7 @@ send(Dispatcher, Name, Request, Timeout, PatternPid, State) ->
            Name :: cloudi_service:service_name(),
            RequestInfo :: cloudi_service:request_info(),
            Request :: cloudi_service:request(),
-           Timeout :: cloudi_service:timeout_milliseconds(),
+           Timeout :: cloudi_service:timeout_period(),
            Priority :: cloudi_service:priority(),
            State :: state()) ->
     {ok, StateNew :: state()} |
@@ -818,7 +815,7 @@ send(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, State) ->
            Name :: cloudi_service:service_name(),
            RequestInfo :: cloudi_service:request_info(),
            Request :: cloudi_service:request(),
-           Timeout :: cloudi_service:timeout_milliseconds(),
+           Timeout :: cloudi_service:timeout_period(),
            Priority :: cloudi_service:priority(),
            PatternPid :: cloudi_service:pattern_pid() | undefined,
            State :: state()) ->
@@ -861,7 +858,7 @@ send_id(Dispatcher, Name, Request, State) ->
 -spec send_id(Dispatcher :: cloudi_service:dispatcher(),
               Name :: cloudi_service:service_name(),
               Request :: cloudi_service:request(),
-              Timeout :: cloudi_service:timeout_milliseconds(),
+              Timeout :: cloudi_service:timeout_period(),
               State :: state()) ->
     {ok, Id :: cloudi_service:trans_id(), StateNew :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, StateNew :: state()}.
@@ -879,7 +876,7 @@ send_id(Dispatcher, Name, Request, Timeout, State) ->
 -spec send_id(Dispatcher :: cloudi_service:dispatcher(),
               Name :: cloudi_service:service_name(),
               Request :: cloudi_service:request(),
-              Timeout :: cloudi_service:timeout_milliseconds(),
+              Timeout :: cloudi_service:timeout_period(),
               PatternPid :: cloudi_service:pattern_pid() | undefined,
               State :: state()) ->
     {ok, Id :: cloudi_service:trans_id(), StateNew :: state()} |
@@ -899,7 +896,7 @@ send_id(Dispatcher, Name, Request, Timeout, PatternPid, State) ->
               Name :: cloudi_service:service_name(),
               RequestInfo :: cloudi_service:request_info(),
               Request :: cloudi_service:request(),
-              Timeout :: cloudi_service:timeout_milliseconds(),
+              Timeout :: cloudi_service:timeout_period(),
               Priority :: cloudi_service:priority(),
               State :: state()) ->
     {ok, Id :: cloudi_service:trans_id(), StateNew :: state()} |
@@ -919,7 +916,7 @@ send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, State) ->
               Name :: cloudi_service:service_name(),
               RequestInfo :: cloudi_service:request_info(),
               Request :: cloudi_service:request(),
-              Timeout :: cloudi_service:timeout_milliseconds(),
+              Timeout :: cloudi_service:timeout_period(),
               Priority :: cloudi_service:priority(),
               PatternPid :: cloudi_service:pattern_pid() | undefined,
               State :: state()) ->

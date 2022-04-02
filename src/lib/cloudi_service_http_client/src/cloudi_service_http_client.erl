@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2014-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -128,7 +128,7 @@
 
 -type agent() :: cloudi:agent().
 -type service_name() :: cloudi:service_name().
--type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type timeout_period() :: cloudi:timeout_period().
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -157,7 +157,7 @@ head(Agent, Prefix, RequestInfo, Request) ->
            Prefix :: service_name(),
            RequestInfo :: headers(),
            Request :: binary(),
-           Timeout :: timeout_milliseconds()) ->
+           Timeout :: timeout_period()) ->
     {{ok, headers(), binary()} | {error, any()},
      NewAgent :: agent()}.
 
@@ -192,7 +192,7 @@ head_async(Agent, Prefix, RequestInfo, Request) ->
                  Prefix :: service_name(),
                  RequestInfo :: headers(),
                  Request :: binary(),
-                 Timeout :: timeout_milliseconds()) ->
+                 Timeout :: timeout_period()) ->
     {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
      NewAgent :: agent()}.
 
@@ -227,7 +227,7 @@ get(Agent, Prefix, RequestInfo, Request) ->
           Prefix :: service_name(),
           RequestInfo :: headers(),
           Request :: binary(),
-          Timeout :: timeout_milliseconds()) ->
+          Timeout :: timeout_period()) ->
     {{ok, headers(), binary()} | {error, any()},
      NewAgent :: agent()}.
 
@@ -262,7 +262,7 @@ get_async(Agent, Prefix, RequestInfo, Request) ->
                 Prefix :: service_name(),
                 RequestInfo :: headers(),
                 Request :: binary(),
-                Timeout :: timeout_milliseconds()) ->
+                Timeout :: timeout_period()) ->
     {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
      NewAgent :: agent()}.
 
@@ -297,7 +297,7 @@ put(Agent, Prefix, RequestInfo, Request) ->
           Prefix :: service_name(),
           RequestInfo :: headers(),
           Request :: binary(),
-          Timeout :: timeout_milliseconds()) ->
+          Timeout :: timeout_period()) ->
     {{ok, headers(), binary()} | {error, any()},
      NewAgent :: agent()}.
 
@@ -332,7 +332,7 @@ put_async(Agent, Prefix, RequestInfo, Request) ->
                 Prefix :: service_name(),
                 RequestInfo :: headers(),
                 Request :: binary(),
-                Timeout :: timeout_milliseconds()) ->
+                Timeout :: timeout_period()) ->
     {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
      NewAgent :: agent()}.
 
@@ -367,7 +367,7 @@ post(Agent, Prefix, RequestInfo, Request) ->
            Prefix :: service_name(),
            RequestInfo :: headers(),
            Request :: binary(),
-           Timeout :: timeout_milliseconds()) ->
+           Timeout :: timeout_period()) ->
     {{ok, headers(), binary()} | {error, any()},
      NewAgent :: agent()}.
 
@@ -402,7 +402,7 @@ post_async(Agent, Prefix, RequestInfo, Request) ->
                  Prefix :: service_name(),
                  RequestInfo :: headers(),
                  Request :: binary(),
-                 Timeout :: timeout_milliseconds()) ->
+                 Timeout :: timeout_period()) ->
     {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
      NewAgent :: agent()}.
 
@@ -437,7 +437,7 @@ trace(Agent, Prefix, RequestInfo, Request) ->
             Prefix :: service_name(),
             RequestInfo :: headers(),
             Request :: binary(),
-            Timeout :: timeout_milliseconds()) ->
+            Timeout :: timeout_period()) ->
     {{ok, headers(), binary()} | {error, any()},
      NewAgent :: agent()}.
 
@@ -472,7 +472,7 @@ trace_async(Agent, Prefix, RequestInfo, Request) ->
                   Prefix :: service_name(),
                   RequestInfo :: headers(),
                   Request :: binary(),
-                  Timeout :: timeout_milliseconds()) ->
+                  Timeout :: timeout_period()) ->
     {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
      NewAgent :: agent()}.
 
@@ -507,7 +507,7 @@ options(Agent, Prefix, RequestInfo, Request) ->
               Prefix :: service_name(),
               RequestInfo :: headers(),
               Request :: binary(),
-              Timeout :: timeout_milliseconds()) ->
+              Timeout :: timeout_period()) ->
     {{ok, headers(), binary()} | {error, any()},
      NewAgent :: agent()}.
 
@@ -542,7 +542,7 @@ options_async(Agent, Prefix, RequestInfo, Request) ->
                     Prefix :: service_name(),
                     RequestInfo :: headers(),
                     Request :: binary(),
-                    Timeout :: timeout_milliseconds()) ->
+                    Timeout :: timeout_period()) ->
     {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
      NewAgent :: agent()}.
 
@@ -577,7 +577,7 @@ delete(Agent, Prefix, RequestInfo, Request) ->
              Prefix :: service_name(),
              RequestInfo :: headers(),
              Request :: binary(),
-             Timeout :: timeout_milliseconds()) ->
+             Timeout :: timeout_period()) ->
     {{ok, headers(), binary()} | {error, any()},
      NewAgent :: agent()}.
 
@@ -612,7 +612,7 @@ delete_async(Agent, Prefix, RequestInfo, Request) ->
                    Prefix :: service_name(),
                    RequestInfo :: headers(),
                    Request :: binary(),
-                   Timeout :: timeout_milliseconds()) ->
+                   Timeout :: timeout_period()) ->
     {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
      NewAgent :: agent()}.
 

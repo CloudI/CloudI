@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2012-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -63,7 +63,7 @@
 -define(DEFAULT_LOG_EXECUTION_TIME,                true).
 -define(DEFAULT_RETRY,                                3).
         % Max retries with a Timeout value of timeout_max
-        % before cloudi_service_map_reduce_resend is called.
+        % before exiting with retry_max.
         % The Timeout value needs to be provided in the map_send_args()
         % and is typically increasing due to service request failures.
 -define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
@@ -273,7 +273,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         {retry,                  ?DEFAULT_RETRY},
         {retry_delay,            ?DEFAULT_RETRY_DELAY}],
     [MapReduceModule, MapReduceArgs, Name, Concurrency, LogExecutionTime,
-     Retry, RetryDelay] =
+     Retry, RetryDelay0] =
         cloudi_proplists:take_values(Defaults, Args),
     TimeStart = cloudi_timestamp:seconds_monotonic(),
     true = is_atom(MapReduceModule) andalso (MapReduceModule /= undefined),
@@ -281,8 +281,10 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     true = is_number(Concurrency) andalso (Concurrency > 0),
     true = is_boolean(LogExecutionTime),
     true = is_integer(Retry) andalso (Retry >= 0),
-    true = is_integer(RetryDelay) andalso
-           (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
+    RetryDelayN = cloudi_args_type:
+                  period_to_milliseconds(RetryDelay0, 0, 4294967295),
+    true = ((Retry == 0) andalso (RetryDelayN == 0)) orelse
+           ((Retry > 0) andalso (RetryDelayN >= 0)),
     case application:load(MapReduceModule) of
         ok ->
             ok = cloudi_x_reltool_util:application_start(MapReduceModule,
@@ -305,7 +307,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                           concurrency = Concurrency,
                           log_execution_time = LogExecutionTime,
                           retry = Retry,
-                          retry_delay = RetryDelay,
+                          retry_delay = RetryDelayN,
                           timeout_max = TimeoutMax,
                           time_start = TimeStart},
     ok = cloudi_service:subscribe(Dispatcher, Name),

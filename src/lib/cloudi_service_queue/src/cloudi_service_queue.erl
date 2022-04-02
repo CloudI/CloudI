@@ -72,7 +72,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -93,8 +93,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2014-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -173,7 +173,7 @@
         trans_id :: cloudi_service:trans_id()
     }).
 -type request_both_mode() :: #both_request{} | #both_response{}.
-% cloudi_write_ahead_logging 
+% cloudi_write_ahead_logging
 -type request() :: request_destination_mode() |
                    request_both_mode().
 -export_type([request/0]).
@@ -206,7 +206,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {retry,                       ?DEFAULT_RETRY},
         {retry_delay,           ?DEFAULT_RETRY_DELAY},
         {fault_isolation,   ?DEFAULT_FAULT_ISOLATION}],
-    [FilePath, FileSizeLimit, Compression, Checksum, Retry, RetryDelay,
+    [FilePath, FileSizeLimit, Compression, Checksum, Retry, RetryDelay0,
      Mode] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = is_list(FilePath) andalso is_integer(hd(FilePath)),
@@ -220,10 +220,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
            (Checksum =:= sha224) orelse (Checksum =:= sha256) orelse
            (Checksum =:= sha384) orelse (Checksum =:= sha512),
     true = is_integer(Retry) andalso (Retry >= 0),
-    true = is_integer(RetryDelay) andalso
-           (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
-    true = ((Retry == 0) andalso (RetryDelay == 0)) orelse
-           ((Retry > 0) andalso (RetryDelay >= 0)),
+    RetryDelayN = cloudi_args_type:
+                  period_to_milliseconds(RetryDelay0, 0, 4294967295),
+    true = ((Retry == 0) andalso (RetryDelayN == 0)) orelse
+           ((Retry > 0) andalso (RetryDelayN >= 0)),
     true = ((Mode =:= destination) orelse (Mode =:= both)),
     I = erlang:integer_to_list(cloudi_service:process_index(Dispatcher)),
     Environment = cloudi_x_trie:store("I", I,
@@ -245,7 +245,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 logging = Logging,
                 mode = Mode,
                 retry = Retry,
-                retry_delay = RetryDelay,
+                retry_delay = RetryDelayN,
                 retry_f = RetryF}}.
 
 cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,

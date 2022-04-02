@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2019-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_shell).
@@ -80,7 +80,7 @@
 
 -type agent() :: cloudi:agent().
 -type service_name() :: cloudi:service_name().
--type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type timeout_period() :: cloudi:timeout_period().
 -type module_response(Result) ::
     {{ok, Result}, AgentNew :: agent()} |
     {{error, cloudi:error_reason()}, AgentNew :: agent()}.
@@ -96,7 +96,7 @@ exec(Agent, Prefix, Command) ->
 -spec exec(Agent :: agent(),
            Prefix :: service_name(),
            Command :: nonempty_string() | binary(),
-           Timeout :: timeout_milliseconds()) ->
+           Timeout :: timeout_period()) ->
     module_response(binary()).
 
 exec(Agent, Prefix, Command, Timeout) ->

@@ -47,7 +47,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2020-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -68,8 +68,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2020-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_funnel).
@@ -186,7 +186,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY}],
     [Name, NodeCount, ReceiveOnly, RequestsExtendLiveness,
-     Retry, RetryDelay] = cloudi_proplists:take_values(Defaults, Args),
+     Retry, RetryDelay0] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_service_name:pattern(Prefix),
     true = cloudi_service:destination_refresh_immediate(Dispatcher),
     true = is_list(Name) andalso is_integer(hd(Name)),
@@ -196,10 +196,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_boolean(ReceiveOnly),
     true = is_boolean(RequestsExtendLiveness),
     true = is_integer(Retry) andalso (Retry >= 0),
-    true = is_integer(RetryDelay) andalso
-           (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
-    true = ((Retry == 0) andalso (RetryDelay == 0)) orelse
-           ((Retry > 0) andalso (RetryDelay >= 0)),
+    RetryDelayN = cloudi_args_type:
+                  period_to_milliseconds(RetryDelay0, 0, 4294967295),
+    true = ((Retry == 0) andalso (RetryDelayN == 0)) orelse
+           ((Retry > 0) andalso (RetryDelayN >= 0)),
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     SenderId = {node(), ProcessIndex},
     Service = cloudi_service:self(Dispatcher),
@@ -209,7 +209,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                              {node_count, NodeCount},
                              {initial_data_function, InitialDataF},
                              {retry, 20}, % 5 minutes total
-                             {retry_delay, 15 * 1000}, % 15 seconds
+                             {retry_delay, {15, seconds}},
                              {priority_default_offset, -1}]),
     CRDTN = cloudi_crdt:events_subscriptions(Dispatcher,
                                              [assign, update], CRDT0),
@@ -221,7 +221,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 receive_only = ReceiveOnly,
                 requests_extend_liveness = RequestsExtendLiveness,
                 retry = Retry,
-                retry_delay = RetryDelay,
+                retry_delay = RetryDelayN,
                 crdt = CRDTN}}.
 
 cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,

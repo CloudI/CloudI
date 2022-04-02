@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_future).
@@ -78,7 +78,7 @@ new(Agent, Name, Request) ->
 -spec new(Agent :: cloudi:agent(),
           Name :: cloudi:service_name(),
           Request :: cloudi:request(),
-          Timeout :: cloudi:timeout_milliseconds()) ->
+          Timeout :: cloudi:timeout_period()) ->
     {value(), cloudi:agent()}.
 
 new(Agent, Name, Request, Timeout) ->
@@ -94,7 +94,7 @@ new(Agent, Name, Request, Timeout) ->
 -spec new(Agent :: cloudi:agent(),
           Name :: cloudi:service_name(),
           Request :: cloudi:request(),
-          Timeout :: cloudi:timeout_milliseconds(),
+          Timeout :: cloudi:timeout_period(),
           PatternPid :: cloudi:pattern_pid()) ->
     {value(), cloudi:agent()}.
 
@@ -112,7 +112,7 @@ new(Agent, Name, Request, Timeout, PatternPid) ->
           Name :: cloudi:service_name(),
           RequestInfo :: cloudi:request_info(),
           Request :: cloudi:request(),
-          Timeout :: cloudi:timeout_milliseconds(),
+          Timeout :: cloudi:timeout_period(),
           Priority :: cloudi:priority()) ->
     {value(), cloudi:agent()}.
 
@@ -130,7 +130,7 @@ new(Agent, Name, RequestInfo, Request, Timeout, Priority) ->
           Name :: cloudi:service_name(),
           RequestInfo :: cloudi:request_info(),
           Request :: cloudi:request(),
-          Timeout :: cloudi:timeout_milliseconds(),
+          Timeout :: cloudi:timeout_period(),
           Priority :: cloudi:priority(),
           PatternPid :: cloudi:pattern_pid() | undefined) ->
     {value(), cloudi:agent()}.

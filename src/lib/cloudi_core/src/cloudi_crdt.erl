@@ -68,7 +68,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -89,8 +89,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2017-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_crdt).
@@ -321,14 +321,14 @@
 -type event_id() :: cloudi_service:trans_id() | any().
 -type options() ::
     list({service_name, string()} |
-         {init_delay, undefined | milliseconds()} |
+         {init_delay, undefined | cloudi_args_type:period()} |
          {node_count, non_neg_integer()} |
          {initial_data_function, initial_data_function() | undefined} |
          {clean_vclocks, seconds()} |
          {clean_vclocks_failure, undefined | float() | 1..100} |
          {retry, non_neg_integer()} |
-         {retry_delay, non_neg_integer()} |
-         {timeout_default, cloudi_service:timeout_milliseconds()} |
+         {retry_delay, cloudi_args_type:period()} |
+         {timeout_default, cloudi_service:timeout_period()} |
          {priority_default, cloudi_service:priority()} |
          {priority_default_offset,
           ?PRIORITY_HIGHER_OFFSET..?PRIORITY_LOWER_OFFSET | undefined}).
@@ -929,18 +929,15 @@ new(Dispatcher, Options)
     true = cloudi_service:process_count_min(Dispatcher) > 1,
     true = is_integer(NodeCount) andalso
            (NodeCount >= 1),
-    InitDelay1 = if
-        InitDelay0 =:= undefined ->
-            if
-                NodeCount == 1 ->
-                    100;
-                NodeCount > 1 ->
-                    5000
-            end;
-        is_integer(InitDelay0) andalso
-        (InitDelay0 > 0) ->
-            InitDelay0
+    InitDelayDefault = if
+        NodeCount == 1 ->
+            100;
+        NodeCount > 1 ->
+            {5, seconds}
     end,
+    InitDelay1 = cloudi_args_type:period_to_milliseconds(InitDelay0,
+                                                         1, 4294967295,
+                                                         InitDelayDefault),
     true = (InitialDataF =:= undefined) orelse
            is_function(InitialDataF, 1),
     true = is_integer(CleanIntervalSeconds) andalso

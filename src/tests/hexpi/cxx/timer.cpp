@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -42,8 +42,13 @@ double timer::elapsed() const
 {
     struct timespec end;
     ::clock_gettime(CLOCK_MONOTONIC, &end);
-    return (static_cast<double>(end.tv_sec - m_start.tv_sec) +
-            static_cast<double>(end.tv_nsec - m_start.tv_nsec) * 1.0e-9);
+    double value = static_cast<double>(end.tv_sec - m_start.tv_sec) +
+        static_cast<double>(end.tv_nsec - m_start.tv_nsec) * 1.0e-9;
+    if (value < 0.0)
+    {
+        value = 0.0;
+    }
+    return value;
 }
 
 #else
@@ -62,8 +67,13 @@ double timer::elapsed() const
 {
     struct timeval end;
     ::gettimeofday(&end, 0);
-    return (static_cast<double>(end.tv_sec - m_start.tv_sec) +
-            static_cast<double>(end.tv_usec - m_start.tv_usec) * 1.0e-6);
+    double value = static_cast<double>(end.tv_sec - m_start.tv_sec) +
+        static_cast<double>(end.tv_usec - m_start.tv_usec) * 1.0e-6;
+    if (value < 0.0)
+    {
+        value = 0.0;
+    }
+    return value;
 }
 
 #endif

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_future).
@@ -78,7 +78,7 @@ new(Dispatcher, Name, Request) ->
 -spec new(Dispatcher :: cloudi_service:dispatcher(),
           Name :: cloudi_service:service_name(),
           Request :: cloudi_service:request(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
+          Timeout :: cloudi_service:timeout_period()) ->
     value().
 
 new(Dispatcher, Name, Request, Timeout) ->
@@ -94,7 +94,7 @@ new(Dispatcher, Name, Request, Timeout) ->
 -spec new(Dispatcher :: cloudi_service:dispatcher(),
           Name :: cloudi_service:service_name(),
           Request :: cloudi_service:request(),
-          Timeout :: cloudi_service:timeout_milliseconds(),
+          Timeout :: cloudi_service:timeout_period(),
           PatternPid :: cloudi_service:pattern_pid()) ->
     value().
 
@@ -112,7 +112,7 @@ new(Dispatcher, Name, Request, Timeout, PatternPid) ->
           Name :: cloudi_service:service_name(),
           RequestInfo :: cloudi_service:request_info(),
           Request :: cloudi_service:request(),
-          Timeout :: cloudi_service:timeout_milliseconds(),
+          Timeout :: cloudi_service:timeout_period(),
           Priority :: cloudi_service:priority()) ->
     value().
 
@@ -130,7 +130,7 @@ new(Dispatcher, Name, RequestInfo, Request, Timeout, Priority) ->
           Name :: cloudi_service:service_name(),
           RequestInfo :: cloudi_service:request_info(),
           Request :: cloudi_service:request(),
-          Timeout :: cloudi_service:timeout_milliseconds(),
+          Timeout :: cloudi_service:timeout_period(),
           Priority :: cloudi_service:priority(),
           PatternPid :: cloudi_service:pattern_pid() | undefined) ->
     value().

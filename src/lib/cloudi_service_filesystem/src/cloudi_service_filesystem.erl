@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -197,7 +197,7 @@
     {
         send :: mcast_async | send_async,
         service_name :: cloudi_service:service_name(),
-        timeout :: cloudi_service:timeout_milliseconds(),
+        timeout :: cloudi_service_api:timeout_send_async_value_milliseconds(),
         priority :: cloudi_service:priority()
     }).
 
@@ -224,7 +224,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
+cloudi_service_init(Args, Prefix, _, Dispatcher) ->
     Defaults = [
         {directory,                    ?DEFAULT_DIRECTORY},
         {files_size,                   ?DEFAULT_FILES_SIZE},

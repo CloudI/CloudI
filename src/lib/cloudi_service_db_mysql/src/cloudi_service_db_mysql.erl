@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2009-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -202,7 +202,7 @@
 
 -type agent() :: cloudi:agent().
 -type service_name() :: cloudi:service_name().
--type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type timeout_period() :: cloudi:timeout_period().
 -type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
     {{error, cloudi:error_reason()}, NewAgent :: agent()}.
@@ -235,7 +235,7 @@ equery(Agent, Name, Query, Parameters)
              Name :: service_name(),
              Query :: string() | binary(),
              Parameters :: list(),
-             Timeout :: timeout_milliseconds()) ->
+             Timeout :: timeout_period()) ->
     module_response(any()).
 
 equery(Agent, Name, Query, Parameters, Timeout)
@@ -272,7 +272,7 @@ prepare_query(Agent, Name, Identifier, Query)
                     Name :: service_name(),
                     Identifier :: atom(),
                     Query :: string() | binary(),
-                    Timeout :: timeout_milliseconds()) ->
+                    Timeout :: timeout_period()) ->
     module_response(ok).
 
 prepare_query(Agent, Name, Identifier, Query, Timeout)
@@ -308,7 +308,7 @@ execute_query(Agent, Name, Identifier, Arguments)
                     Name :: service_name(),
                     Identifier :: atom(),
                     Arguments :: list(),
-                    Timeout :: timeout_milliseconds()) ->
+                    Timeout :: timeout_period()) ->
     module_response(any()).
 
 execute_query(Agent, Name, Identifier, Arguments, Timeout)
@@ -341,7 +341,7 @@ squery(Agent, Name, Query)
 -spec squery(Agent :: agent(),
              Name :: service_name(),
              Query :: string() | binary(),
-             Timeout :: timeout_milliseconds()) ->
+             Timeout :: timeout_period()) ->
     module_response(any()).
 
 squery(Agent, Name, Query, Timeout)
@@ -374,7 +374,7 @@ transaction(Agent, Name, [Query | _] = QueryList)
 -spec transaction(Agent :: agent(),
                   Name :: service_name(),
                   QueryList :: list(string() | binary()),
-                  Timeout :: timeout_milliseconds()) ->
+                  Timeout :: timeout_period()) ->
     module_response(ok | {error, any()}).
 
 transaction(Agent, Name, [Query | _] = QueryList, Timeout)
@@ -493,7 +493,7 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                             {T1, T2};
                         [T1, T2, T3]
                             when (T1 =:= <<"prepare">>) orelse
-                                 (T1 =:= <<"execute">>) orelse 
+                                 (T1 =:= <<"execute">>) orelse
                                  (T1 =:= <<"equery">>) ->
                             T1New = erlang:binary_to_atom(T1, utf8),
                             T2New = if

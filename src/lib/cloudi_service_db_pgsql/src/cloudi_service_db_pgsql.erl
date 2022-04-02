@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2009-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -116,7 +116,7 @@
 
 -type agent() :: cloudi:agent().
 -type service_name() :: cloudi:service_name().
--type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type timeout_period() :: cloudi:timeout_period().
 -type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
     {{error, cloudi:error_reason()}, NewAgent :: agent()}.
@@ -149,7 +149,7 @@ equery(Agent, Name, Query, Parameters)
              Name :: service_name(),
              Query :: string() | binary(),
              Parameters :: list(),
-             Timeout :: timeout_milliseconds()) ->
+             Timeout :: timeout_period()) ->
     module_response(any()).
 
 equery(Agent, Name, Query, Parameters, Timeout)
@@ -182,7 +182,7 @@ squery(Agent, Name, Query)
 -spec squery(Agent :: agent(),
              Name :: service_name(),
              Query :: string() | binary(),
-             Timeout :: timeout_milliseconds()) ->
+             Timeout :: timeout_period()) ->
     module_response(any()).
 
 squery(Agent, Name, Query, Timeout)
@@ -215,7 +215,7 @@ transaction(Agent, Name, [Query | _] = QueryList)
 -spec transaction(Agent :: agent(),
                   Name :: service_name(),
                   QueryList :: list(string() | binary()),
-                  Timeout :: timeout_milliseconds()) ->
+                  Timeout :: timeout_period()) ->
     module_response(ok | {error, any()}).
 
 transaction(Agent, Name, [Query | _] = QueryList, Timeout)
@@ -747,7 +747,7 @@ semiocast_to_common_rows([Row | _] = Rows) ->
 -spec semiocast_to_common(?MODULE_SEMIOCAST:result_tuple() |
                           {error, any()}) ->
     common_result().
-    
+
 % Rows in the semiocast format use Erlang types for data
 semiocast_to_common({error, {cloudi_x_pgsql_error, L}}) ->
     {_, Message} = lists:keyfind(message, 1, L),

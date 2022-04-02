@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2019-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_batch).
@@ -143,7 +143,7 @@
     nonempty_list(cloudi_service_api:service_internal() |
                   cloudi_service_api:service_external() |
                   cloudi_service_api:service_proplist()).
--type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type timeout_period() :: cloudi:timeout_period().
 -type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
     {{error, cloudi:error_reason()}, NewAgent :: agent()}.
@@ -161,7 +161,7 @@ queue_clear(Agent, Prefix, [I | _] = QueueName)
 -spec queue_clear(Agent :: agent(),
                   Prefix :: service_name(),
                   QueueName :: nonempty_string(),
-                  Timeout :: timeout_milliseconds()) ->
+                  Timeout :: timeout_period()) ->
     module_response(ok | {error, not_found}).
 
 queue_clear(Agent, Prefix, [I | _] = QueueName, Timeout)
@@ -184,7 +184,7 @@ services_add(Agent, Prefix, [I | _] = QueueName, [_ | _] = Configs)
                    Prefix :: service_name(),
                    QueueName :: nonempty_string(),
                    Configs :: service_configurations(),
-                   Timeout :: timeout_milliseconds()) ->
+                   Timeout :: timeout_period()) ->
     module_response(CountQueued :: non_neg_integer() | {error, purged}).
 
 services_add(Agent, Prefix, [I | _] = QueueName, [_ | _] = Configs, Timeout)
@@ -205,7 +205,7 @@ services_remove(Agent, Prefix, [I | _] = QueueName)
 -spec services_remove(Agent :: agent(),
                       Prefix :: service_name(),
                       QueueName :: nonempty_string(),
-                      Timeout :: timeout_milliseconds()) ->
+                      Timeout :: timeout_period()) ->
     module_response(ok | {error, not_found}).
 
 services_remove(Agent, Prefix, [I | _] = QueueName, Timeout)
@@ -226,7 +226,7 @@ services_restart(Agent, Prefix, [I | _] = QueueName)
 -spec services_restart(Agent :: agent(),
                        Prefix :: service_name(),
                        QueueName :: nonempty_string(),
-                       Timeout :: timeout_milliseconds()) ->
+                       Timeout :: timeout_period()) ->
     module_response(ok | {error, not_found | not_running}).
 
 services_restart(Agent, Prefix, [I | _] = QueueName, Timeout)

@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-04-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add support for the period format in all retry_delay arguments
+      (cloudi_service_funnel, cloudi_service_map_reduce,
+       cloudi_service_queue, cloudi_queue)
+    * Fix the C/C++ CloudI API poll timeout when either
+      clock_gettime CLOCK_MONOTONIC or gettimeofday allowed the
+      elapsed time to become negative
+      (possible with clock_gettime CLOCK_MONOTONIC when using
+       MacOS (Big Sur and Monterey at least),
+       e.g. setting the system clock back)
+
 2022-03-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Support the "period" timeout format in the Timeout parameters of
