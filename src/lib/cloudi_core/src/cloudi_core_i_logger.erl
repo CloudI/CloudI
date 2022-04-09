@@ -92,14 +92,18 @@
 
 -record(state,
     {
-        file_path = undefined
-            :: undefined | string(),
         interface_module = undefined
             :: undefined | binary(),
-        fd = undefined
+        file_path = undefined
+            :: undefined | string(),
+        file_fd = undefined
             :: undefined | file:fd(),
-        inode = undefined
+        file_inode = undefined
             :: undefined | non_neg_integer(),
+        file_sync
+            :: cloudi_service_api:logging_file_sync_value_milliseconds(),
+        file_sync_timer = undefined
+            :: undefined | reference(),
         stdout = undefined
             :: undefined | port(),
         main_level = undefined % both file and stdout level
@@ -281,7 +285,7 @@ level_set(Level)
 
 -spec syslog_set(SyslogConfig :: #config_logging_syslog{} | undefined) ->
     'ok'.
-                 
+
 syslog_set(SyslogConfig)
     when SyslogConfig =:= undefined;
          is_record(SyslogConfig, config_logging_syslog) ->
@@ -652,6 +656,7 @@ datetime_to_string(DateTimeUTC) ->
 %%%------------------------------------------------------------------------
 
 init([#config_logging{file = FilePath,
+                      file_sync = FileSync,
                       stdout = Stdout,
                       level = MainLevel,
                       queue_mode_async = QueueModeAsync,
@@ -674,7 +679,8 @@ init([#config_logging{file = FilePath,
             FormattersLevel0
     end,
     #state{mode = Mode} = State =
-        #state{stdout = StdoutPort,
+        #state{file_sync = FileSync,
+               stdout = StdoutPort,
                main_level = MainLevel,
                queue_mode_async = QueueModeAsync,
                queue_mode_sync = QueueModeSync,
@@ -715,8 +721,8 @@ init([#config_logging{file = FilePath,
         {ok, Binary} ->
             case ?LOG_T0_INFO("redirecting log output to ~ts",
                               [NodeLogger],
-                              StateNext#state{file_path = FilePath,
-                                              interface_module = Binary,
+                              StateNext#state{interface_module = Binary,
+                                              file_path = FilePath,
                                               level = Level,
                                               destination = ?MODULE}) of
                 {ok, StateNew} ->
@@ -1101,14 +1107,21 @@ handle_info({terminate, Reason, TerminateTimeMax} = Terminate,
             _ = erlang:send_after(TerminateDelay, Self, Terminate),
             {noreply, State}
     end;
+handle_info(file_sync, State) ->
+    case log_file_sync(State) of
+        {ok, StateNew} ->
+            {noreply, StateNew#state{file_sync_timer = undefined}};
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
+    end;
 handle_info(Request, State) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
-terminate(_, #state{fd = Fd,
+terminate(_, #state{file_fd = FileFd,
                     stdout = StdoutPort,
                     syslog = Syslog,
                     log_time_offset_monitor = Monitor}) ->
-    _ = (catch file:close(Fd)),
+    _ = (catch file:close(FileFd)),
     ok = stdout_close(StdoutPort),
     ok = syslog_close(Syslog),
     true = erlang:demonitor(Monitor),
@@ -1195,11 +1208,11 @@ log_config_file_set(FilePathNew,
     end,
     case ?LOG_T0_INFO("changing file path from ~ts to ~ts",
                       [FilePathOldStr, FilePathNewStr], State) of
-        {ok, #state{fd = FdOld} = StateNew} ->
-            _ = file:close(FdOld),
+        {ok, #state{file_fd = FileFdOld} = StateNew} ->
+            _ = file:close(FileFdOld),
             {ok, StateNew#state{file_path = FilePathNew,
-                                fd = undefined,
-                                inode = undefined}};
+                                file_fd = undefined,
+                                file_inode = undefined}};
         {{error, _}, _} = ErrorResult ->
             ErrorResult
     end.
@@ -1729,47 +1742,78 @@ log_level([_ | _] = L) ->
 
 log_file(_, _, #state{file_path = undefined} = State) ->
     {ok, State};
-log_file(Level, Message,
-         #state{file_path = FilePath,
-                fd = FdOld,
-                inode = InodeOld,
-                error_read_count = ErrorReadCount,
-                error_read_types = ErrorReadTypes} = State) ->
+log_file(Level, Message, State) ->
+    case log_file_ready(State) of
+        {ok, StateNew} ->
+            log_file_write(Level, Message, StateNew);
+        {error_tracked, StateNew} ->
+            {ok, StateNew};
+        {{error, _}, _} = Error ->
+            Error
+    end.
+
+log_file_sync(#state{file_path = undefined} = State) ->
+    {ok, State};
+log_file_sync(State) ->
+    case log_file_ready(State) of
+        {ok, #state{file_fd = FileFd,
+                    error_sync_count = ErrorSyncCount,
+                    error_sync_types = ErrorSyncTypes} = StateNew} = Success ->
+            case file:datasync(FileFd) of
+                ok ->
+                    Success;
+                {error, Reason} ->
+                    true = is_atom(Reason),
+                    ErrorSyncTypesNew = log_error_type(ErrorSyncTypes, Reason),
+                    {ok,
+                     StateNew#state{error_sync_count = ErrorSyncCount + 1,
+                                    error_sync_types = ErrorSyncTypesNew}}
+            end;
+        {error_tracked, StateNew} ->
+            {ok, StateNew};
+        {{error, _}, _} = Error ->
+            Error
+    end.
+
+log_file_ready(#state{file_path = FilePath,
+                      file_fd = FileFdOld,
+                      file_inode = FileInodeOld,
+                      error_read_count = ErrorReadCount,
+                      error_read_types = ErrorReadTypes} = State) ->
     case file:read_file_info(FilePath, [raw]) of
-        {ok, #file_info{inode = CurrentInode}} ->
+        {ok, #file_info{inode = FileInodeNew}} ->
             if
-                CurrentInode == InodeOld ->
-                    log_file_write(Level, Message, State);
+                FileInodeNew == FileInodeOld ->
+                    {ok, State};
                 true ->
-                    _ = file:close(FdOld),
-                    case log_file_reopen(FilePath, CurrentInode, State) of
-                        {ok, StateNew} ->
-                            log_file_write(Level, Message, StateNew);
+                    case log_file_reopen(FileInodeNew, State) of
+                        {ok, _} = Success ->
+                            Success;
                         {error, _} = Error ->
-                            {Error, State#state{fd = undefined,
-                                                inode = undefined}}
+                            {Error, State#state{file_fd = undefined,
+                                                file_inode = undefined}}
                     end
             end;
         {error, enoent} ->
-            _ = file:close(FdOld),
+            _ = file:close(FileFdOld),
             case log_file_open(FilePath, State) of
-                {ok, StateNew} ->
-                    log_file_write(Level, Message, StateNew);
+                {ok, _} = Success ->
+                    Success;
                 {error, _} ->
                     ErrorReadTypesNew = log_error_type(ErrorReadTypes, enoent),
-                    {ok,
-                     State#state{fd = undefined,
-                                 inode = undefined,
+                    {error_tracked,
+                     State#state{file_fd = undefined,
+                                 file_inode = undefined,
                                  error_read_count = ErrorReadCount + 1,
                                  error_read_types = ErrorReadTypesNew}}
             end;
         {error, Reason} ->
-            _ = file:close(FdOld),
+            _ = file:close(FileFdOld),
             true = is_atom(Reason),
             ErrorReadTypesNew = log_error_type(ErrorReadTypes, Reason),
-            {ok,
-             State#state{fd = undefined,
-                         inode = undefined,
+            {error_tracked,
+             State#state{file_fd = undefined,
+                         file_inode = undefined,
                          error_read_count = ErrorReadCount + 1,
                          error_read_types = ErrorReadTypesNew}}
     end.
@@ -1778,12 +1822,12 @@ log_file_open(undefined, State) ->
     {ok, State};
 log_file_open(FilePath, State) ->
     case file:open(FilePath, [raw, append]) of
-        {ok, Fd} ->
+        {ok, FileFd} ->
             case file:read_file_info(FilePath, [raw]) of
-                {ok, #file_info{inode = Inode}} ->
+                {ok, #file_info{inode = FileInode}} ->
                     {ok, State#state{file_path = FilePath,
-                                     fd = Fd,
-                                     inode = Inode}};
+                                     file_fd = FileFd,
+                                     file_inode = FileInode}};
                 {error, _} = Error ->
                     Error
             end;
@@ -1791,38 +1835,54 @@ log_file_open(FilePath, State) ->
             Error
     end.
 
-log_file_reopen(FilePath, Inode, State) ->
+log_file_reopen(FileInode,
+                #state{file_path = FilePath,
+                       file_fd = FileFdOld} = State) ->
+    _ = file:close(FileFdOld),
     case file:open(FilePath, [raw, append]) of
-        {ok, Fd} ->
-            {ok, State#state{file_path = FilePath,
-                             fd = Fd,
-                             inode = Inode}};
+        {ok, FileFdNew} ->
+            {ok, State#state{file_fd = FileFdNew,
+                             file_inode = FileInode}};
         {error, _} = Error ->
             Error
     end.
 
 log_file_write(Level, Message,
-               #state{fd = Fd,
+               #state{file_fd = FileFd,
+                      file_sync = FileSync,
+                      file_sync_timer = FileSyncTimer,
+                      logger_self = Self,
                       file_counts = FileCounts,
                       error_write_count = ErrorWriteCount,
                       error_write_types = ErrorWriteTypes,
                       error_sync_count = ErrorSyncCount,
                       error_sync_types = ErrorSyncTypes} = State) ->
-    case file:write(Fd, Message) of
-        ok ->
-            case file:datasync(Fd) of
+    FileCountsNew = maps:update_with(Level, fun(Count) ->
+        Count + 1
+    end, 1, FileCounts),
+    case file:write(FileFd, Message) of
+        ok when FileSync == 0 ->
+            case file:datasync(FileFd) of
                 ok ->
-                    FileCountsNew = maps:update_with(Level, fun(Count) ->
-                        Count + 1
-                    end, 1, FileCounts),
                     {ok, State#state{file_counts = FileCountsNew}};
                 {error, Reason} ->
                     true = is_atom(Reason),
                     ErrorSyncTypesNew = log_error_type(ErrorSyncTypes, Reason),
                     {ok,
-                     State#state{error_sync_count = ErrorSyncCount + 1,
+                     State#state{file_counts = FileCountsNew,
+                                 error_sync_count = ErrorSyncCount + 1,
                                  error_sync_types = ErrorSyncTypesNew}}
             end;
+        ok ->
+            FileSyncTimerNew = if
+                FileSyncTimer =:= undefined ->
+                    erlang:send_after(FileSync, Self, file_sync);
+                is_reference(FileSyncTimer) ->
+                    FileSyncTimer
+            end,
+            {ok,
+             State#state{file_sync_timer = FileSyncTimerNew,
+                         file_counts = FileCountsNew}};
         {error, Reason} ->
             true = is_atom(Reason),
             ErrorWriteTypesNew = log_error_type(ErrorWriteTypes, Reason),
@@ -2079,7 +2139,7 @@ load_interface_module(Level, Mode, Destination) when is_atom(Level) ->
     ModuleText = interface(Level, Mode, Destination),
     {ok, Module, Binary} = merl:compile(merl:quote(ModuleText)),
     cloudi_core_i_logger_interface = Module,
-    % make sure no old code exists
+    % ensure no old code exists
     _ = code:purge(Module),
     % load the new current code
     case code:load_binary(Module,
@@ -2236,9 +2296,10 @@ int_to_list_pad(L, Count, Char) ->
 int_to_dec(I) when 0 =< I, I =< 9 ->
     I + $0.
 
--spec accum(L :: list({any(),
-                       fun((any(), #state{}) ->
-                           {ok, #state{}} | {{error, any()}, #state{}})}),
+-spec accum(L :: nonempty_list({any(),
+                                fun((any(), #state{}) ->
+                                    {ok, #state{}} |
+                                    {{error, any()}, #state{}})}),
             State :: #state{}) ->
     {ok, #state{}} | {{error, any()}, #state{}}.
 

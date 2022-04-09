@@ -432,6 +432,10 @@
 % log messages to process before switching back to sync mode
 -define(LOGGER_MODE_OVERLOAD_OFFSET, 250).
 
+% logger options limits (milliseconds)
+-define(LOGGER_FILE_SYNC_MIN, 0).
+-define(LOGGER_FILE_SYNC_MAX, 60000).
+
 % periodic connection checks to determine if the udp connection is still active
 % must be a short time since this impacts MaxR and MaxT.  However, this time
 % becomes a hard maximum (minus a delta for overhead) for a task time target

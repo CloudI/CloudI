@@ -121,6 +121,11 @@
         % file path to write log output to while allowing the file to rotate
         file = "cloudi.log"
             :: undefined | string(),
+        % ensure all log file data has been written by flushing any
+        % operating system buffers that contain pending write data
+        % based on the interval provided
+        file_sync = 0
+            :: cloudi_service_api:logging_file_sync_value_milliseconds(),
         % write log output to stdout
         stdout = false
             :: boolean(),
@@ -273,14 +278,7 @@
         % delay to wait after a service terminate but before the service
         % initialization of the new service instance, during a service restart
         restart_delay = false
-            :: list({time_exponential_min,
-                     cloudi_service_api:restart_delay_milliseconds()} |
-                    {time_exponential_max,
-                     cloudi_service_api:restart_delay_milliseconds()} |
-                    {time_absolute,
-                     cloudi_service_api:restart_delay_milliseconds()}) |
-               false |
-               tuple(),
+            :: false | tuple(),
         % provide a scope for all subscribe/unsubscribe and messaging
         % (i.e., all service name usage is within the scope).  Using a
         % different scope can help avoid contention when using an immediate
@@ -291,19 +289,8 @@
         % based on the parameters specified.  If "system" is set, the
         % cloudi_core Erlang application env value is used after being
         % checked during service startup (e.g., after service restarts).
-        % (all time parameters are specified in milliseconds)
         monkey_latency = false
-            :: list({time_uniform_min,
-                     cloudi_service_api:latency_min_time_milliseconds()} |
-                    {time_uniform_max,
-                     cloudi_service_api:latency_max_time_milliseconds()} |
-                    {time_gaussian_mean,
-                     cloudi_service_api:latency_mean_time_milliseconds()} |
-                    {time_gaussian_stddev, float() | pos_integer()} |
-                    {time_absolute,
-                     cloudi_service_api:latency_time_milliseconds()}) |
-               system | false |
-               tuple(),
+            :: false | tuple(),
         % cause service termination based on the probability parameter
         % (checked for each service request and info message, if necessary).
         % If "system" is set, the cloudi_core Erlang application env value
@@ -311,10 +298,7 @@
         % (e.g., after service restarts).  The probability_day method
         % replicates the Netflix chaos monkey usage.
         monkey_chaos = false
-            :: list({probability_request, float()} |
-                    {probability_day, float()}) |
-               system | false |
-               tuple(),
+            :: false | tuple(),
         % should the service be automatically loaded and unloaded at
         % service start and stop, respectively?
         % (or the aspect module be automatically loaded)

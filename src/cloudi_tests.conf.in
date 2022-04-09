@@ -1253,16 +1253,8 @@
     %     [{mode, legacy_stderr}]}]}]},
     %{redirect, undefined}
     {log_time_offset, info},
-    % For slower logging disk writes, this configuration allows the
-    % integration tests initialization to complete
-    % (it also depends on the OS scheduling).
-    % However, the logging sync mode will always slow concurrent
-    % service execution if these limits are met consistently
-    % (if you see the logging_status mode as sync consistently,
-    %  it is better to set the logging level to warn to avoid the info data
-    %  or use a RAM disk installation instead).
-    {queue_mode_async, 4000},
-    {queue_mode_sync, 4250}
+    % For slower logging disk writes
+    {file_sync, {5, seconds}}
 ]}.
 {code, [
     % internal service source code configuration

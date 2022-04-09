@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-04-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the logging configuration option file_sync to delay
+      calling fdatasync after a logging file line is written
+      (defaults to 0 milliseconds, i.e., disabled by default)
+        * Avoids the OS scheduler adjusting CPU time of processes
+          by reducing hard disk use
+
 2022-04-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add support for the period format in all retry_delay arguments

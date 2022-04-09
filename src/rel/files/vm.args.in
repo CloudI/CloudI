@@ -4,9 +4,6 @@
 # Cookie for distributed erlang
 @CLOUDI_ARG_NODE_COOKIE@
 
-# Ensure SMP is used
--smp
-
 ## heart VM monitoring (required for reboot command)
 ## (WARNING: (from http://erlang.org/doc/man/heart.html)
 ##  "When running on OSs lacking support for monotonic time, heart is

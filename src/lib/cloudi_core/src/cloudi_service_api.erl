@@ -1128,6 +1128,14 @@
               aspect_log_after/0]).
 -type loglevel() :: loglevel_on() | off.
 -type loglevel_on() :: fatal | error | warn | info | debug | trace.
+-type logging_file_sync_value_milliseconds() ::
+    ?LOGGER_FILE_SYNC_MIN..?LOGGER_FILE_SYNC_MAX.
+-type logging_file_sync_milliseconds() ::
+    limit_min | limit_max | logging_file_sync_value_milliseconds().
+-type logging_file_sync_period() ::
+    {1..(?LOGGER_FILE_SYNC_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    logging_file_sync_milliseconds().
 -type logging_syslog_identity() :: nonempty_string().
 -type logging_syslog_facility() ::
     kernel | user | mail | daemon | auth0 | syslog |
@@ -1199,6 +1207,7 @@
          {file_read_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
     nonempty_list({file, nonempty_string() | undefined} |
+                  {file_sync, logging_file_sync_period()} |
                   {level, loglevel()} |
                   {redirect, node() | undefined} |
                   {syslog, logging_syslog_set_proplist() | undefined} |
@@ -1212,6 +1221,9 @@
                   {aspects_log_after, list(aspect_log_after())}).
 -export_type([loglevel/0,
               loglevel_on/0,
+              logging_file_sync_value_milliseconds/0,
+              logging_file_sync_milliseconds/0,
+              logging_file_sync_period/0,
               logging_syslog_identity/0,
               logging_syslog_facility/0,
               logging_syslog_transport/0,
