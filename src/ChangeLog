@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-04-16 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add support for the period format to cloudi:new/1 options
+      (dest_refresh_start, dest_refresh_delay, timeout_async, timeout_sync)
+
 2022-04-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the logging configuration option file_sync to delay

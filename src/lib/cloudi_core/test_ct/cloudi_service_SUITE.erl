@@ -626,7 +626,7 @@ t_service_internal_sync_1(_Config) ->
     % fail within the cloudi_service_init/3 callback with invalid_state,
     % and that an exception within cloudi_service_init/3 doesn't affect
     % other services
-    Context0 = cloudi:new(),
+    Context0 = cloudi:new([{timeout_sync, {5, seconds}}]),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     Self = self(),
     {{ok, ?RESPONSE_INFO1, ?RESPONSE1},

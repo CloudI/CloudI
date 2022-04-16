@@ -125,10 +125,6 @@
 -type error_reason() :: timeout.
 -export_type([error_reason/0]).
 
--type dest_refresh_delay_milliseconds() ::
-    ?DEST_REFRESH_DELAY_MIN..?DEST_REFRESH_DELAY_MAX.
--export_type([dest_refresh_delay_milliseconds/0]).
-
 -type message_service_request() ::
     {Type :: 'cloudi_service_send_async' |
              'cloudi_service_send_sync',
@@ -157,7 +153,7 @@
         {
             dest_refresh :: cloudi_service_api:dest_refresh(),
             dest_refresh_delay
-                :: cloudi_service_api:dest_refresh_delay_milliseconds(),
+                :: cloudi_service_api:dest_refresh_delay_value_milliseconds(),
             request_name_lookup :: sync | async,
             timeout_async
                 :: cloudi_service_api:timeout_send_async_value_milliseconds(),
@@ -173,14 +169,11 @@
 
 -type options() ::
     list({dest_refresh, cloudi_service_api:dest_refresh()} |
-         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
-         {dest_refresh_delay,
-          cloudi_service_api:dest_refresh_delay_milliseconds()} |
+         {dest_refresh_start, cloudi_service_api:dest_refresh_delay_period()} |
+         {dest_refresh_delay, cloudi_service_api:dest_refresh_delay_period()} |
          {request_name_lookup, sync | async} |
-         {timeout_async,
-          cloudi_service_api:timeout_send_async_value_milliseconds()} |
-         {timeout_sync,
-          cloudi_service_api:timeout_send_sync_value_milliseconds()} |
+         {timeout_async, cloudi_service_api:timeout_send_async_period()} |
+         {timeout_sync, cloudi_service_api:timeout_send_sync_period()} |
          {priority_default, priority()} |
          {scope, atom()} |
          % advanced:
@@ -246,8 +239,8 @@ new(Options)
         {groups_scope,                                 undefined},
         {groups_static,                                    false}
         ],
-    [DestRefresh, DestRefreshStart, DestRefreshDelay, RequestNameLookup,
-     TimeoutAsyncDefault, TimeoutSyncDefault, PriorityDefault, Scope,
+    [DestRefresh, DestRefreshStart0, DestRefreshDelay0, RequestNameLookup,
+     TimeoutAsyncDefault0, TimeoutSyncDefault0, PriorityDefault, Scope,
      UUIDOld, GroupsOld, GroupsScope, GroupsStatic] =
         cloudi_proplists:take_values(Defaults, Options),
     true = (DestRefresh =:= immediate_closest) orelse
@@ -264,20 +257,12 @@ new(Options)
            (DestRefresh =:= lazy_newest) orelse
            (DestRefresh =:= immediate_oldest) orelse
            (DestRefresh =:= lazy_oldest),
-    true = is_integer(DestRefreshStart) andalso
-           (DestRefreshStart >= ?DEST_REFRESH_START_MIN) andalso
-           (DestRefreshStart =< ?DEST_REFRESH_START_MAX),
-    true = is_integer(DestRefreshDelay) andalso
-           (DestRefreshDelay >= ?DEST_REFRESH_DELAY_MIN) andalso
-           (DestRefreshDelay =< ?DEST_REFRESH_DELAY_MAX),
+    true = ?DEST_REFRESH_START_GUARD(DestRefreshStart0),
+    true = ?DEST_REFRESH_DELAY_GUARD(DestRefreshDelay0),
     true = (RequestNameLookup =:= sync) orelse
            (RequestNameLookup =:= async),
-    true = is_integer(TimeoutAsyncDefault) andalso
-           (TimeoutAsyncDefault >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
-           (TimeoutAsyncDefault =< ?TIMEOUT_SEND_ASYNC_MAX),
-    true = is_integer(TimeoutSyncDefault) andalso
-           (TimeoutSyncDefault >= ?TIMEOUT_SEND_SYNC_MIN) andalso
-           (TimeoutSyncDefault =< ?TIMEOUT_SEND_SYNC_MAX),
+    true = ?TIMEOUT_SEND_ASYNC_GUARD(TimeoutAsyncDefault0),
+    true = ?TIMEOUT_SEND_SYNC_GUARD(TimeoutSyncDefault0),
     true = (PriorityDefault >= ?PRIORITY_HIGH) andalso
            (PriorityDefault =< ?PRIORITY_LOW),
     true = is_atom(Scope),
@@ -285,6 +270,10 @@ new(Options)
            (element(1, UUIDOld) =:= uuid_state),
     true = is_atom(GroupsScope),
     true = is_boolean(GroupsStatic),
+    DestRefreshStartN = ?DEST_REFRESH_START_ASSIGN(DestRefreshStart0),
+    DestRefreshDelayN = ?DEST_REFRESH_DELAY_ASSIGN(DestRefreshDelay0),
+    TimeoutAsyncDefaultN = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsyncDefault0),
+    TimeoutSyncDefaultN = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSyncDefault0),
     ConfiguredScope = if
         GroupsScope =:= undefined ->
             CpgScope = ?SCOPE_ASSIGN(Scope),
@@ -315,7 +304,7 @@ new(Options)
         GroupsStatic =:= false ->
             ok = destination_refresh(DestRefresh,
                                      Receiver,
-                                     DestRefreshStart,
+                                     DestRefreshStartN,
                                      ConfiguredScope),
             if
                 ((DestRefresh =:= lazy_closest) orelse
@@ -325,14 +314,14 @@ new(Options)
                  (DestRefresh =:= lazy_remote) orelse
                  (DestRefresh =:= lazy_newest) orelse
                  (DestRefresh =:= lazy_oldest)),
-                DestRefreshStart < ?DEFAULT_DEST_REFRESH_START ->
+                DestRefreshStartN < ?DEFAULT_DEST_REFRESH_START ->
                     receive
                         {cloudi_cpg_data, G} ->
                             % DestRefreshStart was small enough to
                             % immediately cache the groups
                             ok = destination_refresh(DestRefresh,
                                                      Receiver,
-                                                     DestRefreshDelay,
+                                                     DestRefreshDelayN,
                                                      ConfiguredScope),
                             G
                     after
@@ -347,10 +336,10 @@ new(Options)
     end,
     #cloudi_context{
         dest_refresh = DestRefresh,
-        dest_refresh_delay = DestRefreshDelay,
+        dest_refresh_delay = DestRefreshDelayN,
         request_name_lookup = RequestNameLookup,
-        timeout_async = TimeoutAsyncDefault,
-        timeout_sync = TimeoutSyncDefault,
+        timeout_async = TimeoutAsyncDefaultN,
+        timeout_sync = TimeoutSyncDefaultN,
         priority_default = PriorityDefault,
         scope = ConfiguredScope,
         receiver = Receiver,

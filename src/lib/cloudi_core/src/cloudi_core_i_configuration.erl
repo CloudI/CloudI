@@ -428,58 +428,6 @@
                                   ?TIMEOUT_INITIALIZE_MIN,
                                   ?TIMEOUT_INITIALIZE_MAX)).
 
--define(TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutSendAsync),
-        ?LIMIT_ASSIGN_MILLISECONDS(TimeoutSendAsync,
-                                   ?TIMEOUT_SEND_ASYNC_MIN,
-                                   ?TIMEOUT_SEND_ASYNC_MAX)).
--define(TIMEOUT_SEND_ASYNC_FORMAT(TimeoutSendAsync),
-        ?LIMIT_FORMAT_MILLISECONDS(TimeoutSendAsync,
-                                   ?TIMEOUT_SEND_ASYNC_MIN,
-                                   ?TIMEOUT_SEND_ASYNC_MAX)).
--define(TIMEOUT_SEND_ASYNC_GUARD(TimeoutSendAsync),
-        ?LIMIT_GUARD_MILLISECONDS(TimeoutSendAsync,
-                                  ?TIMEOUT_SEND_ASYNC_MIN,
-                                  ?TIMEOUT_SEND_ASYNC_MAX)).
-
--define(TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSendSync),
-        ?LIMIT_ASSIGN_MILLISECONDS(TimeoutSendSync,
-                                   ?TIMEOUT_SEND_SYNC_MIN,
-                                   ?TIMEOUT_SEND_SYNC_MAX)).
--define(TIMEOUT_SEND_SYNC_FORMAT(TimeoutSendSync),
-        ?LIMIT_FORMAT_MILLISECONDS(TimeoutSendSync,
-                                   ?TIMEOUT_SEND_SYNC_MIN,
-                                   ?TIMEOUT_SEND_SYNC_MAX)).
--define(TIMEOUT_SEND_SYNC_GUARD(TimeoutSendSync),
-        ?LIMIT_GUARD_MILLISECONDS(TimeoutSendSync,
-                                  ?TIMEOUT_SEND_SYNC_MIN,
-                                  ?TIMEOUT_SEND_SYNC_MAX)).
-
--define(DEST_REFRESH_START_ASSIGN(DestRefreshStart),
-        ?LIMIT_ASSIGN_MILLISECONDS(DestRefreshStart,
-                                   ?DEST_REFRESH_START_MIN,
-                                   ?DEST_REFRESH_START_MAX)).
--define(DEST_REFRESH_START_FORMAT(DestRefreshStart),
-        ?LIMIT_FORMAT_MILLISECONDS(DestRefreshStart,
-                                   ?DEST_REFRESH_START_MIN,
-                                   ?DEST_REFRESH_START_MAX)).
--define(DEST_REFRESH_START_GUARD(DestRefreshStart),
-        ?LIMIT_GUARD_MILLISECONDS(DestRefreshStart,
-                                  ?DEST_REFRESH_START_MIN,
-                                  ?DEST_REFRESH_START_MAX)).
-
--define(DEST_REFRESH_DELAY_ASSIGN(DestRefreshDelay),
-        ?LIMIT_ASSIGN_MILLISECONDS(DestRefreshDelay,
-                                   ?DEST_REFRESH_DELAY_MIN,
-                                   ?DEST_REFRESH_DELAY_MAX)).
--define(DEST_REFRESH_DELAY_FORMAT(DestRefreshDelay),
-        ?LIMIT_FORMAT_MILLISECONDS(DestRefreshDelay,
-                                   ?DEST_REFRESH_DELAY_MIN,
-                                   ?DEST_REFRESH_DELAY_MAX)).
--define(DEST_REFRESH_DELAY_GUARD(DestRefreshDelay),
-        ?LIMIT_GUARD_MILLISECONDS(DestRefreshDelay,
-                                  ?DEST_REFRESH_DELAY_MIN,
-                                  ?DEST_REFRESH_DELAY_MAX)).
-
 -define(REQUEST_TIMEOUT_IMMEDIATE_MAX_ASSIGN(RequestTimeoutImmediateMax),
         ?LIMIT_ASSIGN_MILLISECONDS(RequestTimeoutImmediateMax,
                                    ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MIN,
