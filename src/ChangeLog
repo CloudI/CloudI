@@ -5,6 +5,8 @@
 
     * Add support for the period format to cloudi:new/1 options
       (dest_refresh_start, dest_refresh_delay, timeout_async, timeout_sync)
+    * Improve cloudi_core_i_os_port
+    * Update erlang_term
 
 2022-04-09 Michael Truog   <mjtruog at protonmail dot com>
 

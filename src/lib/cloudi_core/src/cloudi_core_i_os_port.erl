@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_port).
@@ -88,7 +88,7 @@ init(undefined, _, _, _) ->
     ignore;
 init(FileName, OutputNewline, StdOutHandler, StdErrHandler) ->
     {ok, FilePath} = load_path(FileName),
-    Port = erlang:open_port({spawn, FilePath},
+    Port = erlang:open_port({spawn_executable, FilePath},
                             [{packet, 4}, binary,
                              exit_status, nouse_stdio]),
     true = is_port(Port),

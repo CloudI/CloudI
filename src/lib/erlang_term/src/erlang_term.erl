@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2014-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(erlang_term).
@@ -49,6 +49,11 @@
 -ifdef(ERLANG_OTP_VERSION_16).
 -else.
 -define(ERLANG_OTP_VERSION_17_FEATURES, undefined).
+-ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
+-if(?OTP_RELEASE >= 25).
+-define(ERLANG_OTP_VERSION_25_FEATURES, true).
+-endif.
+-endif.
 -endif.
 -ifdef(ERLANG_OTP_VERSION_17_FEATURES).
 -define(BYTE_SIZE_TERMS_MAP,
@@ -69,6 +74,15 @@ byte_size_terms(Term)
     ;).
 -define(INTERNAL_TEST_MAP,
     ok,
+    ).
+-endif.
+-ifdef(ERLANG_OTP_VERSION_25_FEATURES).
+-define(INTERNAL_TEST_TUPLE_EMPTY,
+    8 = byte_size({}, 8),
+    ).
+-else.
+-define(INTERNAL_TEST_TUPLE_EMPTY,
+    16 = byte_size({}, 8),
     ).
 -endif.
 
@@ -168,11 +182,12 @@ t_basic() ->
     8 = byte_size([], 8),
     24 = byte_size([0|[]], 8),
     24 = byte_size([1|2], 8), % improper list
-    16 = byte_size({}, 8),
     24 = byte_size({0}, 8),
+    32 = byte_size({0,1}, 8),
     8 = byte_size(0, 8),
     8 = byte_size(erlang:self(), 8),
     8 = byte_size(atom, 8),
+    ?INTERNAL_TEST_TUPLE_EMPTY
     ?INTERNAL_TEST_MAP
     ok.
 

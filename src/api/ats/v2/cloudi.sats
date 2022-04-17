@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2021-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -94,8 +94,7 @@ result (a:vt@ype+) =
 typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
 
 (*
-
-   function effect tags:
+   function effect tags (an effect system):
    !ntm - possibly non-terminating (divergent)
    !exn - may raise an exception (partial functions)
    !ref - write to memory not owned (no proof) or

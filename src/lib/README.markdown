@@ -28,8 +28,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Term Info`
 
 - `https://github.com/okeuday/erlang_term`
-- `commit 5a26745ac290101a45df5b26e10cff519e8266ba (v2.0.4)`
-- `Sun Dec  5 01:53:52 UTC 2021`
+- `commit feffb6ed73ed0d917d9fac0c143514c57993b23b`
+- `Sun Apr 17 04:45:45 UTC 2022`
 - `MIT`
 
 `key2value`
