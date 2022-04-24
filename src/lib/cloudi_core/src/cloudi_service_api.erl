@@ -327,11 +327,29 @@
 
 -type seconds() ::
     non_neg_integer().
--export_type([seconds/0]).
-
 -type period_seconds() ::
-    1..(?TIMEOUT_MAX_ERLANG div 1000).
--export_type([period_seconds/0]).
+    1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_SECOND).
+-type period() ::
+    limit_min | limit_max |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?TIMEOUT_MAX_ERLANG div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    period_seconds().
+-type period_gte() ::
+    limit_min |
+    {pos_integer(), minutes | minute} |
+    {pos_integer(), hours | hour} |
+    {pos_integer(), days | day} |
+    seconds().
+-type max_t() :: period_gte().
+-export_type([seconds/0,
+              period_seconds/0,
+              period/0,
+              period_gte/0,
+              max_t/0]).
 
 -type aspect_init_after_internal_f() ::
     fun((Args :: list(),
@@ -740,7 +758,7 @@
                   {count_process, pos_integer() | float()} |
                   {count_thread, pos_integer() | float()} |
                   {max_r, non_neg_integer()} |
-                  {max_t, seconds()} |
+                  {max_t, max_t()} |
                   {options, service_options_internal() |
                             service_options_external()}).
 -type service() :: #internal{} | #external{}.
@@ -1169,7 +1187,7 @@
                {output, module() | undefined} |
                {output_args, list()} |
                {output_max_r, non_neg_integer()} |
-               {output_max_t, cloudi_service_api:seconds()} |
+               {output_max_t, max_t()} |
                {formatter, module() | undefined} |
                {formatter_config, list()})}).
 -type iso8601() ::

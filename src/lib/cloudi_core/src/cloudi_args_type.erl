@@ -43,6 +43,7 @@
          function_optional/2,
          period_to_milliseconds/3,
          period_to_milliseconds/4,
+         period_to_seconds/2,
          priority/1,
          service_name/1,
          service_name_pattern/1,
@@ -223,6 +224,42 @@ period_to_milliseconds(undefined, Min, Max, Default) ->
     period_to_milliseconds(Default, Min, Max);
 period_to_milliseconds(Value, Min, Max, _) ->
     period_to_milliseconds(Value, Min, Max).
+
+-spec period_to_seconds(Value :: cloudi_service_api:period_gte(),
+                        Min :: non_neg_integer()) ->
+    cloudi_service_api:seconds().
+
+period_to_seconds(_, Min)
+    when not is_integer(Min) ->
+    ?LOG_ERROR_SYNC("invalid period min: ~tp", [Min]),
+    erlang:exit(badarg);
+period_to_seconds(limit_min, Min) ->
+    Min;
+period_to_seconds(Value, Min)
+    when is_integer(Value), Value >= 0 ->
+    if
+        Value < Min ->
+            ?LOG_ERROR_SYNC("period ~w < ~w ", [Value, Min]),
+            erlang:exit(badarg);
+        true ->
+            Value
+    end;
+period_to_seconds({Multiplier, Unit}, _)
+    when is_integer(Multiplier), Multiplier >= 1 ->
+    if
+        Unit =:= minutes orelse Unit =:= minute ->
+            Multiplier * 60;
+        Unit =:= hours orelse Unit =:= hour ->
+            Multiplier * 3600;
+        Unit =:= days orelse Unit =:= day ->
+            Multiplier * 86400;
+        true ->
+            ?LOG_ERROR_SYNC("invalid period unit: ~tp", [Unit]),
+            erlang:exit(badarg)
+    end;
+period_to_seconds(Value, _) ->
+    ?LOG_ERROR_SYNC("invalid period: ~tp", [Value]),
+    erlang:exit(badarg).
 
 -spec priority(Priority :: cloudi:priority()) ->
     true.

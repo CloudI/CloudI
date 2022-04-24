@@ -146,6 +146,7 @@
 -define(HOURS_IN_DAY, 24).
 -define(SECONDS_IN_MINUTE, 60).
 -define(SECONDS_IN_HOUR, (60 * ?SECONDS_IN_MINUTE)).
+-define(SECONDS_IN_DAY, (?HOURS_IN_DAY * ?SECONDS_IN_HOUR)).
 -define(MILLISECONDS_IN_SECOND, 1000).
 -define(MILLISECONDS_IN_MINUTE,
         (?SECONDS_IN_MINUTE * ?MILLISECONDS_IN_SECOND)).
@@ -271,6 +272,46 @@
             is_integer(Value); Value =:= undefined ->
                 Value
         end).
+-define(LIMIT_ASSIGN_SECONDS(Value, Min, Max),
+        if
+            Value =:= limit_min ->
+                Min;
+            Value =:= limit_max ->
+                Max;
+            is_tuple(Value) ->
+                if
+                    element(2, Value) =:= minutes orelse
+                    element(2, Value) =:= minute ->
+                        element(1, Value) * ?SECONDS_IN_MINUTE;
+                    element(2, Value) =:= hours orelse
+                    element(2, Value) =:= hour ->
+                        element(1, Value) * ?SECONDS_IN_HOUR;
+                    element(2, Value) =:= days orelse
+                    element(2, Value) =:= day ->
+                        element(1, Value) * ?SECONDS_IN_DAY
+                end;
+            is_integer(Value) ->
+                Value
+        end).
+-define(LIMIT_ASSIGN_SECONDS_GTE(Value, Min),
+        if
+            Value =:= limit_min ->
+                Min;
+            is_tuple(Value) ->
+                if
+                    element(2, Value) =:= minutes orelse
+                    element(2, Value) =:= minute ->
+                        element(1, Value) * ?SECONDS_IN_MINUTE;
+                    element(2, Value) =:= hours orelse
+                    element(2, Value) =:= hour ->
+                        element(1, Value) * ?SECONDS_IN_HOUR;
+                    element(2, Value) =:= days orelse
+                    element(2, Value) =:= day ->
+                        element(1, Value) * ?SECONDS_IN_DAY
+                end;
+            is_integer(Value) ->
+                Value
+        end).
 -define(LIMIT_FORMAT(Value, Min, Max),
         if
             Value == Min ->
@@ -306,6 +347,52 @@
             (Value div ?MILLISECONDS_IN_SECOND) *
             ?MILLISECONDS_IN_SECOND == Value ->
                 {Value div ?MILLISECONDS_IN_SECOND, seconds};
+            true ->
+                Value
+        end).
+-define(LIMIT_FORMAT_SECONDS(Value, Min, Max),
+        if
+            Value == Min ->
+                limit_min;
+            Value == Max ->
+                limit_max;
+            Value == ?SECONDS_IN_DAY ->
+                {1, day};
+            (Value div ?SECONDS_IN_DAY) *
+            ?SECONDS_IN_DAY == Value ->
+                {Value div ?SECONDS_IN_DAY, days};
+            Value == ?SECONDS_IN_HOUR ->
+                {1, hour};
+            (Value div ?SECONDS_IN_HOUR) *
+            ?SECONDS_IN_HOUR == Value ->
+                {Value div ?SECONDS_IN_HOUR, hours};
+            Value == ?SECONDS_IN_MINUTE ->
+                {1, minute};
+            (Value div ?SECONDS_IN_MINUTE) *
+            ?SECONDS_IN_MINUTE == Value ->
+                {Value div ?SECONDS_IN_MINUTE, minutes};
+            true ->
+                Value
+        end).
+-define(LIMIT_FORMAT_SECONDS_GTE(Value, Min),
+        if
+            Value == Min ->
+                limit_min;
+            Value == ?SECONDS_IN_DAY ->
+                {1, day};
+            (Value div ?SECONDS_IN_DAY) *
+            ?SECONDS_IN_DAY == Value ->
+                {Value div ?SECONDS_IN_DAY, days};
+            Value == ?SECONDS_IN_HOUR ->
+                {1, hour};
+            (Value div ?SECONDS_IN_HOUR) *
+            ?SECONDS_IN_HOUR == Value ->
+                {Value div ?SECONDS_IN_HOUR, hours};
+            Value == ?SECONDS_IN_MINUTE ->
+                {1, minute};
+            (Value div ?SECONDS_IN_MINUTE) *
+            ?SECONDS_IN_MINUTE == Value ->
+                {Value div ?SECONDS_IN_MINUTE, minutes};
             true ->
                 Value
         end).
@@ -349,6 +436,38 @@
             (element(1, Value) =< Max div ?MILLISECONDS_IN_SECOND)))) orelse
          (Value =:= limit_min) orelse
          (Value =:= limit_max))).
+-define(LIMIT_GUARD_SECONDS(Value, Min, Max),
+        ((is_integer(Value) andalso
+          (Value >= Min) andalso (Value =< Max)) orelse
+         (is_tuple(Value) andalso
+          (tuple_size(Value) == 2) andalso
+          is_integer(element(1, Value)) andalso
+          (element(1, Value) >= 1) andalso
+          ((((element(2, Value) =:= minutes) orelse
+             (element(2, Value) =:= minute)) andalso
+            (element(1, Value) =< Max div ?SECONDS_IN_MINUTE)) orelse
+           (((element(2, Value) =:= hours) orelse
+             (element(2, Value) =:= hour)) andalso
+            (element(1, Value) =< Max div ?SECONDS_IN_HOUR)) orelse
+           (((element(2, Value) =:= days) orelse
+             (element(2, Value) =:= day)) andalso
+            (element(1, Value) =< Max div ?SECONDS_IN_DAY)))) orelse
+         (Value =:= limit_min) orelse
+         (Value =:= limit_max))).
+-define(LIMIT_GUARD_SECONDS_GTE(Value, Min),
+        ((is_integer(Value) andalso
+          (Value >= Min)) orelse
+         (is_tuple(Value) andalso
+          (tuple_size(Value) == 2) andalso
+          is_integer(element(1, Value)) andalso
+          (element(1, Value) >= 1) andalso
+          ((element(2, Value) =:= minutes) orelse
+           (element(2, Value) =:= minute) orelse
+           (element(2, Value) =:= hours) orelse
+           (element(2, Value) =:= hour) orelse
+           (element(2, Value) =:= days) orelse
+           (element(2, Value) =:= day))) orelse
+         (Value =:= limit_min))).
 
 % The TIMEOUT_*_MIN values below are for initialization,
 % the interface functions allow 0 as the min due to the service request

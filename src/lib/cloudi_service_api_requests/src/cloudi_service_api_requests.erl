@@ -563,7 +563,8 @@ convert_json_to_term_service([{<<"count_thread">>, Value} | Service], L) ->
 convert_json_to_term_service([{<<"max_r">>, Value} | Service], L) ->
     convert_json_to_term_service(Service, [{max_r, Value} | L]);
 convert_json_to_term_service([{<<"max_t">>, Value} | Service], L) ->
-    convert_json_to_term_service(Service, [{max_t, Value} | L]);
+    MaxT = convert_json_to_term_period(Value),
+    convert_json_to_term_service(Service, [{max_t, MaxT} | L]);
 convert_json_to_term_service([{<<"options">>, OptionsL} | Service], L) ->
     Options = if
         is_binary(OptionsL) ->
@@ -726,7 +727,7 @@ convert_term_to_json_service(#internal{prefix = Prefix,
                                        options = Options}, Id) ->
     Service0 = [{<<"count_process">>, CountProcess},
                 {<<"max_r">>, MaxR},
-                {<<"max_t">>, MaxT},
+                {<<"max_t">>, convert_term_to_json_period_seconds(MaxT)},
                 {<<"options">>, convert_term_to_json_options(Options)}],
     Service1 = if
         DestListAllow =:= undefined ->
@@ -745,11 +746,12 @@ convert_term_to_json_service(#internal{prefix = Prefix,
                || DestDeny <- DestListDeny]} | Service1]
     end,
     Service3 = [{<<"timeout_init">>,
-                 convert_term_to_json_period(TimeoutInit)},
+                 convert_term_to_json_period_milliseconds(TimeoutInit)},
                 {<<"timeout_async">>,
-                 convert_term_to_json_period(TimeoutAsync)},
+                 convert_term_to_json_period_milliseconds(TimeoutAsync)},
                 {<<"timeout_sync">>,
-                 convert_term_to_json_period(TimeoutSync)} | Service2],
+                 convert_term_to_json_period_milliseconds(TimeoutSync)} |
+                Service2],
     ServiceN = if
         DestRefresh =:= none ->
             Service3;
@@ -788,7 +790,7 @@ convert_term_to_json_service(#external{prefix = Prefix,
     Service0 = [{<<"count_process">>, CountProcess},
                 {<<"count_thread">>, CountThread},
                 {<<"max_r">>, MaxR},
-                {<<"max_t">>, MaxT},
+                {<<"max_t">>, convert_term_to_json_period_seconds(MaxT)},
                 {<<"options">>, convert_term_to_json_options(Options)}],
     Service1 = if
         DestListAllow =:= undefined ->
@@ -809,11 +811,12 @@ convert_term_to_json_service(#external{prefix = Prefix,
     Service3 = [{<<"protocol">>, erlang:atom_to_binary(Protocol, utf8)},
                 {<<"buffer_size">>, BufferSize},
                 {<<"timeout_init">>,
-                 convert_term_to_json_period(TimeoutInit)},
+                 convert_term_to_json_period_milliseconds(TimeoutInit)},
                 {<<"timeout_async">>,
-                 convert_term_to_json_period(TimeoutAsync)},
+                 convert_term_to_json_period_milliseconds(TimeoutAsync)},
                 {<<"timeout_sync">>,
-                 convert_term_to_json_period(TimeoutSync)} | Service2],
+                 convert_term_to_json_period_milliseconds(TimeoutSync)} |
+                Service2],
     ServiceN = if
         DestRefresh =:= none ->
             Service3;
@@ -898,12 +901,17 @@ convert_term_to_json_atoms([A | L]) ->
     [erlang:atom_to_binary(A, utf8) |
      convert_term_to_json_atoms(L)].
 
-convert_term_to_json_period(limit_max) ->
+convert_term_to_json_period_milliseconds(limit_max) ->
     <<"limit_max">>;
-convert_term_to_json_period(limit_min) ->
+convert_term_to_json_period_milliseconds(limit_min) ->
     <<"limit_min">>;
-convert_term_to_json_period(Timeout) ->
+convert_term_to_json_period_milliseconds(Timeout) ->
     cloudi_args_type:timeout_period_to_milliseconds(Timeout).
+
+convert_term_to_json_period_seconds(limit_min) ->
+    <<"limit_min">>;
+convert_term_to_json_period_seconds(Value) ->
+    cloudi_args_type:period_to_seconds(Value, 0).
 
 json_encode(Term, true) ->
     cloudi_x_jsx:encode(Term, [{indent, 1}]);

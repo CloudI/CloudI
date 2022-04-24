@@ -58,7 +58,7 @@
         max_r = 5
             :: non_neg_integer(),
         max_t = 300
-            :: cloudi_service_api:seconds(),
+            :: cloudi_service_api:max_t(),
         options = []
             :: cloudi_service_api:service_options_internal()
     }).
@@ -97,7 +97,7 @@
         max_r = 5
             :: non_neg_integer(),
         max_t = 300
-            :: cloudi_service_api:seconds(),
+            :: cloudi_service_api:max_t(),
         options = []
             :: cloudi_service_api:service_options_external()
     }).

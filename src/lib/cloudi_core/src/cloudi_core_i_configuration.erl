@@ -428,6 +428,13 @@
                                   ?TIMEOUT_INITIALIZE_MIN,
                                   ?TIMEOUT_INITIALIZE_MAX)).
 
+-define(MAX_T_ASSIGN(MaxT),
+        ?LIMIT_ASSIGN_SECONDS_GTE(MaxT, 0)).
+-define(MAX_T_FORMAT(MaxT),
+        ?LIMIT_FORMAT_SECONDS_GTE(MaxT, 0)).
+-define(MAX_T_GUARD(MaxT),
+        ?LIMIT_GUARD_SECONDS_GTE(MaxT, 0)).
+
 -define(REQUEST_TIMEOUT_IMMEDIATE_MAX_ASSIGN(RequestTimeoutImmediateMax),
         ?LIMIT_ASSIGN_MILLISECONDS(RequestTimeoutImmediateMax,
                                    ?REQUEST_TIMEOUT_IMMEDIATE_MAX_MIN,
@@ -837,7 +844,7 @@ service_format(#config_service_internal{prefix = Prefix,
                dest_list_allow = DestListAllow,
                count_process = CountProcess,
                max_r = MaxR,
-               max_t = MaxT,
+               max_t = ?MAX_T_FORMAT(MaxT),
                options = services_format_options_internal(Options)}};
 service_format(#config_service_external{prefix = Prefix,
                                         file_path = FilePath,
@@ -873,7 +880,7 @@ service_format(#config_service_external{prefix = Prefix,
                count_process = CountProcess,
                count_thread = CountThread,
                max_r = MaxR,
-               max_t = MaxT,
+               max_t = ?MAX_T_FORMAT(MaxT),
                options = services_format_options_external(Options)}}.
 
 %%-------------------------------------------------------------------------
@@ -1809,7 +1816,8 @@ logging(#config{logging = #config_logging{
                             FormatterDefaults#config_logging_formatter.output_max_t ->
                                 FormatterValue4;
                             true ->
-                                [{output_max_t, FormatterOutputMaxT} |
+                                [{output_max_t,
+                                  ?MAX_T_FORMAT(FormatterOutputMaxT)} |
                                  FormatterValue4]
                         end
                 end,
@@ -2141,16 +2149,8 @@ services_validate([#internal{max_r = MaxR} | _], _, _, _)
     when not (is_integer(MaxR) andalso MaxR >= 0) ->
     {error, {service_internal_max_r_invalid, MaxR}};
 services_validate([#internal{max_t = MaxT} | _], _, _, _)
-    when not (is_integer(MaxT) andalso MaxT >= 0) ->
+    when not ?MAX_T_GUARD(MaxT) ->
     {error, {service_internal_max_t_invalid, MaxT}};
-services_validate([#internal{max_r = MaxR,
-                             max_t = MaxT} | _], _, _, _)
-    when (MaxT > 0) andalso
-         (((MaxR == 0) andalso
-           (?TIMEOUT_TERMINATE_CALC0(MaxT) < ?TIMEOUT_TERMINATE_MIN)) orelse
-          ((MaxR > 0) andalso
-           (?TIMEOUT_TERMINATE_CALC1(MaxR, MaxT) < ?TIMEOUT_TERMINATE_MIN))) ->
-    {error, {service_internal_max_t_increase, MaxT}};
 services_validate([#internal{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_internal_options_invalid, Options}};
@@ -2178,10 +2178,11 @@ services_validate([#internal{
     TimeoutInitValue = ?TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
     TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
     TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
-    case service_name_valid(Prefix, service_internal_prefix_invalid) of
+    MaxTValue = ?MAX_T_ASSIGN(MaxT),
+    case services_validate_common(internal, Prefix, MaxR, MaxTValue) of
         ok ->
             case services_validate_options_internal(Options, CountProcess,
-                                                    MaxR, MaxT) of
+                                                    MaxR, MaxTValue) of
                 {ok, TimeoutTermValue, OptionsNew} ->
                     {ID, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
                     services_validate(L,
@@ -2199,7 +2200,7 @@ services_validate([#internal{
                                            dest_list_allow = DestListAllow,
                                            count_process = CountProcess,
                                            max_r = MaxR,
-                                           max_t = MaxT,
+                                           max_t = MaxTValue,
                                            options = OptionsNew,
                                            uuid = ID} | Output],
                                       [ID | IDs],
@@ -2298,16 +2299,8 @@ services_validate([#external{max_r = MaxR} | _], _, _, _)
     when not (is_integer(MaxR) andalso MaxR >= 0) ->
     {error, {service_external_max_r_invalid, MaxR}};
 services_validate([#external{max_t = MaxT} | _], _, _, _)
-    when not (is_integer(MaxT) andalso MaxT >= 0) ->
+    when not ?MAX_T_GUARD(MaxT) ->
     {error, {service_external_max_t_invalid, MaxT}};
-services_validate([#external{max_r = MaxR,
-                             max_t = MaxT} | _], _, _, _)
-    when (MaxT > 0) andalso
-         (((MaxR == 0) andalso
-           (?TIMEOUT_TERMINATE_CALC0(MaxT) < ?TIMEOUT_TERMINATE_MIN)) orelse
-          ((MaxR > 0) andalso
-           (?TIMEOUT_TERMINATE_CALC1(MaxR, MaxT) < ?TIMEOUT_TERMINATE_MIN))) ->
-    {error, {service_external_max_t_increase, MaxT}};
 services_validate([#external{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_external_options_invalid, Options}};
@@ -2352,10 +2345,11 @@ services_validate([#external{
     TimeoutInitValue = ?TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
     TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
     TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
-    case service_name_valid(Prefix, service_external_prefix_invalid) of
+    MaxTValue = ?MAX_T_ASSIGN(MaxT),
+    case services_validate_common(external, Prefix, MaxR, MaxTValue) of
         ok ->
             case services_validate_options_external(Options, CountProcess,
-                                                    MaxR, MaxT) of
+                                                    MaxR, MaxTValue) of
                 {ok, TimeoutTermValue, OptionsNew} ->
                     {ID, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
                     services_validate(L,
@@ -2376,7 +2370,7 @@ services_validate([#external{
                                            count_process = CountProcess,
                                            count_thread = CountThread,
                                            max_r = MaxR,
-                                           max_t = MaxT,
+                                           max_t = MaxTValue,
                                            options = OptionsNew,
                                            uuid = ID} | Output],
                                       [ID | IDs],
@@ -2484,6 +2478,34 @@ services_validate([[_| _] = ServicePropList | L], Output, IDs, UUID) ->
 ?CLOUDI_CORE_SUPPORT_EXTERNAL
 services_validate([Service | _], _, _, _) ->
     {error, {service_invalid, Service}}.
+
+services_validate_common(Type, _, MaxR, MaxT)
+    when (MaxT > 0) andalso
+         (((MaxR == 0) andalso
+           (?TIMEOUT_TERMINATE_CALC0(MaxT) < ?TIMEOUT_TERMINATE_MIN)) orelse
+          ((MaxR > 0) andalso
+           (?TIMEOUT_TERMINATE_CALC1(MaxR, MaxT) < ?TIMEOUT_TERMINATE_MIN))) ->
+    ErrorReason = if
+        Type =:= internal ->
+            service_internal_max_t_increase;
+        Type =:= external ->
+            service_external_max_t_increase
+    end,
+    {error, {ErrorReason, MaxT}};
+services_validate_common(Type, Prefix, _, _) ->
+    try cloudi_x_trie:is_pattern2_bytes(Prefix) of
+        _ ->
+            ok
+    catch
+        exit:badarg ->
+            ErrorReason = if
+                Type =:= internal ->
+                    service_internal_prefix_invalid;
+                Type =:= external ->
+                    service_external_prefix_invalid
+            end,
+            {error, {ErrorReason, Prefix}}
+    end.
 
 timeout_terminate(undefined, undefined, undefined) ->
     {ok, undefined};
@@ -5010,15 +5032,6 @@ acl_update_values([E | L], Output, Path, Key, ACL)
 acl_update_values([E | _], _, _, _, _) ->
     {error, {acl_invalid, E}}.
 
-service_name_valid(Name, ErrorReason) ->
-    try cloudi_x_trie:is_pattern2_bytes(Name) of
-        _ ->
-            ok
-    catch
-        exit:badarg ->
-            {error, {ErrorReason, Name}}
-    end.
-
 nodes_validate([]) ->
     ok;
 nodes_validate([A | As])
@@ -5785,7 +5798,7 @@ logging_validate_formatter(Key, Value) ->
             {error, {logging_formatter_output_max_r_invalid,
                      OutputMaxR}};
         [_, _, _, _, OutputMaxT, _, _]
-            when not (is_integer(OutputMaxT) andalso (OutputMaxT >= 0)) ->
+            when not ?MAX_T_GUARD(OutputMaxT) ->
             {error, {logging_formatter_output_max_t_invalid,
                      OutputMaxT}};
         [_, Output, _, _, _, Formatter, _]
@@ -5824,13 +5837,15 @@ logging_validate_formatter(Key, Value) ->
                             end,
                             [{level, LagerLevel} | OutputArgs]
                     end,
+                    OutputMaxTValue = ?MAX_T_ASSIGN(OutputMaxT),
                     OutputName = if
                         Output =:= undefined ->
                             undefined;
                         true ->
                             Instance = erlang:phash2({Key,
                                                       OutputArgsNew,
-                                                      OutputMaxR, OutputMaxT,
+                                                      OutputMaxR,
+                                                      OutputMaxTValue,
                                                       Formatter, Config}),
                             ?LOGGING_FORMATTER_OUTPUT_ASSIGN(Output, Instance)
                     end,
@@ -5841,7 +5856,7 @@ logging_validate_formatter(Key, Value) ->
                          output_name = OutputName,
                          output_args = OutputArgsNew,
                          output_max_r = OutputMaxR,
-                         output_max_t = OutputMaxT,
+                         output_max_t = OutputMaxTValue,
                          formatter = Formatter,
                          formatter_config = Config}};
                 {error, _} = Error ->

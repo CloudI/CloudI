@@ -3,6 +3,8 @@
 
 2022-04-23 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add support for the period format to the
+      max_t service configuration value
     * Update quickrand
     * Update erlang_term
 
