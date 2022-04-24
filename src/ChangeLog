@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-04-23 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update quickrand
+    * Update erlang_term
+
 2022-04-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add support for the period format to cloudi:new/1 options

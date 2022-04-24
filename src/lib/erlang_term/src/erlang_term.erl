@@ -79,11 +79,19 @@ byte_size_terms(Term)
 -ifdef(ERLANG_OTP_VERSION_25_FEATURES).
 -define(INTERNAL_TEST_TUPLE_EMPTY,
     8 = byte_size({}, 8),
+    32 = byte_size(#{}, 8),
+    ).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17_FEATURES).
+-define(INTERNAL_TEST_TUPLE_EMPTY,
+    16 = byte_size({}, 8),
+    40 = byte_size(#{}, 8),
     ).
 -else.
 -define(INTERNAL_TEST_TUPLE_EMPTY,
     16 = byte_size({}, 8),
     ).
+-endif.
 -endif.
 
 %%%------------------------------------------------------------------------

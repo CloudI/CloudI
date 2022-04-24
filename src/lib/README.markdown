@@ -28,8 +28,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Term Info`
 
 - `https://github.com/okeuday/erlang_term`
-- `commit feffb6ed73ed0d917d9fac0c143514c57993b23b`
-- `Sun Apr 17 04:45:45 UTC 2022`
+- `commit bbf32a607be45be6acfa1f12f4be094820a8932e`
+- `Sun Apr 24 00:44:21 UTC 2022`
 - `MIT`
 
 `key2value`
@@ -64,8 +64,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit 3a627197409c7398f97089d41a6696d7f945fef0`
-- `Sat Mar 26 05:22:35 UTC 2022`
+- `commit fc152c8cd15460d37f00fe458611d416f949a540`
+- `Sun Apr 24 00:44:21 UTC 2022`
 - `MIT`
 
 `reltool_util`
