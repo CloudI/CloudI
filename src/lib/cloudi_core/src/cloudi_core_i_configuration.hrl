@@ -668,10 +668,10 @@
             :: list(node()),
         % time to wait before the first reconnect is attempted with a node
         reconnect_start = ?DEFAULT_NODE_RECONNECT_START
-            :: cloudi_service_api:node_reconnect_delay_seconds(),
+            :: cloudi_service_api:period_seconds(),
         % maximum wait time before a reconnect is attempted with a node
         reconnect_delay = ?DEFAULT_NODE_RECONNECT_DELAY
-            :: cloudi_service_api:node_reconnect_delay_seconds(),
+            :: cloudi_service_api:period_seconds(),
         % how should node connections be monitored
         % (inferred from connect value if it is not set,
         %  if connect is visible

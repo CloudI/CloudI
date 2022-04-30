@@ -535,6 +535,12 @@
 % (if durations are discarded, the downtime result is considered approximate)
 -define(STATUS_DURATIONS_YEAR_MAX, 366).
 
+% nodes options limits (seconds)
+-define(NODES_RECONNECT_START_MIN, 1).
+-define(NODES_RECONNECT_START_MAX, ?TIMEOUT_MAX_ERLANG div 1000).
+-define(NODES_RECONNECT_DELAY_MIN, 1).
+-define(NODES_RECONNECT_DELAY_MAX, ?TIMEOUT_MAX_ERLANG div 1000).
+
 % maximum average time inbetween CloudI logger calls during the interval
 % to trigger logger flooding prevention, so that logging messages are discarded
 % since they are coming from source code that is misbehaving that has already

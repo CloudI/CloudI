@@ -57,11 +57,11 @@
          count_process_dynamic_terminate/1,
          count_process_dynamic_terminate_set/2,
          count_process_dynamic_terminated/1,
-         rate_request_format/1,
-         rate_request_validate/1,
-         rate_request_init/1,
-         rate_request_reinit/1,
-         rate_request_request/1]).
+         rate_request_max_format/1,
+         rate_request_max_validate/1,
+         rate_request_max_init/1,
+         rate_request_max_reinit/1,
+         rate_request_max_request/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -77,13 +77,13 @@
 -define(RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT, 250). % milliseconds
 -define(COUNT_PROCESS_DYNAMIC_METHOD_DEFAULT, rate_request).
 -define(COUNT_PROCESS_DYNAMIC_PERIOD_DEFAULT, 5). % seconds
--define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_DEFAULT, 1000). % req/sec
+-define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_VALUE_DEFAULT, 1000). % req/sec
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MIN_DEFAULT, 100). % req/sec
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_OFFSET_DEFAULT, 10). % req/sec
 -define(COUNT_PROCESS_DYNAMIC_COUNT_MAX_DEFAULT, 4.0). % float%/integer_abs
 -define(COUNT_PROCESS_DYNAMIC_COUNT_MIN_DEFAULT, 0.5). % float%/integer_abs
--define(RATE_REQUEST_PERIOD_DEFAULT, 5). % seconds
--define(RATE_REQUEST_MAX_DEFAULT, 1000). % req/sec
+-define(RATE_REQUEST_MAX_PERIOD_DEFAULT, 5). % seconds
+-define(RATE_REQUEST_MAX_VALUE_DEFAULT, 1000). % req/sec
 
 -record(hibernate,
     {
@@ -130,6 +130,8 @@
 
 % macros used to simplify source code in this file
 
+-define(HIBERNATE_PERIOD_MIN, 1).
+-define(HIBERNATE_PERIOD_MAX, ?TIMEOUT_MAX_ERLANG div 1000).
 -define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_MIN, 1).
 -define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_MAX, ?TIMEOUT_MAX_ERLANG).
 -define(RESTART_DELAY_EXPONENTIAL_TIME_MAX_MIN, 1).
@@ -140,6 +142,23 @@
 -define(RESTART_DELAY_LINEAR_TIME_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
 -define(RESTART_DELAY_ABSOLUTE_TIME_MIN, 1).
 -define(RESTART_DELAY_ABSOLUTE_TIME_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(COUNT_PROCESS_DYNAMIC_PERIOD_MIN, 1).
+-define(COUNT_PROCESS_DYNAMIC_PERIOD_MAX, ?TIMEOUT_MAX_ERLANG div 1000).
+-define(RATE_REQUEST_MAX_PERIOD_MIN, 1).
+-define(RATE_REQUEST_MAX_PERIOD_MAX, ?TIMEOUT_MAX_ERLANG div 1000).
+
+-define(HIBERNATE_PERIOD_ASSIGN(Period),
+        ?LIMIT_ASSIGN_SECONDS(Period,
+                              ?HIBERNATE_PERIOD_MIN,
+                              ?HIBERNATE_PERIOD_MAX)).
+-define(HIBERNATE_PERIOD_FORMAT(Period),
+        ?LIMIT_FORMAT_SECONDS(Period,
+                              ?HIBERNATE_PERIOD_MIN,
+                              ?HIBERNATE_PERIOD_MAX)).
+-define(HIBERNATE_PERIOD_GUARD(Period),
+        ?LIMIT_GUARD_SECONDS(Period,
+                             ?HIBERNATE_PERIOD_MIN,
+                             ?HIBERNATE_PERIOD_MAX)).
 
 -define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_ASSIGN(TimeMin),
         ?LIMIT_ASSIGN_MILLISECONDS(TimeMin,
@@ -206,6 +225,32 @@
                                   ?RESTART_DELAY_ABSOLUTE_TIME_MIN,
                                   ?RESTART_DELAY_ABSOLUTE_TIME_MAX)).
 
+-define(COUNT_PROCESS_DYNAMIC_PERIOD_ASSIGN(Period),
+        ?LIMIT_ASSIGN_SECONDS(Period,
+                              ?COUNT_PROCESS_DYNAMIC_PERIOD_MIN,
+                              ?COUNT_PROCESS_DYNAMIC_PERIOD_MAX)).
+-define(COUNT_PROCESS_DYNAMIC_PERIOD_FORMAT(Period),
+        ?LIMIT_FORMAT_SECONDS(Period,
+                              ?COUNT_PROCESS_DYNAMIC_PERIOD_MIN,
+                              ?COUNT_PROCESS_DYNAMIC_PERIOD_MAX)).
+-define(COUNT_PROCESS_DYNAMIC_PERIOD_GUARD(Period),
+        ?LIMIT_GUARD_SECONDS(Period,
+                             ?COUNT_PROCESS_DYNAMIC_PERIOD_MIN,
+                             ?COUNT_PROCESS_DYNAMIC_PERIOD_MAX)).
+
+-define(RATE_REQUEST_MAX_PERIOD_ASSIGN(Period),
+        ?LIMIT_ASSIGN_SECONDS(Period,
+                              ?RATE_REQUEST_MAX_PERIOD_MIN,
+                              ?RATE_REQUEST_MAX_PERIOD_MAX)).
+-define(RATE_REQUEST_MAX_PERIOD_FORMAT(Period),
+        ?LIMIT_FORMAT_SECONDS(Period,
+                              ?RATE_REQUEST_MAX_PERIOD_MIN,
+                              ?RATE_REQUEST_MAX_PERIOD_MAX)).
+-define(RATE_REQUEST_MAX_PERIOD_GUARD(Period),
+        ?LIMIT_GUARD_SECONDS(Period,
+                             ?RATE_REQUEST_MAX_PERIOD_MIN,
+                             ?RATE_REQUEST_MAX_PERIOD_MAX)).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -222,7 +267,7 @@ hibernate_format(false) ->
 hibernate_format(#hibernate{method = rate_request,
                             period = Period,
                             rate_min = RateMin}) ->
-    [{period, Period},
+    [{period, ?HIBERNATE_PERIOD_FORMAT(Period)},
      {rate_request_min, RateMin}].
 
 %% convert the configuration format to internal state
@@ -380,7 +425,7 @@ count_process_dynamic_format(#count_process_dynamic{
                                  rate_min = RateMin,
                                  count_process_max = CountProcessMax,
                                  count_process_min = CountProcessMin}) ->
-    [{period, Period},
+    [{period, ?COUNT_PROCESS_DYNAMIC_PERIOD_FORMAT(Period)},
      {rate_request_max, RateMax},
      {rate_request_min, RateMin},
      {count_max, CountProcessMax},
@@ -511,36 +556,36 @@ count_process_dynamic_terminated(#count_process_dynamic{
 
 %% convert internal state to the configuration format
 
--spec rate_request_format(#rate_request{} | undefined) ->
+-spec rate_request_max_format(#rate_request{} | undefined) ->
     cloudi_service_api:service_options_rate_request_max_options() | undefined.
 
-rate_request_format(undefined) ->
+rate_request_max_format(undefined) ->
     undefined;
-rate_request_format(#rate_request{period = Period,
+rate_request_max_format(#rate_request{period = Period,
                                   rate_max = RateMax}) ->
-    [{period, Period},
+    [{period, ?RATE_REQUEST_MAX_PERIOD_FORMAT(Period)},
      {value, RateMax}].
 
 %% convert the configuration format to internal state
 
--spec rate_request_validate(list({atom(), any()}) | number() | undefined) ->
+-spec rate_request_max_validate(list({atom(), any()}) | number() | undefined) ->
     {ok, #rate_request{} | undefined} |
     {error, {service_options_rate_request_max_invalid, any()}}.
 
-rate_request_validate(undefined) ->
+rate_request_max_validate(undefined) ->
     {ok, undefined};
-rate_request_validate(Value)
+rate_request_max_validate(Value)
     when is_number(Value) ->
-    rate_request_validate([{value, Value}], #rate_request{});
-rate_request_validate(Options) ->
-    rate_request_validate(Options, #rate_request{}).
+    rate_request_max_validate([{value, Value}], #rate_request{});
+rate_request_max_validate(Options) ->
+    rate_request_max_validate(Options, #rate_request{}).
 
 %% called by init/1
 
--spec rate_request_init(State :: #rate_request{}) ->
+-spec rate_request_max_init(State :: #rate_request{}) ->
     #rate_request{}.
 
-rate_request_init(#rate_request{period = Period} = State) ->
+rate_request_max_init(#rate_request{period = Period} = State) ->
     erlang:send_after(Period * 1000, self(),
                       'cloudi_rate_request_max_rate'),
     State#rate_request{count = 0,
@@ -548,12 +593,12 @@ rate_request_init(#rate_request{period = Period} = State) ->
 
 %% called by handle_info('cloudi_rate_request_max_rate', ...)
 
--spec rate_request_reinit(State :: #rate_request{} | undefined) ->
+-spec rate_request_max_reinit(State :: #rate_request{} | undefined) ->
     #rate_request{}.
 
-rate_request_reinit(undefined) ->
+rate_request_max_reinit(undefined) ->
     undefined;
-rate_request_reinit(#rate_request{period = Period,
+rate_request_max_reinit(#rate_request{period = Period,
                                   count = Count,
                                   blocking = Blocking} = State) ->
     erlang:send_after(Period * 1000, self(),
@@ -571,12 +616,12 @@ rate_request_reinit(#rate_request{period = Period,
 
 %% called when a service request is handled
 
--spec rate_request_request(State :: #rate_request{}) ->
+-spec rate_request_max_request(State :: #rate_request{}) ->
     {boolean(), #rate_request{}}.
 
-rate_request_request(#rate_request{blocking = true} = State) ->
+rate_request_max_request(#rate_request{blocking = true} = State) ->
     {false, State};
-rate_request_request(#rate_request{period = Period,
+rate_request_max_request(#rate_request{period = Period,
                                    count = Count,
                                    rate_max = RateMax} = State) ->
     CountNew = Count + 1,
@@ -627,10 +672,10 @@ hibernate_validate([{rate_request_min, RateMin} | Options],
                                        rate_min = RateMin});
 hibernate_validate([{period, Period} | Options],
                    #hibernate{} = State)
-    when is_integer(Period), Period > 0,
-         Period =< (?TIMEOUT_MAX_ERLANG div 1000) ->
+    when ?HIBERNATE_PERIOD_GUARD(Period) ->
+    PeriodNew = ?HIBERNATE_PERIOD_ASSIGN(Period),
     hibernate_validate(Options,
-                       State#hibernate{period = Period});
+                       State#hibernate{period = PeriodNew});
 hibernate_validate([Invalid | _Options],
                    _State) ->
     {error, {service_options_hibernate_invalid, Invalid}}.
@@ -846,7 +891,7 @@ count_process_dynamic_validate([],
     end,
     RateMaxNew = if
         RateMax =:= undefined ->
-            ?COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_DEFAULT;
+            ?COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_VALUE_DEFAULT;
         RateMax =/= undefined ->
             RateMax
     end,
@@ -995,44 +1040,44 @@ count_process_dynamic_validate([{count_min, CountMin} = Option | Options],
 count_process_dynamic_validate([{period, Period} | Options],
                                #count_process_dynamic{} = State,
                                CountProcess)
-    when is_integer(Period), Period > 0,
-         Period =< (?TIMEOUT_MAX_ERLANG div 1000) ->
+    when ?COUNT_PROCESS_DYNAMIC_PERIOD_GUARD(Period) ->
+    PeriodNew = ?COUNT_PROCESS_DYNAMIC_PERIOD_ASSIGN(Period),
     count_process_dynamic_validate(Options,
         State#count_process_dynamic{
-            period = Period}, CountProcess);
+            period = PeriodNew}, CountProcess);
 count_process_dynamic_validate([Invalid | _Options],
                                _State, _CountProcess) ->
     {error, {service_options_count_process_dynamic_invalid, Invalid}}.
 
-rate_request_validate([],
-                      #rate_request{period = Period,
-                                    rate_max = RateMax} = State) ->
+rate_request_max_validate([],
+                          #rate_request{period = Period,
+                                        rate_max = RateMax} = State) ->
     PeriodNew = if
         Period =:= undefined ->
-            ?RATE_REQUEST_PERIOD_DEFAULT;
+            ?RATE_REQUEST_MAX_PERIOD_DEFAULT;
         Period =/= undefined ->
             Period
     end,
     RateMaxNew = if
         RateMax =:= undefined ->
-            ?RATE_REQUEST_MAX_DEFAULT;
+            ?RATE_REQUEST_MAX_VALUE_DEFAULT;
         RateMax =/= undefined ->
             RateMax
     end,
     {ok, State#rate_request{period = PeriodNew,
                             rate_max = RateMaxNew}};
-rate_request_validate([{value, RateMax} | Options],
-                      #rate_request{} = State)
+rate_request_max_validate([{value, RateMax} | Options],
+                          #rate_request{} = State)
     when is_number(RateMax), RateMax > 0 ->
-    rate_request_validate(Options,
-                          State#rate_request{rate_max = RateMax});
-rate_request_validate([{period, Period} | Options],
-                      #rate_request{} = State)
-    when is_integer(Period), Period > 0,
-         Period =< (?TIMEOUT_MAX_ERLANG div 1000) ->
-    rate_request_validate(Options,
-                          State#rate_request{period = Period});
-rate_request_validate([Invalid | _Options],
-                      _State) ->
+    rate_request_max_validate(Options,
+                              State#rate_request{rate_max = RateMax});
+rate_request_max_validate([{period, Period} | Options],
+                          #rate_request{} = State)
+    when ?RATE_REQUEST_MAX_PERIOD_GUARD(Period) ->
+    PeriodNew = ?RATE_REQUEST_MAX_PERIOD_ASSIGN(Period),
+    rate_request_max_validate(Options,
+                              State#rate_request{period = PeriodNew});
+rate_request_max_validate([Invalid | _Options],
+                          _State) ->
     {error, {service_options_rate_request_max_invalid, Invalid}}.
 

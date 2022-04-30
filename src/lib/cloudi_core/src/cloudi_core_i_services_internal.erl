@@ -1046,7 +1046,7 @@ handle_info({'cloudi_service_send_async' = SendType,
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -1094,7 +1094,7 @@ handle_info({'cloudi_service_send_sync' = SendType,
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -1173,7 +1173,7 @@ handle_info({SendType, Name, Pattern, _, _,
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -1572,7 +1572,7 @@ handle_info('cloudi_rate_request_max_rate',
                        rate_request_max =
                            RateRequest} = ConfigOptions} = State) ->
     RateRequestNew = cloudi_core_i_rate_based_configuration:
-                     rate_request_reinit(RateRequest),
+                     rate_request_max_reinit(RateRequest),
     hibernate_check({noreply,
                      State#state{
                          options = ConfigOptions#config_service_options{
@@ -3630,7 +3630,7 @@ duo_handle_info({'cloudi_service_send_async' = SendType,
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -3675,7 +3675,7 @@ duo_handle_info({'cloudi_service_send_sync' = SendType,
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -3751,7 +3751,7 @@ duo_handle_info({SendType, Name, Pattern, _, _,
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -3851,7 +3851,7 @@ duo_handle_info('cloudi_rate_request_max_rate',
                                rate_request_max = RateRequest} = ConfigOptions
                            } = State) ->
     RateRequestNew = cloudi_core_i_rate_based_configuration:
-                     rate_request_reinit(RateRequest),
+                     rate_request_max_reinit(RateRequest),
     {noreply,
      State#state_duo{options = ConfigOptions#config_service_options{
                          rate_request_max = RateRequestNew}}};
@@ -4423,7 +4423,7 @@ update_state(#state{dispatcher = Dispatcher,
             RateRequestNew = if
                 RateRequest =/= undefined ->
                     cloudi_core_i_rate_based_configuration:
-                    rate_request_init(RateRequest);
+                    rate_request_max_init(RateRequest);
                 true ->
                     RateRequest
             end,
@@ -4519,7 +4519,7 @@ update_state(#state_duo{dispatcher = Dispatcher,
             RateRequestNew = if
                 RateRequest =/= undefined ->
                     cloudi_core_i_rate_based_configuration:
-                    rate_request_init(RateRequest);
+                    rate_request_max_init(RateRequest);
                 true ->
                     RateRequest
             end,

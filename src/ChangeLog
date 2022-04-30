@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-04-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add support for the period format to the
+      reconnect_start and reconnect_delay nodes configuration value
+    * Add support for the period format to the
+      hibernate, count_process_dynamic and rate_request_max
+      service configuration options (in the period value)
+
 2022-04-23 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add support for the period format to the

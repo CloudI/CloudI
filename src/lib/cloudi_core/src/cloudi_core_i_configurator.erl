@@ -522,7 +522,7 @@ handle_call({services_search, Scope, ServiceName, Timeout}, _,
                 {ok, []} ->
                     {reply, {ok, []}, State};
                 {ok, L} ->
-                    {reply, 
+                    {reply,
                      {ok,
                       cloudi_core_i_configuration:services_search(L, Config)},
                      State};
@@ -1330,7 +1330,7 @@ nodes_call_remote_result({Replies, BadNodes}) ->
         true ->
             {error, {remote, Errors}}
     end.
-    
+
 nodes_call_remote_result_replies([], Output) ->
     lists:reverse(Output);
 nodes_call_remote_result_replies([{_, ok} | Replies], Output) ->

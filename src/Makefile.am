@@ -214,7 +214,6 @@ erlang-applications-scope-remove:
 dialyze: all \
          $(top_srcdir)/dialyzer.plt
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
-              -Wno_improper_lists \
               -I lib/cloudi_core/include \
               lib/cloudi_core/ebin \
               lib/cloudi_service_api_batch/ebin \
@@ -278,7 +277,6 @@ dialyze: all \
 dialyze-internal: all \
                   $(top_srcdir)/dialyzer.plt
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
-              -Wno_improper_lists \
               -Wunmatched_returns \
               -Wunderspecs \
               -Werror_handling \

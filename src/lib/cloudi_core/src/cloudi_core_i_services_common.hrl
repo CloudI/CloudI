@@ -412,7 +412,7 @@ check_init_receive(#config_service_options{
     RateRequestNew = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_init(RateRequest);
+            rate_request_max_init(RateRequest);
         true ->
             RateRequest
     end,

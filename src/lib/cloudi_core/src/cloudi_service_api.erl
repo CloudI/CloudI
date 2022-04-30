@@ -578,10 +578,10 @@
               directory_external/0]).
 
 -type service_options_rate_request_max_options() ::
-    list({period, period_seconds()} |
+    list({period, period()} |
          {value, number()}).
 -type service_options_count_process_dynamic_options() ::
-    list({period, period_seconds()} |
+    list({period, period()} |
          {rate_request_max, number()} |
          {rate_request_min, number()} |
          {count_max, number()} |
@@ -603,7 +603,7 @@
     list({probability_request, float()} |
          {probability_day, float()}).
 -type service_options_internal_hibernate_options() ::
-    list({period, period_seconds()} |
+    list({period, period()} |
          {rate_request_min, number()}).
 -type service_options_internal() ::
     list({priority_default, priority()} |
@@ -1005,7 +1005,7 @@
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap})} |
          {hibernate,
-          list({period, period_seconds()} |
+          list({period, period()} |
                {rate_request_min, number()}) | boolean()} |
          {reload, boolean()}).
 -type service_update_plan_options_external() ::
@@ -1050,7 +1050,7 @@
               service_update_plan/0]).
 
 -type node_reconnect_delay_seconds() ::
-    period_seconds().
+    period().
 -export_type([node_reconnect_delay_seconds/0]).
 -type nodes_properties() ::
     node() |

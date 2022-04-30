@@ -474,6 +474,32 @@
                                             ?TIMEOUT_TERMINATE_MIN,
                                             ?TIMEOUT_TERMINATE_MAX)).
 
+-define(NODES_RECONNECT_START_ASSIGN(ReconnectStart),
+        ?LIMIT_ASSIGN_SECONDS(ReconnectStart,
+                              ?NODES_RECONNECT_START_MIN,
+                              ?NODES_RECONNECT_START_MAX)).
+-define(NODES_RECONNECT_START_FORMAT(ReconnectStart),
+        ?LIMIT_FORMAT_SECONDS(ReconnectStart,
+                              ?NODES_RECONNECT_START_MIN,
+                              ?NODES_RECONNECT_START_MAX)).
+-define(NODES_RECONNECT_START_GUARD(ReconnectStart),
+        ?LIMIT_GUARD_SECONDS(ReconnectStart,
+                             ?NODES_RECONNECT_START_MIN,
+                             ?NODES_RECONNECT_START_MAX)).
+
+-define(NODES_RECONNECT_DELAY_ASSIGN(ReconnectDelay),
+        ?LIMIT_ASSIGN_SECONDS(ReconnectDelay,
+                              ?NODES_RECONNECT_DELAY_MIN,
+                              ?NODES_RECONNECT_DELAY_MAX)).
+-define(NODES_RECONNECT_DELAY_FORMAT(ReconnectDelay),
+        ?LIMIT_FORMAT_SECONDS(ReconnectDelay,
+                              ?NODES_RECONNECT_DELAY_MIN,
+                              ?NODES_RECONNECT_DELAY_MAX)).
+-define(NODES_RECONNECT_DELAY_GUARD(ReconnectDelay),
+        ?LIMIT_GUARD_SECONDS(ReconnectDelay,
+                             ?NODES_RECONNECT_DELAY_MIN,
+                             ?NODES_RECONNECT_DELAY_MAX)).
+
 -define(LOGGER_FILE_SYNC_ASSIGN(FileSync),
         ?LIMIT_ASSIGN_MILLISECONDS(FileSync,
                                    ?LOGGER_FILE_SYNC_MIN,
@@ -1045,7 +1071,7 @@ services_format_options_external(Options) ->
         Defaults#config_service_options.rate_request_max ->
             [{rate_request_max,
               cloudi_core_i_rate_based_configuration:
-              rate_request_format(
+              rate_request_max_format(
                   Options#config_service_options.rate_request_max)} |
              OptionsList3];
         true ->
@@ -1400,13 +1426,15 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
         ReconnectStart == Defaults#config_nodes.reconnect_start ->
             NodesList1;
         true ->
-            [{reconnect_start, ReconnectStart} | NodesList1]
+            [{reconnect_start,
+              ?NODES_RECONNECT_START_FORMAT(ReconnectStart)} | NodesList1]
     end,
     NodesList3 = if
         ReconnectDelay == Defaults#config_nodes.reconnect_delay ->
             NodesList2;
         true ->
-            [{reconnect_delay, ReconnectDelay} | NodesList2]
+            [{reconnect_delay,
+              ?NODES_RECONNECT_DELAY_FORMAT(ReconnectDelay)} | NodesList2]
     end,
     NodesList4 = if
         (Listen =:= visible) andalso (Connect =:= visible);
@@ -3654,7 +3682,7 @@ services_validate_options_common_checks(RateRequestMax,
                                         MaxT) ->
     eval([{RateRequestMax,
            fun cloudi_core_i_rate_based_configuration:
-               rate_request_validate/1},
+               rate_request_max_validate/1},
           {CountProcessDynamic,
            fun(Value) ->
                cloudi_core_i_rate_based_configuration:
@@ -5280,32 +5308,19 @@ nodes_options(Nodes0, Value) ->
          NodesConfig#config_nodes.cost_precision},
         {log_reconnect,
          NodesConfig#config_nodes.log_reconnect}],
-    ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() + 500) div 1000,
     case cloudi_proplists:take_values(Defaults, Value) of
         [Nodes1, _, _, _, _, _, _, _, _, _]
             when not is_list(Nodes1) ->
             {error, {node_invalid,
                      Nodes1}};
         [_, ReconnectStart, _, _, _, _, _, _, _, _]
-            when not (is_integer(ReconnectStart) andalso
-                      (ReconnectStart > 0) andalso
-                      (ReconnectStart =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
+            when not ?NODES_RECONNECT_START_GUARD(ReconnectStart) ->
             {error, {node_reconnect_start_invalid,
                      ReconnectStart}};
-        [_, ReconnectStart, _, _, _, _, _, _, _, _]
-            when not (ReconnectStart >= ConnectTimeSeconds) ->
-            {error, {node_reconnect_start_min,
-                     ConnectTimeSeconds}};
         [_, _, ReconnectDelay, _, _, _, _, _, _, _]
-            when not (is_integer(ReconnectDelay) andalso
-                      (ReconnectDelay > 0) andalso
-                      (ReconnectDelay =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
+            when not ?NODES_RECONNECT_DELAY_GUARD(ReconnectDelay) ->
             {error, {node_reconnect_delay_invalid,
                      ReconnectDelay}};
-        [_, _, ReconnectDelay, _, _, _, _, _, _, _]
-            when not (ReconnectDelay >= ConnectTimeSeconds) ->
-            {error, {node_reconnect_delay_min,
-                     ConnectTimeSeconds}};
         [_, _, _, Listen, _, _, _, _, _, _]
             when not ((Listen =:= visible) orelse
                       (Listen =:= all) orelse
@@ -5351,22 +5366,35 @@ nodes_options(Nodes0, Value) ->
         [Nodes1, ReconnectStart, ReconnectDelay,
          Listen, Connect, TimestampType, Discovery, Cost, CostPrecision,
          LogReconnect] ->
-            accum([{Listen,
-                    fun nodes_listen/2},
-                   {Nodes1,
-                    fun nodes_elements_add/2},
-                   {Discovery,
-                    fun nodes_discovery_options/2},
-                   {Cost,
-                    fun nodes_cost/2}],
-                  NodesConfig#config_nodes{
-                      nodes = Nodes0,
-                      reconnect_start = ReconnectStart,
-                      reconnect_delay = ReconnectDelay,
-                      connect = Connect,
-                      timestamp_type = TimestampType,
-                      cost_precision = CostPrecision,
-                      log_reconnect = LogReconnect});
+            ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() +
+                                  500) div 1000,
+            ReconnectStartNew = ?NODES_RECONNECT_START_ASSIGN(ReconnectStart),
+            ReconnectDelayNew = ?NODES_RECONNECT_DELAY_ASSIGN(ReconnectDelay),
+            if
+                ReconnectStartNew < ConnectTimeSeconds ->
+                    {error, {node_reconnect_start_min,
+                             ConnectTimeSeconds}};
+                ReconnectDelayNew < ConnectTimeSeconds ->
+                    {error, {node_reconnect_delay_min,
+                             ConnectTimeSeconds}};
+                true ->
+                    accum([{Listen,
+                            fun nodes_listen/2},
+                           {Nodes1,
+                            fun nodes_elements_add/2},
+                           {Discovery,
+                            fun nodes_discovery_options/2},
+                           {Cost,
+                            fun nodes_cost/2}],
+                          NodesConfig#config_nodes{
+                              nodes = Nodes0,
+                              reconnect_start = ReconnectStartNew,
+                              reconnect_delay = ReconnectDelayNew,
+                              connect = Connect,
+                              timestamp_type = TimestampType,
+                              cost_precision = CostPrecision,
+                              log_reconnect = LogReconnect})
+            end;
         [_, _, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {node_invalid, Extra}}
     end.

@@ -223,6 +223,17 @@
         cgroup = undefined :: cloudi_service_api:cgroup_external()
     }).
 
+-dialyzer({no_improper_lists,
+           ['init_out'/10,
+            'send_async_out'/8,
+            'send_sync_out'/8,
+            'return_async_out'/1,
+            'return_sync_out'/2,
+            'return_sync_out'/3,
+            'returns_async_out'/1,
+            'recv_async_out'/2,
+            'recv_async_out'/3]}).
+
 -include("cloudi_core_i_services_common.hrl").
 
 %%%------------------------------------------------------------------------
@@ -988,7 +999,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -1077,7 +1088,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
-            rate_request_request(RateRequest);
+            rate_request_max_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
@@ -1309,7 +1320,7 @@ handle_event(EventType, EventContent, StateName, State) ->
          #state{options = #config_service_options{
                     rate_request_max = RateRequest} = ConfigOptions} = State) ->
     RateRequestNew = cloudi_core_i_rate_based_configuration:
-                     rate_request_reinit(RateRequest),
+                     rate_request_max_reinit(RateRequest),
     {keep_state,
      State#state{options = ConfigOptions#config_service_options{
                      rate_request_max = RateRequestNew}}};
@@ -2021,8 +2032,8 @@ process_queue(#state{dispatcher = Dispatcher,
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
                             0;
-                        V ->    
-                            V       
+                        V ->
+                            V
                     end,
                     T = {'cloudi_service_send_async',
                          Name, Pattern, RequestInfo, Request,
@@ -2067,8 +2078,8 @@ process_queue(#state{dispatcher = Dispatcher,
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
                             0;
-                        V ->    
-                            V       
+                        V ->
+                            V
                     end,
                     T = {'cloudi_service_send_sync',
                          Name, Pattern, RequestInfo, Request,
@@ -2729,7 +2740,7 @@ update_state(#state{dispatcher = Dispatcher,
             RateRequestNew = if
                 RateRequest =/= undefined ->
                     cloudi_core_i_rate_based_configuration:
-                    rate_request_init(RateRequest);
+                    rate_request_max_init(RateRequest);
                 true ->
                     RateRequest
             end,
