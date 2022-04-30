@@ -8,6 +8,8 @@
     * Add support for the period format to the
       hibernate, count_process_dynamic and rate_request_max
       service configuration options (in the period value)
+    * Add support for the period format to the
+      services_update timeout configuration values
 
 2022-04-23 Michael Truog   <mjtruog at protonmail dot com>
 

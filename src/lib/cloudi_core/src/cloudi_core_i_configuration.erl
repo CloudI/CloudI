@@ -4218,11 +4218,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
          _, _, _, _, _,
          _, TimeoutInit, _, _, _, _, _]
         when not ((TimeoutInit =:= undefined) orelse
-                  (is_integer(TimeoutInit) andalso
-                   (TimeoutInit >= ?TIMEOUT_INITIALIZE_MIN) andalso
-                   (TimeoutInit =< ?TIMEOUT_INITIALIZE_MAX)) orelse
-                  (TimeoutInit =:= limit_min) orelse
-                  (TimeoutInit =:= limit_max)) ->
+                  ?TIMEOUT_INITIALIZE_GUARD(TimeoutInit)) ->
             {error, {service_update_timeout_init_invalid,
                      TimeoutInit}};
         [_, _, _,
@@ -4230,11 +4226,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
          _, _, _, _, _,
          _, _, TimeoutAsync, _, _, _, _]
         when not ((TimeoutAsync =:= undefined) orelse
-                  (is_integer(TimeoutAsync) andalso
-                   (TimeoutAsync >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
-                   (TimeoutAsync =< ?TIMEOUT_SEND_ASYNC_MAX)) orelse
-                  (TimeoutAsync =:= limit_min) orelse
-                  (TimeoutAsync =:= limit_max)) ->
+                  ?TIMEOUT_SEND_ASYNC_GUARD(TimeoutAsync)) ->
             {error, {service_update_timeout_async_invalid,
                      TimeoutAsync}};
         [_, _, _,
@@ -4242,11 +4234,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
          _, _, _, _, _,
          _, _, _, TimeoutSync, _, _, _]
         when not ((TimeoutSync =:= undefined) orelse
-                  (is_integer(TimeoutSync) andalso
-                   (TimeoutSync >= ?TIMEOUT_SEND_SYNC_MIN) andalso
-                   (TimeoutSync =< ?TIMEOUT_SEND_SYNC_MAX)) orelse
-                  (TimeoutSync =:= limit_min) orelse
-                  (TimeoutSync =:= limit_max)) ->
+                  ?TIMEOUT_SEND_SYNC_GUARD(TimeoutSync)) ->
             {error, {service_update_timeout_sync_invalid,
                      TimeoutSync}};
         [_, _, _,
