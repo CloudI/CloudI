@@ -26,7 +26,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -47,8 +47,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -652,13 +652,9 @@ get_v4(Cache) when element(1, Cache) =:= quickrand_cache ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Get a v4 UUID (using Wichmann-Hill 2006).===
-%% random_wh06_int:uniform/1 repeats every 2.66e36 (2^121) approx.
-%% (see B.A. Wichmann and I.D.Hill, in
-%%  'Generating good pseudo-random numbers',
-%%  Computational Statistics and Data Analysis 51 (2006) 1614-1622)
-%% a single random_wh06_int:uniform/1 call can provide a maximum of 124 bits
-%% (see random_wh06_int.erl for details)
+%% ===Get a v4 UUID (using a 256-bit Marsaglia multiply-with-carry PRNG).===
+%% quickrand:mwc256_128/1 repeats every 5.79e76 (2^255) approx.
+%% (see quickrand.erl for details)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -667,7 +663,7 @@ get_v4(Cache) when element(1, Cache) =:= quickrand_cache ->
 
 get_v4_urandom() ->
     % random 122 bits
-    Rand = random_wh06_int:uniform(5316911983139663491615228241121378304) - 1,
+    Rand = quickrand:mwc256_128(16#4000000000000000000000000000000) - 1,
     <<Rand1:48, Rand2:12, Rand3:62>> = <<Rand:122>>,
     <<Rand1:48,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
