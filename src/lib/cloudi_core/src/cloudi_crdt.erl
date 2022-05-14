@@ -47,22 +47,23 @@
 %%% Georges Younes, Ali Shoker, Paulo Sérgio Almeida, and Carlos Baquero.
 %%% Integration Challenges of Pure Operation-based CRDTs in Redis.
 %%% In First Workshop on Programming Models and Languages for
-%%% Distributed Computing (PMLDC '16). ACM, New York, NY, USA, Article 7, 2016.
+%%% Distributed Computing (PMLDC '16), New York, NY, USA, Article 7, 2016.
 %%% http://haslab.uminho.pt/cbm/files/pmldc-2016-redis-crdts.pdf
 %%%
 %%% Carlos Baquero, Paulo Sérgio Almeida, and Ali Shoker.
 %%% Making operation-based crdts operation-based.
 %%% In Proceedings of the First Workshop on Principles and
-%%% Practice of Eventual Consistency, page 7. ACM, 2014.
+%%% Practice of Eventual Consistency, page 7, 2014.
 %%% http://haslab.uminho.pt/ashoker/files/opbaseddais14.pdf
 %%%
-%%% Mattern, Friedemann. "Virtual Time and Global States of
-%%% Distributed Systems". Workshop on Parallel and Distributed
-%%% Algorithms: pp. 215-226 (1988).
+%%% Mattern, Friedemann.
+%%% Virtual Time and Global States of Distributed Systems.
+%%% Workshop on Parallel and Distributed Algorithms, pp. 215-226, 1988.
 %%% http://homes.cs.washington.edu/~arvind/cs425/doc/mattern89virtual.pdf
 %%%
-%%% Lamport, Leslie. "Time, clocks, and the ordering of events in a
-%%% distributed system". Communications of the ACM. 21 (7): 558–565. (1978)
+%%% Lamport, Leslie.
+%%% Time, clocks, and the ordering of events in a distributed system.
+%%% Communications of the ACM, vol. 21, iss. 7, pp. 558–565, 1978.
 %%% http://research.microsoft.com/en-us/um/people/lamport/pubs/time-clocks.pdf
 %%% @end
 %%%

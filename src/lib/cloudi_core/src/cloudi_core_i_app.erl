@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2009-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_app).
@@ -86,7 +86,7 @@ test() ->
 start(_, _) ->
     ok = application:set_env(cloudi_core, mac_address,
                              cloudi_x_uuid:mac_address()),
-    ok = cloudi_x_quickrand:seed(),
+    ok = cloudi_x_quickrand:seed([quickrand]),
     PathOrData = case application:get_env(cloudi_core, configuration) of
         {ok, C} ->
             C;

@@ -11,7 +11,7 @@
 %%%  so only 1 node hop is necessary in the worst case).
 %%% @end
 %%%
-%%% Copyright (c) 2011-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -156,7 +156,7 @@
          remove_leave_callback/3]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          code_change/3, terminate/2]).
 
 -include("cpg_constants.hrl").
@@ -1224,7 +1224,7 @@ get_members(Scope, GroupName, Exclude, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group.===
-%% All members are ordered from newest to oldest, based on the 
+%% All members are ordered from newest to oldest, based on the
 %% join order, not pid creation time.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1239,7 +1239,7 @@ get_local_members(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group while excluding a specific pid or within a specific scope.===
-%% All members are ordered from newest to oldest, based on the 
+%% All members are ordered from newest to oldest, based on the
 %% join order, not pid creation time.
 %% Usually the self() pid is excluded with this function call.
 %% @end
@@ -1267,7 +1267,7 @@ get_local_members(GroupName, Timeout) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group within a specific scope while excluding a specific pid.===
-%% All members are ordered from newest to oldest, based on the 
+%% All members are ordered from newest to oldest, based on the
 %% join order, not pid creation time.
 %% Usually the self() pid is excluded with this function call.
 %% @end
@@ -1298,7 +1298,7 @@ get_local_members(Scope, GroupName, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group within a specific scope while excluding a specific pid.===
-%% All members are ordered from newest to oldest, based on the 
+%% All members are ordered from newest to oldest, based on the
 %% join order, not pid creation time.
 %% Usually the self() pid is excluded with this function call.
 %% @end
@@ -2793,7 +2793,7 @@ init([Scope]) ->
     Listen = cpg_app:listen_type(),
     ok = monitor_nodes(true, Listen),
     ok = gather_groups(listen_nodes(Listen, NodeNameLocal), Scope),
-    ok = quickrand:seed(),
+    ok = quickrand:seed([quickrand]),
     {ok, #state{node_name = NodeNameLocal,
                 scope = Scope,
                 groups = cpg_data:get_empty_groups(),

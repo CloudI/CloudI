@@ -37,12 +37,12 @@
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([lcg35/1,
-         mcg35/1,
-         mwc128_64/1,
+-export([lcg35x_32/1,
+         mwc256/1,
          mwc256_64/1,
          mwc256_128/1,
          seed/0,
+         seed/1,
          strong_float/0,
          strong_floatL/0,
          strong_floatM/0,
@@ -79,14 +79,26 @@
 -define(TIME_UNIT_MICROSECOND, micro_seconds).
 -endif.
 
--define(LCG35_PDICT_KEY, quickrand_lcg35_seed).
--define(MCG35_PDICT_KEY, quickrand_mcg35_seed).
--define(MWC128_PDICT_KEY, quickrand_mwc128_seed).
--define(MWC256_PDICT_KEY, quickrand_mwc256_seed).
--define(BITMASK_35, 16#7ffffffff).
--define(BITMASK_64, 16#ffffffffffffffff).
--define(BITMASK_128, 16#ffffffffffffffffffffffffffffffff).
+-define(ALGORITHMS,
+        [lcg35x,
+         mwc256,
+         rand, random_wh06_int, random_wh82]).
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+-define(UNIFORM_FUNCTION_ALGORITHMS, [lcg35x, rand, mwc256]).
+-else.
+-define(UNIFORM_FUNCTION_ALGORITHMS, [lcg35x, mwc256]).
+-endif.
 
+-define(LCG35X_PDICT_KEY, quickrand_lcg35x_seed).
+-define(MWC256_PDICT_KEY, quickrand_mwc256_seed).
+
+-type algorithms() ::
+    lcg35x |
+    mwc256 |
+    rand | random_wh06_int | random_wh82.
+-export_type([algorithms/0]).
+
+-include("quickrand_constants.hrl").
 -include("quickrand_internal.hrl").
 
 %%%------------------------------------------------------------------------
@@ -95,139 +107,86 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===35-bit classical Linear Congruential Generator.===
+%% ===35-bit state 32-bit value Linear Congruential Generators xor.===
+%% Both algorithms used for the variables LCG and MCG provide
+%% fast low-quality pseudo-random number generation without using
+%% Erlang bignums.
 %%
-%% Based on Erlang/OTP 25.0-rc3 rand:lcg35/1.  Provides fast low-quality
-%% pseudo-random number generation without using Erlang bignums.
-%% lcg35/1 is slightly faster than mcg35/1.
+%% LCG:
+%%   35-bit classical Linear Congruential Generator
+%%   based on Erlang/OTP 25.0-rc3 rand:lcg35/1.
 %%
-%% X1 = (A * X0 + C) rem M
-%% A = 15319397, C = 15366142135, M = 2^35
+%%   X1 = (A * X0 + C) rem M
+%%   A = 15319397, C = 15366142135, M = 2^35
 %%
-%% C is an odd value close to M / sqrt(5).
-%% The period of lcg35/1 is M (i.e., 2^35).
-%% TestU01 SmallCrush failed (p-value statistics are outside [0.001..0.999])
-%% 8 out of 15 tests (with seed == 1).
+%%   C is an odd value close to M / sqrt(5).
+%%   The period is M (i.e., 2^35).
 %%
+%% MCG:
+%%   35-bit Multiplicative Congruential Generator
+%%   (i.e., Lehmer random number generator,
+%%    Park-Miller random number generator)
+%%   based on Erlang/OTP 25.0-rc3 rand:mcg35/1.
+%%
+%%   X1 = (A * X0) rem M
+%%   A = 185852, B = 35, D = 31, M = 2^B - D
+%%
+%%   D makes M prime (M == 34359738337) so X0 is always coprime.
+%%   The period is M (i.e., 2^35 - 31).
+%%
+%% The LCG and MCG are combined with xor to produce a 32-bit random number
+%% with the period 2^35.  TestU01 SmallCrush/Crush/BigCrush have been used
+%% to test the 32-bit result (both with the bits forward and reversed)
+%% and the p-value statistics are in [0.0001..0.9999]
+%% (2 seeds tested currently, testing is ongoing).
+%% The wider bounds (i.e., wider than [0.001..0.999]) are due to the
+%% shorter period and are sometimes necessary for the result of a single
+%% test per run of Crush or BigCrush
+%% (Crush uses 2^35 random numbers and BigCrush uses 2^38 random numbers).
+%%
+%% That means this random number generator was created for efficiency
+%% and provides the best quality possible while keeping execution efficient
+%% in Erlang source code.
+%%
+%% (A is selected from)
 %% L'Ecuyer, Pierre.  Tables of linear congruential generators of
 %% different sizes and good lattice structure.
 %% Mathematics of Computation, vol. 68, no. 225, pp. 249–260, 1999.
 %% https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/
+%% https://www.iro.umontreal.ca/~lecuyer/myftp/papers/latrules99Errata.pdf
 %% @end
 %%-------------------------------------------------------------------------
 
--spec lcg35(N :: 1..(1 + ?BITMASK_35)) ->
-    1..(1 + ?BITMASK_35).
+-spec lcg35x_32(N :: 1..(1 + ?BITMASK_32)) ->
+    1..(1 + ?BITMASK_32).
 
-lcg35(N) ->
-    Seed1 = case erlang:get(?LCG35_PDICT_KEY) of
+lcg35x_32(N) ->
+    {LCG1, MCG1} = case erlang:get(?LCG35X_PDICT_KEY) of
         undefined ->
-            <<Seed0:35/unsigned-integer,
-              _:5>> = crypto:strong_rand_bytes(5),
-            Seed0 + 1;
-        Seed0 when is_integer(Seed0) ->
-            Seed0
-    end,
-    SeedN = (15319397 * (Seed1 band ?BITMASK_35) +
-             15366142135) band ?BITMASK_35,
-    _ = erlang:put(?LCG35_PDICT_KEY, SeedN),
-    (SeedN rem N) + 1.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===35-bit Multiplicative Congruential Generator.===
-%% (i.e., Lehmer random number generator, Park-Miller random number generator)
-%%
-%% Based on Erlang/OTP 25.0-rc3 rand:mcg35/1.  Provides fast low-quality
-%% pseudo-random number generation without using Erlang bignums.
-%% mcg35/1 is slightly slower than lcg35/1.
-%%
-%% X1 = (A * X0) rem M
-%% A = 185852, B = 35, D = 31, M = 2^B - D
-%%
-%% D makes M prime (M == 34359738337) so X0 is always coprime.
-%% The period of mcg35/1 is M (i.e., 2^35 - 31).
-%% TestU01 SmallCrush failed (p-value statistics are outside [0.001..0.999])
-%% 3 out of 15 tests (with seed == 1).
-%%
-%% L'Ecuyer, Pierre.  Tables of linear congruential generators of
-%% different sizes and good lattice structure.
-%% Mathematics of Computation, vol. 68, no. 225, pp. 249–260, 1999.
-%% https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/
-%% @end
-%%-------------------------------------------------------------------------
-
--spec mcg35(N :: 1..(1 + ?BITMASK_35)) ->
-    1..(1 + ?BITMASK_35 - 31).
-
-mcg35(N) ->
-    Seed1 = case erlang:get(?MCG35_PDICT_KEY) of
-        undefined ->
-            <<Seed0:35/unsigned-integer,
-              _:5>> = crypto:strong_rand_bytes(5),
-            Seed0 + 1;
-        Seed0 when is_integer(Seed0) ->
-            Seed0
-    end,
-    Value0 = 185852 * (Seed1 band ?BITMASK_35),
-    ValueN = (Value0 band ?BITMASK_35) + 31 * (Value0 bsr 35),
-    SeedN = if
-        ValueN =< ?BITMASK_35 - 31 ->
-            ValueN;
-        true ->
-            % an optimization to avoid rem
-            ValueN - (1 + ?BITMASK_35 - 31)
-    end,
-    _ = erlang:put(?MCG35_PDICT_KEY, SeedN),
-    (SeedN rem N) + 1.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===128-bit state 64-bit value Marsaglia multiply-with-carry generator.===
-%%
-%% T = A * X0 + C0
-%% C1 = T bsr 64
-%% X1 = T band 16#ffffffffffffffff
-%% A = 16#ff3a275c007b8ee6, 0 < X0, 0 < C0 < A - 1
-%%
-%% Simulates a multiplicative LCG with prime modulus
-%% M = 16#ff3a275c007b8ee5ffffffffffffffff .
-%% The period is approximately 2^127.
-%%
-%% Vigna, Sebastiano.
-%% https://prng.di.unimi.it/MWC128.c
-%% https://prng.di.unimi.it/#quality
-%% TestU01 BigCrush passed (p-value statistics are in [0.001..0.999])
-%% when starting from 100 equispaced points of the state space.
-%%
-%% Marsaglia, George.  Xorshift RNGs.
-%% Journal of Statistical Software, vol. 8, no. 14, pp. 1–6, 2003-07.
-%% https://doi.org/10.18637/jss.v008.i14
-%% @end
-%%-------------------------------------------------------------------------
-
--spec mwc128_64(N :: 1..(1 + ?BITMASK_64)) ->
-    1..(1 + ?BITMASK_64).
-
-mwc128_64(N) ->
-    {X1, C1} = case erlang:get(?MWC128_PDICT_KEY) of
-        undefined ->
-            <<X0:63/unsigned-integer,
-              C0:63/unsigned-integer,
-              _:2>> = crypto:strong_rand_bytes(16),
-            {X0 + 1, C0 + 1};
-        {X0, C0} = Seed when is_integer(X0), is_integer(C0) ->
+            <<LCG0:35/unsigned-integer,
+              MCG0:35/unsigned-integer,
+              _:2>> = crypto:strong_rand_bytes(9),
+            {LCG0 + 1, MCG0 + 1};
+        {LCG0, MCG0} = Seed when is_integer(LCG0), is_integer(MCG0) ->
             Seed
     end,
-    T = 16#ff3a275c007b8ee6 * X1 + C1,
-    CN = T bsr 64,
-    XN = T band ?BITMASK_64,
-    _ = erlang:put(?MWC128_PDICT_KEY, {XN, CN}),
-    (XN rem N) + 1.
+    LCGN = (15319397 * (LCG1 band ?BITMASK_35) +
+            15366142135) band ?BITMASK_35,
+    MCG2 = 185852 * (MCG1 band ?BITMASK_35),
+    MCG3 = (MCG2 band ?BITMASK_35) + 31 * (MCG2 bsr 35),
+    MCGN = if
+        MCG3 =< ?BITMASK_35 - 31 ->
+            MCG3;
+        true ->
+            % an optimization to avoid rem
+            MCG3 - (1 + ?BITMASK_35 - 31)
+    end,
+    _ = erlang:put(?LCG35X_PDICT_KEY, {LCGN, MCGN}),
+    (((LCG1 bsr 4) bxor (MCG1 bsr 2)) rem N) + 1.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===256-bit state 64-bit value Marsaglia multiply-with-carry generator.===
+%% ===256-bit state Marsaglia multiply-with-carry generator.===
 %%
 %% T = A * X0 + C0
 %% X1 = Y0
@@ -249,6 +208,32 @@ mwc128_64(N) ->
 %% Marsaglia, George.  Xorshift RNGs.
 %% Journal of Statistical Software, vol. 8, no. 14, pp. 1–6, 2003-07.
 %% https://doi.org/10.18637/jss.v008.i14
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mwc256(N :: pos_integer()) ->
+    pos_integer().
+
+mwc256(N) when is_integer(N), N > 0 ->
+    {X1, Y1, Z1, C1} = case erlang:get(?MWC256_PDICT_KEY) of
+        undefined ->
+            <<X0:63/unsigned-integer,
+              Y0:63/unsigned-integer,
+              Z0:63/unsigned-integer,
+              C0:63/unsigned-integer,
+              _:4>> = crypto:strong_rand_bytes(32),
+            {X0 + 1, Y0 + 1, Z0 + 1, C0 + 1};
+        {X0, Y0, Z0, C0} = Seed
+            when is_integer(X0), is_integer(Y0),
+                 is_integer(Z0), is_integer(C0) ->
+            Seed
+    end,
+    mwc256_next(N, 0, X1, Y1, Z1, C1, N).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===256-bit state 64-bit value Marsaglia multiply-with-carry generator.===
+%% mwc256/1 limited to a 64-bit return value for less latency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -280,7 +265,7 @@ mwc256_64(N) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===256-bit state 128-bit value Marsaglia multiply-with-carry generator.===
-%% Two iterations of mwc256_64/1 to provide 128 bits without extra latency.
+%% mwc256/1 limited to a 128-bit return value for less latency.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -317,39 +302,40 @@ mwc256_128(N) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Seed random number generation.===
+%% ===Randomized seeding of random number generators.===
+%% Backwards-compatible seeding of random number generators for this
+%% module's uniform prefix functions and the external modules used
+%% (rand, random_wh06_int and random_wh82).
+%% Use seed/1 to seed specific random number generators.
+%%
+%% Instead of using this function, it is better to use a jump function
+%% for obtaining non-overlapping sequences, if a jump function is available
+%% and the number of Erlang processes used is limited
+%% (to ensure concurrent usage of the same algorithm has no collisions).
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec seed() ->
-    'ok'.
+    ok.
 
 seed() ->
-    % to provide better seeding than erlang:now() or os:timestamp()
-    <<I1:32/unsigned-integer,
-      I2:32/unsigned-integer,
-      I3:32/unsigned-integer,
-      I4:32/unsigned-integer,
-      I5:58/unsigned-integer,
-      I6:58/unsigned-integer,
-      I7:58/unsigned-integer,
-      _:2>> = crypto:strong_rand_bytes(38),
-    % only use positive integers for setting seed values
-    IP1 = I1 + 1,
-    IP2 = I2 + 1,
-    IP3 = I3 + 1,
-    IP4 = I4 + 1,
-    IP5 = I5 + 1,
-    IP6 = I6 + 1,
-    IP7 = I7 + 1,
-    _ = random_wh82:seed(IP1, IP2, IP3),
-    _ = random_wh06_int:seed(IP1, IP2, IP3, IP4),
-    1 = lcg35(1),
-    1 = mcg35(1),
-    1 = mwc128_64(1),
-    1 = mwc256_64(1),
-    ok = seed_rand(IP5, IP6, IP7),
+    seed([quickrand, rand, random_wh06_int, random_wh82]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Randomized seeding of specific random number generators.===
+%% Instead of using this function, it is better to use a jump function
+%% for obtaining non-overlapping sequences, if a jump function is available
+%% and the number of Erlang processes used is limited
+%% (to ensure concurrent usage of the same algorithm has no collisions).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seed(nonempty_list(all | quickrand | algorithms())) ->
     ok.
+
+seed([_ | _] = L) ->
+    seed_algorithms(L).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -430,17 +416,18 @@ strong_floatR() ->
 -spec strong_uniform(N :: pos_integer()) ->
     pos_integer().
 
-strong_uniform(N) when is_integer(N), N < 1 ->
-    erlang:exit(badarg);
-
-strong_uniform(1) ->
-    1;
-
-strong_uniform(N) when is_integer(N), N > 1 ->
-    Bytes = bytes(N),
-    Bits = Bytes * 8,
-    <<I:Bits/unsigned-integer>> = crypto:strong_rand_bytes(Bytes),
-    (I rem N) + 1.
+strong_uniform(N) when is_integer(N) ->
+    if
+        N < 1 ->
+            erlang:exit(badarg);
+        N == 1 ->
+            1;
+        N > 1 ->
+            Bytes = bytes(N),
+            Bits = Bytes * 8,
+            <<I:Bits/unsigned-integer>> = crypto:strong_rand_bytes(Bytes),
+            (I rem N) + 1
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -448,15 +435,18 @@ strong_uniform(N) when is_integer(N), N > 1 ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec strong_uniform_range(Min :: non_neg_integer(),
+-spec strong_uniform_range(Min :: integer(),
                            Max :: non_neg_integer()) ->
-    non_neg_integer().
+    integer().
 
-strong_uniform_range(Min, Min) ->
-    Min;
 strong_uniform_range(Min, Max)
-    when is_integer(Min), is_integer(Max), Min < Max ->
-    strong_uniform(1 + Max - Min) - 1 + Min.
+    when is_integer(Min), is_integer(Max), Max >= 0 ->
+    if
+        Min == Max ->
+            Min;
+        Min < Max ->
+            strong_uniform(1 + Max - Min) - 1 + Min
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -470,49 +460,54 @@ strong_uniform_range(Min, Max)
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 
-uniform(N) when is_integer(N), N < 1 ->
-    erlang:exit(badarg);
-
-uniform(1) ->
-    1;
-
-uniform(N) when is_integer(N), N =< ?BITMASK_35 ->
-    % lcg35 for 35 bits, period 3.44e10
-    lcg35(N);
-
-uniform(N) when is_integer(N), N =< 16#03ffffffffffffff ->
-    % assuming exsplus/exsp for 58 bits, period 8.31e34
-    rand:uniform(N);
-
-uniform(N) when is_integer(N), N =< ?BITMASK_128 ->
-    % mwc256_128 for 128 bits, period 5.79e76
-    mwc256_128(N);
-
-uniform(N) when is_integer(N), N > ?BITMASK_128 ->
-    strong_uniform(N).
+uniform(N) when is_integer(N) ->
+    if
+        N < 1 ->
+            erlang:exit(badarg);
+        N == 1 ->
+            1;
+        N =< ?BITMASK_32 ->
+            % 32 bits, period 3.44e10
+            lcg35x_32(N);
+        N =< 16#3ffffffffffffff ->
+            % assuming exsplus/exsp for 58 bits, period 8.31e34
+            rand:uniform(N);
+        N =< ?BITMASK_64 ->
+            % 64 bits, period 5.79e76
+            mwc256_64(N);
+        N =< ?BITMASK_128 ->
+            % 128 bits, period 5.79e76
+            mwc256_128(N);
+        N =< ?BITMASK_1024 ->
+            % mwc256 for up to 1024 bits, period 5.79e76
+            mwc256(N);
+        true ->
+            strong_uniform(N)
+    end.
 
 -else.
 
-uniform(N) when is_integer(N), N < 1 ->
-    erlang:exit(badarg);
-
-uniform(1) ->
-    1;
-
-uniform(N) when is_integer(N), N =< ?BITMASK_35 ->
-    % lcg35 for 35 bits, period 3.44e10
-    lcg35(N);
-
-uniform(N) when is_integer(N), N =< 27817185604309 ->
-    % 27817185604309 == 30269 * 30307 * 30323, period 2.78e13
-    random_wh82:uniform(N);
-
-uniform(N) when is_integer(N), N =< ?BITMASK_128 ->
-    % mwc256_128 for 128 bits, period 5.79e76
-    mwc256_128(N);
-
-uniform(N) when is_integer(N), N > ?BITMASK_128 ->
-    strong_uniform(N).
+uniform(N) when is_integer(N) ->
+    if
+        N < 1 ->
+            erlang:exit(badarg);
+        N == 1 ->
+            1;
+        N =< ?BITMASK_32 ->
+            % 32 bits, period 3.44e10
+            lcg35x_32(N);
+        N =< ?BITMASK_64 ->
+            % 64 bits, period 5.79e76
+            mwc256_64(N);
+        N =< ?BITMASK_128 ->
+            % 128 bits, period 5.79e76
+            mwc256_128(N);
+        N =< ?BITMASK_1024 ->
+            % mwc256 for up to 1024 bits, period 5.79e76
+            mwc256(N);
+        true ->
+            strong_uniform(N)
+    end.
 
 -endif.
 
@@ -526,18 +521,18 @@ uniform(N) when is_integer(N), N > ?BITMASK_128 ->
 -spec uniform_cache(N :: pos_integer()) ->
     pos_integer().
 
-uniform_cache(N) when is_integer(N), N < 1 ->
-    erlang:exit(badarg);
-
-uniform_cache(1) ->
-    1;
-
-uniform_cache(N) when is_integer(N), N =< ?BITMASK_35 ->
-    % lcg35 for 35 bits, period 3.44e10
-    lcg35(N);
-
-uniform_cache(N) when is_integer(N), N > ?BITMASK_35 ->
-    quickrand_cache:uniform(N).
+uniform_cache(N) when is_integer(N) ->
+    if
+        N < 1 ->
+            erlang:exit(badarg);
+        N == 1 ->
+            1;
+        N =< ?BITMASK_32 ->
+            % 32 bits, period 3.44e10
+            lcg35x_32(N);
+        N > ?BITMASK_32 ->
+            quickrand_cache:uniform(N)
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -550,34 +545,88 @@ uniform_cache(N) when is_integer(N), N > ?BITMASK_35 ->
                     State :: quickrand_cache:state()) ->
     {pos_integer(), quickrand_cache:state()}.
 
-uniform_cache(N, _) when is_integer(N), N < 1 ->
-    erlang:exit(badarg);
-
-uniform_cache(1, State) ->
-    {1, State};
-
-uniform_cache(N, State) when is_integer(N), N =< ?BITMASK_35 ->
-    % lcg35 for 35 bits, period 3.44e10
-    {lcg35(N), State};
-
-uniform_cache(N, State) when is_integer(N), N > ?BITMASK_35 ->
-    quickrand_cache:uniform(N, State).
+uniform_cache(N, State) when is_integer(N) ->
+    if
+        N < 1 ->
+            erlang:exit(badarg);
+        N == 1 ->
+            {1, State};
+        N =< ?BITMASK_32 ->
+            % 32 bits, period 3.44e10
+            {lcg35x_32(N), State};
+        N > ?BITMASK_32 ->
+            quickrand_cache:uniform(N, State)
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+mwc256_next(0, I, X0, Y0, Z0, C0, N) ->
+    _ = erlang:put(?MWC256_PDICT_KEY, {X0, Y0, Z0, C0}),
+    (I rem N) + 1;
+mwc256_next(B, I, X0, Y0, Z0, C0, N) ->
+    T = 16#ff377e26f82da74a * X0 + C0,
+    XN = Y0,
+    YN = Z0,
+    CN = T bsr 64,
+    ZN = T band ?BITMASK_64,
+    mwc256_next(B bsr 64, (I bsl 64) bor ZN, XN, YN, ZN, CN, N).
+
+seed_algorithms([]) ->
+    ok;
+seed_algorithms([all]) ->
+    seed_algorithms(?ALGORITHMS);
+seed_algorithms([quickrand | L]) ->
+    seed_algorithms(lists:usort(?UNIFORM_FUNCTION_ALGORITHMS ++ L));
+seed_algorithms([lcg35x | L]) ->
+    1 = lcg35x_32(1),
+    seed_algorithms(L);
+seed_algorithms([mwc256 | L]) ->
+    1 = mwc256_64(1),
+    seed_algorithms(L);
+seed_algorithms([rand | L]) ->
+    <<I1:58/unsigned-integer,
+      I2:58/unsigned-integer,
+      I3:58/unsigned-integer,
+      _:2>> = crypto:strong_rand_bytes(22),
+    IP1 = I1 + 1,
+    IP2 = I2 + 1,
+    IP3 = I3 + 1,
+    ok = seed_algorithms_rand(IP1, IP2, IP3),
+    seed_algorithms(L);
+seed_algorithms([random_wh06_int | L]) ->
+    <<I1:32/unsigned-integer,
+      I2:32/unsigned-integer,
+      I3:32/unsigned-integer,
+      I4:32/unsigned-integer>> = crypto:strong_rand_bytes(16),
+    IP1 = I1 + 1,
+    IP2 = I2 + 1,
+    IP3 = I3 + 1,
+    IP4 = I4 + 1,
+    _ = random_wh06_int:seed(IP1, IP2, IP3, IP4),
+    seed_algorithms(L);
+seed_algorithms([random_wh82 | L]) ->
+    <<I1:32/unsigned-integer,
+      I2:32/unsigned-integer,
+      I3:32/unsigned-integer>> = crypto:strong_rand_bytes(12),
+    IP1 = I1 + 1,
+    IP2 = I2 + 1,
+    IP3 = I3 + 1,
+    _ = random_wh82:seed(IP1, IP2, IP3),
+    seed_algorithms(L).
+
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-seed_rand(IP1, IP2, IP3) ->
+seed_algorithms_rand(IP1, IP2, IP3) ->
     _ = rand:seed(exsp, {IP1, IP2, IP3}),
     ok.
 -else.
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
-seed_rand(IP1, IP2, IP3) ->
+seed_algorithms_rand(IP1, IP2, IP3) ->
     _ = rand:seed(exsplus, {IP1, IP2, IP3}),
     ok.
 -else.
-seed_rand(_, _, _) ->
+seed_algorithms_rand(_, _, _) ->
     ok.
 -endif.
 -endif.

@@ -19,14 +19,17 @@
 %%% 4.5 times slower than crypto:hash(md5,_) which provides the same number
 %%% of bits, because the jenkins64 functions are implemented in Erlang.
 %%%
-%%% All the jenkins prefix functions have been checked with the C++
-%%% implementations to ensure the same hash value is obtained, though
-%%% this implementation forces numbers to be interpreted as big-endian.
+%%% The jenkins prefix functions are faster than the jenkins64 prefix functions
+%%% due to avoiding Erlang bignums and both provide the same quality.
+%%%
+%%% All the functions have been checked with the C++ implementations to ensure
+%%% the same hash value is obtained, though this implementation forces numbers
+%%% to be interpreted as big-endian.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -47,8 +50,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2017-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_hash).
@@ -98,8 +101,7 @@
 -define(JENKINS64_CONST, 16#DEADBEEFDEADBEEF).
 -define(JENKINS_CONST, 16#DEADBEEF).
 
--define(BITMASK32, 16#FFFFFFFF).
--define(BITMASK64, 16#FFFFFFFFFFFFFFFF).
+-include("quickrand_constants.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -189,8 +191,8 @@ jenkins64_128(MessageRaw) ->
 jenkins64_128(MessageRaw, Seed)
     when is_integer(Seed), Seed >= 0 ->
     {Message, Size} = iodata_to_list(MessageRaw),
-    SeedA = Seed band ?BITMASK64,
-    SeedB = (Seed bsr 64) band ?BITMASK64,
+    SeedA = Seed band ?BITMASK_64,
+    SeedB = (Seed bsr 64) band ?BITMASK_64,
     {HashA, HashB} = jenkins64_128(Message, Size, SeedA, SeedB),
     (HashB bsl 64) + HashA.
 
@@ -219,7 +221,7 @@ jenkins64_64(MessageRaw) ->
 jenkins64_64(MessageRaw, Seed)
     when is_integer(Seed), Seed >= 0 ->
     {Message, Size} = iodata_to_list(MessageRaw),
-    SeedA = Seed band ?BITMASK64,
+    SeedA = Seed band ?BITMASK_64,
     {HashA, _} = jenkins64_128(Message, Size, SeedA, SeedA),
     HashA.
 
@@ -248,9 +250,9 @@ jenkins64_32(MessageRaw) ->
 jenkins64_32(MessageRaw, Seed)
     when is_integer(Seed), Seed >= 0 ->
     {Message, Size} = iodata_to_list(MessageRaw),
-    SeedA = Seed band ?BITMASK32,
+    SeedA = Seed band ?BITMASK_32,
     {HashA, _} = jenkins64_128(Message, Size, SeedA, SeedA),
-    HashA band ?BITMASK32.
+    HashA band ?BITMASK_32.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -283,10 +285,10 @@ jenkins_32([], 0, _, B, C) ->
     {C, B}.
 
 % mix -- mix 3 32-bit values reversibly.
-% 
+%
 % This is reversible, so any information in (a,b,c) before mix() is
 % still in (a,b,c) after mix().
-% 
+%
 % If four pairs of (a,b,c) inputs are run through mix(), or through
 % mix() in reverse, there are at least 32 bits of the output that
 % are sometimes the same for one pair and different for another pair.
@@ -298,9 +300,9 @@ jenkins_32([], 0, _, B, C) ->
 %   delta transformed to a Gray code (a^(a>>1)) so a string of 1's (as
 %   is commonly produced by subtraction) look like a single 1-bit
 %   difference.
-% * the base values were pseudorandom, all zero but one bit set, or 
+% * the base values were pseudorandom, all zero but one bit set, or
 %   all zero plus a counter that starts at zero.
-% 
+%
 % Some k values for my "a-=c; a^=rot(c,k); c+=b;" arrangement that
 % satisfy this are
 %     4  6  8 16 19  4
@@ -310,12 +312,12 @@ jenkins_32([], 0, _, B, C) ->
 % for "differ" defined as + with a one-bit base and a two-bit delta.
 % Data at http://burtleburtle.net/bob/hash/avalanche.html was used to
 % choose the operations, constants, and arrangements of the variables.
-% 
+%
 % This does not achieve avalanche.  There are input bits of (a,b,c)
 % that fail to affect some output bits of (a,b,c), especially of a.  The
 % most thoroughly mixed value is c, but it doesn't really even achieve
 % avalanche in c.
-% 
+%
 jenkins_mix(A0, B0, C0) ->
     A1 = subtract_32(A0, C0),A2 = A1 bxor rotate_32(C0,  4),C1 = add_32(C0, B0),
     B1 = subtract_32(B0, A2),B2 = B1 bxor rotate_32(A2,  6),A3 = add_32(A2, C1),
@@ -326,7 +328,7 @@ jenkins_mix(A0, B0, C0) ->
     {AN, BN, CN}.
 
 % final -- final mixing of 3 32-bit values (a,b,c) into c
-% 
+%
 % Pairs of (a,b,c) values differing in only a few bits will usually
 % produce values of c that look totally different.  This was tested for
 % * pairs that differed by one bit, by two bits, in any combination
@@ -336,9 +338,9 @@ jenkins_mix(A0, B0, C0) ->
 %   delta transformed to a Gray code (a^(a>>1)) so a string of 1's (as
 %   is commonly produced by subtraction) look like a single 1-bit
 %   difference.
-% * the base values were pseudorandom, all zero but one bit set, or 
+% * the base values were pseudorandom, all zero but one bit set, or
 %   all zero plus a counter that starts at zero.
-% 
+%
 % These constants passed:
 %  14 11 25 16 4 14 24
 %  12 14 25 16 4 14 24
@@ -346,7 +348,7 @@ jenkins_mix(A0, B0, C0) ->
 %   4  8 15 26 3 22 24
 %  10  8 15 26 3 22 24
 %  11  8 15 26 3 22 24
-% 
+%
 jenkins_final(A0, B0, C0) ->
     C1 = C0 bxor B0, C2 = subtract_32(C1, rotate_32(B0, 14)),
     A1 = A0 bxor C2, A2 = subtract_32(A1, rotate_32(C2, 11)),
@@ -498,7 +500,7 @@ jenkins64_128([], 0, AN, BN, C0, D0, TotalSize) ->
     jenkins64_short_end(AN, BN, CN, DN).
 
 %
-% The goal is for each bit of the input to expand into 128 bits of 
+% The goal is for each bit of the input to expand into 128 bits of
 %   apparent entropy before it is fully overwritten.
 % n trials both set and cleared at least m bits of h0 h1 h2 h3
 %   n: 2   m: 29
@@ -575,12 +577,12 @@ jenkins64_short_end(H0_0, H1_0, H2_0, H3_0)
 % left rotate a 32-bit value by k bits
 rotate_32(X, Bits)
     when is_integer(X), is_integer(Bits), Bits >= 0, Bits =< 32 ->
-    ((X bsl Bits) band ?BITMASK32) bor (X bsr (32 - Bits)).
+    ((X bsl Bits) band ?BITMASK_32) bor (X bsr (32 - Bits)).
 
 % left rotate a 64-bit value by k bits
 rotate_64(X, Bits)
     when is_integer(X), is_integer(Bits), Bits >= 0, Bits =< 64 ->
-    ((X bsl Bits) band ?BITMASK64) bor (X bsr (64 - Bits)).
+    ((X bsl Bits) band ?BITMASK_64) bor (X bsr (64 - Bits)).
 
 consume_32([Byte00, Byte01, Byte02, Byte03 | Message], Size) ->
     <<Value:32/big-unsigned-integer>> = <<Byte00, Byte01, Byte02, Byte03>>,
@@ -606,37 +608,37 @@ consume_64([Byte00, Byte01, Byte02, Byte03, Byte04, Byte05, Byte06, Byte07 |
 
 add_32(X0, X1)
     when is_integer(X0), is_integer(X1) ->
-    (X0 + X1) band ?BITMASK32.
+    (X0 + X1) band ?BITMASK_32.
 
 add_32(X0, X1, X2)
     when is_integer(X0), is_integer(X1), is_integer(X2) ->
-    (X0 + X1 + X2) band ?BITMASK32.
+    (X0 + X1 + X2) band ?BITMASK_32.
 
 add_64(X0, X1)
     when is_integer(X0), is_integer(X1) ->
-    (X0 + X1) band ?BITMASK64.
+    (X0 + X1) band ?BITMASK_64.
 
 add_64(X0, X1, X2)
     when is_integer(X0), is_integer(X1), is_integer(X2) ->
-    (X0 + X1 + X2) band ?BITMASK64.
+    (X0 + X1 + X2) band ?BITMASK_64.
 
 add_64(X0, X1, X2, X3)
     when is_integer(X0), is_integer(X1), is_integer(X2), is_integer(X3) ->
-    (X0 + X1 + X2 + X3) band ?BITMASK64.
+    (X0 + X1 + X2 + X3) band ?BITMASK_64.
 
 add_64(X0, X1, X2, X3, X4)
     when is_integer(X0), is_integer(X1), is_integer(X2),
          is_integer(X3), is_integer(X4) ->
-    (X0 + X1 + X2 + X3 + X4) band ?BITMASK64.
+    (X0 + X1 + X2 + X3 + X4) band ?BITMASK_64.
 
 add_64(X0, X1, X2, X3, X4, X5)
     when is_integer(X0), is_integer(X1), is_integer(X2),
          is_integer(X3), is_integer(X4), is_integer(X5) ->
-    (X0 + X1 + X2 + X3 + X4 + X5) band ?BITMASK64.
+    (X0 + X1 + X2 + X3 + X4 + X5) band ?BITMASK_64.
 
 subtract_32(X0, X1)
     when is_integer(X0), is_integer(X1) ->
-    (X0 - X1) band ?BITMASK32.
+    (X0 - X1) band ?BITMASK_32.
 
 -spec iodata_to_list(IOData :: iodata()) ->
     {list(byte()), non_neg_integer()}.

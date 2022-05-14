@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2017-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_normal).
@@ -49,7 +49,7 @@
 %% @doc
 %% ===Box-Muller transformation for generating Gaussian noise.===
 %% Has numerical stability problems when X1 is very close to zero.
-%% This is a serious problem for stochastic modelling that is generating
+%% This is a serious problem for stochastic modeling that is generating
 %% millions of numbers.  If the result is used with added noise
 %% (e.g., creating a process sleep value) then it isn't a problem.
 %% @end
@@ -61,10 +61,11 @@
 
 box_muller(Mean, StdDev) ->
     % use Box-Muller transformation to generate Gaussian noise
-    % (G. E. P. Box and Mervin E. Muller,
-    %  A Note on the Generation of Random Normal Deviates,
-    %  The Annals of Mathematical Statistics (1958),
-    %  Vol. 29, No. 2 pp. 610–611)
+    %
+    % George Edward Pelham Box, Mervin Edgar Muller.
+    % A Note on the Generation of Random Normal Deviates.
+    % The Annals of Mathematical Statistics,
+    % vol. 29, no. 2, pp. 610–611, 1958.
     X1 = quickrand:strong_floatR(),
     X2 = ?PI2 * quickrand:strong_floatR(),
     K = StdDev * math:sqrt(-2.0 * math:log(X1)),

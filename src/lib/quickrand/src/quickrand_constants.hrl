@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -27,13 +27,15 @@
 %%%
 %%%------------------------------------------------------------------------
 
--define(BYTES_RESOLUTION, 4). % bytes
+-define(APPLICATION, quickrand).
 
-bytes(I) when is_integer(I), I > 0 ->
-    bytes(I, 0).
+% 1 / (1 + 16#1fffffffffffff) =:= math:pow(2, -53) to provide [0.0 .. 1.0]
+-define(DBL_EPSILON_DIV2, 1.1102230246251565e-16).
 
-bytes(0, Bytes) ->
-    Bytes;
-bytes(I, Bytes) ->
-    bytes(I bsr (?BYTES_RESOLUTION * 8), Bytes + ?BYTES_RESOLUTION).
+-define(BITMASK_16, 16#ffff).
+-define(BITMASK_32, 16#ffffffff).
+-define(BITMASK_35, 16#7ffffffff).
+-define(BITMASK_64, 16#ffffffffffffffff).
+-define(BITMASK_128, 16#ffffffffffffffffffffffffffffffff).
+-define(BITMASK_1024, 16#ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff).
 
