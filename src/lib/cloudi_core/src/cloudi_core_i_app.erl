@@ -86,7 +86,7 @@ test() ->
 start(_, _) ->
     ok = application:set_env(cloudi_core, mac_address,
                              cloudi_x_uuid:mac_address()),
-    ok = cloudi_x_quickrand:seed([quickrand]),
+    ok = cloudi_x_quickrand:seed([cloudi_x_quickrand]),
     PathOrData = case application:get_env(cloudi_core, configuration) of
         {ok, C} ->
             C;

@@ -339,7 +339,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
                                   'cloudi_service_init_timeout'),
     case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
         {ok, StateSocket} ->
-            ok = cloudi_x_quickrand:seed([quickrand]),
+            ok = cloudi_x_quickrand:seed([cloudi_x_quickrand]),
             WordSize = erlang:system_info(wordsize),
             ConfigOptionsNew = check_init_send(ConfigOptions),
             Variant = application:get_env(cloudi_core, uuid_v1_variant,

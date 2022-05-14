@@ -303,7 +303,7 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
         is_pid(GroupLeader) ->
             erlang:group_leader(GroupLeader, Dispatcher)
     end,
-    ok = cloudi_x_quickrand:seed([quickrand]),
+    ok = cloudi_x_quickrand:seed([cloudi_x_quickrand]),
     WordSize = erlang:system_info(wordsize),
     ConfigOptionsNew = check_init_send(ConfigOptions),
     DuoModePid = if
