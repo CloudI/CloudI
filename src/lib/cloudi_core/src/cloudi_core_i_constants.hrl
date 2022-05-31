@@ -516,6 +516,8 @@
 -define(REQUEST_TIMEOUT_IMMEDIATE_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
 -define(RESPONSE_TIMEOUT_IMMEDIATE_MAX_MIN, 0).
 -define(RESPONSE_TIMEOUT_IMMEDIATE_MAX_MAX, ?TIMEOUT_MAX_ERLANG).
+-define(FATAL_TIMEOUT_DELAY_MIN, 0).
+-define(FATAL_TIMEOUT_DELAY_MAX, ?TIMEOUT_MAX_ERLANG).
 
 % termination timeout when MaxT == 0
 % (if MaxR == 0, take MaxT as a terminate timeout value, i.e., as if MaxR == 1)

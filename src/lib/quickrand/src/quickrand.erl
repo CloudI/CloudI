@@ -38,6 +38,7 @@
 
 %% external interface
 -export([lcg35x_32/1,
+         mwc59x_32/1,
          mwc256/1,
          mwc256_64/1,
          mwc256_128/1,
@@ -81,20 +82,21 @@
 
 -define(ALGORITHMS,
         [lcg35x,
-         mwc256,
+         mwc59x, mwc256,
          rand, random_wh06_int, random_wh82]).
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
--define(UNIFORM_FUNCTION_ALGORITHMS, [lcg35x, rand, mwc256]).
+-define(UNIFORM_FUNCTION_ALGORITHMS, [lcg35x, mwc59x, rand, mwc256]).
 -else.
--define(UNIFORM_FUNCTION_ALGORITHMS, [lcg35x, mwc256]).
+-define(UNIFORM_FUNCTION_ALGORITHMS, [lcg35x, mwc59x, mwc256]).
 -endif.
 
 -define(LCG35X_PDICT_KEY, quickrand_lcg35x_seed).
+-define(MWC59X_PDICT_KEY, quickrand_mwc59x_seed).
 -define(MWC256_PDICT_KEY, quickrand_mwc256_seed).
 
 -type algorithms() ::
     lcg35x |
-    mwc256 |
+    mwc59x | mwc256 |
     rand | random_wh06_int | random_wh82.
 -export_type([algorithms/0]).
 
@@ -134,19 +136,26 @@
 %%   D makes M prime (M == 34359738337) so X0 is always coprime.
 %%   The period is M (i.e., 2^35 - 31).
 %%
-%% The LCG and MCG are combined with xor to produce a 32-bit random number
-%% with the period 2^35.  TestU01 SmallCrush/Crush/BigCrush have been used
-%% to test the 32-bit result (both with the bits forward and reversed)
-%% and the p-value statistics are in [0.0001..0.9999]
-%% (2 seeds tested currently, testing is ongoing).
+%% The LCG and MCG are combined with xor to produce a 32-bit random number.
+%% TestU01 SmallCrush/Crush/BigCrush have been used to test the 32-bit result
+%% (both with the bits forward and reversed)
+%% and the p-value statistics are in [0.0000001..0.9999999]
+%% (when starting from 100 equispaced points of the state space).
 %% The wider bounds (i.e., wider than [0.001..0.999]) are due to the
-%% shorter period and are sometimes necessary for the result of a single
-%% test per run of Crush or BigCrush
-%% (Crush uses 2^35 random numbers and BigCrush uses 2^38 random numbers).
+%% shorter period.
 %%
-%% That means this random number generator was created for efficiency
-%% and provides the best quality possible while keeping execution efficient
-%% in Erlang source code.
+%% mwc59x_32/1 is slighly more efficient but provides slightly less randomness
+%% (same p-value statistics bounds but the separate sums of
+%%  (1e-8  .. 1e-4] and [1 - 1e-4 .. 1 - 1e-8) are less extreme
+%%  for lcg35x_32/1, i.e., the mwc59x_32/1 (1e-8  .. 1e-4] sum is 20.3% smaller
+%%  and the mwc59x_32/1 [1 - 1e-4 .. 1 - 1e-8) sum is 16.1% larger while
+%%  mwc59x_32/1 provides roughly a 1.08x speedup with Erlang/OTP 25.0).
+%%
+%% Pierre L'Ecuyer, Richard Simard.
+%% TestU01: A C Library for Empirical Testing of Random Number Generators.
+%% ACM Transactions on Mathematical Software, vol. 33, iss. 4, article 22, 2007.
+%% http://portal.acm.org/citation.cfm?doid=1268776.1268777
+%% http://simul.iro.umontreal.ca/testu01/tu01.html
 %%
 %% (A is selected from)
 %% L'Ecuyer, Pierre.  Tables of linear congruential generators of
@@ -163,9 +172,9 @@
 lcg35x_32(N) ->
     {LCG1, MCG1} = case erlang:get(?LCG35X_PDICT_KEY) of
         undefined ->
-            <<LCG0:35/unsigned-integer,
-              MCG0:35/unsigned-integer,
-              _:2>> = crypto:strong_rand_bytes(9),
+            <<LCG0:34/unsigned-integer,
+              MCG0:34/unsigned-integer,
+              _:4>> = crypto:strong_rand_bytes(9),
             {LCG0 + 1, MCG0 + 1};
         {LCG0, MCG0} = Seed when is_integer(LCG0), is_integer(MCG0) ->
             Seed
@@ -183,6 +192,65 @@ lcg35x_32(N) ->
     end,
     _ = erlang:put(?LCG35X_PDICT_KEY, {LCGN, MCGN}),
     (((LCG1 bsr 4) bxor (MCG1 bsr 2)) rem N) + 1.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===59-bit state 32-bit value Marsaglia multiply-with-carry generator xor.===
+%%
+%% T = A * X0 + C0
+%% C1 = T bsr 32
+%% X1 = T band 16#ffffffff
+%% A = 16#7fa6502, 0 < X0, 0 < C0 < A - 1
+%%
+%% Simulates a multiplicative LCG with prime modulus
+%% M = 16#7fa6501ffffffff (M = A * 2^32 - 1).
+%% The period is approximately 2^58.
+%%
+%% X1 and C1 are combined with xor to produce a 32-bit random number.
+%% TestU01 SmallCrush/Crush/BigCrush have been used to test the 32-bit result
+%% (both with the bits forward and reversed)
+%% and the p-value statistics are in [0.0000001..0.9999999]
+%% (when starting from 100 equispaced points of the state space).
+%% The wider bounds (i.e., wider than [0.001..0.999]) are due to the
+%% shorter period.
+%%
+%% rand:mwc59/1 in Erlang/OTP 25.0 is similar.  However, usage of rand:mwc59/1
+%% with rand:mwc59_value32/1 clearly fails the TestU01 Crush and BigCrush tests
+%% (e.g., with X0 and C0 initially set to 1).  mwc59x_32/1 was created
+%% to provide more statistically significant randomness than is possible when
+%% using rand:mwc59/1 .
+%%
+%% Pierre L'Ecuyer, Richard Simard.
+%% TestU01: A C Library for Empirical Testing of Random Number Generators.
+%% ACM Transactions on Mathematical Software, vol. 33, iss. 4, article 22, 2007.
+%% http://portal.acm.org/citation.cfm?doid=1268776.1268777
+%% http://simul.iro.umontreal.ca/testu01/tu01.html
+%%
+%% Marsaglia, George.  Xorshift RNGs.
+%% Journal of Statistical Software, vol. 8, no. 14, pp. 1–6, 2003-07.
+%% https://doi.org/10.18637/jss.v008.i14
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec mwc59x_32(N :: 1..(1 + ?BITMASK_32)) ->
+    1..(1 + ?BITMASK_32).
+
+mwc59x_32(N) ->
+    {X1, C1} = case erlang:get(?MWC59X_PDICT_KEY) of
+        undefined ->
+            <<X0:31/unsigned-integer,
+              C0:26/unsigned-integer,
+              _:7>> = crypto:strong_rand_bytes(8),
+            {X0 + 1, C0 + 1};
+        {X0, C0} = Seed
+            when is_integer(X0), is_integer(C0) ->
+            Seed
+    end,
+    T = (16#7fa6502 * X1 + C1) band ?BITMASK_59,
+    CN = T bsr 32,
+    XN = T band ?BITMASK_32,
+    _ = erlang:put(?MWC59X_PDICT_KEY, {XN, CN}),
+    ((XN bxor (CN bsl 3)) rem N) + 1.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -581,6 +649,9 @@ seed_algorithms([quickrand | L]) ->
     seed_algorithms(lists:usort(?UNIFORM_FUNCTION_ALGORITHMS ++ L));
 seed_algorithms([lcg35x | L]) ->
     1 = lcg35x_32(1),
+    seed_algorithms(L);
+seed_algorithms([mwc59x | L]) ->
+    1 = mwc59x_32(1),
     seed_algorithms(L);
 seed_algorithms([mwc256 | L]) ->
     1 = mwc256_64(1),

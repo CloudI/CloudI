@@ -483,6 +483,24 @@ check_incoming(ServiceRequest,
         monkey_chaos = MonkeyChaosNew,
         hibernate = HibernateNew}.
 
+fatal_timer_start(_, _,
+                  #config_service_options{
+                      fatal_timeout = false}) ->
+    undefined;
+fatal_timer_start(Timeout, Dispatcher,
+                  #config_service_options{
+                      fatal_timeout = true,
+                      fatal_timeout_delay = FatalTimeoutDelay}) ->
+    FatalTimeout = erlang:min(Timeout + FatalTimeoutDelay,
+                              ?TIMEOUT_MAX_ERLANG),
+    erlang:send_after(FatalTimeout, Dispatcher,
+                      'cloudi_service_fatal_timeout').
+
+fatal_timer_end(undefined) ->
+    ok;
+fatal_timer_end(FatalTimer) ->
+    cancel_timer_async(FatalTimer).
+
 request_timeout_adjustment_f(true) ->
     RequestTimeStart = cloudi_timestamp:milliseconds_monotonic(),
     fun(T) ->

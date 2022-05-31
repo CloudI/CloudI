@@ -117,13 +117,13 @@
             :: cloudi_x_pqueue4:cloudi_x_pqueue4(
                    cloudi:message_service_request()) |
                list({cloudi:priority_value(), any()}),
-
-        % state record fields unique to the external thread Erlang process:
-
         % (11) queued size in bytes
         queued_size = 0 :: non_neg_integer(),
         % (12) erlang:system_info(wordsize) cached
         queued_word_size :: pos_integer(),
+
+        % state record fields unique to the external thread Erlang process:
+
         % (13) external thread connection protocol
         protocol = undefined :: undefined | tcp | udp | local,
         % (14) external thread connection port
@@ -179,26 +179,28 @@
         keepalive = undefined :: undefined | received,
         % (34) init timeout handler
         init_timer :: undefined | reference(),
-        % (35) transaction id (UUIDv1) generator
+        % (35) timeout enforcement of fatal_timeout
+        fatal_timer = undefined :: undefined | reference(),
+        % (36) transaction id (UUIDv1) generator
         uuid_generator :: cloudi_x_uuid:state(),
-        % (36) how service destination lookups occur for a service request send
+        % (37) how service destination lookups occur for a service request send
         dest_refresh :: cloudi_service_api:dest_refresh(),
-        % (37) cached cpg data for lazy destination refresh methods
+        % (38) cached cpg data for lazy destination refresh methods
         cpg_data
             :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
-        % (38) old subscriptions to remove after an update's initialization
+        % (39) old subscriptions to remove after an update's initialization
         subscribed = []
             :: list({cloudi:service_name_pattern(), pos_integer()}),
-        % (39) ACL lookup for denied destinations
+        % (40) ACL lookup for denied destinations
         dest_deny
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % (40) ACL lookup for allowed destinations
+        % (41) ACL lookup for allowed destinations
         dest_allow
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % (41) service configuration options
+        % (42) service configuration options
         options
             :: #config_service_options{} |
                cloudi_service_api:service_options_external()
@@ -619,6 +621,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 request_data = {{SendType, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
                                 RequestTimeoutF},
+                fatal_timer = FatalTimer,
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
@@ -652,6 +655,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 true ->
                     TimeoutNext
             end,
+            ok = fatal_timer_end(FatalTimer),
             ok = case destination_allowed(NameNext, DestDeny, DestAllow) of
                 true ->
                     case destination_get(DestRefresh, Scope, NameNext, Source,
@@ -689,11 +693,14 @@ handle_event(EventType, EventContent, StateName, State) ->
             end,
             {keep_state,
              process_queues(State#state{service_state = ServiceStateNew,
-                                        request_data = undefined})};
+                                        request_data = undefined,
+                                        fatal_timer = undefined})};
         {stop, Reason, ServiceStateNew} ->
+            ok = fatal_timer_end(FatalTimer),
             {stop, Reason,
              State#state{service_state = ServiceStateNew,
-                         request_data = undefined}}
+                         request_data = undefined,
+                         fatal_timer = undefined}}
     end;
 
 'HANDLE'(connection,
@@ -704,6 +711,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 request_data = {{SendType, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
                                 RequestTimeoutF},
+                fatal_timer = FatalTimer,
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
@@ -736,6 +744,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 true ->
                     TimeoutNext
             end,
+            ok = fatal_timer_end(FatalTimer),
             ok = case destination_allowed(NameNext, DestDeny, DestAllow) of
                 true ->
                     case destination_get(DestRefresh, Scope, NameNext, Source,
@@ -773,11 +782,14 @@ handle_event(EventType, EventContent, StateName, State) ->
             end,
             {keep_state,
              process_queues(State#state{service_state = ServiceStateNew,
-                                        request_data = undefined})};
+                                        request_data = undefined,
+                                        fatal_timer = undefined})};
         {stop, Reason, ServiceStateNew} ->
+            ok = fatal_timer_end(FatalTimer),
             {stop, Reason,
              State#state{service_state = ServiceStateNew,
-                         request_data = undefined}}
+                         request_data = undefined,
+                         fatal_timer = undefined}}
     end;
 
 'HANDLE'(connection,
@@ -787,6 +799,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 request_data = {{_, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
                                 RequestTimeoutF},
+                fatal_timer = FatalTimer,
                 options = #config_service_options{
                     response_timeout_immediate_max =
                         ResponseTimeoutImmediateMax,
@@ -821,6 +834,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 true ->
                     TimeoutNext
             end,
+            ok = fatal_timer_end(FatalTimer),
             if
                 Result =:= noreply ->
                     ok;
@@ -837,11 +851,14 @@ handle_event(EventType, EventContent, StateName, State) ->
             end,
             {keep_state,
              process_queues(State#state{service_state = ServiceStateNew,
-                                        request_data = undefined})};
+                                        request_data = undefined,
+                                        fatal_timer = undefined})};
         {stop, Reason, ServiceStateNew} ->
+            ok = fatal_timer_end(FatalTimer),
             {stop, Reason,
              State#state{service_state = ServiceStateNew,
-                         request_data = undefined}}
+                         request_data = undefined,
+                         fatal_timer = undefined}}
     end;
 
 'HANDLE'(connection, {'recv_async', Timeout, TransId, Consume}, State) ->
@@ -988,7 +1005,8 @@ handle_event(EventType, EventContent, StateName, State) ->
 'HANDLE'(info,
          {SendType, Name, Pattern, RequestInfo, Request,
           Timeout, Priority, TransId, Source} = T,
-         #state{queue_requests = false,
+         #state{dispatcher = Dispatcher,
+                queue_requests = false,
                 service_state = ServiceState,
                 options = #config_service_options{
                     rate_request_max = RateRequest,
@@ -1017,6 +1035,8 @@ handle_event(EventType, EventContent, StateName, State) ->
             #config_service_options{
                 request_timeout_adjustment = RequestTimeoutAdjustment,
                 aspects_request_before = AspectsBefore} = ConfigOptionsNew,
+            FatalTimer = fatal_timer_start(Timeout, Dispatcher,
+                                           ConfigOptionsNew),
             RequestTimeoutF =
                 request_timeout_adjustment_f(RequestTimeoutAdjustment),
             case aspects_request_before(AspectsBefore, Type,
@@ -1042,10 +1062,12 @@ handle_event(EventType, EventContent, StateName, State) ->
                      State#state{queue_requests = true,
                                  service_state = ServiceStateNew,
                                  request_data = {T, RequestTimeoutF},
+                                 fatal_timer = FatalTimer,
                                  options = ConfigOptionsNew}};
                 {stop, Reason, ServiceStateNew} ->
                     {stop, Reason,
                      State#state{service_state = ServiceStateNew,
+                                 fatal_timer = FatalTimer,
                                  options = ConfigOptionsNew}}
             end;
         RateRequestOk =:= false ->
@@ -1610,6 +1632,9 @@ handle_info({'EXIT', _, Reason}, _, _) ->
 handle_info('cloudi_service_init_timeout', _, _) ->
     {stop, timeout};
 
+handle_info('cloudi_service_fatal_timeout', _, _) ->
+    {stop, fatal_timeout};
+
 handle_info({'cloudi_service_update', UpdatePending, _}, _,
             #state{dispatcher = Dispatcher,
                    update_plan = undefined}) ->
@@ -1763,14 +1788,12 @@ handle_recv_async(Timeout, <<0:128>> = TransId, Consume,
             keep_state_and_data;
         L when Consume =:= true ->
             TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-            {ResponseInfo, Response} = maps:get(TransIdPick,
-                                                AsyncResponses),
+            {{ResponseInfo, Response},
+             AsyncResponsesNew} = maps:take(TransIdPick, AsyncResponses),
             ok = send('recv_async_out'(ResponseInfo, Response,
                                        TransIdPick),
                       State),
-            {keep_state, State#state{
-                async_responses = maps:remove(TransIdPick,
-                                              AsyncResponses)}};
+            {keep_state, State#state{async_responses = AsyncResponsesNew}};
         L when Consume =:= false ->
             TransIdPick = ?RECV_ASYNC_STRATEGY(L),
             {ResponseInfo, Response} = maps:get(TransIdPick,
@@ -1809,6 +1832,7 @@ handle_recv_async(Timeout, TransId, Consume,
            ProcessCountMax, ProcessCountMin, Prefix,
            TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
            PriorityDefault) ->
+    %XXX add fatal_exceptions boolean
     true = ProcessCount < 4294967296,
     true = ProcessCountMax < 4294967296,
     true = ProcessCountMin < 4294967296,
@@ -1831,6 +1855,7 @@ handle_recv_async(Timeout, TransId, Consume,
 
 'reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
              PriorityDefault) ->
+    %XXX add fatal_exceptions boolean
     true = ProcessCount < 4294967296,
     <<?MESSAGE_REINIT:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native,
@@ -2015,7 +2040,7 @@ process_queue(#state{dispatcher = Dispatcher,
           {Size,
            {'cloudi_service_send_async',
             Name, Pattern, RequestInfo, Request,
-            TimeoutOld, Priority, TransId, Source}}}, QueueNew} ->
+            _, Priority, TransId, Source}}}, QueueNew} ->
             Type = 'send_async',
             ConfigOptionsNew = check_incoming(true, ConfigOptions),
             #config_service_options{
@@ -2023,45 +2048,50 @@ process_queue(#state{dispatcher = Dispatcher,
                     RequestTimeoutAdjustment,
                 aspects_request_before =
                     AspectsBefore} = ConfigOptionsNew,
+            {RecvTimer,
+             RecvTimeoutsNew} = maps:take(TransId, RecvTimeouts),
+            Timeout = case erlang:cancel_timer(RecvTimer) of
+                false ->
+                    0;
+                V ->
+                    V
+            end,
+            FatalTimer = fatal_timer_start(Timeout, Dispatcher,
+                                           ConfigOptionsNew),
+            RequestTimeoutF =
+                request_timeout_adjustment_f(RequestTimeoutAdjustment),
             case aspects_request_before(AspectsBefore, Type,
                                         Name, Pattern, RequestInfo, Request,
-                                        TimeoutOld, Priority, TransId, Source,
+                                        Timeout, Priority, TransId, Source,
                                         ServiceState) of
                 {ok, ServiceStateNew} ->
-                    RecvTimer = maps:get(TransId, RecvTimeouts),
-                    Timeout = case erlang:cancel_timer(RecvTimer) of
-                        false ->
-                            0;
-                        V ->
-                            V
-                    end,
                     T = {'cloudi_service_send_async',
                          Name, Pattern, RequestInfo, Request,
                          Timeout, Priority, TransId, Source},
-                    RequestTimeoutF =
-                        request_timeout_adjustment_f(RequestTimeoutAdjustment),
                     ok = send('send_async_out'(Name, Pattern,
                                                RequestInfo, Request,
                                                Timeout, Priority, TransId,
                                                Source),
                               State),
-                    State#state{recv_timeouts = maps:remove(TransId,
-                                                            RecvTimeouts),
+                    State#state{recv_timeouts = RecvTimeoutsNew,
                                 queued = QueueNew,
                                 queued_size = QueuedSize - Size,
                                 service_state = ServiceStateNew,
                                 request_data = {T, RequestTimeoutF},
+                                fatal_timer = FatalTimer,
                                 options = ConfigOptionsNew};
                 {stop, Reason, ServiceStateNew} ->
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{service_state = ServiceStateNew,
+                    State#state{recv_timeouts = RecvTimeoutsNew,
+                                service_state = ServiceStateNew,
+                                fatal_timer = FatalTimer,
                                 options = ConfigOptionsNew}
             end;
         {{value,
           {Size,
            {'cloudi_service_send_sync',
             Name, Pattern, RequestInfo, Request,
-            TimeoutOld, Priority, TransId, Source}}}, QueueNew} ->
+            _, Priority, TransId, Source}}}, QueueNew} ->
             Type = 'send_sync',
             ConfigOptionsNew = check_incoming(true, ConfigOptions),
             #config_service_options{
@@ -2069,38 +2099,43 @@ process_queue(#state{dispatcher = Dispatcher,
                     RequestTimeoutAdjustment,
                 aspects_request_before =
                     AspectsBefore} = ConfigOptionsNew,
+            {RecvTimer,
+             RecvTimeoutsNew} = maps:take(TransId, RecvTimeouts),
+            Timeout = case erlang:cancel_timer(RecvTimer) of
+                false ->
+                    0;
+                V ->
+                    V
+            end,
+            FatalTimer = fatal_timer_start(Timeout, Dispatcher,
+                                           ConfigOptionsNew),
+            RequestTimeoutF =
+                request_timeout_adjustment_f(RequestTimeoutAdjustment),
             case aspects_request_before(AspectsBefore, Type,
                                         Name, Pattern, RequestInfo, Request,
-                                        TimeoutOld, Priority, TransId, Source,
+                                        Timeout, Priority, TransId, Source,
                                         ServiceState) of
                 {ok, ServiceStateNew} ->
-                    RecvTimer = maps:get(TransId, RecvTimeouts),
-                    Timeout = case erlang:cancel_timer(RecvTimer) of
-                        false ->
-                            0;
-                        V ->
-                            V
-                    end,
                     T = {'cloudi_service_send_sync',
                          Name, Pattern, RequestInfo, Request,
                          Timeout, Priority, TransId, Source},
-                    RequestTimeoutF =
-                        request_timeout_adjustment_f(RequestTimeoutAdjustment),
                     ok = send('send_sync_out'(Name, Pattern,
                                               RequestInfo, Request,
                                               Timeout, Priority, TransId,
                                               Source),
                               State),
-                    State#state{recv_timeouts = maps:remove(TransId,
-                                                            RecvTimeouts),
+                    State#state{recv_timeouts = RecvTimeoutsNew,
                                 queued = QueueNew,
                                 queued_size = QueuedSize - Size,
                                 service_state = ServiceStateNew,
                                 request_data = {T, RequestTimeoutF},
+                                fatal_timer = FatalTimer,
                                 options = ConfigOptionsNew};
                 {stop, Reason, ServiceStateNew} ->
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{service_state = ServiceStateNew,
+                    State#state{recv_timeouts = RecvTimeoutsNew,
+                                service_state = ServiceStateNew,
+                                fatal_timer = FatalTimer,
                                 options = ConfigOptionsNew}
             end
     end.
@@ -2205,7 +2240,9 @@ socket_recv(#state_socket{protocol = udp,
         {udp_closed, Socket} ->
             {error, socket_closed};
         'cloudi_service_init_timeout' ->
-            {error, timeout}
+            {error, timeout};
+        'cloudi_service_fatal_timeout' ->
+            {error, fatal_timeout}
     end;
 socket_recv(#state_socket{protocol = Protocol,
                           listener = Listener,
@@ -2225,7 +2262,9 @@ socket_recv(#state_socket{protocol = Protocol,
         {inet_async, Listener, Acceptor, _} ->
             {error, inet_async};
         'cloudi_service_init_timeout' ->
-            {error, timeout}
+            {error, timeout};
+        'cloudi_service_fatal_timeout' ->
+            {error, fatal_timeout}
     end.
 
 socket_recv_term(StateSocket) ->

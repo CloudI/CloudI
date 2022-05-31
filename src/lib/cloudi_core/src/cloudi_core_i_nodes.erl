@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -613,7 +613,8 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
             Status8 = if
                 NanoSecondsDayDisconnect > 0 orelse
                 NanoSecondsWeekDisconnect > 0 orelse
-                NanoSecondsMonthDisconnect > 0 ->
+                NanoSecondsMonthDisconnect > 0 orelse
+                NanoSecondsYearDisconnect > 0 ->
                     [{downtime_day_disconnected,
                       cloudi_core_i_status:
                       nanoseconds_to_string_gt(NanoSecondsDayDisconnect,

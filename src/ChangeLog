@@ -1,6 +1,29 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-05-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the fatal_exceptions service configuration option with the
+      default value true for whether a service restart should occur
+      for unexpected exceptions that the programming language
+      considers recoverable
+        * internal services previously had default value true functionality
+          but external services have had fatal_exceptions == false
+          functionality
+          (external services don't yet use the fatal_exceptions value,
+           but it will be described as a backwards incompatible change
+           in the next release's NEWS after external services have it
+           hooked-up)
+        * If fatal_exceptions is false a null response is provided
+    * Add the fatal_timeout and fatal_timeout_delay service configuration
+      options to cause a service restart if a service request takes
+      longer than the timeout parameter
+        * fatal_timeout defaults to false
+        * fatal_timeout_delay defaults to 0 milliseconds
+    * Improve CloudI Service API nodes_status and services_status
+      to provide day information for a failure during the past year
+    * Update quickrand
+
 2022-05-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update cpg

@@ -264,6 +264,22 @@
                     {count_max, number()} | % float multiplier or
                     {count_min, number()}) | % integer absolute
                tuple(),
+        % unexpected exceptions that are considered recoverable by the
+        % programming language should be considered fatal,
+        % causing the service to restart (if possible)
+        fatal_exceptions = true
+            :: boolean(),
+        % a service request timeout is fatal in the service handling the
+        % service request, causing the service to restart (if possible)
+        % (i.e., ensure the service request handler terminates)
+        fatal_timeout = false
+            :: boolean(),
+        % provide an offset on the fatal timeout value to avoid premature
+        % failure of the service when the service request is handled during a
+        % time period close to the service request timeout value
+        fatal_timeout_delay = 0 % milliseconds
+            :: cloudi_service_api:
+               fatal_timeout_delay_value_milliseconds(),
         % when undefined, timeout_terminate defaults to
         % (1000 * MaxT) / MaxR - 100 to ensure the service lifetime is finite
         % when errors occur. timeout_terminate can be set manually to

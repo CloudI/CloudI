@@ -2001,7 +2001,8 @@ service_id_status(ServiceId, TimeNow,
             Status17 = if
                 NanoSecondsDaySuspend > 0 orelse
                 NanoSecondsWeekSuspend > 0 orelse
-                NanoSecondsMonthSuspend > 0 ->
+                NanoSecondsMonthSuspend > 0 orelse
+                NanoSecondsYearSuspend > 0 ->
                     [{interrupt_day_suspended,
                       cloudi_core_i_status:
                       nanoseconds_to_string_gt(NanoSecondsDaySuspend,
@@ -2049,7 +2050,8 @@ service_id_status(ServiceId, TimeNow,
             Status21 = if
                 NanoSecondsDayUpdate > 0 orelse
                 NanoSecondsWeekUpdate > 0 orelse
-                NanoSecondsMonthUpdate > 0 ->
+                NanoSecondsMonthUpdate > 0 orelse
+                NanoSecondsYearUpdate > 0 ->
                     [{interrupt_day_updating,
                       cloudi_core_i_status:
                       nanoseconds_to_string_gt(NanoSecondsDayUpdate,
@@ -2097,7 +2099,8 @@ service_id_status(ServiceId, TimeNow,
             Status25 = if
                 NanoSecondsDayRestart > 0 orelse
                 NanoSecondsWeekRestart > 0 orelse
-                NanoSecondsMonthRestart > 0 ->
+                NanoSecondsMonthRestart > 0 orelse
+                NanoSecondsYearRestart > 0 ->
                     [{downtime_day_restarting,
                       cloudi_core_i_status:
                       nanoseconds_to_string_gt(NanoSecondsDayRestart,

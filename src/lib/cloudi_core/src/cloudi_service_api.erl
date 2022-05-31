@@ -230,6 +230,24 @@
               response_timeout_immediate_max_milliseconds/0,
               response_timeout_immediate_max_period/0]).
 
+-type fatal_timeout_delay_value_milliseconds() ::
+    ?FATAL_TIMEOUT_DELAY_MIN..?FATAL_TIMEOUT_DELAY_MAX.
+-type fatal_timeout_delay_milliseconds() ::
+    limit_min | limit_max | fatal_timeout_delay_value_milliseconds().
+-type fatal_timeout_delay_period() ::
+    {1..(?FATAL_TIMEOUT_DELAY_MAX div ?MILLISECONDS_IN_SECOND),
+     seconds | second} |
+    {1..(?FATAL_TIMEOUT_DELAY_MAX div ?MILLISECONDS_IN_MINUTE),
+     minutes | minute} |
+    {1..(?FATAL_TIMEOUT_DELAY_MAX div ?MILLISECONDS_IN_HOUR),
+     hours | hour} |
+    {1..(?FATAL_TIMEOUT_DELAY_MAX div ?MILLISECONDS_IN_DAY),
+     days | day} |
+    fatal_timeout_delay_milliseconds().
+-export_type([fatal_timeout_delay_value_milliseconds/0,
+              fatal_timeout_delay_milliseconds/0,
+              fatal_timeout_delay_period/0]).
+
 -type restart_delay_value_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
 -type restart_delay_milliseconds() ::
@@ -622,6 +640,9 @@
           response_timeout_immediate_max_period()} |
          {count_process_dynamic,
           service_options_count_process_dynamic_options() | false} |
+         {fatal_exceptions, boolean()} |
+         {fatal_timeout, boolean()} |
+         {fatal_timeout_delay, fatal_timeout_delay_period()} |
          {timeout_terminate,
           undefined | timeout_terminate_period()} |
          {restart_all, boolean()} |
@@ -697,6 +718,9 @@
           response_timeout_immediate_max_period()} |
          {count_process_dynamic,
           service_options_count_process_dynamic_options() | false} |
+         {fatal_exceptions, boolean()} |
+         {fatal_timeout, boolean()} |
+         {fatal_timeout_delay, fatal_timeout_delay_period()} |
          {timeout_terminate,
           undefined | timeout_terminate_period()} |
          {restart_all, boolean()} |
@@ -958,6 +982,9 @@
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
           response_timeout_immediate_max_period()} |
+         {fatal_exceptions, boolean()} |
+         {fatal_timeout, boolean()} |
+         {fatal_timeout_delay, fatal_timeout_delay_period()} |
          {monkey_latency,
           service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,
@@ -1023,6 +1050,9 @@
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
           response_timeout_immediate_max_period()} |
+         {fatal_exceptions, boolean()} |
+         {fatal_timeout, boolean()} |
+         {fatal_timeout_delay, fatal_timeout_delay_period()} |
          {monkey_latency,
           service_options_monkey_latency_options() | system | false} |
          {monkey_chaos,

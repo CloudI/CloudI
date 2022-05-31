@@ -35,6 +35,7 @@
 -define(BITMASK_16, 16#ffff).
 -define(BITMASK_32, 16#ffffffff).
 -define(BITMASK_35, 16#7ffffffff).
+-define(BITMASK_59, 16#7ffffffffffffff).
 -define(BITMASK_64, 16#ffffffffffffffff).
 -define(BITMASK_128, 16#ffffffffffffffffffffffffffffffff).
 -define(BITMASK_1024, 16#ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff).
