@@ -5,7 +5,7 @@ package cloudi
 //
 // MIT License
 //
-// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -71,6 +71,7 @@ type Instance struct {
 	socket                 net.Conn
 	useHeader              bool
 	initializationComplete bool
+	fatalExceptions        bool
 	terminate              bool
 	fragmentSize           uint32
 	fragmentRecv           []byte
@@ -742,6 +743,9 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 			case *FatalError:
 				ErrorExit(os.Stderr, err)
 			default:
+				if api.fatalExceptions {
+					ErrorExit(os.Stderr, err)
+				}
 				os.Stderr.WriteString(err.Error() + "\n")
 				err = nil
 			}
@@ -771,6 +775,9 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 			case *FatalError:
 				ErrorExit(os.Stderr, err)
 			default:
+				if api.fatalExceptions {
+					ErrorExit(os.Stderr, err)
+				}
 				os.Stderr.WriteString(err.Error() + "\n")
 				err = nil
 			}
@@ -847,6 +854,10 @@ func (api *Instance) handleEvents(external bool, reader *bytes.Reader, command u
 				return false, err
 			}
 			err = binary.Read(reader, nativeEndian, &(api.priorityDefault))
+			if err != nil {
+				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.fatalExceptions))
 			if err != nil {
 				return false, err
 			}
@@ -973,6 +984,10 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 				return false, err
 			}
 			err = binary.Read(reader, nativeEndian, &(api.priorityDefault))
+			if err != nil {
+				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.fatalExceptions))
 			if err != nil {
 				return false, err
 			}
@@ -1206,6 +1221,10 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 				return false, err
 			}
 			err = binary.Read(reader, nativeEndian, &(api.priorityDefault))
+			if err != nil {
+				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.fatalExceptions))
 			if err != nil {
 				return false, err
 			}

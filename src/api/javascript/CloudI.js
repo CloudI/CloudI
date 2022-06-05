@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -249,6 +249,7 @@ CloudI.API = function API (thread_index, callback) {
                                   readable: true,
                                   writable: true});
     API._initialization_complete = false;
+    API._fatal_exceptions = false;
     API._terminate = false;
     API._terminate_callback = undefined;
     API._size = parseInt(buffer_size_str);
@@ -619,8 +620,11 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     process.exit(1);
                 }
                 else {
-                    return_null_response = true;
                     API._exception(err);
+                    if (API._fatal_exceptions) {
+                        process.exit(1);
+                    }
+                    return_null_response = true;
                 }
                 if (return_null_response) {
                     var response_info = '';
@@ -706,8 +710,11 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     process.exit(1);
                 }
                 else {
-                    return_null_response = true;
                     API._exception(err);
+                    if (API._fatal_exceptions) {
+                        process.exit(1);
+                    }
+                    return_null_response = true;
                 }
                 if (return_null_response) {
                     var response_info = '';
@@ -788,6 +795,8 @@ CloudI.API.prototype._handle_events = function (data, data_size, i, command) {
                 i += 4;
                 API._priority_default = unpackInt8(i, data);
                 i += 1;
+                API._fatal_exceptions = unpackUint8(i, data) != 0;
+                i += 1;
                 break;
             case MESSAGE_KEEPALIVE:
                 API._send(new Erlang.OtpErlangAtom('keepalive'));
@@ -840,6 +849,8 @@ CloudI.API.prototype._poll_request = function (data) {
                 API._timeout_terminate = unpackUint32(i, data);
                 i += 4;
                 API._priority_default = unpackInt8(i, data);
+                i += 1;
+                API._fatal_exceptions = unpackUint8(i, data) != 0;
                 i += 1;
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
@@ -966,6 +977,8 @@ CloudI.API.prototype._poll_request = function (data) {
                 API._timeout_sync = unpackUint32(i, data);
                 i += 4;
                 API._priority_default = unpackInt8(i, data);
+                i += 1;
+                API._fatal_exceptions = unpackUint8(i, data) != 0;
                 i += 1;
                 if (i == data_size) {
                     return;

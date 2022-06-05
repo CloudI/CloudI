@@ -61,6 +61,7 @@ typedef struct cloudi_instance_t
     int8_t priority_default;
     unsigned int use_header:1;
     unsigned int initialization_complete:1;
+    unsigned int fatal_exceptions:1;
     unsigned int terminate:1;
     unsigned int cxx_terminate_exception:1;
     unsigned int free_with_delete:1;

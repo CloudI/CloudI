@@ -4387,16 +4387,15 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
          _, _, _, _, _,
          _, _, _, _, _, _, _]
         when not (((Type =:= internal) andalso
-                   (Module =:= undefined) andalso
-                   (ID /= <<>>)) orelse
-                  (((Type =:= internal) orelse
-                    (Type =:= undefined)) andalso
-                   (Module =/= undefined)) orelse
-                  (((Type =:= external) orelse
-                    (Type =:= undefined)) andalso
-                   ((FilePath =/= undefined) orelse
-                    (Args =/= undefined) orelse
-                    (Env =/= undefined)))) ->
+                   ((Module =/= undefined) orelse
+                    ((Module =:= undefined) andalso
+                     (ID /= <<>>)))) orelse
+                  (Type =:= external) orelse
+                  ((Type =:= undefined) andalso
+                   ((Module =/= undefined) orelse
+                    ((FilePath =/= undefined) orelse
+                     (Args =/= undefined) orelse
+                     (Env =/= undefined))))) ->
             {error, {service_update_type_invalid,
                      Type}};
         [Type, Module, ModuleState,

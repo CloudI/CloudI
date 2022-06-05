@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -103,6 +103,7 @@ data T s = T
     , socketHandle :: !Handle
     , useHeader :: !Bool
     , initializationComplete :: !Bool
+    , fatalExceptions :: !Bool
     , terminate :: !Bool
     , timeout :: !(Maybe Bool)
     , callbacks :: !(Map ByteString (Seq (Callback s)))
@@ -155,6 +156,7 @@ make state' terminateException'
         , socketHandle = socketHandle'
         , useHeader = useHeader'
         , initializationComplete = False
+        , fatalExceptions = False
         , terminate = False
         , timeout = Nothing
         , callbacks = Map.empty
@@ -179,11 +181,11 @@ make state' terminateException'
     }
 
 init :: T s -> Word32 -> Word32 -> Word32 -> Word32 -> ByteString ->
-    Word32 -> Word32 -> Word32 -> Word32 -> Int8 -> T s
+    Word32 -> Word32 -> Word32 -> Word32 -> Int8 -> Int8 -> T s
 init api0
     processIndex' processCount' processCountMax' processCountMin'
     prefix' timeoutInitialize' timeoutAsync' timeoutSync' timeoutTerminate'
-    priorityDefault' =
+    priorityDefault' fatalExceptions' =
     api0{
           timeout = Just False
         , processIndex = fromIntegral processIndex'
@@ -195,17 +197,19 @@ init api0
         , timeoutAsync = fromIntegral timeoutAsync'
         , timeoutSync = fromIntegral timeoutSync'
         , timeoutTerminate = fromIntegral timeoutTerminate'
-        , priorityDefault = fromIntegral priorityDefault'}
+        , priorityDefault = fromIntegral priorityDefault'
+        , fatalExceptions = toEnum (fromIntegral fatalExceptions')}
 
-reinit :: T s -> Word32 -> Word32 -> Word32 -> Int8 -> T s
+reinit :: T s -> Word32 -> Word32 -> Word32 -> Int8 -> Int8 -> T s
 reinit api0
     processCount' timeoutAsync' timeoutSync'
-    priorityDefault' =
+    priorityDefault' fatalExceptions' =
     api0{
           processCount = fromIntegral processCount'
         , timeoutAsync = fromIntegral timeoutAsync'
         , timeoutSync = fromIntegral timeoutSync'
-        , priorityDefault = fromIntegral priorityDefault'}
+        , priorityDefault = fromIntegral priorityDefault'
+        , fatalExceptions = toEnum (fromIntegral fatalExceptions')}
 
 setResponse :: T s -> ByteString -> ByteString -> ByteString -> T s
 setResponse api0

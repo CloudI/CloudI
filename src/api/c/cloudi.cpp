@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1445,10 +1445,18 @@ static void callback(cloudi_instance_t * api,
         catch (boost::exception const & e)
         {
             std::cerr << boost::diagnostic_information(e);
+            if (api->fatal_exceptions)
+            {
+                ::exit(1);
+            }
         }
         catch (std::exception const & e)
         {
             std::cerr << boost::diagnostic_information(e);
+            if (api->fatal_exceptions)
+            {
+                ::exit(1);
+            }
         }
         try
         {
@@ -1503,10 +1511,18 @@ static void callback(cloudi_instance_t * api,
         catch (boost::exception const & e)
         {
             std::cerr << boost::diagnostic_information(e);
+            if (api->fatal_exceptions)
+            {
+                ::exit(1);
+            }
         }
         catch (std::exception const & e)
         {
             std::cerr << boost::diagnostic_information(e);
+            if (api->fatal_exceptions)
+            {
+                ::exit(1);
+            }
         }
         try
         {
@@ -1536,7 +1552,7 @@ static void store_incoming_binary(buffer_t const & buffer,
                                   uint32_t & index,
                                   char * & p)
 {
-    uint32_t size = *reinterpret_cast<uint32_t *>(&buffer[index]);
+    uint32_t const size = *reinterpret_cast<uint32_t *>(&buffer[index]);
     index += sizeof(uint32_t);
     p = new char[size];
     ::memcpy(p, &buffer[index], size);
@@ -1557,6 +1573,14 @@ static void store_incoming_int8(buffer_t const & buffer,
 {
     i = *reinterpret_cast<int8_t *>(&buffer[index]);
     index += sizeof(int8_t);
+}
+
+static uint8_t get_incoming_uint8(buffer_t const & buffer,
+                                  uint32_t & index)
+{
+    uint8_t const i = *reinterpret_cast<uint8_t *>(&buffer[index]);
+    index += sizeof(uint8_t);
+    return i;
 }
 
 static bool handle_events(cloudi_instance_t * api,
@@ -1594,6 +1618,7 @@ static bool handle_events(cloudi_instance_t * api,
                 store_incoming_uint32(buffer_recv, index, api->timeout_async);
                 store_incoming_uint32(buffer_recv, index, api->timeout_sync);
                 store_incoming_int8(buffer_recv, index, api->priority_default);
+                api->fatal_exceptions = get_incoming_uint8(buffer_recv, index);
                 break;
             }
             case MESSAGE_KEEPALIVE:
@@ -1685,6 +1710,7 @@ static int poll_request(cloudi_instance_t * api,
                 store_incoming_uint32(buffer_recv, index, api->timeout_sync);
                 store_incoming_uint32(buffer_recv, index, api->timeout_terminate);
                 store_incoming_int8(buffer_recv, index, api->priority_default);
+                api->fatal_exceptions = get_incoming_uint8(buffer_recv, index);
                 if (index != api->buffer_recv_index)
                 {
                     assert(! external);
@@ -1814,6 +1840,7 @@ static int poll_request(cloudi_instance_t * api,
                 store_incoming_uint32(buffer_recv, index, api->timeout_async);
                 store_incoming_uint32(buffer_recv, index, api->timeout_sync);
                 store_incoming_int8(buffer_recv, index, api->priority_default);
+                api->fatal_exceptions = get_incoming_uint8(buffer_recv, index);
                 if (index == api->buffer_recv_index)
                 {
                     api->buffer_recv_index = 0;

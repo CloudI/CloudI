@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-06-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the fatal_exceptions service configuration option support to
+      external services
+      (ATS/C/C++/Go/Haskell/Java/JavaScript/OCaml/Perl/PHP/Python/Ruby
+       CloudI API implementations were changed)
+    * Fix CloudI Service API services_update external services validation
+      so the arguments file_path, args or env are not required
+      (to ensure an external service update without
+       an OS process restart is allowed)
+
 2022-05-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the fatal_exceptions service configuration option with the

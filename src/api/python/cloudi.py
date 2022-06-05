@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -124,7 +124,8 @@ class API(object):
          self.__timeout_initialize,
          self.__timeout_async, self.__timeout_sync,
          self.__timeout_terminate,
-         self.__priority_default) = self.__poll_request(None, False)
+         self.__priority_default,
+         self.__fatal_exceptions) = self.__poll_request(None, False)
 
     @staticmethod
     def thread_count():
@@ -450,8 +451,10 @@ class API(object):
                 traceback.print_exc(file=sys.stderr)
                 raise
             except Exception:
-                return_null_response = True
                 traceback.print_exc(file=sys.stderr)
+                if self.__fatal_exceptions:
+                    sys.exit(1)
+                return_null_response = True
             except:
                 traceback.print_exc(file=sys.stderr)
                 sys.exit(1)
@@ -502,8 +505,10 @@ class API(object):
                 traceback.print_exc(file=sys.stderr)
                 raise
             except Exception:
-                return_null_response = True
                 traceback.print_exc(file=sys.stderr)
+                if self.__fatal_exceptions:
+                    sys.exit(1)
+                return_null_response = True
             except:
                 traceback.print_exc(file=sys.stderr)
                 sys.exit(1)
@@ -533,11 +538,12 @@ class API(object):
                     return False
                 raise TerminateException(self.__timeout_terminate)
             if command == _MESSAGE_REINIT:
-                i, j = j, j + 4 + 4 + 4 + 1
+                i, j = j, j + 4 + 4 + 4 + 1 + 1
                 (self.__process_count,
                  self.__timeout_async, self.__timeout_sync,
-                 self.__priority_default) = struct.unpack(
-                     b'=IIIb', data[i:j]
+                 self.__priority_default,
+                 self.__fatal_exceptions) = struct.unpack(
+                     b'=IIIbB', data[i:j]
                  )
             elif command == _MESSAGE_KEEPALIVE:
                 self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
@@ -592,11 +598,11 @@ class API(object):
                 (process_index, process_count,
                  process_count_max, process_count_min,
                  prefix_size) = struct.unpack(b'=IIIII', data[i:j])
-                i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1
+                i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1 + 1
                 (prefix, _, timeout_initialize,
                  timeout_async, timeout_sync, timeout_terminate,
-                 priority_default) = struct.unpack(
-                     '=%dscIIIIb' % (prefix_size - 1), data[i:j]
+                 priority_default, fatal_exceptions) = struct.unpack(
+                     '=%dscIIIIbB' % (prefix_size - 1), data[i:j]
                  )
                 if j != data_size:
                     assert external is False
@@ -605,7 +611,7 @@ class API(object):
                         process_count_max, process_count_min,
                         prefix.decode('utf-8'), timeout_initialize,
                         timeout_sync, timeout_async, timeout_terminate,
-                        priority_default)
+                        priority_default, fatal_exceptions)
             if command in (_MESSAGE_SEND_ASYNC, _MESSAGE_SEND_SYNC):
                 i, j = j, j + 4
                 name_size = struct.unpack(b'=I', data[i:j])[0]
@@ -691,11 +697,12 @@ class API(object):
                     return False
                 assert False
             elif command == _MESSAGE_REINIT:
-                i, j = j, j + 4 + 4 + 4 + 1
+                i, j = j, j + 4 + 4 + 4 + 1 + 1
                 (self.__process_count,
                  self.__timeout_async, self.__timeout_sync,
-                 self.__priority_default) = struct.unpack(
-                     b'=IIIb', data[i:j]
+                 self.__priority_default,
+                 self.__fatal_exceptions) = struct.unpack(
+                     b'=IIIbB', data[i:j]
                  )
                 if j == data_size:
                     data = b''

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -63,6 +63,7 @@ class API
     private $use_header;
     private $s;
     private $initialization_complete;
+    private $fatal_exceptions;
     private $terminate;
     private $size;
     private $callbacks;
@@ -98,6 +99,7 @@ class API
         else
             throw new InvalidInputException();
         $this->initialization_complete = false;
+        $this->fatal_exceptions = false;
         $this->terminate = false;
         $this->size = intval($buffer_size_str);
         $this->callbacks = array();
@@ -112,7 +114,8 @@ class API
              $this->timeout_async,
              $this->timeout_sync,
              $this->timeout_terminate,
-             $this->priority_default
+             $this->priority_default,
+             $this->fatal_exceptions
              ) = $this->poll_request(null, false);
     }
 
@@ -430,8 +433,12 @@ class API
                 }
                 catch (\Throwable $e)
                 {
-                    $return_null_response = true;
                     fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
+                    if ($this->fatal_exceptions)
+                    {
+                        exit(1);
+                    }
+                    $return_null_response = true;
                 }
                 if ($return_null_response)
                 {
@@ -507,8 +514,12 @@ class API
                 }
                 catch (\Throwable $e)
                 {
-                    $return_null_response = true;
                     fwrite(STDERR, "{$e->getMessage()}\n{$e}\n");
+                    if ($this->fatal_exceptions)
+                    {
+                        exit(1);
+                    }
+                    $return_null_response = true;
                 }
                 if ($return_null_response)
                 {
@@ -555,12 +566,13 @@ class API
                     else
                         throw new TerminateException($this->timeout_terminate);
                 case MESSAGE_REINIT:
-                    $i += $j; $j = 4 + 4 + 4 + 1;
-                    $tmp = unpack('L3a/cb', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+                    $tmp = unpack('L3a/cb/Cc', substr($data, $i, $j));
                     $this->process_count = $tmp['a1'];
                     $this->timeout_async = $tmp['a2'];
                     $this->timeout_sync = $tmp['a3'];
                     $this->priority_default = $tmp['b'];
+                    $this->fatal_exceptions = $tmp['c'];
                     $i += $j;
                     break;
                 case MESSAGE_KEEPALIVE:
@@ -645,13 +657,14 @@ class API
                          $prefix_size) = unpack('L5', substr($data, $i, $j));
                     $i += $j; $j = $prefix_size;
                     $prefix = substr($data, $i, $j - 1);
-                    $i += $j; $j = 4 + 4 + 4 + 4 + 1;
-                    $tmp = unpack('L4a/cb', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 4 + 1 + 1;
+                    $tmp = unpack('L4a/cb/Cc', substr($data, $i, $j));
                     $timeout_initialize = $tmp['a1'];
                     $timeout_async = $tmp['a2'];
                     $timeout_sync = $tmp['a3'];
                     $timeout_terminate = $tmp['a4'];
                     $priority_default = $tmp['b'];
+                    $fatal_exceptions = $tmp['c'];
                     $i += $j;
                     if ($i != $data_size)
                     {
@@ -662,7 +675,8 @@ class API
                                  $process_count_max, $process_count_min,
                                  $prefix, $timeout_initialize,
                                  $timeout_sync, $timeout_async,
-                                 $timeout_terminate, $priority_default);
+                                 $timeout_terminate,
+                                 $priority_default, $fatal_exceptions);
                 case MESSAGE_SEND_ASYNC:
                 case MESSAGE_SEND_SYNC:
                     $i += $j; $j = 4;
@@ -781,12 +795,13 @@ class API
                     }
                     assert(false);
                 case MESSAGE_REINIT:
-                    $i += $j; $j = 4 + 4 + 4 + 1;
-                    $tmp = unpack('L3a/cb', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+                    $tmp = unpack('L3a/cb/Cc', substr($data, $i, $j));
                     $this->process_count = $tmp['a1'];
                     $this->timeout_async = $tmp['a2'];
                     $this->timeout_sync = $tmp['a3'];
                     $this->priority_default = $tmp['b'];
+                    $this->fatal_exceptions = $tmp['c'];
                     $i += $j; $j = 4;
                     if ($i == $data_size)
                     {

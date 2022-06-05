@@ -226,7 +226,7 @@
     }).
 
 -dialyzer({no_improper_lists,
-           ['init_out'/10,
+           ['init_out'/11,
             'send_async_out'/8,
             'send_sync_out'/8,
             'return_async_out'/1,
@@ -1303,10 +1303,12 @@ handle_event(EventType, EventContent, StateName, State) ->
          #state{timeout_async = TimeoutAsync,
                 timeout_sync = TimeoutSync,
                 options = #config_service_options{
-                    priority_default = PriorityDefault}
+                    priority_default = PriorityDefault,
+                    fatal_exceptions = FatalExceptions}
                 } = State) ->
     ok = send('reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
-                           PriorityDefault), State),
+                           PriorityDefault, FatalExceptions),
+              State),
     {keep_state,
      State#state{process_count = ProcessCount}};
 
@@ -1531,7 +1533,8 @@ os_init(#state{initialize = true,
                timeout_term = TimeoutTerm,
                options = #config_service_options{
                    priority_default = PriorityDefault,
-                   count_process_dynamic = CountProcessDynamic}} = State) ->
+                   count_process_dynamic = CountProcessDynamic,
+                   fatal_exceptions = FatalExceptions}} = State) ->
     CountProcessDynamicFormat =
         cloudi_core_i_rate_based_configuration:
         count_process_dynamic_format(CountProcessDynamic),
@@ -1548,7 +1551,7 @@ os_init(#state{initialize = true,
     ok = send('init_out'(ProcessIndex, ProcessCount,
                          ProcessCountMax, ProcessCountMin, Prefix,
                          TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
-                         PriorityDefault),
+                         PriorityDefault, FatalExceptions),
               State),
     ok.
 
@@ -1831,14 +1834,19 @@ handle_recv_async(Timeout, TransId, Consume,
 'init_out'(ProcessIndex, ProcessCount,
            ProcessCountMax, ProcessCountMin, Prefix,
            TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
-           PriorityDefault) ->
-    %XXX add fatal_exceptions boolean
+           PriorityDefault, FatalExceptions) ->
     true = ProcessCount < 4294967296,
     true = ProcessCountMax < 4294967296,
     true = ProcessCountMin < 4294967296,
     PrefixSize = length(Prefix) + 1,
     true = PrefixSize < 4294967296,
     TimeoutTermExternal = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
+    FatalExceptionsValue = if
+        FatalExceptions =:= true ->
+            1;
+        FatalExceptions =:= false ->
+            0
+    end,
     [<<?MESSAGE_INIT:32/unsigned-integer-native,
        ProcessIndex:32/unsigned-integer-native,
        ProcessCount:32/unsigned-integer-native,
@@ -1851,17 +1859,24 @@ handle_recv_async(Timeout, TransId, Consume,
        TimeoutAsync:32/unsigned-integer-native,
        TimeoutSync:32/unsigned-integer-native,
        TimeoutTermExternal:32/unsigned-integer-native,
-       PriorityDefault:8/signed-integer-native>>].
+       PriorityDefault:8/signed-integer-native,
+       FatalExceptionsValue:8/unsigned-integer-native>>].
 
 'reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
-             PriorityDefault) ->
-    %XXX add fatal_exceptions boolean
+             PriorityDefault, FatalExceptions) ->
     true = ProcessCount < 4294967296,
+    FatalExceptionsValue = if
+        FatalExceptions =:= true ->
+            1;
+        FatalExceptions =:= false ->
+            0
+    end,
     <<?MESSAGE_REINIT:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native,
       TimeoutAsync:32/unsigned-integer-native,
       TimeoutSync:32/unsigned-integer-native,
-      PriorityDefault:8/signed-integer-native>>.
+      PriorityDefault:8/signed-integer-native,
+      FatalExceptionsValue:8/unsigned-integer-native>>.
 
 'terminate_out'() ->
     <<?MESSAGE_TERM:32/unsigned-integer-native>>.
@@ -2154,11 +2169,13 @@ process_update(#state{dispatcher = Dispatcher,
                    timeout_async = TimeoutAsync,
                    timeout_sync = TimeoutSync,
                    options = #config_service_options{
-                       priority_default = PriorityDefault}
+                       priority_default = PriorityDefault,
+                       fatal_exceptions = FatalExceptions}
                    } = StateNext,
             ok = send('reinit_out'(ProcessCount,
                                    TimeoutAsync, TimeoutSync,
-                                   PriorityDefault), StateNext),
+                                   PriorityDefault, FatalExceptions),
+                      StateNext),
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
             {false, StateNext};
         {ok, {error, _} = Error} ->

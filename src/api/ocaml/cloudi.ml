@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -64,6 +64,7 @@ module Instance = struct
       socket : Unix.file_descr;
       use_header : bool;
       mutable initialization_complete : bool;
+      mutable fatal_exceptions : bool;
       mutable terminate : bool;
       fragment_size : int;
       fragment_recv : bytes;
@@ -96,6 +97,7 @@ module Instance = struct
     ~callbacks ~buffer_recv ~timeout_terminate =
     {state; terminate_exception; socket; use_header;
      initialization_complete = false;
+     fatal_exceptions = false;
      terminate = false;
      fragment_size; fragment_recv; callbacks; buffer_recv;
      process_index = 0;
@@ -116,7 +118,7 @@ module Instance = struct
   let init api process_index process_count
     process_count_max process_count_min prefix
     timeout_initialize timeout_async timeout_sync timeout_terminate
-    priority_default =
+    priority_default fatal_exceptions =
     api.process_index <- process_index ;
     api.process_count <- process_count ;
     api.process_count_max <- process_count_max ;
@@ -127,13 +129,15 @@ module Instance = struct
     api.timeout_sync <- timeout_sync ;
     api.timeout_terminate <- timeout_terminate ;
     api.priority_default <- priority_default ;
+    api.fatal_exceptions <- fatal_exceptions ;
     ()
   let reinit api process_count timeout_async timeout_sync
-    priority_default =
+    priority_default fatal_exceptions =
     api.process_count <- process_count ;
     api.timeout_async <- timeout_async ;
     api.timeout_sync <- timeout_sync ;
     api.priority_default <- priority_default ;
+    api.fatal_exceptions <- fatal_exceptions ;
     ()
   let set_response api response_info response trans_id =
     api.response_info <- response_info ;
@@ -267,6 +271,9 @@ let unpack_uint32_big i binary : (int, string) result =
         )
       )
     )
+
+let unpack_uint8 i binary : int =
+  int_of_char binary.[i]
 
 let unpack_int8 i binary : int =
   let byte0 = int_of_char binary.[i] in
@@ -530,12 +537,14 @@ let handle_events api ext data data_size i cmd : (bool, string) result =
               Error (error)
             | Ok (timeout_sync) ->
               let priority_default = unpack_int8 (i1 + 12) data
-              and i2 = i1 + 13 in
+              and fatal_exceptions = (unpack_uint8 (i1 + 13) data) != 0
+              and i2 = i1 + 14 in
               Instance.reinit api
                 process_count
                 timeout_async
                 timeout_sync
-                priority_default ;
+                priority_default
+                fatal_exceptions ;
               loop_cmd i2)
       else if cmd_event = message_keepalive then
         match Erlang.term_to_binary (Erlang.OtpErlangAtom ("keepalive")) with
@@ -621,7 +630,7 @@ let rec poll_request_loop api timeout ext poll_timer: (bool, string) result =
 and callback
   api request_type name pattern request_info request
   timeout priority trans_id pid : (bool option, string) result =
-  let {Instance.state; callbacks; _} = api in
+  let {Instance.fatal_exceptions; state; callbacks; _} = api in
   let callback_get () =
     let function_queue = Hashtbl.find callbacks pattern in
     let f = Queue.pop function_queue in
@@ -661,6 +670,8 @@ and callback
             exit 1 ;
           | FatalError ->
             exit 1 ;
+          | _ when fatal_exceptions ->
+            exit 1 ;
           | _ ->
             Some (Null))
     | SYNC -> (
@@ -689,6 +700,8 @@ and callback
           | Assert_failure _ ->
             exit 1 ;
           | FatalError ->
+            exit 1 ;
+          | _ when fatal_exceptions ->
             exit 1 ;
           | _ ->
             Some (Null))
@@ -787,7 +800,9 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                       | Ok (timeout_terminate) ->
                         let priority_default =
                           unpack_int8 (i1 + 16) data
-                        and i2 = i1 + 17 in
+                        and fatal_exceptions =
+                          (unpack_uint8 (i1 + 17) data) != 0
+                        and i2 = i1 + 18 in
                         Instance.init api
                           process_index
                           process_count
@@ -798,7 +813,8 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                           timeout_async
                           timeout_sync
                           timeout_terminate
-                          priority_default ;
+                          priority_default
+                          fatal_exceptions ;
                         if i2 <> data_size then
                           match handle_events api ext data data_size i2 0 with
                           | Error (error) ->
@@ -1000,12 +1016,14 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
             Error (error)
           | Ok (timeout_sync) ->
             let priority_default = unpack_int8 (i + 16) data
-            and i1 = i + 17 in
+            and fatal_exceptions = (unpack_uint8 (i + 17) data) != 0
+            and i1 = i + 18 in
             Instance.reinit api
               process_count
               timeout_async
               timeout_sync
-              priority_default ;
+              priority_default
+              fatal_exceptions ;
             if i1 = data_size then
               Ok (None)
             else if i1 < data_size then

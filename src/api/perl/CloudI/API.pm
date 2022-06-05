@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -111,6 +111,7 @@ sub new
         _use_header => $use_header,
         _s => $s,
         _initialization_complete => 0,
+        _fatal_exceptions => 0,
         _terminate => 0,
         _size => $buffer_size,
         _callbacks => \%callbacks,
@@ -135,7 +136,8 @@ sub new
      $self->{_timeout_async},
      $self->{_timeout_sync},
      $self->{_timeout_terminate},
-     $self->{_priority_default}) = $self->_poll_request(undef, 0);
+     $self->{_priority_default},
+     $self->{_fatal_exceptions}) = $self->_poll_request(undef, 0);
     return $self;
 }
 
@@ -554,6 +556,10 @@ sub _callback
             else
             {
                 print STDERR "$e";
+                if ($self->{_fatal_exceptions})
+                {
+                    exit(1);
+                }
             }
             $response_info = '';
             $response = '';
@@ -631,6 +637,10 @@ sub _callback
             else
             {
                 print STDERR "$e";
+                if ($self->{_fatal_exceptions})
+                {
+                    exit(1);
+                }
             }
             $response_info = '';
             $response = '';
@@ -691,11 +701,12 @@ sub _handle_events
         }
         elsif ($command == MESSAGE_REINIT)
         {
-            $i += $j; $j = 4 + 4 + 4 + 1;
+            $i += $j; $j = 4 + 4 + 4 + 1 + 1;
             ($self->{_process_count},
              $self->{_timeout_async},
              $self->{_timeout_sync},
-             $self->{_priority_default}) = unpack("L3 c",
+             $self->{_priority_default},
+             $self->{_fatal_exceptions}) = unpack("L3 c C",
                                                   substr($data, $i, $j));
             $i += $j;
         }
@@ -793,13 +804,14 @@ sub _poll_request
                 $process_count_max,
                 $process_count_min,
                 $prefix_size) = unpack('L5', substr($data, $i, $j));
-            $i += $j; $j = $prefix_size + 4 + 4 + 4 + 4 + 1;
+            $i += $j; $j = $prefix_size + 4 + 4 + 4 + 4 + 1 + 1;
             my ($prefix,
                 $timeout_initialize,
                 $timeout_async,
                 $timeout_sync,
                 $timeout_terminate,
-                $priority_default) = unpack("Z$prefix_size L4 c",
+                $priority_default,
+                $fatal_exceptions) = unpack("Z$prefix_size L4 c C",
                                             substr($data, $i, $j));
             $i += $j;
             if ($i != $data_size)
@@ -810,8 +822,8 @@ sub _poll_request
             return ($process_index, $process_count,
                     $process_count_max, $process_count_min,
                     $prefix, $timeout_initialize,
-                    $timeout_sync, $timeout_async,
-                    $timeout_terminate, $priority_default);
+                    $timeout_sync, $timeout_async, $timeout_terminate,
+                    $priority_default, $fatal_exceptions);
         }
         elsif ($command == MESSAGE_SEND_ASYNC or
                $command == MESSAGE_SEND_SYNC)
@@ -928,11 +940,12 @@ sub _poll_request
         }
         elsif ($command == MESSAGE_REINIT)
         {
-            $i += $j; $j = 4 + 4 + 4 + 1;
+            $i += $j; $j = 4 + 4 + 4 + 1 + 1;
             ($self->{_process_count},
              $self->{_timeout_async},
              $self->{_timeout_sync},
-             $self->{_priority_default}) = unpack("L3 c",
+             $self->{_priority_default},
+             $self->{_fatal_exceptions}) = unpack("L3 c C",
                                                   substr($data, $i, $j));
             $i += $j; $j = 4;
             if ($i == $data_size)

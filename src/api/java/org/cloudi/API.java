@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -118,6 +118,7 @@ public class API
     private final FileInputStream input;
     private final ExecutorService poll_timer_executor;
     private boolean initialization_complete;
+    private boolean fatal_exceptions;
     private boolean terminate;
     private final HashMap<String, LinkedList<FunctionInterface9>> callbacks;
     private final FunctionInterface9 null_response;
@@ -173,6 +174,7 @@ public class API
         this.input = new FileInputStream(this.fd_in);
         this.poll_timer_executor = Executors.newFixedThreadPool(1);
         this.initialization_complete = false;
+        this.fatal_exceptions = false;
         this.terminate = false;
         this.callbacks = new HashMap<String, LinkedList<FunctionInterface9>>();
         this.null_response = new NullResponse();
@@ -1142,6 +1144,10 @@ public class API
             catch (Throwable e)
             {
                 e.printStackTrace(API.err);
+                if (this.fatal_exceptions)
+                {
+                    System.exit(1);
+                }
             }
             try
             {
@@ -1237,6 +1243,10 @@ public class API
             catch (Throwable e)
             {
                 e.printStackTrace(API.err);
+                if (this.fatal_exceptions)
+                {
+                    System.exit(1);
+                }
             }
             try
             {
@@ -1293,6 +1303,7 @@ public class API
                     this.timeout_async = buffer.getInt();
                     this.timeout_sync = buffer.getInt();
                     this.priority_default = buffer.get();
+                    this.fatal_exceptions = buffer.get() != 0;
                     break;
                 }
                 case MESSAGE_KEEPALIVE:
@@ -1370,6 +1381,7 @@ public class API
                         this.timeout_sync = buffer.getInt();
                         this.timeout_terminate = buffer.getInt();
                         this.priority_default = buffer.get();
+                        this.fatal_exceptions = buffer.get() != 0;
                         if (buffer.hasRemaining())
                         {
                             assert ! external;
@@ -1475,6 +1487,7 @@ public class API
                         this.timeout_async = buffer.getInt();
                         this.timeout_sync = buffer.getInt();
                         this.priority_default = buffer.get();
+                        this.fatal_exceptions = buffer.get() != 0;
                         if (buffer.hasRemaining())
                             continue;
                         break;

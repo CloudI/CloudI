@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -296,9 +296,12 @@ module CloudI
                     $stderr.puts e.backtrace
                     return
                 rescue StandardError => e
-                    return_null_response = true
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
+                    if @fatal_exceptions
+                        exit(1)
+                    end
+                    return_null_response = true
                 rescue SystemExit => e
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
@@ -355,9 +358,12 @@ module CloudI
                     $stderr.puts e.backtrace
                     return
                 rescue StandardError => e
-                    return_null_response = true
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
+                    if @fatal_exceptions
+                        exit(1)
+                    end
+                    return_null_response = true
                 rescue SystemExit => e
                     $stderr.puts e.message
                     $stderr.puts e.backtrace
@@ -401,12 +407,13 @@ module CloudI
                         raise TerminateException.new(@timeout_terminate)
                     end
                 when MESSAGE_REINIT
-                    i += j; j = 4 + 4 + 4 + 1
-                    tmp = data[i, j].unpack("LLLc")
+                    i += j; j = 4 + 4 + 4 + 1 + 1
+                    tmp = data[i, j].unpack("LLLcC")
                     @process_count = tmp[0]
                     @timeout_async = tmp[1]
                     @timeout_sync = tmp[2]
                     @priority_default = tmp[3]
+                    @fatal_exceptions = tmp[4]
                     i += j
                 when MESSAGE_KEEPALIVE
                     send(Erlang.term_to_binary(:keepalive))
@@ -471,14 +478,15 @@ module CloudI
                     @process_count_max = tmp[2]
                     @process_count_min = tmp[3]
                     prefix_size = tmp[4]
-                    i += j; j = prefix_size + 4 + 4 + 4 + 4 + 1
-                    tmp = data[i, j].unpack("Z#{prefix_size}LLLLc")
+                    i += j; j = prefix_size + 4 + 4 + 4 + 4 + 1 + 1
+                    tmp = data[i, j].unpack("Z#{prefix_size}LLLLcC")
                     @prefix = tmp[0]
                     @timeout_initialize = tmp[1]
                     @timeout_async = tmp[2]
                     @timeout_sync = tmp[3]
                     @timeout_terminate = tmp[4]
                     @priority_default = tmp[5]
+                    @fatal_exceptions = tmp[6]
                     i += j
                     if i != data_size
                         API.assert{external == false}
@@ -575,12 +583,13 @@ module CloudI
                     end
                     API.assert{false}
                 when MESSAGE_REINIT
-                    i += j; j = 4 + 4 + 4 + 1
-                    tmp = data[i, j].unpack("LLLc")
+                    i += j; j = 4 + 4 + 4 + 1 + 1
+                    tmp = data[i, j].unpack("LLLcC")
                     @process_count = tmp[0]
                     @timeout_async = tmp[1]
                     @timeout_sync = tmp[2]
                     @priority_default = tmp[3]
+                    @fatal_exceptions = tmp[4]
                     i += j; j = 4
                     if i == data_size
                         data.clear()

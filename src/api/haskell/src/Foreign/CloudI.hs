@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -664,8 +664,9 @@ callbackExceptionFatal e = do
     printException $ show e
     POSIX.exitImmediately (Exit.ExitFailure 1)
 
-callbackException :: SomeException -> IO ()
-callbackException e
+callbackException :: Instance.T s -> SomeException -> IO ()
+callbackException api@Instance.T{
+      Instance.fatalExceptions = fatalExceptions} e
     | Just _ <- (Exception.fromException e :: Maybe AsyncException) =
         callbackExceptionFatal e
     | Just _ <- (Exception.fromException e :: Maybe SomeAsyncException) =
@@ -677,7 +678,10 @@ callbackException e
     | Just exitCode <- (Exception.fromException e :: Maybe ExitCode) =
         POSIX.exitImmediately exitCode
     | otherwise =
-        printException $ show e
+        if fatalExceptions then
+            callbackExceptionFatal e
+        else
+            printException $ show e
 
 callback :: Typeable s => Instance.T s ->
     (RequestType, ByteString, ByteString, ByteString, ByteString,
@@ -763,7 +767,7 @@ callback api0@Instance.T{
                     return $ ReturnI (empty, empty, v0, v1)
     callbackResultType <- case callbackResultValue of
         Left exception -> do
-            callbackException exception
+            callbackException api1 exception
             return $ ReturnI (empty, empty, state, api1)
         Right callbackResult ->
             return $ callbackResult
@@ -808,11 +812,13 @@ handleEvents messages api0 external cmd0 = do
             timeoutAsync' <- Get.getWord32host
             timeoutSync' <- Get.getWord32host
             priorityDefault' <- Get.getInt8
+            fatalExceptions' <- Get.getInt8
             let api1 = Instance.reinit api0
                     processCount'
                     timeoutAsync'
                     timeoutSync'
                     priorityDefault'
+                    fatalExceptions'
             empty <- Get.isEmpty
             if not empty then
                 handleEvents messages api1 external 0
@@ -846,6 +852,7 @@ pollRequestDataGet messages api0 external = do
             timeoutSync' <- Get.getWord32host
             timeoutTerminate' <- Get.getWord32host
             priorityDefault' <- Get.getInt8
+            fatalExceptions' <- Get.getInt8
             let api1 = Instance.init api0
                     processIndex'
                     processCount'
@@ -857,6 +864,7 @@ pollRequestDataGet messages api0 external = do
                     timeoutSync'
                     timeoutTerminate'
                     priorityDefault'
+                    fatalExceptions'
             empty <- Get.isEmpty
             if not empty then
                 handleEvents messages api1 external 0
@@ -950,11 +958,13 @@ pollRequestDataGet messages api0 external = do
             timeoutAsync' <- Get.getWord32host
             timeoutSync' <- Get.getWord32host
             priorityDefault' <- Get.getInt8
+            fatalExceptions' <- Get.getInt8
             let api1 = Instance.reinit api0
                     processCount'
                     timeoutAsync'
                     timeoutSync'
                     priorityDefault'
+                    fatalExceptions'
             empty <- Get.isEmpty
             if not empty then
                 pollRequestDataGet messages api1 external
