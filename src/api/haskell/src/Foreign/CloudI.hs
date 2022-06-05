@@ -665,7 +665,7 @@ callbackExceptionFatal e = do
     POSIX.exitImmediately (Exit.ExitFailure 1)
 
 callbackException :: Instance.T s -> SomeException -> IO ()
-callbackException api@Instance.T{
+callbackException Instance.T{
       Instance.fatalExceptions = fatalExceptions} e
     | Just _ <- (Exception.fromException e :: Maybe AsyncException) =
         callbackExceptionFatal e
