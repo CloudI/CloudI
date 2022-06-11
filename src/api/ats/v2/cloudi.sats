@@ -216,7 +216,7 @@ response =
   | NullError of (string)
 
 exception Terminate of ()
-exception FatalError of ()
+exception FatalError of (string)
 
 typedef
 callback (s:vt@ype) =

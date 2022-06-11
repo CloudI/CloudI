@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2021-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -90,6 +90,24 @@ enum
     cloudi_error_poll_unknown                  = 112
 };
 
+void c_errexnmsg2(void * exn, void * exn_msg, void * msg)
+{
+    char const * const exn_msg_str = (char const *)exn_msg;
+    fprintf(stderr, "exception %s(%d%s%s%s)\n%s\n",
+            ((atstype_exnconptr)exn)->exnmsg,
+            ((atstype_exnconptr)exn)->exntag,
+            exn_msg_str[0] ? ", \"" : "",
+            exn_msg_str,
+            exn_msg_str[0] ? "\"" : "",
+            (char const *)msg);
+}
+
+void c_exit_errexnmsg2(int ecode, void * exn, void * exn_msg, void * msg)
+{
+    c_errexnmsg2(exn, exn_msg, msg);
+    exit(ecode);
+}
+
 void c_threads_yield()
 {
     struct timespec delay = {0, 1000};
@@ -99,6 +117,11 @@ void c_threads_yield()
 void c_set_c_state(void * api_c, void * state)
 {
     ((cloudi_instance_t *)api_c)->state = state;
+}
+
+int c_fatal_exceptions(void * api_c)
+{
+    return ((cloudi_instance_t *)api_c)->fatal_exceptions;
 }
 
 #define C_GET_FUNCTION(T, NAME)                                               \
@@ -265,6 +288,19 @@ callback_attach
 (* C CloudI API related functions
  *)
 extern fn
+c_errexnmsg2: {l1,l2,l3:agz}
+    (ptr(l1),
+     ptr(l2),
+     ptr(l3)) -<fun,!exn>
+    void = "ext#"
+extern fn
+c_exit_errexnmsg2: {l1,l2,l3:agz}
+    (int,
+     ptr(l1),
+     ptr(l2),
+     ptr(l3)) -<fun,!exn>
+    void = "ext#"
+extern fn
 c_threads_yield:
     () -<fun0>
     void = "ext#"
@@ -273,6 +309,10 @@ c_set_c_state: {l1:agz}
     (ptr,
      ptr(l1)) -<fun,!wrt>
     void = "ext#"
+extern fn
+c_fatal_exceptions:
+    (ptr) -<fun0>
+    bool = "ext#"
 extern fn
 c_get_response:
     (ptr) -<fun0>
@@ -968,19 +1008,34 @@ callback_attach
     val api = $UNSAFE.castvwtp1{$CLOUDI.instance(s)}(state_c)
     val INSTANCE(@{state_p = state_p, ...}) = api
     val state = $UNSAFE.castvwtp1{$CLOUDI.stateptr(s)}(state_p)
+    (* exn does not provide a $raise location,
+     * so instead $mylocation is used below
+     * (assertloc is used instead of assertexn to avoid this problem)
+     *)
     val callback_result = try callback(request_type, name, pattern,
                                        request_info, request,
                                        timeout, priority, trans_id,
                                        source, state, api) with
       | ~$CLOUDI.Terminate() =>
         $CLOUDI.Null()
-      | ~$CLOUDI.FatalError() => let
-        val () = exit_errmsg_void(1, $mylocation)
-    in
-        $CLOUDI.Null()
-    end
       | e:exn => let
-        val () = fprintln!(stderr_ref, $mylocation)
+        val fatal_exception = case+ e of
+          | $CLOUDI.FatalError(_) => true
+          | AssertExn() => true
+          | IllegalArgExn(_) => true
+          | _ => c_fatal_exceptions(api_c)
+        val e_msg = case+ e of
+          | $CLOUDI.FatalError(e_msg) => e_msg
+          | IllegalArgExn(e_msg) => e_msg
+          | _ => ""
+        val () = if fatal_exception then
+            c_exit_errexnmsg2(1, $UNSAFE.castvwtp1{Ptr1}(e),
+                              string2ptr(e_msg),
+                              string2ptr($mylocation))
+        else
+            c_errexnmsg2($UNSAFE.castvwtp1{Ptr1}(e),
+                         string2ptr(e_msg),
+                         string2ptr($mylocation))
         prval () = __vfree_exn(e)
     in
         $CLOUDI.Null()

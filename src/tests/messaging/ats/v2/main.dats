@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2021-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -332,7 +332,7 @@ in
         val () = strptr_free(name_ptr)
         val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
     in
-        $raise $CLOUDI.FatalError
+        $raise $CLOUDI.FatalError($mylocation)
     end
 end
 
@@ -372,7 +372,7 @@ sequence1
       | ~$CLOUDI.Error(status) => let
         val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
     in
-        $raise $CLOUDI.FatalError
+        $raise $CLOUDI.FatalError($mylocation)
     end
     val () = wait(api)
     val () = println!("messaging sequence1 start ats2 (", request_str, ")")
@@ -473,7 +473,7 @@ sequence1
           | ~$CLOUDI.Error(status) => let
             val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
         in
-            $raise $CLOUDI.FatalError
+            $raise $CLOUDI.FatalError($mylocation)
         end
     end
     fn
@@ -497,7 +497,7 @@ sequence1
         val () = $CLOUDI.trans_id_free(trans_id_assert)
         val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
     in
-        $raise $CLOUDI.FatalError
+        $raise $CLOUDI.FatalError($mylocation)
     end
     val () = recv_async_wait(api, test1_id)
     val () = recv_async_assert(api, test1_id, "test1")
@@ -762,7 +762,7 @@ sequence2
                         val () = fprintln!(stderr_ref,
                                            "error ", status, ": ", $mylocation)
                     in
-                        $raise $CLOUDI.FatalError
+                        $raise $CLOUDI.FatalError($mylocation)
                     end
                     val p_ids_next = ptr0_succ<$CLOUDI.trans_id>(p_ids)
                     val p_e_check_next = ptr0_succ<int>(p_e_check)
@@ -816,7 +816,7 @@ sequence2
                     val () = fprintln!(stderr_ref,
                                        "error ", status, ": ", $mylocation)
                 in
-                    $raise $CLOUDI.FatalError
+                    $raise $CLOUDI.FatalError($mylocation)
                 end
             end
         end
@@ -824,7 +824,7 @@ sequence2
             val () = strptr_free(name_mcast_ptr)
             val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
         in
-            $raise $CLOUDI.FatalError
+            $raise $CLOUDI.FatalError($mylocation)
         end
     end
     val () = recv_asyncs_loop(api)
@@ -950,7 +950,7 @@ sequence3
       | ~$CLOUDI.Error(status) => let
         val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
     in
-        $raise $CLOUDI.FatalError
+        $raise $CLOUDI.FatalError($mylocation)
     end
     val name_send_sync_ptr = string0_append($CLOUDI.prefix_(api), "g1")
     val name_send_sync = $UNSAFE.strptr2string(name_send_sync_ptr)
@@ -968,7 +968,7 @@ sequence3
       | ~$CLOUDI.Error(status) => let
         val () = fprintln!(stderr_ref, "error ", status, ": ", $mylocation)
     in
-        $raise $CLOUDI.FatalError
+        $raise $CLOUDI.FatalError($mylocation)
     end
     val () = strptr_free(name_send_sync_ptr)
     val () = println!("messaging sequence3 end ats2 (", request_str, ")")

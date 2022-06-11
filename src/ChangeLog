@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-06-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix the fatal_exceptions service configuration option support in the
+      ATS CloudI API
+    * Changed the FatalError exception in the ATS CloudI API to accept a
+      string parameter that is typically $mylocation for providing the
+      $raise location
+    * Fixed stderr exception information provided by the ATS CloudI API
+    * Improve the C/C++ CloudI API unbuffered stdout/stderr use
+
 2022-06-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the fatal_exceptions service configuration option support to

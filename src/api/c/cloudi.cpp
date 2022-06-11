@@ -558,11 +558,11 @@ extern "C" {
 
 static void exit_handler()
 {
-    ::fflush(stdout);
-    ::fflush(stderr);
     std::cout.flush();
     std::cerr.flush();
     std::clog.flush();
+    ::fflush(stdout);
+    ::fflush(stderr);
 }
 
 static int poll_request(cloudi_instance_t * api,
@@ -632,9 +632,10 @@ int cloudi_initialize(cloudi_instance_t * api,
     ::atexit(&exit_handler);
     assert_initialize();
 
-    // unbuffered stdout (stderr is always unbuffered)
-    ::setbuf(stdout, NULL);
+    // unbuffered stdout/stderr
     std::cout.setf(std::ios::unitbuf);
+    ::setvbuf(stdout, NULL, _IONBF, 0);
+    ::setvbuf(stderr, NULL, _IONBF, 0);
 
     // attempt initialization
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(api->buffer_send);
