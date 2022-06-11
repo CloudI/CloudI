@@ -291,14 +291,14 @@ extern fn
 c_errexnmsg2: {l1,l2,l3:agz}
     (ptr(l1),
      ptr(l2),
-     ptr(l3)) -<fun,!exn>
+     ptr(l3)) -<fun0>
     void = "ext#"
 extern fn
 c_exit_errexnmsg2: {l1,l2,l3:agz}
     (int,
      ptr(l1),
      ptr(l2),
-     ptr(l3)) -<fun,!exn>
+     ptr(l3)) -<fun0>
     void = "ext#"
 extern fn
 c_threads_yield:
