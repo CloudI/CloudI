@@ -16,7 +16,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -37,8 +37,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2013-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_quorum).
@@ -230,7 +230,7 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                                                " ~p N=~p", [QuorumName, Count]),
                                     undefined;
                                 true ->
-                                    Count - cloudi_math:floor((Count - 1) / 3)
+                                    Count - floor((Count - 1) / 3)
                             end;
                         is_integer(Quorum) ->
                             if
@@ -242,8 +242,7 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                                     Quorum
                             end;
                         is_float(Quorum) ->
-                            erlang:min(Count,
-                                       cloudi_math:ceil(Quorum * Count))
+                            erlang:min(Count, ceil(Quorum * Count))
                     end,
                     if
                         CountRequired =:= undefined ->

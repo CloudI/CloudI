@@ -1465,8 +1465,7 @@ pids_change_loop([{increase, RateCurrent,
             % have: CountProcessMax < CountProcess
             CountProcess;
         CountProcessMax > CountProcess ->
-            erlang:min(cloudi_math:ceil((CountProcess * RateCurrent) /
-                                        RateMax),
+            erlang:min(ceil((CountProcess * RateCurrent) / RateMax),
                        CountProcessMax)
     end),
     pids_change_loop(ChangeList,
@@ -1487,8 +1486,7 @@ pids_change_loop([{decrease, RateCurrent,
             % have: CountProcessMin > CountProcess
             CountProcess;
         CountProcessMin < CountProcess ->
-            erlang:max(cloudi_math:floor((CountProcess * RateCurrent) /
-                                         RateMin),
+            erlang:max(floor((CountProcess * RateCurrent) / RateMin),
                        CountProcessMin)
     end),
     pids_change_loop(ChangeList,

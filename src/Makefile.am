@@ -274,10 +274,12 @@ dialyze: all \
 	@echo "No Errors or Warnings Found!"
 
 # -Wunknown isn't helpful due to the external dependencies not being present
+# -Wmissing_return XXX ADD ME
 dialyze-internal: all \
                   $(top_srcdir)/dialyzer.plt
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
               -Wunmatched_returns \
+              -Wextra_return \
               -Wunderspecs \
               -Werror_handling \
               -I lib/cloudi_core/include \

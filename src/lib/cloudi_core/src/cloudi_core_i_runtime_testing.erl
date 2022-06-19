@@ -179,8 +179,7 @@ monkey_latency_validate(Options) ->
 
 monkey_latency_init(system) ->
     Options = application:get_env(cloudi_core, monkey_latency, false),
-    true = (Options =/= system),
-    {ok, MonkeyLatency} = monkey_latency_validate(Options),
+    {ok, MonkeyLatency} = monkey_latency_validate(Options, #monkey_latency{}),
     MonkeyLatency;
 monkey_latency_init(#monkey_latency{} = MonkeyLatency) ->
     MonkeyLatency.

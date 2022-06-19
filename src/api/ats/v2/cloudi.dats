@@ -291,14 +291,14 @@ extern fn
 c_errexnmsg2: {l1,l2,l3:agz}
     (ptr(l1),
      ptr(l2),
-     ptr(l3)) -<fun,!ref>
+     ptr(l3)) -<fun,!exn,!ref>
     void = "ext#"
 extern fn
 c_exit_errexnmsg2: {l1,l2,l3:agz}
     (int,
      ptr(l1),
      ptr(l2),
-     ptr(l3)) -<fun,!ref>
+     ptr(l3)) -<fun,!exn,!ref>
     void = "ext#"
 extern fn
 c_threads_yield:
@@ -1027,6 +1027,7 @@ callback_attach
         val e_msg = case+ e of
           | $CLOUDI.FatalError(e_msg) => e_msg
           | IllegalArgExn(e_msg) => e_msg
+          | GenerallyExn(e_msg) => e_msg
           | _ => ""
         val () = if fatal_exception then
             c_exit_errexnmsg2(1, $UNSAFE.castvwtp1{Ptr1}(e),

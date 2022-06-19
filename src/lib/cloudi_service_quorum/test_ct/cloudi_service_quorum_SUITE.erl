@@ -322,7 +322,7 @@ services_add(I, L, Configuration) ->
     services_add(I - 1, [E | L], Configuration).
 
 result_expected(byzantine, CountProcess, Monkey, RequestInfo, Request) ->
-    QuorumProcesses = CountProcess - cloudi_math:floor((CountProcess - 1) / 3),
+    QuorumProcesses = CountProcess - floor((CountProcess - 1) / 3),
     case (QuorumProcesses =< count_process_successes(CountProcess, Monkey)) of
         true ->
             result_success(RequestInfo, Request);
@@ -340,8 +340,7 @@ result_expected(Quorum, CountProcess, Monkey, RequestInfo, Request)
     end;
 result_expected(Quorum, CountProcess, Monkey, RequestInfo, Request)
     when is_float(Quorum) ->
-    QuorumProcesses = erlang:min(CountProcess,
-                                 cloudi_math:ceil(Quorum * CountProcess)),
+    QuorumProcesses = erlang:min(CountProcess, ceil(Quorum * CountProcess)),
     case (QuorumProcesses =< count_process_successes(CountProcess, Monkey)) of
         true ->
             result_success(RequestInfo, Request);

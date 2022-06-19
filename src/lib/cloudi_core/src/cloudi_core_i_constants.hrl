@@ -135,6 +135,9 @@
 % maximum timeout value for blocking on a response in Erlang source code
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
+% Erlang float() type is double-precision floating-point
+-define(DBL_MAX, 1.7976931348623158e+308).
+
 % for gen_server:call/3 and similar functions that exit on timeout or noproc
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
@@ -178,10 +181,10 @@
         convert(?NANOSECONDS_IN_WEEK, nanosecond, native)).
 -define(NATIVE_TIME_IN_MONTH,
         cloudi_timestamp:
-        convert(cloudi_math:ceil(?NANOSECONDS_IN_MONTH), nanosecond, native)).
+        convert(ceil(?NANOSECONDS_IN_MONTH), nanosecond, native)).
 -define(NATIVE_TIME_IN_YEAR,
         cloudi_timestamp:
-        convert(cloudi_math:ceil(?NANOSECONDS_IN_YEAR), nanosecond, native)).
+        convert(ceil(?NANOSECONDS_IN_YEAR), nanosecond, native)).
 -define(AVAILABILITY_ZERO, "0 %").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

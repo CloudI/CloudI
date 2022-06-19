@@ -98,9 +98,11 @@ typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
    function effect tags (an effect system):
    !ntm - possibly non-terminating (divergent)
    !exn - may raise an exception (partial functions)
+          or terminate with a function tracked like an exception
+          (e.g., the libc functions exit and abort)
    !ref - write to memory not owned (no proof) or
           read from global memory that may change state during runtime
-          (includes file descriptors, not reentrant)
+          (includes file descriptors, stdin/stdout/stderr, not reentrant)
    !wrt - write (includes alloc/free) to memory owned (reentrant)
    fun0 - mathematical purity (no side-effects) during runtime
    fun1 - may have all possible side-effects (default)

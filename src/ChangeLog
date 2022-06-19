@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-06-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_send async == true usage so the service
+      initializes and terminates immediately
+    * Remove the cloudi_math cloudi_core module
+    * Add the cloudi_statistics cloudi_core module
+
 2022-06-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix the fatal_exceptions service configuration option support in the

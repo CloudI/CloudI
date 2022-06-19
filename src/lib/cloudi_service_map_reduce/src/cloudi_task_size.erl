@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2009-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_task_size).
@@ -131,7 +131,7 @@ get(Pid,
         {ok, #node{task_size = TaskSize}} ->
             TaskSizeInteger = if
                 is_float(TaskSize) ->
-                    cloudi_math:floor(TaskSize);
+                    floor(TaskSize);
                 is_integer(TaskSize) ->
                     TaskSize
             end,
@@ -236,7 +236,7 @@ put(Pid, TaskSize, ElapsedTime,
 
 task_size_clamp(TaskSize, TaskSizeMin, TaskSizeMax)
     when is_float(TaskSize) ->
-    TaskSizeInteger = cloudi_math:floor(TaskSize),
+    TaskSizeInteger = floor(TaskSize),
     if
         TaskSizeInteger < TaskSizeMin ->
             TaskSizeMin;

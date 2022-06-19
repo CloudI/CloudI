@@ -841,6 +841,12 @@
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
         [{nice, 15}]},
+    [{module, cloudi_service_send},
+     {args,
+      [{async, true},
+       {sends,
+        [{"/tests/echo/post", <<"cloudi_service_send's async echo">>}]}]},
+     {max_r, 0}],
     % unstable 50% chance (coin toss) echo in python
     {external,
         "/tests/coin/",
