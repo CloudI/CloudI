@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-06-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change cloudi_service_request_rate to use process 0
+      for processing results and add request latency log output
+
 2022-06-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_send async == true usage so the service
