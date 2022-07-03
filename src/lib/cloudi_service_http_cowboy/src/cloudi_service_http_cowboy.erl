@@ -53,7 +53,7 @@
 
 -define(DEFAULT_IP,                         {127,0,0,1}). % interface ip address
 -define(DEFAULT_PORT,                              8080).
--define(DEFAULT_REUSEPORT,                    undefined).
+-define(DEFAULT_REUSE_PORT,                   undefined).
         % If undefined, count_process > 1 will automatically attempt to
         % use SO_REUSEPORT or SO_REUSEPORT_LB (depending on the OS support).
         % If true or false, the socket option addition will be
@@ -230,7 +230,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {ip,                            ?DEFAULT_IP},
         {port,                          ?DEFAULT_PORT},
-        {reuseport,                     ?DEFAULT_REUSEPORT},
+        {reuse_port,                    ?DEFAULT_REUSE_PORT},
         {backlog,                       ?DEFAULT_BACKLOG},
         {nodelay,                       ?DEFAULT_NODELAY},
         {recv_timeout,                  ?DEFAULT_RECV_TIMEOUT},

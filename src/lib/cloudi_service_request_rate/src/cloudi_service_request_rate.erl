@@ -457,9 +457,9 @@ request_rate(#dynamic{count_stable_max = CountStableMax,
                        round(RequestRateCompleteMin * 10.0) / 10.0,
                        round(RequestRateCompleteMax * 10.0) / 10.0,
                        Name, seconds_to_string(Elapsed), RequestRate]),
-            {0, 0, 0, 0};
+            {0, 0.0, undefined, undefined};
         true ->
-            {0, 0, 0, 0}
+            {0, 0.0, undefined, undefined}
     end;
 request_rate(_RequestRate, RequestRateComplete,
              RequestRateCompleteCount, RequestRateCompleteAvg,
@@ -490,6 +490,27 @@ process_results_data([],
      RequestRateCompleteMinSum,
      RequestRateCompleteMaxSum,
      RequestLatency};
+process_results_data([{_ProcessIndex,
+                       RequestFail,
+                       0,
+                       0.0,
+                       undefined,
+                       undefined,
+                       RequestLatency} | Results],
+                     RequestFailSum,
+                     _ResultsStable,
+                     RequestRateCompleteAvgSum,
+                     RequestRateCompleteMinSum,
+                     RequestRateCompleteMaxSum,
+                     RequestLatencyOld) ->
+    process_results_data(Results,
+                         RequestFailSum + RequestFail,
+                         false,
+                         RequestRateCompleteAvgSum,
+                         RequestRateCompleteMinSum,
+                         RequestRateCompleteMaxSum,
+                         cloudi_statistics:merge(RequestLatency,
+                                                 RequestLatencyOld));
 process_results_data([{_ProcessIndex,
                        RequestFail,
                        RequestRateCompleteCount,
