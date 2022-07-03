@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2012-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -167,15 +167,15 @@ websocket_init(#cowboy_state{
     if
         SubscribeWebSocket =:= true ->
             % initiate an asynchronous close if the websocket must be unique
-            OldConnectionMonitors = if
+            ConnectionMonitorsOld = if
                 WebSocketNameUnique =:= true ->
                     case cloudi_x_cpg:get_members(Scope, NameWebSocket,
                                                   infinity) of
-                        {ok, _, OldConnections} ->
-                            lists:map(fun(OldConnection) ->
-                                cloudi_service_http_cowboy:close(OldConnection),
-                                erlang:monitor(process, OldConnection)
-                            end, OldConnections);
+                        {ok, _, ConnectionsOld} ->
+                            lists:map(fun(ConnectionOld) ->
+                                cloudi_service_http_cowboy:close(ConnectionOld),
+                                erlang:monitor(process, ConnectionOld)
+                            end, ConnectionsOld);
                         {error, _} ->
                             []
                     end;
@@ -188,12 +188,12 @@ websocket_init(#cowboy_state{
             % block on the websocket close if the connection must be unique
             if
                 WebSocketNameUnique =:= true ->
-                    lists:foreach(fun(OldConnectionMonitor) ->
+                    lists:foreach(fun(ConnectionMonitorOld) ->
                         receive
-                            {'DOWN', OldConnectionMonitor, process, _, _} ->
+                            {'DOWN', ConnectionMonitorOld, process, _, _} ->
                                 ok
                         end
-                    end, OldConnectionMonitors);
+                    end, ConnectionMonitorsOld);
                 WebSocketNameUnique =:= false ->
                     ok
             end,
@@ -432,10 +432,10 @@ websocket_info({Type, Name, Pattern, RequestInfo, RequestProtocol,
          Timeout, Priority, TransId, Source},
     ResponseTimer = erlang:send_after(Timeout, self(),
                                       {response_timeout, ID}),
-    NewResponseLookup = maps:put(ID, {T, ResponseTimer}, ResponseLookup),
+    ResponseLookupNew = maps:put(ID, {T, ResponseTimer}, ResponseLookup),
     StateNew = State#cowboy_state{
         websocket_state = WebSocketState#websocket_state{
-            response_lookup = NewResponseLookup}},
+            response_lookup = ResponseLookupNew}},
     case websocket_terminate_check(RequestInfo) of
         true when Request == <<>> ->
             {[close], StateNew};
@@ -502,12 +502,12 @@ websocket_info({'cloudi_service_recv_timeout', Priority, TransId},
                                  } = WebSocketState
                              } = State) ->
     F = fun({_, {_, _, _, _, _, _, _, Id, _}}) -> Id == TransId end,
-    {_, NewQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
+    {_, QueueNew} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
     {[],
      State#cowboy_state{
          websocket_state = WebSocketState#websocket_state{
              recv_timeouts = maps:remove(TransId, RecvTimeouts),
-             queued = NewQueue}
+             queued = QueueNew}
          }};
 
 websocket_info({'cloudi_service_return_async',
@@ -759,8 +759,8 @@ websocket_time_end_error(NameIncoming, NameOutgoing,
                (cloudi_timestamp:microseconds_monotonic() -
                 RequestStartMicroSec) / 1000.0, Reason]).
 
-websocket_request_end(Name, NewTimeout, OldTimeout) ->
-    ?LOG_TRACE("~s ~p ms", [Name, OldTimeout - NewTimeout]).
+websocket_request_end(Name, TimeoutNew, TimeoutOld) ->
+    ?LOG_TRACE("~s ~p ms", [Name, TimeoutOld - TimeoutNew]).
 
 handle(Req0,
        #cowboy_state{
@@ -1073,8 +1073,8 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers0, HeadersPart,
             {HeadersPartNext,
              ReqN} = case cloudi_x_cowboy_req:read_part(Req1,
                                                         PartHeaderOpts) of
-                {ok, HeadersPartNextValue, Req2} ->
-                    {HeadersPartNextValue, Req2};
+                {ok, HeadersPartValueNext, Req2} ->
+                    {HeadersPartValueNext, Req2};
                 {done, Req2} ->
                     {undefined, Req2}
             end,
@@ -1494,7 +1494,7 @@ websocket_handle_incoming_request(Dispatcher, NameOutgoing,
 
 websocket_handle_outgoing_response({SendType,
                                     Name, Pattern, _, _,
-                                    OldTimeout, _, TransId, Source},
+                                    TimeoutOld, _, TransId, Source},
                                    ResponseTimer,
                                    ResponseInfo, Response) ->
     Timeout = case erlang:cancel_timer(ResponseTimer) of
@@ -1513,7 +1513,7 @@ websocket_handle_outgoing_response({SendType,
               Name, Pattern, ResponseInfo, Response,
               Timeout, TransId, Source},
     ?LOG_TRACE_APPLY(fun websocket_request_end/3,
-                     [Name, Timeout, OldTimeout]).
+                     [Name, Timeout, TimeoutOld]).
 
 websocket_process_queue(#cowboy_state{websocket_state =
                             #websocket_state{
@@ -1521,12 +1521,12 @@ websocket_process_queue(#cowboy_state{websocket_state =
                                 recv_timeouts = RecvTimeouts,
                                 queued = Queue} = WebSocketState} = State) ->
     case cloudi_x_pqueue4:out(Queue) of
-        {empty, NewQueue} ->
+        {empty, QueueNew} ->
             {[],
              State#cowboy_state{websocket_state =
-                 WebSocketState#websocket_state{queued = NewQueue}}};
+                 WebSocketState#websocket_state{queued = QueueNew}}};
         {{value, {Type, Name, Pattern, RequestInfo, Request,
-                  _, Priority, TransId, Pid}}, NewQueue} ->
+                  _, Priority, TransId, Pid}}, QueueNew} ->
             Timeout = case erlang:cancel_timer(maps:get(TransId,
                                                         RecvTimeouts)) of
                 false ->
@@ -1540,6 +1540,6 @@ websocket_process_queue(#cowboy_state{websocket_state =
                                WebSocketState#websocket_state{
                                    recv_timeouts = maps:remove(TransId,
                                                                RecvTimeouts),
-                                   queued = NewQueue}})
+                                   queued = QueueNew}})
     end.
 

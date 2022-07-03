@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-07-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the reuse_port argument to the cloudi_service_http_cowboy with
+      the default allowing the use of count_process > 1
+    * Improve the cloudi_service_request_rate log output
+
 2022-06-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change cloudi_service_request_rate to use process 0

@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2012-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -53,6 +53,11 @@
 
 -define(DEFAULT_IP,                         {127,0,0,1}). % interface ip address
 -define(DEFAULT_PORT,                              8080).
+-define(DEFAULT_REUSEPORT,                    undefined).
+        % If undefined, count_process > 1 will automatically attempt to
+        % use SO_REUSEPORT or SO_REUSEPORT_LB (depending on the OS support).
+        % If true or false, the socket option addition will be
+        % separate from the count_process value.
 -define(DEFAULT_BACKLOG,                            128).
 -define(DEFAULT_NODELAY,                           true).
 -define(DEFAULT_RECV_TIMEOUT,                     60000). % milliseconds
@@ -225,6 +230,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {ip,                            ?DEFAULT_IP},
         {port,                          ?DEFAULT_PORT},
+        {reuseport,                     ?DEFAULT_REUSEPORT},
         {backlog,                       ?DEFAULT_BACKLOG},
         {nodelay,                       ?DEFAULT_NODELAY},
         {recv_timeout,                  ?DEFAULT_RECV_TIMEOUT},
@@ -273,7 +279,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_x_method_override,         ?DEFAULT_USE_X_METHOD_OVERRIDE},
         {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX},
         {update_delay,                  ?DEFAULT_UPDATE_DELAY}],
-    [Interface, Port, Backlog, NoDelay, RecvTimeout,
+    [Interface, Port, ReusePort0, Backlog, NoDelay, RecvTimeout,
      BodyTimeout, BodyLengthRead, MultipartHeaderTimeout,
      MultipartHeaderLengthRead,
      MultipartBodyTimeout, MultipartBodyLengthRead,
@@ -292,8 +298,26 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix,
      UpdateDelaySeconds] =
         cloudi_proplists:take_values(Defaults, Args),
-    1 = cloudi_service:process_count_max(Dispatcher),
+    OSType = os:type(),
+    CountProcess = cloudi_service:process_count(Dispatcher),
+    CountProcess = cloudi_service:process_count_max(Dispatcher),
+    CountProcess = cloudi_service:process_count_min(Dispatcher),
     true = is_integer(Port),
+    ReusePortN = if
+        ReusePort0 =:= undefined ->
+            CountProcess > 1;
+        is_boolean(ReusePort0) ->
+            ReusePort0
+    end,
+    ReusePortOptL = if
+        ReusePortN =:= true ->
+            ReusePortOpt = socket_option_reuseport(OSType),
+            {raw, _, _, _} = ReusePortOpt,
+            [ReusePortOpt,
+             {reuseaddr, true}];
+        ReusePortN =:= false ->
+            []
+    end,
     true = is_integer(Backlog),
     true = is_boolean(NoDelay),
     true = is_integer(RecvTimeout) andalso (RecvTimeout > 0),
@@ -492,19 +516,20 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                               password,
                                               verify], SSLOpts),
             Environment = cloudi_environment:lookup(),
-            NewSSLOpts = environment_transform_ssl_options(SSLOpts,
+            SSLOptsNew = environment_transform_ssl_options(SSLOpts,
                                                            Environment),
             cloudi_x_cowboy:start_tls(
                 Service, % Ref
                 #{
                     % Transport options
-                    socket_opts => [
+                    socket_opts => ReusePortOptL ++ [
                         {ip, Interface},
                         {port, Port},
                         {backlog, Backlog},
                         {nodelay, NoDelay},
-                        {certfile, CertFile}
-                    ] ++ NewSSLOpts,
+                        {certfile, CertFile} |
+                        SSLOptsNew
+                    ],
                     max_connections => MaxConnections,
                     connection_type => supervisor,
                     num_acceptors => 10
@@ -527,7 +552,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 Service, % Ref
                 #{
                     % Transport options
-                    socket_opts => [
+                    socket_opts => ReusePortOptL ++ [
                         {ip, Interface},
                         {port, Port},
                         {backlog, Backlog},
@@ -568,22 +593,22 @@ cloudi_service_handle_info({update, UpdateDelaySeconds},
     ContextOptions = cloudi_service:context_options(Dispatcher),
     {_, TimeoutAsyncCurrent} = lists:keyfind(timeout_async, 1, ContextOptions),
     {_, TimeoutSyncCurrent} = lists:keyfind(timeout_sync, 1, ContextOptions),
-    NewHandlerState = if
+    HandlerStateNew = if
         TimeoutAsync == TimeoutAsyncCurrent,
         TimeoutSync == TimeoutSyncCurrent ->
             HandlerState;
         true ->
-            NextHandlerState = HandlerState#cowboy_state{
+            HandlerStateNext = HandlerState#cowboy_state{
                 timeout_async = TimeoutAsyncCurrent,
                 timeout_sync = TimeoutSyncCurrent},
             ok = cloudi_x_cowboy:set_env(Service,
                                          dispatch,
-                                         cowboy_dispatch(NextHandlerState)),
-            NextHandlerState
+                                         cowboy_dispatch(HandlerStateNext)),
+            HandlerStateNext
     end,
     erlang:send_after(UpdateDelaySeconds * 1000, Service,
                       {update, UpdateDelaySeconds}),
-    {noreply, State#state{handler_state = NewHandlerState}};
+    {noreply, State#state{handler_state = HandlerStateNew}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
@@ -619,12 +644,12 @@ websocket_subscriptions_lookup([{PatternSuffix, L} |
             F = fun(Parameters) ->
                 cloudi_service_name:new(Name, Parameters)
             end,
-            NewLookup = cloudi_x_trie:update(Prefix ++ PatternSuffix,
+            LookupNew = cloudi_x_trie:update(Prefix ++ PatternSuffix,
                                              fun(Functions) ->
                                                  [F | Functions]
                                              end, [F], Lookup),
             websocket_subscriptions_lookup(WebSocketSubscriptions,
-                                           NewLookup, Prefix);
+                                           LookupNew, Prefix);
         [_ | _] ->
             [ParametersAllowed,
              ParametersStrictMatching,
@@ -663,12 +688,12 @@ websocket_subscriptions_lookup([{PatternSuffix, L} |
                         end
                     end
             end,
-            NewLookup = cloudi_x_trie:update(Prefix ++ PatternSuffix,
+            LookupNew = cloudi_x_trie:update(Prefix ++ PatternSuffix,
                                              fun(Functions) ->
                                                  [F | Functions]
                                              end, [F], Lookup),
             websocket_subscriptions_lookup(WebSocketSubscriptions,
-                                           NewLookup, Prefix)
+                                           LookupNew, Prefix)
     end.
 
 websocket_subscriptions_lookup(WebSocketSubscriptions, Prefix) ->
@@ -683,8 +708,8 @@ environment_transform_ssl_options([], Output, _) ->
 environment_transform_ssl_options([{K, FilePath} | SSLOpts],
                                   Output, Environment)
     when K =:= certfile; K =:= cacertfile; K =:= keyfile ->
-    NewFilePath = cloudi_environment:transform(FilePath, Environment),
-    environment_transform_ssl_options(SSLOpts, [{K, NewFilePath} | Output],
+    FilePathNew = cloudi_environment:transform(FilePath, Environment),
+    environment_transform_ssl_options(SSLOpts, [{K, FilePathNew} | Output],
                                       Environment);
 environment_transform_ssl_options([E | SSLOpts], Output, Environment) ->
     environment_transform_ssl_options(SSLOpts, [E | Output], Environment).
@@ -701,7 +726,7 @@ content_types_accepted_pattern([H | ContentTypesAccepted], L) ->
         is_binary(H) ->
             H
     end,
-    NewL = case binary:split(ContentType, <<"/">>) of
+    LNew = case binary:split(ContentType, <<"/">>) of
         [<<"*">>, <<"*">>] ->
             lists:umerge(L, [ContentType]);
         [_, <<"*">>] ->
@@ -709,5 +734,17 @@ content_types_accepted_pattern([H | ContentTypesAccepted], L) ->
         [Type, _] ->
             lists:umerge(L, [<<Type/binary,<<"/*">>/binary>>, ContentType])
     end,
-    content_types_accepted_pattern(ContentTypesAccepted, NewL).
+    content_types_accepted_pattern(ContentTypesAccepted, LNew).
 
+socket_option_reuseport({unix, linux}) ->
+    % SO_REUSEPORT requires Linux 3.9
+    {raw, 1, 15, <<1:32/unsigned-integer-native>>};
+socket_option_reuseport({unix, freebsd}) ->
+    % SO_REUSEPORT_LB requires FreeBSD 12.0 or higher
+    {raw, 16#ffff, 16#00010000, <<1:32/unsigned-integer-native>>};
+socket_option_reuseport({unix, BSD})
+    when BSD =:= openbsd; BSD =:= netbsd; BSD =:= darwin ->
+    % will likely only use process 0
+    {raw, 16#ffff, 16#00000200, <<1:32/unsigned-integer-native>>};
+socket_option_reuseport(_) ->
+    undefined.
