@@ -457,9 +457,9 @@ request_rate(#dynamic{count_stable_max = CountStableMax,
                        round(RequestRateCompleteMin * 10.0) / 10.0,
                        round(RequestRateCompleteMax * 10.0) / 10.0,
                        Name, seconds_to_string(Elapsed), RequestRate]),
-            {0, 0, undefined, undefined};
+            {0, 0, 0, 0};
         true ->
-            {0, 0, undefined, undefined}
+            {0, 0, 0, 0}
     end;
 request_rate(_RequestRate, RequestRateComplete,
              RequestRateCompleteCount, RequestRateCompleteAvg,
@@ -518,8 +518,7 @@ process_results(ResultsCount, Results, ResultsCount) ->
      RequestRateCompleteMinSum,
      RequestRateCompleteMaxSum,
      RequestLatency} = process_results_data(Results,
-                                            0, true, 0.0,
-                                            undefined, undefined,
+                                            0, true, 0.0, 0.0, 0.0,
                                             cloudi_statistics:new()),
     if
         ResultsStable =:= true ->
@@ -602,11 +601,6 @@ seconds_to_string(Seconds)
 seconds_to_string(Seconds) ->
     io_lib:format("~.1f seconds", [erlang:round(Seconds * 10.0) / 10.0]).
 
-float_max(undefined, undefined) ->
-    undefined;
-float_max(undefined, Right)
-    when is_float(Right) ->
-    Right;
 float_max(Left, undefined)
     when is_float(Left) ->
     Left;
@@ -619,11 +613,6 @@ float_max(Left, Right)
             Right
     end.
 
-float_min(undefined, undefined) ->
-    undefined;
-float_min(undefined, Right)
-    when is_float(Right) ->
-    Right;
 float_min(Left, undefined)
     when is_float(Left) ->
     Left;
