@@ -96,7 +96,7 @@
         results = [] :: list(),
         request_rate :: pos_integer() | #dynamic{},
         request_rate_count = 0 :: non_neg_integer(),
-        request_rate_avg = undefined :: float() | undefined,
+        request_rate_avg = 0.0 :: float(),
         request_rate_min = undefined :: float() | undefined,
         request_rate_max = undefined :: float() | undefined,
         request_success = 0 :: non_neg_integer(),
@@ -538,31 +538,49 @@ process_results(ResultsCount, Results, ResultsCount) ->
      RequestRateCompleteAvgSum,
      RequestRateCompleteMinSum,
      RequestRateCompleteMaxSum,
-     RequestLatency} = process_results_data(Results,
-                                            0, true, 0.0, 0.0, 0.0,
-                                            cloudi_statistics:new()),
+     RequestLatency0} = process_results_data(Results,
+                                             0, true, 0.0, 0.0, 0.0,
+                                             cloudi_statistics:new()),
     if
         ResultsStable =:= true ->
-            StdDev = cloudi_statistics:standard_deviation(RequestLatency),
-            Skewness = cloudi_statistics:skewness(RequestLatency),
-            Kurtosis = cloudi_statistics:kurtosis(RequestLatency),
+            {StdDev,
+             RequestLatency1} = cloudi_statistics:
+                                standard_deviation(RequestLatency0),
+            {Skewness,
+             RequestLatency2} = cloudi_statistics:
+                                skewness(RequestLatency1),
+            {DescribeSkewness,
+             RequestLatency3} = cloudi_statistics:
+                                describe_skewness(RequestLatency2),
+            {Kurtosis,
+             RequestLatency4} = cloudi_statistics:
+                                kurtosis(RequestLatency3),
+            {DescribeKurtosis,
+             RequestLatency5} = cloudi_statistics:
+                                describe_kurtosis(RequestLatency4),
+            {DescribeDistribution,
+             RequestLatencyN} = cloudi_statistics:
+                                describe_distribution(RequestLatency5),
             ?LOG_INFO("stable at ~.1f [~.1f .. ~.1f] requests/second~n"
-                      "  request latency:~n"
+                      "  request latency (distribution ~s):~n"
                       "    minimum  ~9.b us~n"
                       "    maximum  ~9.b us~n"
                       "    mean     ~9.b us~n"
                       "    stddev   ~12.2f~n"
-                      "    skewness ~12.2f~n"
-                      "    kurtosis ~12.2f",
+                      "    skewness ~12.2f (~s)~n"
+                      "    kurtosis ~12.2f (~s)",
                       [round(RequestRateCompleteAvgSum * 10.0) / 10.0,
                        round(RequestRateCompleteMinSum * 10.0) / 10.0,
                        round(RequestRateCompleteMaxSum * 10.0) / 10.0,
-                       round(cloudi_statistics:minimum(RequestLatency)),
-                       round(cloudi_statistics:maximum(RequestLatency)),
-                       round(cloudi_statistics:mean(RequestLatency)),
+                       DescribeDistribution,
+                       round(cloudi_statistics:minimum(RequestLatencyN)),
+                       round(cloudi_statistics:maximum(RequestLatencyN)),
+                       round(cloudi_statistics:mean(RequestLatencyN)),
                        round(StdDev * 100.0) / 100.0,
                        round(Skewness * 100.0) / 100.0,
-                       round(Kurtosis * 100.0) / 100.0]);
+                       DescribeSkewness,
+                       round(Kurtosis * 100.0) / 100.0,
+                       DescribeKurtosis]);
         ResultsStable =:= false ->
             ok
     end,
