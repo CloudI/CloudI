@@ -327,9 +327,10 @@ t_batch_4(_Config) ->
                                                         ?SERVICE_PREFIX,
                                                         ?QUEUE0,
                                                         Configs0),
-    {ok, Received0} = receive_messages(12), % 2 processes with 5 restarts
-    true = Received0 == [987453, 987453, 987453, 987453, 987453, 987453,
-                         987453, 987453, 987453, 987453, 987453, 987453],
+    {ok, Received0} = receive_messages(7), % 2 processes with 5 total restarts
+    % due to restart_all == false
+    true = Received0 == [987453, 987453,
+                         987453, 987453, 987453, 987453, 987453],
     nothing = receive Something -> Something after 1000 -> nothing end,
     ok.
 

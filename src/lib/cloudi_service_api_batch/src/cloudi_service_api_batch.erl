@@ -104,7 +104,9 @@
         terminate = false
             :: boolean(),
         terminate_timer = undefined
-            :: undefined | reference()
+            :: undefined | reference(),
+        terminate_purge = false
+            :: boolean()
     }).
 
 -record(state,
@@ -350,13 +352,13 @@ cloudi_service_handle_info({aspects_terminate_before,
                             QueueName, Reason, TimeoutTerminate},
                            State, _Dispatcher) ->
     {noreply, running_terminate(QueueName, Reason, TimeoutTerminate, State)};
-cloudi_service_handle_info({terminate, QueueName, Reason, Timeout},
+cloudi_service_handle_info({terminate, QueueName, Timeout},
                            State, _Dispatcher) ->
-    {noreply, running_stopping(QueueName, Reason, Timeout, State)};
-cloudi_service_handle_info({terminated, QueueName, Reason},
-                           State, _Dispatcher) ->
-    QueuePurge = batch_queue_purge(Reason, State),
-    case running_stopped(QueuePurge, QueueName, State) of
+    {noreply, running_stopping(QueueName, Timeout, State)};
+cloudi_service_handle_info({terminated, QueueName},
+                           #state{queues = Queues} = State, _Dispatcher) ->
+    Queue = cloudi_x_trie:fetch(QueueName, Queues),
+    case running_stopped(Queue, QueueName, State) of
         #state{stop_when_done = true,
                queue_count = 0} = StateNew ->
             {stop, shutdown, StateNew};
@@ -484,7 +486,7 @@ batch_queue_resume_list([QueueName | QueueNameList],
                         true ->
                             State;
                         false ->
-                            batch_queue_run_old(QueueName, Queue, State)
+                            batch_queue_run_old(Queue, QueueName, State)
                     end;
                 Suspended =:= false ->
                     State
@@ -673,32 +675,52 @@ running_init(QueueName, TimeoutInit,
 
 running_terminate(QueueName, Reason, TimeoutTerminate,
                   #state{service = Service,
+                         purge_on_error = PurgeOnError,
                          queues = Queues} = State) ->
+    TerminatePurge = if
+        PurgeOnError =:= true ->
+            case Reason of
+                {shutdown, _} ->
+                    false;
+                shutdown ->
+                    false;
+                _ ->
+                    true
+            end;
+        PurgeOnError =:= false ->
+            false
+    end,
     case cloudi_x_trie:find(QueueName, Queues) of
-        {ok, #queue{terminate = true}} ->
-            State;
+        {ok, #queue{terminate = true,
+                    terminate_purge = TerminatePurgeOld} = Queue} ->
+            TerminatePurgeNew = TerminatePurge or TerminatePurgeOld,
+            QueueNew = Queue#queue{terminate_purge = TerminatePurgeNew},
+            State#state{queues = cloudi_x_trie:store(QueueName,
+                                                     QueueNew, Queues)};
         {ok, #queue{timeout_init = TimeoutInit,
-                    terminate = false} = Queue} ->
+                    terminate = false,
+                    terminate_purge = TerminatePurgeOld} = Queue} ->
             Timeout = TimeoutTerminate + TimeoutInit + ?TIMEOUT_DELTA,
             TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
             TerminateTimer = if
                 TimeoutNew > 0 ->
                     erlang:send_after(?TERMINATE_INTERVAL, Service,
-                                      {terminate, QueueName, Reason,
-                                       TimeoutNew});
+                                      {terminate, QueueName, TimeoutNew});
                 true ->
                     erlang:send_after(Timeout, Service,
-                                      {terminated, QueueName, Reason})
+                                      {terminated, QueueName})
             end,
+            TerminatePurgeNew = TerminatePurge or TerminatePurgeOld,
             QueueNew = Queue#queue{terminate = true,
-                                   terminate_timer = TerminateTimer},
+                                   terminate_timer = TerminateTimer,
+                                   terminate_purge = TerminatePurgeNew},
             State#state{queues = cloudi_x_trie:store(QueueName,
                                                      QueueNew, Queues)};
         error ->
             State
     end.
 
-running_stopping(QueueName, Reason, Timeout,
+running_stopping(QueueName, Timeout,
                  #state{service = Service,
                         queues = Queues} = State) ->
     Queue = cloudi_x_trie:fetch(QueueName, Queues),
@@ -718,22 +740,18 @@ running_stopping(QueueName, Reason, Timeout,
     end,
     if
         Running =:= false ->
-            QueuePurge = batch_queue_purge(Reason, State),
-            QueueNew = Queue#queue{terminate = true,
-                                   terminate_timer = undefined},
-            QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
-            running_stopped(QueuePurge, QueueName,
-                            State#state{queues = QueuesNew});
+            running_stopped(Queue#queue{terminate = true,
+                                        terminate_timer = undefined},
+                            QueueName, State);
         Terminate =:= true ->
             TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
             TerminateTimer = if
                 TimeoutNew > 0 ->
                     erlang:send_after(?TERMINATE_INTERVAL, Service,
-                                      {terminate, QueueName, Reason,
-                                       TimeoutNew});
+                                      {terminate, QueueName, TimeoutNew});
                 true ->
                     erlang:send_after(Timeout, Service,
-                                      {terminated, QueueName, Reason})
+                                      {terminated, QueueName})
             end,
             QueueNew = Queue#queue{terminate_timer = TerminateTimer},
             State#state{queues = cloudi_x_trie:store(QueueName,
@@ -743,25 +761,19 @@ running_stopping(QueueName, Reason, Timeout,
             State
     end.
 
-running_stopped(true, QueueName,
+running_stopped(#queue{terminate = false} = Queue, QueueName,
                 #state{queues = Queues} = State) ->
-    #queue{terminate = Terminate} = cloudi_x_trie:fetch(QueueName, Queues),
+    % terminate_timer was cancelled after the message was queued
+    State#state{queues = cloudi_x_trie:store(QueueName, Queue, Queues)};
+running_stopped(#queue{terminate_purge = true}, QueueName, State) ->
+    batch_queue_erase(QueueName, State);
+running_stopped(#queue{count = Count,
+                       terminate_purge = false} = Queue, QueueName,
+                #state{queues = Queues} = State) ->
     if
-        Terminate =:= true ->
+        Count == 0 ->
             batch_queue_erase(QueueName, State);
-        Terminate =:= false ->
-            % terminate_timer was cancelled after the message was queued
-            State
-    end;
-running_stopped(false, QueueName,
-                #state{queues = Queues} = State) ->
-    case cloudi_x_trie:fetch(QueueName, Queues) of
-        #queue{terminate = false} ->
-            % terminate_timer was cancelled after the message was queued
-            State;
-        #queue{count = 0} ->
-            batch_queue_erase(QueueName, State);
-        #queue{} = Queue ->
+        true ->
             case batch_queue_suspended(QueueName, State) of
                 true ->
                     QueueNew = Queue#queue{service_id = undefined,
@@ -770,21 +782,9 @@ running_stopped(false, QueueName,
                                                     QueueNew, Queues),
                     State#state{queues = QueuesNew};
                 false ->
-                    batch_queue_run_old(QueueName, Queue, State)
+                    batch_queue_run_old(Queue, QueueName, State)
             end
     end.
-
-batch_queue_purge(Reason, #state{purge_on_error = true}) ->
-    case Reason of
-        {shutdown, _} ->
-            false;
-        shutdown ->
-            false;
-        _ ->
-            true
-    end;
-batch_queue_purge(_, #state{purge_on_error = false}) ->
-    false.
 
 batch_queue_run_new(QueueName, [Config | ConfigsTail],
                     #state{service = Service,
@@ -805,10 +805,9 @@ batch_queue_run_new(QueueName, [Config | ConfigsTail],
             {{error, purged}, State}
     end.
 
-batch_queue_run_old(QueueName,
-                    #queue{count = Count,
+batch_queue_run_old(#queue{count = Count,
                            service_id = ServiceId,
-                           suspended = true} = Queue,
+                           suspended = true} = Queue, QueueName,
                     #state{queues = Queues} = State)
     when is_binary(ServiceId) ->
     case cloudi_service_api:services_resume([ServiceId], infinity) of
@@ -821,14 +820,12 @@ batch_queue_run_old(QueueName,
                 Count == 0 ->
                     batch_queue_erase(QueueName, State);
                 Count > 0 ->
-                    batch_queue_run_old(QueueName,
-                                        Queue#queue{service_id = undefined},
-                                        State)
+                    batch_queue_run_old(Queue#queue{service_id = undefined},
+                                        QueueName, State)
             end
     end;
-batch_queue_run_old(QueueName,
-                    #queue{count = Count,
-                           data = Data} = Queue,
+batch_queue_run_old(#queue{count = Count,
+                           data = Data} = Queue, QueueName,
                     #state{service = Service,
                            queues = Queues} = State) ->
     {{value, Config}, DataNew} = queue:out(Data),

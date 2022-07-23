@@ -8,6 +8,12 @@
       restart_all is false (the default)
         * Fixes the CloudI Service API services_status
           uptime_restarts value
+        * Ensures the max_r service configuration value is enforced
+          as the maximum number of restarts for all processes
+    * Improve cloudi_service_api_batch processing when the argument
+      purge_on_error is true (the default) and a service
+      with count_process > 1 terminates with an error
+      (any restart of any process due to an error will now cause a purge)
     * Fix cloudi_service_router parameter substitution errors
       due to a current mismatch between the trie:find_match2/2 functionality
       and the trie:pattern2_parse/2 functionality
