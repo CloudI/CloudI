@@ -408,6 +408,8 @@ destination_pick(#destination_forward{length = Length,
 
 name_parameters(Name, [], _) ->
     {ok, Name};
+name_parameters(_, error, _) ->
+    {error, parameters_invalid};
 name_parameters(_, [_ | _],
                 #destination_forward{parameters_allowed = false}) ->
     {error, parameters_not_allowed};

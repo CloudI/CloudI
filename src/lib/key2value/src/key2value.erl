@@ -34,8 +34,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2020 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2011-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(key2value).
@@ -55,6 +55,8 @@
          is_key2/2,
          new/0,
          new/1,
+         map1/3,
+         map2/3,
          size1/1,
          size2/1,
          store/4,
@@ -88,6 +90,12 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Erase a single value.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec erase(K1 :: key1(),
             K2 :: key2(),
@@ -137,6 +145,12 @@ erase(K1, K2,
             State
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Erase all values with key1.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec erase1(K :: key1(),
              State :: key2value(key1(), key2(), value())) ->
     key2value(key1(), key2(), value()).
@@ -152,6 +166,12 @@ erase1(K,
         error ->
             State
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Erase all values with key2.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec erase2(K :: key2(),
              State :: key2value(key1(), key2(), value())) ->
@@ -169,6 +189,12 @@ erase2(K,
             State
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fetch a value with key1.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec fetch1(K :: key1(),
              key2value(key1(), key2(), value())) ->
     {list(), any()}.
@@ -178,6 +204,12 @@ fetch1(K,
                   lookup1 = Lookup1}) ->
     module_fetch(Module, K, Lookup1).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fetch a value with key2.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec fetch2(K :: key2(),
              key2value(key1(), key2(), value())) ->
     {list(), any()}.
@@ -186,6 +218,12 @@ fetch2(K,
        #key2value{module = Module,
                   lookup2 = Lookup2}) ->
     module_fetch(Module, K, Lookup2).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find a value with key1.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec find1(K :: key1(),
             State :: key2value(key1(), key2(), value())) ->
@@ -197,6 +235,12 @@ find1(K,
                  lookup1 = Lookup1}) ->
     module_find(Module, K, Lookup1).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find a value with key2.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec find2(K :: key2(),
             State :: key2value(key1(), key2(), value())) ->
     {ok, {list(), any()}} |
@@ -206,6 +250,12 @@ find2(K,
       #key2value{module = Module,
                  lookup2 = Lookup2}) ->
     module_find(Module, K, Lookup2).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold over all values based on key1.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec fold1(F :: fun((key1(), list(key2()), value(), any()) -> any()),
             A0 :: any(),
@@ -220,6 +270,12 @@ fold1(F, A0,
         F(K1, L1, V1, AN)
     end, A0, Lookup1).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold over all values based on key2.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec fold2(F :: fun((list(key1()), key2(), value(), any()) -> any()),
             A0 :: any(),
             State :: key2value(key1(), key2(), value())) ->
@@ -233,6 +289,12 @@ fold2(F, A0,
         F(L2, K2, V2, AN)
     end, A0, Lookup2).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if key1 has at least one value.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec is_key1(K :: key1(),
               key2value(key1(), key2(), value())) ->
     boolean().
@@ -241,6 +303,12 @@ is_key1(K,
         #key2value{module = Module,
                    lookup1 = Lookup1}) ->
     module_is_key(Module, K, Lookup1).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if key2 has at least one value.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec is_key2(K :: key2(),
               key2value(key1(), key2(), value())) ->
@@ -251,6 +319,72 @@ is_key2(K,
                    lookup2 = Lookup2}) ->
     module_is_key(Module, K, Lookup2).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Map over all key1 values that exist.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec map1(K1 :: key1(),
+           F :: fun((value()) -> value()),
+           key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
+
+map1(K1, F,
+     #key2value{module = Module,
+                lookup1 = Lookup1,
+                lookup2 = Lookup2} = State)
+    when is_function(F, 1) ->
+    case module_find(Module, K1, Lookup1) of
+        {ok, {K2L, _}} ->
+            FN = fun({L, V}) ->
+                {L, F(V)}
+            end,
+            Lookup2New = lists:foldl(fun(K2, Lookup2Next) ->
+                module_update(Module, K2, FN, Lookup2Next)
+            end, Lookup2, K2L),
+            State#key2value{lookup1 = module_update(Module, K1, FN, Lookup1),
+                            lookup2 = Lookup2New};
+        error ->
+            State
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Map over all key2 values that exist.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec map2(K2 :: key2(),
+           F :: fun((value()) -> value()),
+           key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
+
+map2(K2, F,
+     #key2value{module = Module,
+                lookup1 = Lookup1,
+                lookup2 = Lookup2} = State)
+    when is_function(F, 1) ->
+    case module_find(Module, K2, Lookup2) of
+        {ok, {K1L, _}} ->
+            FN = fun({L, V}) ->
+                {L, F(V)}
+            end,
+            Lookup1New = lists:foldl(fun(K1, Lookup1Next) ->
+                module_update(Module, K1, FN, Lookup1Next)
+            end, Lookup1, K1L),
+            State#key2value{lookup1 = Lookup1New,
+                            lookup2 = module_update(Module, K2, FN, Lookup2)};
+        error ->
+            State
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a new lookup.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec new() ->
     key2value_dict(key1(), key2(), value()).
 
@@ -258,6 +392,13 @@ new() ->
     #key2value{module = dict,
                lookup1 = dict:new(),
                lookup2 = dict:new()}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create a new lookup with a module that provides a dict interface.===
+%% maps is supported, though it does not provide a dict interface.
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec new(Module :: atom()) ->
     key2value(key1(), key2(), value()).
@@ -268,6 +409,12 @@ new(Module)
                lookup1 = module_new(Module),
                lookup2 = module_new(Module)}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Size based on key1.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec size1(key2value(key1(), key2(), value())) ->
     non_neg_integer().
 
@@ -275,12 +422,24 @@ size1(#key2value{module = Module,
                  lookup1 = Lookup1}) ->
     module_size(Module, Lookup1).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Size based on key2.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec size2(key2value(key1(), key2(), value())) ->
     non_neg_integer().
 
 size2(#key2value{module = Module,
                  lookup2 = Lookup2}) ->
     module_size(Module, Lookup2).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Store a value with key1 and key2.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec store(K1 :: key1(),
             K2 :: key2(),
@@ -303,6 +462,12 @@ store(K1, K2, V,
     State#key2value{lookup1 = module_update(Module, K1, F1, {K2L, V}, Lookup1),
                     lookup2 = module_update(Module, K2, F2, {K1L, V}, Lookup2)}.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value that exists with key1.===
+%% @end
+%%-------------------------------------------------------------------------
+
 -spec update1(K1 :: key1(),
               F :: fun((value()) -> value()),
               key2value(key1(), key2(), value())) ->
@@ -317,11 +482,17 @@ update1(K1, F,
     FN = fun({L, V}) ->
         {L, F(V)}
     end,
-    NewLookup2 = lists:foldl(fun(K2, NextLookup2) ->
-        module_update(Module, K2, FN, NextLookup2)
+    Lookup2New = lists:foldl(fun(K2, Lookup2Next) ->
+        module_update(Module, K2, FN, Lookup2Next)
     end, Lookup2, K2L),
     State#key2value{lookup1 = module_update(Module, K1, FN, Lookup1),
-                    lookup2 = NewLookup2}.
+                    lookup2 = Lookup2New}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value that exists with key2.===
+%% @end
+%%-------------------------------------------------------------------------
 
 -spec update2(K2 :: key2(),
               F :: fun((value()) -> value()),
@@ -337,10 +508,10 @@ update2(K2, F,
     FN = fun({L, V}) ->
         {L, F(V)}
     end,
-    NewLookup1 = lists:foldl(fun(K1, NextLookup1) ->
-        module_update(Module, K1, FN, NextLookup1)
+    Lookup1New = lists:foldl(fun(K1, Lookup1Next) ->
+        module_update(Module, K1, FN, Lookup1Next)
     end, Lookup1, K1L),
-    State#key2value{lookup1 = NewLookup1,
+    State#key2value{lookup1 = Lookup1New,
                     lookup2 = module_update(Module, K2, FN, Lookup2)}.
 
 %%%------------------------------------------------------------------------

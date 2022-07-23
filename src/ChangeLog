@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-07-23 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix internal/external service restart tracking when
+      count_process > 1 and the service configuration option
+      restart_all is false (the default)
+        * Fixes the CloudI Service API services_status
+          uptime_restarts value
+    * Fix cloudi_service_router parameter substitution errors
+      due to a current mismatch between the trie:find_match2/2 functionality
+      and the trie:pattern2_parse/2 functionality
+    * Update key2value
+
 2022-07-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_statistics describe functions and cached values

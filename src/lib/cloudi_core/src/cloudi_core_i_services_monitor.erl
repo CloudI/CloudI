@@ -980,13 +980,21 @@ restart_success_one(Service, ServiceId, TimeTerminate, Pids,
                            durations_restart = Durations} = State) ->
     {TimeInitialized, OSPid,
      MonitorPids} = initialize_wait(Pids),
+    #service{restart_count_total = Restarts,
+             restart_count = RestartCount,
+             restart_times = RestartTimes} = Service,
+    ServicesNext = cloudi_x_key2value:map1(ServiceId, fun(ServiceOld) ->
+        ServiceOld#service{restart_count_total = Restarts,
+                           restart_count = RestartCount,
+                           restart_times = RestartTimes}
+    end, Services),
     ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
         cloudi_x_key2value:store(ServiceId, P,
             Service#service{pids = Pids,
                             os_pid = OSPid,
                             monitor = MonitorRef,
                             time_restart = TimeInitialized}, D)
-    end, Services, MonitorPids),
+    end, ServicesNext, MonitorPids),
     DurationsNew = cloudi_core_i_status:
                    durations_store([ServiceId],
                                    {TimeTerminate, TimeInitialized},
