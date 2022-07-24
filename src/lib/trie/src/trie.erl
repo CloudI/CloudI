@@ -2251,6 +2251,10 @@ test() ->
                                                     [2, 4, 5, 1], true),
     {error, {FillError2, 6}} = trie:pattern2_fill(FillPattern1, Parameters1,
                                                   [2, 4, 6], true),
+    error = trie:pattern2_parse("?/","//"),
+    error = trie:find_match2("//", trie:new(["?/"])),
+    error = trie:find_match2("//", trie:new(["?a","?/"])),
+    error = trie:find_match2("//b", trie:new(["?a","?/b"])),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -2384,9 +2388,14 @@ wildcard_match2_lists([_ | _], [C | _])
 wildcard_match2_lists([$?], [_ | _]) ->
     erlang:exit(badarg);
 
-wildcard_match2_lists([$?, C | Pattern], [_ | L]) ->
+wildcard_match2_lists([$?, C | Pattern], [H | L]) ->
     true = (C =/= $*) andalso (C =/= $?),
-    wildcard_match2_lists_pattern0(Pattern, C, L);
+    if
+        C == H ->
+            false;
+        true ->
+            wildcard_match2_lists_pattern0(Pattern, C, L)
+    end;
 
 wildcard_match2_lists([$*], [_ | L]) ->
     wildcard_match2_lists_valid(L, true);

@@ -11,6 +11,12 @@ The trie data structure supports string patterns.  The functions `find_match/2`,
 
 The btrie data structure was added because many people wanted a quick associative data structure for binary keys.  However, other alternatives provide better efficiency, so the btrie is best used for functions that can not be found elsewhere (or perhaps extra-long keys)... more testing would be needed to determine the best use-cases of the btrie.
 
+Tests
+-----
+
+    rebar compile
+    ERL_LIBS="/path/to/proper" rebar eunit
+
 Author
 ------
 

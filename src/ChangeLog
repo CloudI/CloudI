@@ -15,9 +15,12 @@
       with count_process > 1 terminates with an error
       (any restart of any process due to an error will now cause a purge)
     * Fix cloudi_service_router parameter substitution errors
-      due to a current mismatch between the trie:find_match2/2 functionality
+      due to a mismatch between the trie:find_match2/2 functionality
       and the trie:pattern2_parse/2 functionality
+        * Fix the mismatch between trie:find_match2/2 functionality and
+          trie:pattern2_parse/2 functionality with the trie update
     * Update key2value
+    * Update trie
 
 2022-07-16 Michael Truog   <mjtruog at protonmail dot com>
 

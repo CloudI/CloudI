@@ -65,6 +65,9 @@
         % (n.b., if a service configuration is unable
         %  to start (initialization fails) the queue is
         %  always purged with the error logged).
+        % Any termination of any process (including restarts)
+        % due to an error (Reason is not {shutdown, _} or shutdown)
+        % will cause a purge when the service terminates.
 -define(DEFAULT_QUEUES,                        []).
         % List of {QueueName, Configs} to be used for services_add
 -define(DEFAULT_QUEUE_DEPENDENCIES,            []).
