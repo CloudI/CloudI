@@ -57,7 +57,13 @@
 -define(DEFAULT_SU_PATH,                      "/bin/su").
 -define(DEFAULT_LOGIN,                             true).
 -define(DEFAULT_TIMEOUT_KILLS_PROCESS,            false).
+        % A service request timeout should kill the OS shell process?
 -define(DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL,   sigterm).
+        % OS signal to use for OS shell process timeout.
+-define(DEFAULT_TERMINATE_KILLS_PROCESS,          false).
+        % Service termination should kill the OS shell process?
+-define(DEFAULT_TERMINATE_KILLS_PROCESS_SIGNAL,  sighup).
+        % OS signal to use for OS shell process termination.
 -define(DEFAULT_DEBUG,                             true).
 -define(DEFAULT_DEBUG_LEVEL,                      trace).
 
@@ -70,7 +76,8 @@
         user :: nonempty_string() | undefined,
         su :: nonempty_string(),
         login :: boolean(),
-        kill_signal :: pos_integer() | undefined,
+        kill_signal_timeout :: pos_integer() | undefined,
+        kill_signal_terminate :: pos_integer() | undefined,
         debug_level :: off | trace | debug | info | warn | error | fatal
     }).
 
@@ -123,10 +130,13 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {login,                         ?DEFAULT_LOGIN},
         {timeout_kills_process,         ?DEFAULT_TIMEOUT_KILLS_PROCESS},
         {timeout_kills_process_signal,  ?DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL},
+        {terminate_kills_process,       ?DEFAULT_TERMINATE_KILLS_PROCESS},
+        {terminate_kills_process_signal,?DEFAULT_TERMINATE_KILLS_PROCESS_SIGNAL},
         {debug,                         ?DEFAULT_DEBUG},
         {debug_level,                   ?DEFAULT_DEBUG_LEVEL}],
     [FilePath, Directory, Env, User, SUPath, Login,
      TimeoutKill, TimeoutKillSignal,
+     TerminateKill, TerminateKillSignal,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     [_ | _] = FilePath,
     true = filelib:is_regular(FilePath),
@@ -152,10 +162,16 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         EnvPort =:= false ->
             EnvExpanded
     end,
-    KillSignal = if
+    KillSignalTimeout = if
         TimeoutKill =:= true ->
             cloudi_os_process:signal_to_integer(TimeoutKillSignal);
         TimeoutKill =:= false ->
+            undefined
+    end,
+    KillSignalTerminate = if
+        TerminateKill =:= true ->
+            cloudi_os_process:signal_to_integer(TerminateKillSignal);
+        TerminateKill =:= false ->
             undefined
     end,
     true = is_boolean(Debug),
@@ -179,15 +195,16 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 user = User,
                 su = SUPath,
                 login = Login,
-                kill_signal = KillSignal,
+                kill_signal_timeout = KillSignalTimeout,
+                kill_signal_terminate = KillSignalTerminate,
                 debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{debug_level = DebugLogLevel} = State,
-                              _Dispatcher) ->
-    {Status, Output} = request(Request, Timeout, State),
+                              Dispatcher) ->
+    {Status, Output} = request(Request, Timeout, State, Dispatcher),
     log_output(Status, Output, RequestInfo, Request, DebugLogLevel),
     {reply, erlang:integer_to_binary(Status), State}.
 
@@ -249,7 +266,8 @@ request(Exec, Timeout,
                user = User,
                su = SUPath,
                login = Login,
-               kill_signal = KillSignal}) ->
+               kill_signal_timeout = KillSignalTimeout,
+               kill_signal_terminate = KillSignalTerminate}, Dispatcher) ->
     ShellInput0 = [unicode:characters_to_binary(Exec, utf8), "\n"
                    "exit $?\n"],
     PortOptions0 = [stream, binary, stderr_to_stdout, exit_status],
@@ -281,19 +299,26 @@ request(Exec, Timeout,
     end,
     Shell = erlang:open_port({spawn_executable, ShellExecutable},
                              [{args, ShellArgs} | PortOptionsN]),
-    KillTimer = kill_timer_start(KillSignal, Shell, Timeout),
+    KillMonitor = kill_monitor_start(KillSignalTerminate, Dispatcher),
+    KillTimer = kill_timer_start(KillSignalTimeout, Shell, Timeout),
     true = erlang:port_command(Shell, ShellInputN),
-    ShellOutput = request_output(Shell, []),
+    ShellOutput = request_output(Shell, [], KillSignalTerminate, Dispatcher),
     ok = kill_timer_stop(KillTimer, Shell),
+    ok = kill_monitor_stop(KillMonitor),
     ShellOutput.
 
-request_output(Shell, Output) ->
+request_output(Shell, Output, KillSignalTerminate, Dispatcher) ->
     receive
         {Shell, {data, Data}} ->
-            request_output(Shell, [Data | Output]);
-        {Shell, {kill, KillSignal}} ->
-            ok = kill_shell(KillSignal, Shell),
-            request_output(Shell, Output);
+            request_output(Shell, [Data | Output],
+                           KillSignalTerminate, Dispatcher);
+        {'DOWN', _, process, Dispatcher, _} ->
+            ok = kill_shell(KillSignalTerminate, Shell),
+            request_output(Shell, Output, KillSignalTerminate, Dispatcher);
+        {Shell, {kill, KillSignalTimeout}} ->
+            true = erlang:unlink(Shell),
+            ok = kill_shell(KillSignalTimeout, Shell),
+            request_output(Shell, Output, KillSignalTerminate, Dispatcher);
         {Shell, {exit_status, Status}} ->
             {Status, lists:reverse(Output)}
     end.
@@ -309,9 +334,9 @@ kill_shell(KillSignal, Shell) ->
 
 kill_timer_start(undefined, _, _) ->
     undefined;
-kill_timer_start(KillSignal, Shell, Timeout)
-    when is_integer(KillSignal) ->
-    erlang:send_after(Timeout, self(), {Shell, {kill, KillSignal}}).
+kill_timer_start(KillSignalTimeout, Shell, Timeout)
+    when is_integer(KillSignalTimeout) ->
+    erlang:send_after(Timeout, self(), {Shell, {kill, KillSignalTimeout}}).
 
 kill_timer_stop(undefined, _) ->
     ok;
@@ -328,6 +353,17 @@ kill_timer_stop(KillTimer, Shell) ->
         _ ->
             ok
     end.
+
+kill_monitor_start(undefined, _) ->
+    undefined;
+kill_monitor_start(_, Dispatcher) ->
+    erlang:monitor(process, Dispatcher).
+
+kill_monitor_stop(undefined) ->
+    ok;
+kill_monitor_stop(KillMonitor) ->
+    true = erlang:demonitor(KillMonitor, [flush]),
+    ok.
 
 log_output(Status, Output, RequestInfo, Request, DebugLogLevel) ->
     Level = if

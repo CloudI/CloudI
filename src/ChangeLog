@@ -19,6 +19,11 @@
       and the trie:pattern2_parse/2 functionality
         * Fix the mismatch between trie:find_match2/2 functionality and
           trie:pattern2_parse/2 functionality with the trie update
+    * Add the cloudi_service_shell arguments terminate_kills_process
+      and terminate_kills_process_signal for handling shell execution
+      during service termination
+    * Fix cloudi_service_shell use of the timeout_kills_process argument
+      so a timeout does not cause service termination
     * Update key2value
     * Update trie
 
