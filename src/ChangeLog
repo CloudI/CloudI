@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-07-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_math module with functions erfinv/1 and erfcinv/1
+    * Increase default test timeout from 10 seconds to 20 seconds
+
 2022-07-23 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix internal/external service restart tracking when

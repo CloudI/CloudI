@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2020-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -35,6 +35,6 @@
 -ifdef(CLOUDI_TEST_TIMEOUT).
 -define(TEST_TIMEOUT, ?CLOUDI_TEST_TIMEOUT). % seconds
 -else.
--define(TEST_TIMEOUT, 10). % seconds
+-define(TEST_TIMEOUT, 20). % seconds
 -endif.
 

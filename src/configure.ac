@@ -369,7 +369,7 @@ AC_MSG_CHECKING([the CloudI Erlang test timeout])
 AC_ARG_WITH([test-timeout],
     [AS_HELP_STRING([--with-test-timeout@<:@=ARG@:>@],
         [The maximum amount of time a CloudI test will wait for completion
-         in seconds.  The default of 10 seconds is for bare-metal use
+         in seconds.  The default of 20 seconds is for bare-metal use
          (ARG=dev).  Execution in a vm should use ARG=vm to get 1 minute (60).
          Unreliable container execution should use ARG=container to get
          10 minutes (600) with a single scheduler (use ARG=container_cpu_quota
@@ -378,7 +378,7 @@ AC_ARG_WITH([test-timeout],
          @<:@ARG=dev@:>@ ])],
     [
     if test "x$withval" = "xdev"; then
-        CLOUDI_TEST_TIMEOUT="10"
+        CLOUDI_TEST_TIMEOUT="20"
     elif test "x$withval" = "xvm"; then
         CLOUDI_TEST_TIMEOUT="60"
     elif test "x$withval" = "xcontainer"; then
@@ -394,7 +394,7 @@ AC_ARG_WITH([test-timeout],
                       (greater than or equal to 10), not $withval])
     fi
     ],
-    [CLOUDI_TEST_TIMEOUT="10"])
+    [CLOUDI_TEST_TIMEOUT="20"])
 AC_MSG_RESULT([$CLOUDI_TEST_TIMEOUT])
 AC_SUBST(CLOUDI_TEST_TIMEOUT)
 

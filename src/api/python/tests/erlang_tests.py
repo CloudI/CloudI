@@ -31,7 +31,7 @@ Erlang External Term Format Encoding/Decoding Tests
 
 import sys
 import os
-sys.path.append(
+sys.path.insert(0,
     os.path.sep.join(
         os.path.dirname(
             os.path.abspath(__file__)
