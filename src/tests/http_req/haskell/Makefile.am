@@ -2,9 +2,20 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http_req"
+if CABAL_INSTALL_V2_USE
+
+all-local: http_req_haskell
+
+http_req_haskell: Main.hs
+	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-configure \
+                 --with-compiler=$(GHC)
+	$(CABAL) v2-build
+	cp $(builddir)/dist/build/http_req_haskell/http_req_haskell .
+
+else
 CLEANFILES = cabal.sandbox.config http_req_haskell
 
-if CABAL_INSTALL_V2
+if CABAL_INSTALL_V2_AVOID
 CABAL_CMD_SANDBOX=v1-sandbox
 CABAL_CMD_INSTALL=v1-install
 CABAL_CMD_CONFIGURE=v1-configure
@@ -29,6 +40,8 @@ http_req_haskell: Main.hs
 	$(CABAL) $(CABAL_CMD_CONFIGURE) --with-compiler=$(GHC)
 	$(CABAL) $(CABAL_CMD_BUILD)
 	cp $(builddir)/dist/build/http_req_haskell/http_req_haskell .
+
+endif
 
 clean-local:
 	rm -rf $(builddir)/dist

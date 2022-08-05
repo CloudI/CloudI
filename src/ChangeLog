@@ -8,6 +8,20 @@
       (for both internal and external services)
     * Limit the cloudi_service_http_cowboy reuse_port argument to
       Linux and FreeBSD (to keep the argument meaning the same)
+    * Haskell support with GHC >= 9.0 requires the use of
+      cabal-install >= 3.4 which has removed the v1-sandbox command
+      (https://github.com/haskell/cabal/issues/6445) and all
+      sandbox functionality
+        * cabal v2-install --lib appears unable to provide a local
+          installation in a sandbox-like directory though that functionality
+          may be pursued as an "env" command
+          (https://github.com/haskell/cabal/issues/6481)
+        * Support of GHC >= 9.0 will be blocked on cabal-install's
+          ability to use local installations of libraries
+        * Changes based on the current cabal-install support
+          have been added for further improvement
+    * Update Haskell network dependency to 3.1.2.7
+    * Update Haskell zlib dependency to 0.6.3.0
 
 2022-07-30 Michael Truog   <mjtruog at protonmail dot com>
 

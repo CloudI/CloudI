@@ -2,21 +2,41 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/api/haskell"
-CLEANFILES = cabal.sandbox.config
 
+HASKELL_NETWORK_VERSION=3.1.2.7
+HASKELL_ZLIB_VERSION=0.6.3.0
+if CABAL_INSTALL_V2_USE
+HASKELL_HSC2HS_VERSION=0.68.8
+CLEANFILES = cabal.project.local
+
+all-local: src/Foreign/CloudI.hs \
+           src/Foreign/CloudI/Instance.hs \
+           src/Foreign/Erlang.hs \
+           src/Foreign/Erlang/Function.hs \
+           src/Foreign/Erlang/Pid.hs \
+           src/Foreign/Erlang/Port.hs \
+           src/Foreign/Erlang/Reference.hs
+	$(MKDIR_P) $(CABAL_SANDBOX)
+	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-configure \
+                 --with-compiler=$(GHC)
+	echo "packages: "$(srcdir)/external/hsc2hs-$(HASKELL_HSC2HS_VERSION)" "$(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)" "$(srcdir)/external/zlib-$(HASKELL_ZLIB_VERSION) >> $(builddir)/cabal.project.local
+	$(CABAL) v2-build
+	$(CABAL) v2-install cloudi --lib --package-env $(CABAL_SANDBOX)
+
+clean-local:
+	rm -rf $(builddir)/dist-newstyle $(CABAL_SANDBOX)
+	rm -rf $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/dist
+	rm -rf $(srcdir)/external/zlib-$(HASKELL_ZLIB_VERSION)/dist
+	rm -f $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/config.log
+	rm -f $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/config.status
+	rm -f $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/network.buildinfo
+
+else
 HASKELL_BINARY_VERSION=0.8.7.0
 HASKELL_BYTESTRING_VERSION=0.10.10.0
-HASKELL_NETWORK_VERSION=3.1.0.1
 HASKELL_UNIX_VERSION=2.7.2.2
-HASKELL_ZLIB_VERSION=0.6.2.1
-
-#HASKELL_BINARY_VERSION=0.10.0.0
-#HASKELL_BYTESTRING_VERSION=0.10.8.2
-#HASKELL_NETWORK_VERSION=2.8.0.0
-#HASKELL_UNIX_VERSION=2.7.2.2
-#HASKELL_ZLIB_VERSION=0.6.2
-
-if CABAL_INSTALL_V2
+CLEANFILES = cabal.sandbox.config
+if CABAL_INSTALL_V2_AVOID
 CABAL_CMD_SANDBOX=v1-sandbox
 CABAL_CMD_INSTALL=v1-install
 CABAL_CMD_CONFIGURE=v1-configure
@@ -68,6 +88,8 @@ clean-local:
 	rm -f $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/config.status
 	rm -f $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/include/HsUnixConfig.h
 	rm -f $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/unix.buildinfo
+
+endif
 
 install-exec-hook:
 	$(MKDIR_P) $(instdir)
