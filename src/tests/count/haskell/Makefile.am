@@ -3,14 +3,21 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count"
 if CABAL_INSTALL_V2_USE
+CLEANFILES = cabal.project
 
 all-local: count_haskell
 
 count_haskell: Main.hs
-	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-configure \
-                 --with-compiler=$(GHC)
-	$(CABAL) v2-build
-	cp $(builddir)/dist/build/count_haskell/count_haskell .
+	echo "packages: "$(builddir)/count_haskell.cabal" "$(top_builddir)/api/haskell/cloudi.cabal > cabal.project
+	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-install \
+                 --project-file=$(builddir)/cabal.project \
+                 --with-compiler=$(GHC) \
+                 --installdir=$(builddir) \
+                 --install-method=copy \
+                 count_haskell
+
+clean-local:
+	rm -rf $(builddir)/dist-newstyle
 
 else
 CLEANFILES = cabal.sandbox.config count_haskell
@@ -41,10 +48,10 @@ count_haskell: Main.hs
 	$(CABAL) $(CABAL_CMD_BUILD)
 	cp $(builddir)/dist/build/count_haskell/count_haskell .
 
-endif
-
 clean-local:
 	rm -rf $(builddir)/dist
+
+endif
 
 install-exec-hook: count_haskell
 	$(MKDIR_P) $(instdir)

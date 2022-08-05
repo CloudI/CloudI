@@ -3,14 +3,21 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/msg_size"
 if CABAL_INSTALL_V2_USE
+CLEANFILES = cabal.project
 
 all-local: msg_size_haskell
 
 msg_size_haskell: Main.hs
-	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-configure \
-                 --with-compiler=$(GHC)
-	$(CABAL) v2-build
-	cp $(builddir)/dist/build/msg_size_haskell/msg_size_haskell .
+	echo "packages: "$(builddir)/msg_size_haskell.cabal" "$(top_builddir)/api/haskell/cloudi.cabal > cabal.project
+	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-install \
+                 --project-file=$(builddir)/cabal.project \
+                 --with-compiler=$(GHC) \
+                 --installdir=$(builddir) \
+                 --install-method=copy \
+                 msg_size_haskell
+
+clean-local:
+	rm -rf $(builddir)/dist-newstyle
 
 else
 CLEANFILES = cabal.sandbox.config msg_size_haskell
@@ -41,10 +48,10 @@ msg_size_haskell: Main.hs
 	$(CABAL) $(CABAL_CMD_BUILD)
 	cp $(builddir)/dist/build/msg_size_haskell/msg_size_haskell .
 
-endif
-
 clean-local:
 	rm -rf $(builddir)/dist
+
+endif
 
 install-exec-hook: msg_size_haskell
 	$(MKDIR_P) $(instdir)

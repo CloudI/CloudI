@@ -9,19 +9,20 @@ if CABAL_INSTALL_V2_USE
 HASKELL_HSC2HS_VERSION=0.68.8
 CLEANFILES = cabal.project.local
 
-all-local: src/Foreign/CloudI.hs \
-           src/Foreign/CloudI/Instance.hs \
-           src/Foreign/Erlang.hs \
-           src/Foreign/Erlang/Function.hs \
-           src/Foreign/Erlang/Pid.hs \
-           src/Foreign/Erlang/Port.hs \
-           src/Foreign/Erlang/Reference.hs
+all-local: cabal.project.local
+
+cabal.project.local: src/Foreign/CloudI.hs \
+                     src/Foreign/CloudI/Instance.hs \
+                     src/Foreign/Erlang.hs \
+                     src/Foreign/Erlang/Function.hs \
+                     src/Foreign/Erlang/Pid.hs \
+                     src/Foreign/Erlang/Port.hs \
+                     src/Foreign/Erlang/Reference.hs
 	$(MKDIR_P) $(CABAL_SANDBOX)
 	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-configure \
-                 --with-compiler=$(GHC)
+                 --with-compiler=$(GHC) --enable-relocatable
 	echo "packages: "$(srcdir)/external/hsc2hs-$(HASKELL_HSC2HS_VERSION)" "$(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)" "$(srcdir)/external/zlib-$(HASKELL_ZLIB_VERSION) >> $(builddir)/cabal.project.local
 	$(CABAL) v2-build
-	$(CABAL) v2-install cloudi --lib --package-env $(CABAL_SANDBOX)
 
 clean-local:
 	rm -rf $(builddir)/dist-newstyle $(CABAL_SANDBOX)

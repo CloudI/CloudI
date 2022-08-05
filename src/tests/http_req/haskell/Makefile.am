@@ -3,14 +3,21 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http_req"
 if CABAL_INSTALL_V2_USE
+CLEANFILES = cabal.project
 
 all-local: http_req_haskell
 
 http_req_haskell: Main.hs
-	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-configure \
-                 --with-compiler=$(GHC)
-	$(CABAL) v2-build
-	cp $(builddir)/dist/build/http_req_haskell/http_req_haskell .
+	echo "packages: "$(builddir)/http_req_haskell.cabal" "$(top_builddir)/api/haskell/cloudi.cabal > cabal.project
+	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-install \
+                 --project-file=$(builddir)/cabal.project \
+                 --with-compiler=$(GHC) \
+                 --installdir=$(builddir) \
+                 --install-method=copy \
+                 http_req_haskell
+
+clean-local:
+	rm -rf $(builddir)/dist-newstyle
 
 else
 CLEANFILES = cabal.sandbox.config http_req_haskell
@@ -41,10 +48,10 @@ http_req_haskell: Main.hs
 	$(CABAL) $(CABAL_CMD_BUILD)
 	cp $(builddir)/dist/build/http_req_haskell/http_req_haskell .
 
-endif
-
 clean-local:
 	rm -rf $(builddir)/dist
+
+endif
 
 install-exec-hook: http_req_haskell
 	$(MKDIR_P) $(instdir)

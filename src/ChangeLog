@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-08-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Haskell support cabal-install >= 3.4 build change for
+      integration tests
+
 2022-08-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix service shutdown during initialization so it is not an error
