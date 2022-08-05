@@ -2073,6 +2073,8 @@ services_add_service([Service | Services], Added, Timeout) ->
     case cloudi_core_i_configurator:service_start(Service, Timeout) of
         {ok, ServiceNew} ->
             services_add_service(Services, [ServiceNew | Added], Timeout);
+        stopped ->
+            services_add_service(Services, Added, Timeout);
         {error, Reason} ->
             {error, Reason, lists:reverse(Added)}
     end.

@@ -80,7 +80,6 @@
 
 -record(state,
     {
-        async :: boolean(),
         sends_failed :: non_neg_integer(),
         queue :: cloudi_queue:state(),
         validate_response :: fun((any(), any()) -> boolean()),
@@ -110,7 +109,6 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     if
         Async =:= true ->
-            self() ! async,
             true = Retry == 0,
             true = Ordered =:= false,
             true = Debug =:= false;
@@ -140,17 +138,16 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         Debug =:= true ->
             DebugLevel
     end,
-    {ok, #state{async = Async,
-                sends_failed = SendsFailed,
-                queue = Queue,
-                validate_response = ValidateResponseN,
-                debug_level = DebugLogLevel}}.
+    if
+        Async =:= true ->
+            {stop, stop_reason(SendsFailed)};
+        Async =:= false ->
+            {ok, #state{sends_failed = SendsFailed,
+                        queue = Queue,
+                        validate_response = ValidateResponseN,
+                        debug_level = DebugLogLevel}}
+    end.
 
-cloudi_service_handle_info(Request,
-                           #state{async = true,
-                                  sends_failed = SendsFailed} = State, _) ->
-    async = Request,
-    {stop, stop_reason(SendsFailed), State};
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     StateNew = recv(Request, State, Dispatcher),
     #state{sends_failed = SendsFailedNew,

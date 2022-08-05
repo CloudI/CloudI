@@ -737,14 +737,10 @@ content_types_accepted_pattern([H | ContentTypesAccepted], L) ->
     content_types_accepted_pattern(ContentTypesAccepted, LNew).
 
 socket_option_reuseport({unix, linux}) ->
-    % SO_REUSEPORT requires Linux 3.9
+    % SO_REUSEPORT requires Linux 3.9 or higher
     {raw, 1, 15, <<1:32/unsigned-integer-native>>};
 socket_option_reuseport({unix, freebsd}) ->
     % SO_REUSEPORT_LB requires FreeBSD 12.0 or higher
     {raw, 16#ffff, 16#00010000, <<1:32/unsigned-integer-native>>};
-socket_option_reuseport({unix, BSD})
-    when BSD =:= openbsd; BSD =:= netbsd; BSD =:= darwin ->
-    % will likely only use process 0
-    {raw, 16#ffff, 16#00000200, <<1:32/unsigned-integer-native>>};
 socket_option_reuseport(_) ->
     undefined.

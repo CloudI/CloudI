@@ -281,6 +281,7 @@ code_status(TimeNative, TimeOffset, Timeout) ->
                     Timeout :: pos_integer() | infinity) ->
     {ok, #config_service_internal{} |
          #config_service_external{}} |
+    stopped |
     {error, error_reason_service_start()}.
 
 service_start(#config_service_internal{
@@ -705,6 +706,8 @@ handle_info(configure,
 handle_info({cloudi_service_init_end, _}, State) ->
     % a service process has initialized due to count_process_dynamic
     % (nothing to do, handled by cloudi_core_i_services_monitor)
+    % or a service process shutdown very quickly which was seen by
+    % the process monitor before this message was able to be received
     {noreply, State};
 
 handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
@@ -746,6 +749,8 @@ configure_service([Service | Services], Configured, Timeout) ->
     case service_start(Service, Timeout) of
         {ok, ServiceNew} ->
             configure_service(Services, [ServiceNew | Configured], Timeout);
+        stopped ->
+            configure_service(Services, Configured, Timeout);
         {error, Reason} = Error ->
             % wait for logging statements to be logged before crashing
             ?LOG_FATAL_SYNC("configure failed: ~tp~n~tp",
@@ -1051,9 +1056,24 @@ service_stop_remove_internal(#config_service_internal{
             {error, {service_internal_application_not_found, Reason}}
     end.
 
-service_start_wait_pid([], Error) ->
-    Error;
-service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
+service_start_wait_pid_death(undefined, shutdown) ->
+    {stopped, shutdown};
+service_start_wait_pid_death(undefined, {shutdown, _} = Shutdown) ->
+    {stopped, Shutdown};
+service_start_wait_pid_death(undefined, Info) ->
+    {error, Info};
+service_start_wait_pid_death({stopped, _} = Stopped, shutdown) ->
+    Stopped;
+service_start_wait_pid_death({stopped, _} = Stopped, {shutdown, _}) ->
+    Stopped;
+service_start_wait_pid_death({stopped, _}, Info) ->
+    {error, Info};
+service_start_wait_pid_death({error, _} = Error, _) ->
+    Error.
+
+service_start_wait_pid([], Death) ->
+    Death;
+service_start_wait_pid([{MonitorRef, Pid} | M], Death) ->
     receive
         {cloudi_service_init_end, Pid} ->
             erlang:demonitor(MonitorRef, [flush]),
@@ -1065,20 +1085,17 @@ service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
             %   it has already completed executing CloudI API functions called
             %   before the poll function and any aspects_init_after functions
             %   (so the external service is now executing the poll function)
-            service_start_wait_pid(M, Error);
+            service_start_wait_pid(M, Death);
         {'DOWN', MonitorRef, process, Pid, Info} ->
-            ErrorNew = if
-                Error =:= undefined ->
-                    % first error encountered is returned
-                    {error, Info};
-                true ->
-                    Error
-            end,
-            service_start_wait_pid(M, ErrorNew)
+            service_start_wait_pid(M, service_start_wait_pid_death(Death, Info))
     end.
 
 service_start_wait_pids([], undefined, Service) ->
     {ok, Service};
+service_start_wait_pids([], {stopped, _}, _) ->
+    % shutdown | {shutdown, _} is logged in cloudi_core_i_services_monitor and
+    % is not helpful as a return value because it will be ignored
+    stopped;
 service_start_wait_pids([], {error, Reason}, Service) ->
     case Service of
         #config_service_internal{} ->
@@ -1086,9 +1103,9 @@ service_start_wait_pids([], {error, Reason}, Service) ->
         #config_service_external{} ->
             {error, {service_external_start_failed, Reason}}
     end;
-service_start_wait_pids([M | MonitorPids], Error, Service) ->
+service_start_wait_pids([M | MonitorPids], Death, Service) ->
     service_start_wait_pids(MonitorPids,
-                            service_start_wait_pid(M, Error), Service).
+                            service_start_wait_pid(M, Death), Service).
 
 service_start_wait(Pids, Service) ->
     % create the monitors on all the service's receiver pids

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-08-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix service shutdown during initialization so it is not an error
+      if the reason is shutdown or {shutdown, any()}
+      (for both internal and external services)
+    * Limit the cloudi_service_http_cowboy reuse_port argument to
+      Linux and FreeBSD (to keep the argument meaning the same)
+
 2022-07-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_math module with functions erfinv/1 and erfcinv/1

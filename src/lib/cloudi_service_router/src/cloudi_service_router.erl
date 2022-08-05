@@ -409,6 +409,8 @@ destination_pick(#destination_forward{length = Length,
 name_parameters(Name, [], _) ->
     {ok, Name};
 name_parameters(_, error, _) ->
+    % a mismatch between trie:find_match2/2 and trie:pattern2_parse/2
+    % functionality should be impossible, but is handled here
     {error, parameters_invalid};
 name_parameters(_, [_ | _],
                 #destination_forward{parameters_allowed = false}) ->
