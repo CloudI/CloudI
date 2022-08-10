@@ -595,16 +595,16 @@ fi
 AM_CONDITIONAL([GO_SUPPORT], [test "x$go_support" = "xtrue"])
 
 # Haskell CloudI API support
-ghc_packages_v="7"
+ghc_packages_v="8"
 if test "x$haskell_support" = "xtrue" ; then
 AC_ARG_VAR([GHC],[Glasgow Haskell Compiler executable])
 AC_PATH_PROGS([GHC],[ghc])
 if test "x$GHC" = "x"; then
     AC_MSG_ERROR([Glasgow Haskell Compiler (GHC) not found])
 fi
-AX_PROG_GHC_VERSION([7.10.3],
+AX_PROG_GHC_VERSION([8.6.0],
     [AX_COMPARE_VERSION([9.0.0],[le],[$GHC_VERSION],[ghc_packages_v="9"])],
-    [AC_MSG_ERROR([ghc >= 7.10.3 not found])])
+    [AC_MSG_ERROR([ghc >= 8.6.0 not found])])
 AC_ARG_VAR([GHC_PKG],[GHC package manager])
 AC_PATH_PROGS([GHC_PKG],[ghc-pkg])
 if test "x$GHC_PKG" = "x"; then

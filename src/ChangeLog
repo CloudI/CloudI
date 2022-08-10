@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-08-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the minimum Haskell requirement to GHC 8.6.0
+
 2022-08-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Remove cabal-install dependency for very important reasons:
