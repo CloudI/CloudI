@@ -130,7 +130,7 @@ Optional (default="no"):
 * `Haskell (GHC >= 8.6.0)`
   * (`ghc zlib1g-dev /Ubuntu`, `ghc zlib-dev /Alpine`)
   * Use the "--enable-haskell-support" configure flag to enable
-  * Haskell CloudI API is available as a [Hackage package](https://github.com/CloudI/cloudi_api_haskell#readme)
+  * Haskell CloudI API is available as a [Hackage package](https://github.com/CloudI/cloudi_api_haskell#readme) for GHC >= 7.10.3
 * `OCaml >= 4.03.0`
   * (`ocaml /Ubuntu`, `ocaml /Alpine`)
   * Use the "--enable-ocaml-support" configure flag to enable
