@@ -595,38 +595,30 @@ fi
 AM_CONDITIONAL([GO_SUPPORT], [test "x$go_support" = "xtrue"])
 
 # Haskell CloudI API support
-cabal_install_v2="false"
 if test "x$haskell_support" = "xtrue" ; then
 AC_ARG_VAR([GHC],[Glasgow Haskell Compiler executable])
 AC_PATH_PROGS([GHC],[ghc])
 if test "x$GHC" = "x"; then
     AC_MSG_ERROR([Glasgow Haskell Compiler (GHC) not found])
 fi
+ghc_packages_v="7"
+AX_PROG_GHC_VERSION([7.10.3],
+    [AX_COMPARE_VERSION([9.0.0],[le],[$GHC_VERSION],[ghc_packages_v="9"])],
+    [AC_MSG_ERROR([ghc >= 7.10.3 not found])])
 AC_ARG_VAR([GHC_PKG],[GHC package manager])
 AC_PATH_PROGS([GHC_PKG],[ghc-pkg])
 if test "x$GHC_PKG" = "x"; then
     AC_MSG_ERROR([GHC package manager not found])
 fi
-AC_ARG_VAR([CABAL],[Haskell Cabal (cabal-install) executable])
-AC_PATH_PROGS([CABAL],[cabal])
-if test "x$CABAL" = "x"; then
-    AC_MSG_ERROR([Haskell Cabal (cabal-install) not found])
-fi
-# Cabal >= 3.0.0.0 is included with GHC >= 8.8.1 (v1- commands used)
-# Cabal >= 3.4.0.0 is included with GHC >= 9.0.0 (v1-sandbox command removed)
-AX_CABAL_VERSION([3.0.0.0],
-    [AX_COMPARE_VERSION([3.4.0.0],[le],[$CABAL_VERSION],
-         [cabal_install_v2="use"],
-         [cabal_install_v2="avoid"])])
+AM_CONDITIONAL([GHC_PACKAGES_V9], [test "x$ghc_packages_v" = "x9"])
 AC_SUBST([CABAL_SANDBOX], ["$abs_top_builddir/api/haskell/sandbox"])
+AC_SUBST([CABAL_SANDBOX_PKG_DB], ["$CABAL_SANDBOX/$host_cpu-$host_os-ghc-$GHC_VERSION-packages.conf.d"])
 AC_SUBST(CONFIG_TESTS_HASKELL_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_haskell\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
 AC_SUBST(CONFIG_TESTS_HASKELL_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_haskell\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
 AC_SUBST(CONFIG_TESTS_HASKELL_MESSAGING, ["[[{prefix, \"/tests/messaging/haskell/\"}, {file_path, \"$cloudi_prefix/tests/messaging/messaging_haskell\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{dispatcher_pid_options, [{priority, low}]}, {nice, 15}, {scope, cloudi_service_test_messaging_haskell}]}]],"])
 AC_SUBST(CONFIG_TESTS_HASKELL_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$cloudi_prefix/tests/msg_size/msg_size_haskell\"}, {options, [{request_timeout_adjustment, true}, {aspects_init_after, [{cloudi_service_test_msg_size, aspect_init}]}, {aspects_request_before, [{cloudi_service_test_msg_size, aspect_request}]}, {aspects_terminate_before, [{cloudi_service_test_msg_size, aspect_terminate}]}, {scope, cloudi_service_test_msg_size}, {nice, 15}]}]],"])
 AC_SUBST(CONFIG_TESTS_HASKELL_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$cloudi_prefix/tests/null/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$cloudi_prefix/tests/null/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
-AM_CONDITIONAL([CABAL_INSTALL_V2_USE], [test "x$cabal_install_v2" = "xuse"])
-AM_CONDITIONAL([CABAL_INSTALL_V2_AVOID], [test "x$cabal_install_v2" = "xavoid"])
 AM_CONDITIONAL([HASKELL_SUPPORT], [test "x$haskell_support" = "xtrue"])
 
 # Java CloudI API support

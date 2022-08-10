@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-08-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Remove cabal-install dependency for very important reasons:
+        * All sandbox functionality was removed (cabal-install >= 3.4)
+          without replacement functionality
+          (https://github.com/haskell/cabal/issues/6445)
+        * cabal-install source code releases are unable to bootstrap with
+          local dependencies due to undependable releases that promote
+          opaque binaries
+          (https://github.com/haskell/cabal/issues/7904)
+    * Manually create a Cabal sandbox without cabal-install for
+      Haskell GHC compilation
+
 2022-08-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Haskell support cabal-install >= 3.4 build change for

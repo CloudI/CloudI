@@ -2,56 +2,19 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count"
-if CABAL_INSTALL_V2_USE
-CLEANFILES = cabal.project
+CLEANFILES = count_haskell
 
 all-local: count_haskell
 
-count_haskell: Main.hs
-	echo "packages: "$(builddir)/count_haskell.cabal" "$(top_builddir)/api/haskell/cloudi.cabal > cabal.project
-	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-install \
-                 --project-file=$(builddir)/cabal.project \
-                 --with-compiler=$(GHC) \
-                 --installdir=$(builddir) \
-                 --install-method=copy \
-                 count_haskell
+count_haskell: Main.hs Setup.hs
+	$(MKDIR_P) dist/setup-bin
+	$(GHC) --make -outputdir dist/setup-bin -o dist/setup-bin/Setup $(srcdir)/Setup.hs
+	dist/setup-bin/Setup configure --builddir=$(builddir)/dist --package-db=$(CABAL_SANDBOX_PKG_DB) --enable-deterministic --disable-shared --enable-static
+	dist/setup-bin/Setup build
+	mv -f dist/build/$@/$@ $(builddir)
 
 clean-local:
-	rm -rf $(builddir)/dist-newstyle
-
-else
-CLEANFILES = cabal.sandbox.config count_haskell
-
-if CABAL_INSTALL_V2_AVOID
-CABAL_CMD_SANDBOX=v1-sandbox
-CABAL_CMD_INSTALL=v1-install
-CABAL_CMD_CONFIGURE=v1-configure
-CABAL_CMD_BUILD=v1-build
-else
-CABAL_CMD_SANDBOX=sandbox
-CABAL_CMD_INSTALL=install
-CABAL_CMD_CONFIGURE=configure
-CABAL_CMD_BUILD=build
-endif
-
-.NOTPARALLEL:
-
-all-local: cabal.sandbox.config count_haskell
-
-cabal.sandbox.config:
-	$(CABAL) $(CABAL_CMD_SANDBOX) init --sandbox $(CABAL_SANDBOX)
-
-count_haskell: Main.hs
-	$(CABAL) $(CABAL_CMD_INSTALL) --only-dependencies --force-reinstalls \
-                                      --with-compiler=$(GHC)
-	$(CABAL) $(CABAL_CMD_CONFIGURE) --with-compiler=$(GHC)
-	$(CABAL) $(CABAL_CMD_BUILD)
-	cp $(builddir)/dist/build/count_haskell/count_haskell .
-
-clean-local:
-	rm -rf $(builddir)/dist
-
-endif
+	rm -rf dist
 
 install-exec-hook: count_haskell
 	$(MKDIR_P) $(instdir)

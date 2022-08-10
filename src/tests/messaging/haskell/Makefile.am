@@ -2,56 +2,19 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
-if CABAL_INSTALL_V2_USE
-CLEANFILES = cabal.project
+CLEANFILES = messaging_haskell
 
 all-local: messaging_haskell
 
-messaging_haskell: Main.hs
-	echo "packages: "$(builddir)/messaging_haskell.cabal" "$(top_builddir)/api/haskell/cloudi.cabal > cabal.project
-	$(CABAL) --store-dir=$(CABAL_SANDBOX) v2-install \
-                 --project-file=$(builddir)/cabal.project \
-                 --with-compiler=$(GHC) \
-                 --installdir=$(builddir) \
-                 --install-method=copy \
-                 messaging_haskell
-
-clean-local:
-	rm -rf $(builddir)/dist-newstyle
-
-else
-CLEANFILES = cabal.sandbox.config messaging_haskell
-
-if CABAL_INSTALL_V2_AVOID
-CABAL_CMD_SANDBOX=v1-sandbox
-CABAL_CMD_INSTALL=v1-install
-CABAL_CMD_CONFIGURE=v1-configure
-CABAL_CMD_BUILD=v1-build
-else
-CABAL_CMD_SANDBOX=sandbox
-CABAL_CMD_INSTALL=install
-CABAL_CMD_CONFIGURE=configure
-CABAL_CMD_BUILD=build
-endif
-
-.NOTPARALLEL:
-
-all-local: cabal.sandbox.config messaging_haskell
-
-cabal.sandbox.config:
-	$(CABAL) $(CABAL_CMD_SANDBOX) init --sandbox $(CABAL_SANDBOX)
-
-messaging_haskell: Main.hs
-	$(CABAL) $(CABAL_CMD_INSTALL) --only-dependencies --force-reinstalls \
-                                      --with-compiler=$(GHC)
-	$(CABAL) $(CABAL_CMD_CONFIGURE) --with-compiler=$(GHC)
-	$(CABAL) $(CABAL_CMD_BUILD)
-	cp $(builddir)/dist/build/messaging_haskell/messaging_haskell .
+messaging_haskell: Main.hs Setup.hs
+	$(MKDIR_P) dist/setup-bin
+	$(GHC) --make -outputdir dist/setup-bin -o dist/setup-bin/Setup $(srcdir)/Setup.hs
+	dist/setup-bin/Setup configure --builddir=$(builddir)/dist --package-db=$(CABAL_SANDBOX_PKG_DB) --enable-deterministic --disable-shared --enable-static
+	dist/setup-bin/Setup build
+	mv -f dist/build/$@/$@ $(builddir)
 
 clean-local:
 	rm -rf $(builddir)/dist
-
-endif
 
 install-exec-hook: messaging_haskell
 	$(MKDIR_P) $(instdir)

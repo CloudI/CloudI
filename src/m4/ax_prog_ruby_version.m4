@@ -46,7 +46,7 @@ AC_DEFUN([AX_PROG_RUBY_VERSION],[
 
         AC_MSG_CHECKING([for ruby version])
         changequote(<<,>>)
-        ruby_version=`$RUBY --version 2>&1 | $GREP "^ruby " | $SED -e 's/^.* \([0-9]*\.[0-9]*\.[0-9]*\) .*/\1/'`
+        ruby_version=`$RUBY --version 2>&1 | $GREP "^ruby " | $SED -e 's/^.* \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/'`
         changequote([,])
         AC_MSG_RESULT($ruby_version)
 

@@ -127,8 +127,8 @@ Optional (default="no"):
   * (`golang /Ubuntu`, `go /Alpine`)
   * Use the "--enable-go-support" configure flag to enable
   * Go CloudI API is available as a [remote import](https://github.com/CloudI/cloudi_api_go#readme)
-* `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
-  * (`ghc cabal-install zlib1g-dev /Ubuntu`, `ghc cabal zlib-dev /Alpine`)
+* `Haskell (GHC >= 7.10.3)`
+  * (`ghc zlib1g-dev /Ubuntu`, `ghc zlib-dev /Alpine`)
   * Use the "--enable-haskell-support" configure flag to enable
   * Haskell CloudI API is available as a [Hackage package](https://github.com/CloudI/cloudi_api_haskell#readme)
 * `OCaml >= 4.03.0`
