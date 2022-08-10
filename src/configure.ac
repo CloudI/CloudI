@@ -595,13 +595,13 @@ fi
 AM_CONDITIONAL([GO_SUPPORT], [test "x$go_support" = "xtrue"])
 
 # Haskell CloudI API support
+ghc_packages_v="7"
 if test "x$haskell_support" = "xtrue" ; then
 AC_ARG_VAR([GHC],[Glasgow Haskell Compiler executable])
 AC_PATH_PROGS([GHC],[ghc])
 if test "x$GHC" = "x"; then
     AC_MSG_ERROR([Glasgow Haskell Compiler (GHC) not found])
 fi
-ghc_packages_v="7"
 AX_PROG_GHC_VERSION([7.10.3],
     [AX_COMPARE_VERSION([9.0.0],[le],[$GHC_VERSION],[ghc_packages_v="9"])],
     [AC_MSG_ERROR([ghc >= 7.10.3 not found])])
@@ -610,7 +610,6 @@ AC_PATH_PROGS([GHC_PKG],[ghc-pkg])
 if test "x$GHC_PKG" = "x"; then
     AC_MSG_ERROR([GHC package manager not found])
 fi
-AM_CONDITIONAL([GHC_PACKAGES_V9], [test "x$ghc_packages_v" = "x9"])
 AC_SUBST([CABAL_SANDBOX], ["$abs_top_builddir/api/haskell/sandbox"])
 AC_SUBST([CABAL_SANDBOX_PKG_DB], ["$CABAL_SANDBOX/$host_cpu-$host_os-ghc-$GHC_VERSION-packages.conf.d"])
 AC_SUBST(CONFIG_TESTS_HASKELL_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_haskell\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
@@ -619,6 +618,7 @@ AC_SUBST(CONFIG_TESTS_HASKELL_MESSAGING, ["[[{prefix, \"/tests/messaging/haskell
 AC_SUBST(CONFIG_TESTS_HASKELL_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$cloudi_prefix/tests/msg_size/msg_size_haskell\"}, {options, [{request_timeout_adjustment, true}, {aspects_init_after, [{cloudi_service_test_msg_size, aspect_init}]}, {aspects_request_before, [{cloudi_service_test_msg_size, aspect_request}]}, {aspects_terminate_before, [{cloudi_service_test_msg_size, aspect_terminate}]}, {scope, cloudi_service_test_msg_size}, {nice, 15}]}]],"])
 AC_SUBST(CONFIG_TESTS_HASKELL_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$cloudi_prefix/tests/null/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$cloudi_prefix/tests/null/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
+AM_CONDITIONAL([GHC_PACKAGES_V9], [test "x$ghc_packages_v" = "x9"])
 AM_CONDITIONAL([HASKELL_SUPPORT], [test "x$haskell_support" = "xtrue"])
 
 # Java CloudI API support
