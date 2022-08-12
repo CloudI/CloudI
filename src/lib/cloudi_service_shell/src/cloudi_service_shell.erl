@@ -58,11 +58,14 @@
 -define(DEFAULT_LOGIN,                             true).
 -define(DEFAULT_TIMEOUT_KILLS_PROCESS,            false).
         % A service request timeout should kill the OS shell process?
--define(DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL,   sigterm).
+-define(DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL,   sigkill).
         % OS signal to use for OS shell process timeout.
 -define(DEFAULT_TERMINATE_KILLS_PROCESS,          false).
         % Service termination should kill the OS shell process?
--define(DEFAULT_TERMINATE_KILLS_PROCESS_SIGNAL,  sighup).
+        % If this argument is false, stdout will still be closed
+        % due to the termination of the service
+        % (e.g., echo will exit with a failure).
+-define(DEFAULT_TERMINATE_KILLS_PROCESS_SIGNAL,  sigkill).
         % OS signal to use for OS shell process termination.
 -define(DEFAULT_DEBUG,                             true).
 -define(DEFAULT_DEBUG_LEVEL,                      trace).
@@ -203,8 +206,8 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{debug_level = DebugLogLevel} = State,
-                              Dispatcher) ->
-    {Status, Output} = request(Request, Timeout, State, Dispatcher),
+                              _Dispatcher) ->
+    {Status, Output} = request(Request, Timeout, State),
     log_output(Status, Output, RequestInfo, Request, DebugLogLevel),
     {reply, erlang:integer_to_binary(Status), State}.
 
@@ -267,7 +270,7 @@ request(Exec, Timeout,
                su = SUPath,
                login = Login,
                kill_signal_timeout = KillSignalTimeout,
-               kill_signal_terminate = KillSignalTerminate}, Dispatcher) ->
+               kill_signal_terminate = KillSignalTerminate}) ->
     ShellInput0 = [unicode:characters_to_binary(Exec, utf8), "\n"
                    "exit $?\n"],
     PortOptions0 = [stream, binary, stderr_to_stdout, exit_status],
@@ -299,26 +302,26 @@ request(Exec, Timeout,
     end,
     Shell = erlang:open_port({spawn_executable, ShellExecutable},
                              [{args, ShellArgs} | PortOptionsN]),
-    KillMonitor = kill_monitor_start(KillSignalTerminate, Dispatcher),
+    KillOnExit = kill_on_exit_start(KillSignalTerminate),
     KillTimer = kill_timer_start(KillSignalTimeout, Shell, Timeout),
     true = erlang:port_command(Shell, ShellInputN),
-    ShellOutput = request_output(Shell, [], KillSignalTerminate, Dispatcher),
+    ShellOutput = request_output(Shell, [], KillSignalTerminate),
     ok = kill_timer_stop(KillTimer, Shell),
-    ok = kill_monitor_stop(KillMonitor),
+    ok = kill_on_exit_stop(KillOnExit),
     ShellOutput.
 
-request_output(Shell, Output, KillSignalTerminate, Dispatcher) ->
+request_output(Shell, Output, KillSignalTerminate) ->
     receive
         {Shell, {data, Data}} ->
-            request_output(Shell, [Data | Output],
-                           KillSignalTerminate, Dispatcher);
-        {'DOWN', _, process, Dispatcher, _} ->
+            request_output(Shell, [Data | Output], KillSignalTerminate);
+        {'EXIT', _Service, Reason} ->
             ok = kill_shell(KillSignalTerminate, Shell),
-            request_output(Shell, Output, KillSignalTerminate, Dispatcher);
+            erlang:exit(Reason),
+            request_output(Shell, Output, KillSignalTerminate);
         {Shell, {kill, KillSignalTimeout}} ->
             true = erlang:unlink(Shell),
             ok = kill_shell(KillSignalTimeout, Shell),
-            request_output(Shell, Output, KillSignalTerminate, Dispatcher);
+            request_output(Shell, Output, KillSignalTerminate);
         {Shell, {exit_status, Status}} ->
             {Status, lists:reverse(Output)}
     end.
@@ -354,15 +357,16 @@ kill_timer_stop(KillTimer, Shell) ->
             ok
     end.
 
-kill_monitor_start(undefined, _) ->
-    undefined;
-kill_monitor_start(_, Dispatcher) ->
-    erlang:monitor(process, Dispatcher).
+kill_on_exit_start(undefined) ->
+    false;
+kill_on_exit_start(_) ->
+    false = erlang:process_flag(trap_exit, true),
+    true.
 
-kill_monitor_stop(undefined) ->
+kill_on_exit_stop(false) ->
     ok;
-kill_monitor_stop(KillMonitor) ->
-    true = erlang:demonitor(KillMonitor, [flush]),
+kill_on_exit_stop(true) ->
+    true = erlang:process_flag(trap_exit, false),
     ok.
 
 log_output(Status, Output, RequestInfo, Request, DebugLogLevel) ->

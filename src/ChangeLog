@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-08-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix the cloudi_service_shell terminate_kills_process feature
+    * Change the default values for cloudi_service_shell arguments
+      timeout_kills_process_signal and terminate_kills_process_signal
+      to sigkill because it is the best cross-platform setting that
+      terminates any shell
+
 2022-08-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change the minimum Haskell requirement to GHC 8.6.0
