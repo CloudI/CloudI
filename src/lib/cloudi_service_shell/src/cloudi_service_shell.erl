@@ -65,7 +65,7 @@
         % If this argument is false, stdout will still be closed
         % due to the termination of the service
         % (e.g., echo will exit with a failure).
--define(DEFAULT_TERMINATE_KILLS_PROCESS_SIGNAL,  sigkill).
+-define(DEFAULT_TERMINATE_KILLS_PROCESS_SIGNAL, sigkill).
         % OS signal to use for OS shell process termination.
 -define(DEFAULT_DEBUG,                             true).
 -define(DEFAULT_DEBUG_LEVEL,                      trace).
