@@ -234,7 +234,7 @@ t_basic() ->
     StateA10 = add(95.0925, StateA9),
     StateA11 = add(Maximum, StateA10),
     StateA12 = add(95.1682, StateA11),
-    {'EXIT', {function_clause, _}} = catch calculate([], StateA12),
+    {'EXIT', {function_clause, _}} = (catch calculate([], StateA12)),
     [Minimum,
      Minimum,
      Minimum,
