@@ -359,7 +359,8 @@ kill_timer_stop(KillTimer, Shell) ->
 
 kill_on_exit_start(undefined) ->
     false;
-kill_on_exit_start(_) ->
+kill_on_exit_start(KillSignalTerminate)
+    when is_integer(KillSignalTerminate) ->
     false = erlang:process_flag(trap_exit, true),
     true.
 
