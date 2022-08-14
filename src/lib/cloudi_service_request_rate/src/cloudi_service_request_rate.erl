@@ -102,6 +102,7 @@
         request_success = 0 :: non_neg_integer(),
         request_fail = 0 :: non_neg_integer(),
         request_latency = cloudi_statistics:new() :: cloudi_statistics:state(),
+        request_latencies = [] :: list(non_neg_integer()),
         request_ids = #{} :: #{cloudi_service:trans_id() := undefined}
     }).
 
@@ -242,7 +243,8 @@ cloudi_service_handle_info({tick, T1},
                                   request_rate_max = RequestRateCompleteMax,
                                   request_success = RequestSuccess,
                                   request_fail = RequestFail,
-                                  request_latency = RequestLatency} = State,
+                                  request_latency = RequestLatency,
+                                  request_latencies = RequestLatencies} = State,
                            Dispatcher) ->
     Elapsed = (cloudi_timestamp:microseconds_monotonic() -
                T1) / 1000000.0, % seconds
@@ -268,7 +270,8 @@ cloudi_service_handle_info({tick, T1},
                                          RequestRateCompleteAvgNew,
                                          RequestRateCompleteMinNew,
                                          RequestRateCompleteMaxNew,
-                                         RequestLatency}),
+                                         RequestLatency,
+                                         RequestLatencies}),
     ok = tick_send(TickLength, Service),
     RequestIds = tick_request_send(RequestCount, Name,
                                    RequestInfo, Request,
@@ -281,6 +284,7 @@ cloudi_service_handle_info({tick, T1},
                           request_success = 0,
                           request_fail = 0,
                           request_latency = cloudi_statistics:new(),
+                          request_latencies = [],
                           request_ids = RequestIds}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {noreply, request_count_recv(Request, State)}.
@@ -395,6 +399,7 @@ request_count_recv(#return_async_active{response_info = ResponseInfo,
                           request_success = RequestSuccess,
                           request_fail = RequestFail,
                           request_latency = RequestLatency,
+                          request_latencies = RequestLatencies,
                           request_ids = RequestIds} = State) ->
     case maps:find(TransId, RequestIds) of
         {ok, _} ->
@@ -405,8 +410,10 @@ request_count_recv(#return_async_active{response_info = ResponseInfo,
                                    cloudi_trans_id:microseconds(TransId),
                     RequestLatencyNew = cloudi_statistics:add(MicroSeconds,
                                                               RequestLatency),
+                    RequestLatenciesNew = [MicroSeconds | RequestLatencies],
                     State#state{request_success = RequestSuccess + 1,
-                                request_latency = RequestLatencyNew};
+                                request_latency = RequestLatencyNew,
+                                request_latencies = RequestLatenciesNew};
                 false ->
                     State#state{request_fail = RequestFail + 1}
             end;
@@ -477,7 +484,8 @@ process_results_data([],
                      RequestRateCompleteAvgSum,
                      RequestRateCompleteMinSum,
                      RequestRateCompleteMaxSum,
-                     RequestLatency) ->
+                     RequestLatency,
+                     RequestLatencyPercentile) ->
     if
         RequestFailSum > 0 ->
             ?LOG_ERROR("~w requests failed validation",
@@ -489,20 +497,23 @@ process_results_data([],
      RequestRateCompleteAvgSum,
      RequestRateCompleteMinSum,
      RequestRateCompleteMaxSum,
-     RequestLatency};
+     RequestLatency,
+     RequestLatencyPercentile};
 process_results_data([{_ProcessIndex,
                        RequestFail,
                        0,
                        0.0,
                        undefined,
                        undefined,
-                       RequestLatency} | Results],
+                       RequestLatency,
+                       RequestLatencies} | Results],
                      RequestFailSum,
                      _ResultsStable,
                      RequestRateCompleteAvgSum,
                      RequestRateCompleteMinSum,
                      RequestRateCompleteMaxSum,
-                     RequestLatencyOld) ->
+                     RequestLatencyOld,
+                     RequestLatencyPercentileOld) ->
     process_results_data(Results,
                          RequestFailSum + RequestFail,
                          false,
@@ -510,20 +521,25 @@ process_results_data([{_ProcessIndex,
                          RequestRateCompleteMinSum,
                          RequestRateCompleteMaxSum,
                          cloudi_statistics:merge(RequestLatency,
-                                                 RequestLatencyOld));
+                                                 RequestLatencyOld),
+                         cloudi_percentiles:
+                         add_from_list(lists:reverse(RequestLatencies),
+                                       RequestLatencyPercentileOld));
 process_results_data([{_ProcessIndex,
                        RequestFail,
                        RequestRateCompleteCount,
                        RequestRateCompleteAvg,
                        RequestRateCompleteMin,
                        RequestRateCompleteMax,
-                       RequestLatency} | Results],
+                       RequestLatency,
+                       RequestLatencies} | Results],
                      RequestFailSum,
                      ResultsStable,
                      RequestRateCompleteAvgSum,
                      RequestRateCompleteMinSum,
                      RequestRateCompleteMaxSum,
-                     RequestLatencyOld) ->
+                     RequestLatencyOld,
+                     RequestLatencyPercentileOld) ->
     process_results_data(Results,
                          RequestFailSum + RequestFail,
                          ResultsStable andalso (RequestRateCompleteCount > 0),
@@ -531,16 +547,21 @@ process_results_data([{_ProcessIndex,
                          RequestRateCompleteMinSum + RequestRateCompleteMin,
                          RequestRateCompleteMaxSum + RequestRateCompleteMax,
                          cloudi_statistics:merge(RequestLatency,
-                                                 RequestLatencyOld)).
+                                                 RequestLatencyOld),
+                         cloudi_percentiles:
+                         add_from_list(lists:reverse(RequestLatencies),
+                                       RequestLatencyPercentileOld)).
 
 process_results(ResultsCount, Results, ResultsCount) ->
     {ResultsStable,
      RequestRateCompleteAvgSum,
      RequestRateCompleteMinSum,
      RequestRateCompleteMaxSum,
-     RequestLatency0} = process_results_data(Results,
-                                             0, true, 0.0, 0.0, 0.0,
-                                             cloudi_statistics:new()),
+     RequestLatency0,
+     RequestLatencyPercentile} = process_results_data(Results,
+                                                      0, true, 0.0, 0.0, 0.0,
+                                                      cloudi_statistics:new(),
+                                                      cloudi_percentiles:new()),
     if
         ResultsStable =:= true ->
             {StdDev,
@@ -561,26 +582,80 @@ process_results(ResultsCount, Results, ResultsCount) ->
             {DescribeDistribution,
              RequestLatencyN} = cloudi_statistics:
                                 describe_distribution(RequestLatency5),
+            [Percentile10,
+             Percentile20,
+             Percentile30,
+             Percentile40,
+             Percentile50,
+             Percentile75,
+             Percentile80,
+             Percentile90,
+             Percentile95,
+             Percentile99,
+             Percentile999,
+             Percentile9999,
+             Percentile99999] = cloudi_percentiles:
+                                calculate([0.10,
+                                           0.20,
+                                           0.30,
+                                           0.40,
+                                           0.50,
+                                           0.75,
+                                           0.80,
+                                           0.90,
+                                           0.95,
+                                           0.99,
+                                           0.999,
+                                           0.9999,
+                                           0.99999],
+                                          RequestLatencyPercentile),
             ?LOG_INFO("stable at ~.1f [~.1f .. ~.1f] requests/second~n"
                       "  request latency (distribution ~s):~n"
-                      "    minimum  ~9.b us~n"
-                      "    maximum  ~9.b us~n"
-                      "    mean     ~9.b us~n"
-                      "    stddev   ~12.2f~n"
-                      "    skewness ~12.2f (~s)~n"
-                      "    kurtosis ~12.2f (~s)",
+                      "    mean               ~9.b us~n"
+                      "    stddev             ~12.2f~n"
+                      "    skewness           ~12.2f (~s)~n"
+                      "    kurtosis           ~12.2f (~s)~n"
+                      "~n"
+                      "      0% (minimum)     ~9.b us~n"
+                      "     10%               ~9.b us~n"
+                      "     20%               ~9.b us~n"
+                      "     30%               ~9.b us~n"
+                      "     40%               ~9.b us~n"
+                      "     50%               ~9.b us~n"
+                      "     75%               ~9.b us~n"
+                      "     80%               ~9.b us~n"
+                      "     90%               ~9.b us~n"
+                      "     95%               ~9.b us~n"
+                      "     99%               ~9.b us~n"
+                      "     99.9%             ~9.b us~n"
+                      "     99.99%            ~9.b us~n"
+                      "     99.999%           ~9.b us~n"
+                      "    100% (maximum)     ~9.b us~n",
                       [round(RequestRateCompleteAvgSum * 10.0) / 10.0,
                        round(RequestRateCompleteMinSum * 10.0) / 10.0,
                        round(RequestRateCompleteMaxSum * 10.0) / 10.0,
                        DescribeDistribution,
-                       round(cloudi_statistics:minimum(RequestLatencyN)),
-                       round(cloudi_statistics:maximum(RequestLatencyN)),
                        round(cloudi_statistics:mean(RequestLatencyN)),
                        round(StdDev * 100.0) / 100.0,
                        round(Skewness * 100.0) / 100.0,
                        DescribeSkewness,
                        round(Kurtosis * 100.0) / 100.0,
-                       DescribeKurtosis]);
+                       DescribeKurtosis,
+                       round(cloudi_statistics:minimum(RequestLatencyN)),
+                       round(Percentile10),
+                       round(Percentile20),
+                       round(Percentile30),
+                       round(Percentile40),
+                       round(Percentile50),
+                       round(Percentile75),
+                       round(Percentile80),
+                       round(Percentile90),
+                       round(Percentile95),
+                       round(Percentile99),
+                       round(Percentile999),
+                       round(Percentile9999),
+                       round(Percentile99999),
+                       round(cloudi_statistics:maximum(RequestLatencyN))]);
         ResultsStable =:= false ->
             ok
     end,

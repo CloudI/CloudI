@@ -46,6 +46,7 @@
 
 %% external interface
 -export([add/2,
+         add_from_list/2,
          calculate/2,
          count/1,
          merge/2,
@@ -56,7 +57,7 @@
 -record(percentiles,
     {
         n = 0 :: non_neg_integer(),
-        samples = [] :: list(float())
+        samples = [] :: list(number())
     }).
 
 %%%------------------------------------------------------------------------
@@ -80,7 +81,22 @@ add(X, #percentiles{n = N,
                     samples = Samples} = State)
     when is_number(X) ->
     State#percentiles{n = N + 1,
-                      samples = lists:merge(Samples, [float(X)])}.
+                      samples = lists:merge(Samples, [X])}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Add samples from a list for computing percentiles.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec add_from_list(L :: list(number()),
+                    State :: state()) ->
+    state().
+
+add_from_list(L, #percentiles{n = N,
+                              samples = Samples} = State) ->
+    State#percentiles{n = N + length(L),
+                      samples = lists:merge(Samples, lists:sort(L))}.
 
 %%-------------------------------------------------------------------------
 %% @doc
