@@ -105,10 +105,10 @@ erfinv(X)
     end,
     E0 = X * PN,
     % one iteration of Halley's method to refine estimate of inverse erf
-    FX = math:erf(E0) - X,
-    DF = (2.0 / math:pow(math:pi(), 0.5)) * math:exp(-(E0 * E0)),
-    D2F = -2 * E0 * DF,
-    EN = E0 - (2 * FX * DF) / ((2 * DF * DF) - (FX * D2F)),
+    F0E = math:erf(E0) - X,
+    F1E = (2.0 / math:pow(math:pi(), 0.5)) * math:exp(-(E0 * E0)),
+    F2E = -2 * E0 * F1E,
+    EN = E0 - (2 * F0E * F1E) / ((2 * F1E * F1E) - (F0E * F2E)),
     EN.
 
 %%%------------------------------------------------------------------------
