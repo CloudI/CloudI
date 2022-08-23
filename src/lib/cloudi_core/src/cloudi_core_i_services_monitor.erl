@@ -500,7 +500,7 @@ handle_call({status, ServiceIdList}, _,
                    suspended = Suspended,
                    durations_restart = DurationsRestart} = State) ->
     TimeNow = cloudi_timestamp:native_monotonic(),
-    Reply = service_ids_status(ServiceIdList, TimeNow,
+    Reply = status_service_ids(ServiceIdList, TimeNow,
                                DurationsUpdate, DurationsSuspend, Suspended,
                                DurationsRestart, Services),
     {reply, Reply, State};
@@ -1687,33 +1687,33 @@ service_id_pids_ordered_put([Pid | Pids], ProcessLookup, Services) ->
                                 {ProcessPids, OSPid}, ProcessLookup),
     service_id_pids_ordered_put(Pids, ProcessLookupNew, Services).
 
-service_ids_status(ServiceIdList, TimeNow,
+status_service_ids(ServiceIdList, TimeNow,
                    DurationsUpdate, DurationsSuspend, Suspended,
                    DurationsRestart, Services) ->
     TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
     TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
     TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
-    service_ids_status(ServiceIdList, [], TimeNow,
+    status_service_ids(ServiceIdList, [], TimeNow,
                        TimeDayStart, TimeWeekStart,
                        TimeMonthStart, TimeYearStart,
                        DurationsUpdate, DurationsSuspend, Suspended,
                        DurationsRestart, Services).
 
-service_ids_status([], StatusList, _, _, _, _, _, _, _, _, _, _) ->
+status_service_ids([], StatusList, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
-service_ids_status([ServiceId | ServiceIdList], StatusList, TimeNow,
+status_service_ids([ServiceId | ServiceIdList], StatusList, TimeNow,
                    TimeDayStart, TimeWeekStart,
                    TimeMonthStart, TimeYearStart,
                    DurationsUpdate, DurationsSuspend, Suspended,
                    DurationsRestart, Services) ->
-    case service_id_status(ServiceId, TimeNow,
+    case status_service_id(ServiceId, TimeNow,
                            TimeDayStart, TimeWeekStart,
                            TimeMonthStart, TimeYearStart,
                            DurationsUpdate, DurationsSuspend, Suspended,
                            DurationsRestart, Services) of
         {ok, Status} ->
-            service_ids_status(ServiceIdList,
+            status_service_ids(ServiceIdList,
                                [{ServiceId, Status} | StatusList], TimeNow,
                                TimeDayStart, TimeWeekStart,
                                TimeMonthStart, TimeYearStart,
@@ -1723,7 +1723,7 @@ service_ids_status([ServiceId | ServiceIdList], StatusList, TimeNow,
             Error
     end.
 
-service_id_status(ServiceId, TimeNow,
+status_service_id(ServiceId, TimeNow,
                   TimeDayStart, TimeWeekStart, TimeMonthStart, TimeYearStart,
                   DurationsUpdate, DurationsSuspend, Suspended,
                   DurationsRestart, Services) ->
@@ -2124,7 +2124,8 @@ service_id_status(ServiceId, TimeNow,
             UptimeProcessing = cloudi_core_i_status:
                                nanoseconds_to_string_lt(NanoSecondsProcessing,
                                                         ApproximateProcessing),
-            Status26 = [{suspended, ProcessingSuspended},
+            Status26 = [{size_erlang, status_pids_size(Pids)},
+                        {suspended, ProcessingSuspended},
                         {uptime_total, UptimeTotal},
                         {uptime_running, UptimeRunning},
                         {uptime_processing, UptimeProcessing},
@@ -2147,6 +2148,19 @@ service_id_status(ServiceId, TimeNow,
             {ok, StatusN};
         error ->
             {error, {service_not_found, ServiceId}}
+    end.
+
+status_pids_size(Pids) ->
+    status_pids_size(Pids, 0).
+
+status_pids_size([], PidsSize) ->
+    PidsSize;
+status_pids_size([Pid | Pids], PidsSize) ->
+    case erlang:process_info(Pid, memory) of
+        undefined ->
+            status_pids_size(Pids, PidsSize);
+        {memory, PidSize} ->
+            status_pids_size(Pids, PidsSize + PidSize)
     end.
 
 restart_pids([]) ->
