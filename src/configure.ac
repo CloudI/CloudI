@@ -873,6 +873,7 @@ AC_SUBST(CLOUDI_ARG_NODE_COOKIE)
 AC_CONFIG_FILES([
     cloudi_tests.conf
     cloudi_minimal.conf
+    linux_setcap.sh
     rebar_src.config
     rebar_src_test.config
     reltool.config

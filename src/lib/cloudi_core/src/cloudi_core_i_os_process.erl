@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_process).
@@ -253,20 +253,23 @@ limit_format_list_value(Value)
 owner_validate(Values)
     when is_list(Values) ->
     Defaults = [
-        {user, "user"},
-        {group, "group"}],
+        {user, "string"},
+        {group, "string"}],
     case cloudi_proplists:take_values(Defaults, Values) of
         [User, _]
-            when not ((is_list(User) andalso is_integer(hd(User))) orelse
+            when not ((is_list(User) andalso is_integer(hd(User)) andalso
+                       (User /= "root")) orelse
                       (is_integer(User) andalso
                        (User > 0) andalso (User =< 16#ffffffffffffffff))) ->
             {error, {service_options_owner_invalid, [{user, User}]}};
         [_, Group]
-            when not ((is_list(Group) andalso is_integer(hd(Group))) orelse
+            when not ((is_list(Group) andalso is_integer(hd(Group)) andalso
+                       (Group /= "root")) orelse
                       (is_integer(Group) andalso
                        (Group > 0) andalso (Group =< 16#ffffffffffffffff))) ->
             {error, {service_options_owner_invalid, [{group, Group}]}};
         [_, _] ->
+            % only basic validation has passed
             {ok, Values};
         [_, _ | Extra] ->
             {error, {service_options_owner_invalid, Extra}}
@@ -288,7 +291,7 @@ owner_format(Values, EnvironmentLookup) ->
             case cloudi_environment:transform(User, EnvironmentLookup) of
                 [] ->
                     % make user lookup fail
-                    {0, User};
+                    {0, [0]};
                 [_ | _] = UserFinal ->
                     {0, UserFinal}
             end;
@@ -303,7 +306,7 @@ owner_format(Values, EnvironmentLookup) ->
             case cloudi_environment:transform(Group, EnvironmentLookup) of
                 [] ->
                     % make group lookup fail
-                    {0, Group};
+                    {0, [0]};
                 [_ | _] = GroupFinal ->
                     {0, GroupFinal}
             end;

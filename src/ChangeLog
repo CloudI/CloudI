@@ -4,6 +4,8 @@
 2022-08-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_request_rate results
+    * Improve owner service configuration option validation
+    * Add linux_setcap.sh script for non-root Linux installations
 
 2022-08-22 Michael Truog   <mjtruog at protonmail dot com>
 

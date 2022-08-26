@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -47,6 +47,11 @@ int owner_get(uint64_t & user_i,
             return -1;
         }
         uid = user_p->pw_uid;
+        if (uid == 0)
+        {
+            // root is not allowed
+            return -1;
+        }
         if (gid == 0 && group_str_len == 1)
         {
             gid = user_p->pw_gid;
@@ -61,6 +66,11 @@ int owner_get(uint64_t & user_i,
             return -1;
         }
         gid = group_p->gr_gid;
+        if (gid == 0)
+        {
+            // root is not allowed
+            return -1;
+        }
     }
     user_i = static_cast<uint64_t>(uid);
     group_i = static_cast<uint64_t>(gid);
