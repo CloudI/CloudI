@@ -3,7 +3,7 @@
 # Use this script on Linux if you are unable to install as root but
 # you still need to be able to use one or more of the following
 # external service configuration options:
-# 'chroot', 'limit', 'nice', 'owner', 'syscall_lock', 'cgroup'
+# 'cgroup', 'chroot', 'limit', 'nice', 'owner', 'syscall_lock'
 
 # Execute the script (after installation) with:
 # sudo sh linux_setcap.sh
@@ -16,10 +16,8 @@ fi
 EXECUTABLE_BEAM="$ROOTDIR/erts-@ERLANG_ERTS_VER@/bin/beam.smp"
 EXECUTABLE_SPAWN="$ROOTDIR/lib/cloudi_core-@VERSION@/priv/cloudi_os_spawn"
 
-# CloudI external service configuration options:
+# required for 'cgroup'
+setcap CAP_SYS_ADMIN=+ep $EXECUTABLE_BEAM
 
 # required for 'chroot', 'limit', 'nice', 'owner', 'syscall_lock'
 setcap CAP_SYS_CHROOT,CAP_SYS_RESOURCE,CAP_SYS_NICE,CAP_SETUID,CAP_SETGID,CAP_SYS_ADMIN=+ep $EXECUTABLE_SPAWN
-
-# required for 'cgroup'
-setcap CAP_SYS_ADMIN=+ep $EXECUTABLE_BEAM

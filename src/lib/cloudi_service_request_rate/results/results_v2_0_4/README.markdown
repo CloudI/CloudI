@@ -1,4 +1,4 @@
-# 2.0.4 `cloudi_service_request_rate` testing
+# 2.0.4 `cloudi_service_request_rate` Testing
 
 ## Hardware
 

@@ -902,6 +902,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_filesystem/rebar.config
     lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
     lib/cloudi_service_funnel/src/cloudi_service_funnel.app.src
+    lib/cloudi_service_health_check/src/cloudi_service_health_check.app.src
     lib/cloudi_service_http_client/rebar.config
     lib/cloudi_service_http_client/src/cloudi_service_http_client.app.src
     lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src

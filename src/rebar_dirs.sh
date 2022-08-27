@@ -14,6 +14,7 @@ REBAR_DIRS="\
     lib/cloudi_service_db_pgsql \
     lib/cloudi_service_filesystem \
     lib/cloudi_service_funnel \
+    lib/cloudi_service_health_check \
     lib/cloudi_service_http_client \
     lib/cloudi_service_http_cowboy \
     lib/cloudi_service_http_cowboy1 \

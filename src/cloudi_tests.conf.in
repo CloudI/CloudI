@@ -1231,7 +1231,16 @@
         [{restart_all, true},
          {hibernate, true},
          {duo_mode, true},
-         {scope, cloudi_service_test_messaging_erlang_variation3}]}
+         {scope, cloudi_service_test_messaging_erlang_variation3}]},
+    [{prefix, "/health_check/"},
+     {module, cloudi_service_health_check},
+     {args,
+      [{hosts,
+        [{"cloudi.org",
+          [{interval, 5}, % seconds
+           {port, 80}]}]},
+       {debug_level, debug}]},
+     {dest_refresh, none}]
 ]}.
 % automatic node detection with a UDP multicast group
 {nodes, automatic}.
