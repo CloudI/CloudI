@@ -179,6 +179,7 @@ Dynamic Configuration and Monitoring:
 * Batch CloudI Service Execution with [`cloudi_service_api_batch`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_api_batch/src/cloudi_service_api_batch.erl)
 * Service Request Sending with [`cloudi_service_send`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_send/src/cloudi_service_send.erl)
 * Monitoring to Graphite, OpenTSDB, SNMP, InfluxDB or StatsD with [`cloudi_service_monitoring`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl)
+* Remote Host Health Checks with [`cloudi_service_health_check`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_health_check/src/cloudi_service_health_check.erl)
 
 Routing:
 
