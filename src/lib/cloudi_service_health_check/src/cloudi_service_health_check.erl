@@ -134,6 +134,8 @@
             :: tcp_port(),
         interval
             :: interval(),
+        start_time
+            :: cloudi_timestamp:native_monotonic(),
         dns_failed = false
             :: boolean(),
         dns_failed_time = undefined
@@ -144,7 +146,11 @@
             :: undefined | dns_restored(),
         tcp_failed = false
             :: boolean(),
-        tcp_failed_time = #{}
+        tcp_failed_count = 0
+            :: non_neg_integer(),
+        tcp_failed_time = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        tcp_failed_time_ip = #{}
             :: #{inet:ip_address() := cloudi_timestamp:native_monotonic()},
         tcp_failure
             :: undefined | tcp_failure(),
@@ -156,13 +162,33 @@
     {
         service
             :: cloudi_service:source(),
+        process_index
+            :: non_neg_integer(),
+        process_count
+            :: pos_integer(),
         prefix
             :: cloudi:service_name_pattern(),
         hosts
             :: cloudi_x_trie:cloudi_x_trie(), % hostname() -> #host{}
+        durations_down = cloudi_core_i_status:durations_new()
+            :: cloudi_core_i_status:durations(hostname()),
         debug_level
             :: off | trace | debug | info | warn | error | fatal
     }).
+
+-define(NATIVE_TIME_IN_DAY,
+        cloudi_timestamp:
+        convert(86400000000000, nanosecond, native)).
+-define(NATIVE_TIME_IN_WEEK,
+        cloudi_timestamp:
+        convert(86400000000000 * 7, nanosecond, native)).
+-define(NATIVE_TIME_IN_MONTH,
+        cloudi_timestamp:
+        convert(ceil(86400000000000 * 30.4375), nanosecond, native)).
+-define(NATIVE_TIME_IN_YEAR,
+        cloudi_timestamp:
+        convert(ceil(86400000000000 * 365.25), nanosecond, native)).
+-define(AVAILABILITY_ZERO, "0 %").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -177,54 +203,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {hosts,                    ?DEFAULT_HOSTS},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [HostsL,
+    [Hosts,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
-    true = is_list(HostsL) andalso (HostsL /= []),
+    true = is_list(Hosts) andalso (Hosts /= []),
     Service = cloudi_service:self(Dispatcher),
-    HostDefaults = [
-        {port,                     ?DEFAULT_PORT},
-        {interval,                 ?DEFAULT_INTERVAL},
-        {ipv4,                     ?DEFAULT_IPV4},
-        {ipv6,                     ?DEFAULT_IPV6},
-        {dns_failure,              ?DEFAULT_DNS_FAILURE},
-        {dns_restored,             ?DEFAULT_DNS_RESTORED},
-        {tcp_failure,              ?DEFAULT_TCP_FAILURE},
-        {tcp_restored,             ?DEFAULT_TCP_RESTORED}],
-    Hosts = lists:foldl(fun({Hostname, L}, Lookup) ->
-        true = is_list(Hostname) andalso is_integer(hd(Hostname)),
-        false = cloudi_x_trie:is_key(Hostname, Lookup),
-        [Port, Interval, IPv4Allowed, IPv6Allowed,
-         DNSFailure0, DNSRestored0, TCPFailure0,
-         TCPRestored0] = cloudi_proplists:take_values(HostDefaults, L),
-        true = is_integer(Port) andalso (Port > 0),
-        true = is_integer(Interval) andalso
-               (Interval > 0) andalso
-               (Interval =< ?TIMEOUT_MAX_ERLANG div 1000),
-        true = is_boolean(IPv4Allowed),
-        true = is_boolean(IPv6Allowed),
-        true = (IPv4Allowed /= false) orelse
-               (IPv6Allowed /= false),
-        DNSFailureN = cloudi_args_type:
-                      function_optional(DNSFailure0, 2),
-        DNSRestoredN = cloudi_args_type:
-                       function_optional(DNSRestored0, 3),
-        TCPFailureN = cloudi_args_type:
-                      function_optional(TCPFailure0, 4),
-        TCPRestoredN = cloudi_args_type:
-                       function_optional(TCPRestored0, 5),
-        erlang:send_after(Interval * 1000, Service,
-                          {host, Hostname}),
-        cloudi_x_trie:store(Hostname,
-                            #host{name = Hostname,
-                                  ipv4_allowed = IPv4Allowed,
-                                  ipv6_allowed = IPv6Allowed,
-                                  port = Port,
-                                  interval = Interval,
-                                  dns_failure = DNSFailureN,
-                                  dns_restored = DNSRestoredN,
-                                  tcp_failure = TCPFailureN,
-                                  tcp_restored = TCPRestoredN}, Lookup)
-    end, cloudi_x_trie:new(), HostsL),
+    ProcessIndex = cloudi_service:process_index(Dispatcher),
+    ProcessCount = cloudi_service:process_count(Dispatcher),
+    HostsLoaded = hosts_load(Hosts, ProcessIndex, ProcessCount, Service),
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
@@ -240,24 +225,83 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end,
     ok = cloudi_service:subscribe(Dispatcher, "hosts.erl/get"),
     ok = cloudi_service:subscribe(Dispatcher, "hosts.json/get"),
+    ok = cloudi_service:subscribe(Dispatcher,
+                                  "hosts/" ++
+                                  erlang:integer_to_list(ProcessIndex)),
     {ok, #state{service = Service,
+                process_index = ProcessIndex,
+                process_count = ProcessCount,
                 prefix = Prefix,
-                hosts = Hosts,
+                hosts = HostsLoaded,
                 debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_request(_RequestType, Name, _Pattern,
-                              _RequestInfo, _Request,
+                              RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Source,
-                              #state{prefix = Prefix,
-                                     hosts = Hosts} = State,
+                              #state{process_index = ProcessIndex,
+                                     process_count = ProcessCount,
+                                     prefix = Prefix,
+                                     hosts = Hosts,
+                                     durations_down = DurationsDown} = State,
                               _Dispatcher) ->
-    Response = case cloudi_service_name:suffix(Prefix, Name) of
-        "hosts.erl/get" ->
-            convert_term_to_erlang(hosts_list(Hosts));
-        "hosts.json/get" ->
-            convert_term_to_json(hosts_list(Hosts), hosts)
+    KeyValues0 = cloudi_request_info:key_value_parse(RequestInfo),
+    ProcessIndexLastKey = <<"process-index-last">>,
+    {ProcessIndexLast,
+     KeyValues1} = case cloudi_key_value:find(ProcessIndexLastKey,
+                                              KeyValues0) of
+        {ok, ProcessIndexLastBin} ->
+            {erlang:binary_to_integer(ProcessIndexLastBin),
+             KeyValues0};
+        error ->
+            ProcessIndexLastValue = if
+                ProcessIndex == 0 ->
+                    ProcessCount - 1;
+                true ->
+                    ProcessIndex - 1
+            end,
+            {ProcessIndexLastValue,
+             cloudi_key_value:
+             store(ProcessIndexLastKey,
+                   erlang:integer_to_binary(ProcessIndexLastValue),
+                   KeyValues0)}
     end,
-    {reply, Response, State}.
+    ProcessIndexLastStr = erlang:integer_to_list(ProcessIndexLast),
+    TextFormatKey = <<"text-format">>,
+    {Last,
+     HostsInfo,
+     TextFormatValue} = case cloudi_service_name:suffix(Prefix, Name) of
+        "hosts.erl/get" ->
+            {ProcessIndexLast == ProcessIndex,
+             hosts_list(Hosts, DurationsDown),
+             <<"erl">>};
+        "hosts.json/get" ->
+            {ProcessIndexLast == ProcessIndex,
+             hosts_list(Hosts, DurationsDown),
+             <<"json">>};
+        "hosts/" ++ Index ->
+            {ProcessIndexLastStr == Index,
+             lists:ukeymerge(1, Request, hosts_list(Hosts, DurationsDown)),
+             element(2, cloudi_key_value:find(TextFormatKey, KeyValues0))}
+    end,
+    if
+        Last =:= true ->
+            Response = if
+                TextFormatValue == <<"erl">> ->
+                    convert_term_to_erlang(HostsInfo);
+                TextFormatValue == <<"json">> ->
+                    convert_term_to_json(HostsInfo, hosts)
+            end,
+            {reply, Response, State};
+        Last =:= false ->
+            ProcessIndexNext = (ProcessIndex + 1) rem ProcessCount,
+            KeyValuesN = cloudi_key_value:store(TextFormatKey,
+                                                TextFormatValue, KeyValues1),
+            {forward,
+             Prefix ++ "hosts/" ++ erlang:integer_to_list(ProcessIndexNext),
+             cloudi_request_info:key_value_new(KeyValuesN, text_pairs),
+             HostsInfo,
+             State}
+    end.
 
 cloudi_service_handle_info({host, Hostname}, State, _Dispatcher) ->
     {noreply, health_check(Hostname, State)}.
@@ -269,17 +313,80 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+hosts_load(Hosts, ProcessIndex, ProcessCount, Service) ->
+    hosts_load(Hosts, cloudi_x_trie:new(),
+               0, ProcessIndex, ProcessCount, Service).
+
+hosts_load([], HostsLoaded, _, _, _, _) ->
+    HostsLoaded;
+hosts_load([{Hostname, Args} | Hosts], HostsLoaded,
+           ProcessIndex, ProcessIndex, ProcessCount, Service) ->
+    true = is_list(Hostname) andalso is_integer(hd(Hostname)),
+    false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
+    Defaults = [
+        {port,                     ?DEFAULT_PORT},
+        {interval,                 ?DEFAULT_INTERVAL},
+        {ipv4,                     ?DEFAULT_IPV4},
+        {ipv6,                     ?DEFAULT_IPV6},
+        {dns_failure,              ?DEFAULT_DNS_FAILURE},
+        {dns_restored,             ?DEFAULT_DNS_RESTORED},
+        {tcp_failure,              ?DEFAULT_TCP_FAILURE},
+        {tcp_restored,             ?DEFAULT_TCP_RESTORED}],
+    [Port, Interval, IPv4Allowed, IPv6Allowed,
+     DNSFailure0, DNSRestored0, TCPFailure0,
+     TCPRestored0] = cloudi_proplists:take_values(Defaults, Args),
+    true = is_integer(Port) andalso (Port > 0),
+    true = is_integer(Interval) andalso
+           (Interval > 0) andalso
+           (Interval =< ?TIMEOUT_MAX_ERLANG div 1000),
+    true = is_boolean(IPv4Allowed),
+    true = is_boolean(IPv6Allowed),
+    true = (IPv4Allowed /= false) orelse
+           (IPv6Allowed /= false),
+    DNSFailureN = cloudi_args_type:
+                  function_optional(DNSFailure0, 2),
+    DNSRestoredN = cloudi_args_type:
+                   function_optional(DNSRestored0, 3),
+    TCPFailureN = cloudi_args_type:
+                  function_optional(TCPFailure0, 4),
+    TCPRestoredN = cloudi_args_type:
+                   function_optional(TCPRestored0, 5),
+    TimeStart = cloudi_timestamp:native_monotonic(),
+    erlang:send_after(Interval * 1000, Service, {host, Hostname}),
+    HostLoaded = #host{name = Hostname,
+                       ipv4_allowed = IPv4Allowed,
+                       ipv6_allowed = IPv6Allowed,
+                       port = Port,
+                       interval = Interval,
+                       start_time = TimeStart,
+                       dns_failure = DNSFailureN,
+                       dns_restored = DNSRestoredN,
+                       tcp_failure = TCPFailureN,
+                       tcp_restored = TCPRestoredN},
+    hosts_load(Hosts, cloudi_x_trie:store(Hostname, HostLoaded, HostsLoaded),
+               (ProcessIndex + 1) rem ProcessCount,
+               ProcessIndex, ProcessCount, Service);
+hosts_load([{Hostname, _} | Hosts], HostsLoaded,
+           Index, ProcessIndex, ProcessCount, Service) ->
+    true = is_list(Hostname) andalso is_integer(hd(Hostname)),
+    false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
+    hosts_load(Hosts, HostsLoaded,
+               (Index + 1) rem ProcessCount,
+               ProcessIndex, ProcessCount, Service).
+
 health_check(Hostname,
              #state{service = Service,
                     hosts = Hosts,
+                    durations_down = DurationsDown,
                     debug_level = DebugLogLevel} = State) ->
     Host0 = cloudi_x_trie:fetch(Hostname, Hosts),
     #host{interval = Interval} = Host0,
     Host1 = health_check_dns(Host0, DebugLogLevel),
-    HostN = health_check_tcp(Host1, DebugLogLevel),
-    erlang:send_after(Interval * 1000, Service,
-                      {host, Hostname}),
-    State#state{hosts = cloudi_x_trie:store(Hostname, HostN, Hosts)}.
+    {HostN,
+     DurationsDownNew} = health_check_tcp(Host1, DurationsDown, DebugLogLevel),
+    erlang:send_after(Interval * 1000, Service, {host, Hostname}),
+    State#state{hosts = cloudi_x_trie:store(Hostname, HostN, Hosts),
+                durations_down = DurationsDownNew}.
 
 health_check_dns(Host0, DebugLogLevel) ->
     case health_check_dns_ipv4(Host0) of
@@ -326,19 +433,37 @@ health_check_dns_ipv6(#host{name = Hostname,
             Error
     end.
 
-health_check_tcp(#host{ipv4 = IPv4,
+health_check_tcp(#host{name = Hostname,
+                       ipv4 = IPv4,
                        ipv6 = IPv6,
                        interval = Interval} = Host0,
-                 DebugLogLevel) ->
+                 DurationsDown, DebugLogLevel) ->
     Timeout = timeout_tcp(IPv4, IPv6, Interval),
     Host1 = health_check_tcp_ips(IPv4, Host0, inet, Timeout, DebugLogLevel),
     HostN = health_check_tcp_ips(IPv6, Host1, inet6, Timeout, DebugLogLevel),
-    #host{tcp_failed_time = TCPFailedTime} = HostN,
+    #host{tcp_failed = TCPFailedOld,
+          tcp_failed_time = TimeFailure,
+          tcp_failed_time_ip = TCPFailedTimeIP} = HostN,
     if
-        TCPFailedTime == #{} ->
-            HostN#host{tcp_failed = false};
+        TCPFailedTimeIP == #{} ->
+            if
+                TimeFailure =:= undefined ->
+                    false = TCPFailedOld,
+                    {HostN,
+                     DurationsDown};
+                is_integer(TimeFailure) ->
+                    true = TCPFailedOld,
+                    TimeRestored = cloudi_timestamp:native_monotonic(),
+                    {HostN#host{tcp_failed = false,
+                                tcp_failed_time = undefined},
+                     cloudi_core_i_status:
+                     durations_store([Hostname],
+                                     {TimeFailure, TimeRestored},
+                                     DurationsDown)}
+            end;
         true ->
-            HostN#host{tcp_failed = true}
+            {HostN#host{tcp_failed = true},
+             DurationsDown}
     end.
 
 health_check_tcp_ips([], HostN, _, _, _) ->
@@ -409,10 +534,12 @@ dns_restored(#host{name = Hostname,
               dns_failed_time = undefined}.
 
 tcp_failure(#host{name = Hostname,
+                  tcp_failed_count = TCPFailedCount,
                   tcp_failed_time = TCPFailedTime,
+                  tcp_failed_time_ip = TCPFailedTimeIP,
                   tcp_failure = TCPFailure} = Host,
             IP, Port, Reason, DebugLogLevel) ->
-    case maps:is_key(IP, TCPFailedTime) of
+    case maps:is_key(IP, TCPFailedTimeIP) of
         true ->
             Host;
         false ->
@@ -427,18 +554,29 @@ tcp_failure(#host{name = Hostname,
                 is_function(TCPFailure) ->
                     TCPFailure(Hostname, IP, Port, Reason)
             end,
-            TCPFailedTimeNew = maps:put(IP, TimeFailure, TCPFailedTime),
-            Host#host{tcp_failed_time = TCPFailedTimeNew}
+            {TCPFailedCountNew,
+             TCPFailedTimeNew} = if
+                TCPFailedTime =:= undefined ->
+                    {TCPFailedCount + 1,
+                     TimeFailure};
+                is_integer(TCPFailedTime) ->
+                    {TCPFailedCount,
+                     TCPFailedTime}
+            end,
+            TCPFailedTimeIPNew = maps:put(IP, TimeFailure, TCPFailedTimeIP),
+            Host#host{tcp_failed_count = TCPFailedCountNew,
+                      tcp_failed_time = TCPFailedTimeNew,
+                      tcp_failed_time_ip = TCPFailedTimeIPNew}
     end.
 
 tcp_restored(#host{name = Hostname,
-                   tcp_failed_time = TCPFailedTime,
+                   tcp_failed_time_ip = TCPFailedTimeIP,
                    tcp_restored = TCPRestored} = Host,
              IP, Port, DebugLogLevel) ->
-    case maps:take(IP, TCPFailedTime) of
+    case maps:take(IP, TCPFailedTimeIP) of
         error ->
             Host;
-        {TimeFailure, TCPFailedTimeNew} ->
+        {TimeFailure, TCPFailedTimeIPNew} ->
             % called for each ip address restored
             TimeRestored = cloudi_timestamp:native_monotonic(),
             NanoSeconds = cloudi_timestamp:convert(TimeRestored - TimeFailure,
@@ -453,10 +591,16 @@ tcp_restored(#host{name = Hostname,
                 is_function(TCPRestored) ->
                     TCPRestored(Hostname, IP, Port, TimeFailure, TimeRestored)
             end,
-            Host#host{tcp_failed_time = TCPFailedTimeNew}
+            Host#host{tcp_failed_time_ip = TCPFailedTimeIPNew}
     end.
 
-hosts_list(Hosts) ->
+hosts_list(Hosts, DurationsDown) ->
+    TimeOffset = erlang:time_offset(),
+    TimeNow = cloudi_timestamp:native_monotonic(),
+    TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
+    TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
+    TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
+    TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
     cloudi_x_trie:foldr(fun(Hostname,
                             #host{ipv4 = IPv4,
                                   ipv4_allowed = IPv4Allowed,
@@ -464,14 +608,33 @@ hosts_list(Hosts) ->
                                   ipv6_allowed = IPv6Allowed,
                                   port = Port,
                                   interval = Interval,
+                                  start_time = TimeStart,
                                   dns_failed = DNSFailed,
                                   dns_failed_time = DNSFailedTime,
                                   tcp_failed = TCPFailed,
-                                  tcp_failed_time = TCPFailedTime}, L) ->
-        TimeOffset = erlang:time_offset(),
+                                  tcp_failed_count = TCPFailedCount,
+                                  tcp_failed_time = TimeFailure,
+                                  tcp_failed_time_ip = TCPFailedTimeIP}, L) ->
+        DurationsDownTmp = if
+            TimeFailure =:= undefined ->
+                DurationsDown;
+            is_integer(TimeFailure) ->
+                cloudi_core_i_status:
+                durations_store([Hostname],
+                                {TimeFailure, TimeNow},
+                                DurationsDown)
+        end,
         HostInfo0 = [{tcp_failed, TCPFailed},
                      {tcp_failed_time,
-                      hosts_list_tcp_failed_time(TCPFailedTime, TimeOffset)}],
+                      hosts_list_tcp_failed_time_ips(TCPFailedTimeIP,
+                                                     TimeOffset)} |
+                     hosts_list_status(TimeNow,
+                                       TimeDayStart, TimeWeekStart,
+                                       TimeMonthStart, TimeYearStart,
+                                       TimeStart, TCPFailedCount,
+                                       cloudi_core_i_status:
+                                       durations_state(Hostname,
+                                                       DurationsDownTmp))],
         HostInfo1 = if
             DNSFailedTime =:= undefined ->
                 HostInfo0;
@@ -502,7 +665,120 @@ hosts_list(Hosts) ->
         [{Hostname, HostInfoN} | L]
     end, [], Hosts).
 
-hosts_list_tcp_failed_time(TCPFailureTime, TimeOffset) ->
+hosts_list_status(TimeNow,
+                  TimeDayStart, TimeWeekStart,
+                  TimeMonthStart, TimeYearStart,
+                  TimeStart, TCPFailedCount,
+                  DurationsStateDown) ->
+    NanoSeconds = cloudi_timestamp:
+                  convert(TimeNow - TimeStart, native, nanosecond),
+    Tracked = cloudi_timestamp:
+              nanoseconds_to_string(NanoSeconds),
+    {ApproximateYearDown,
+     NanoSecondsYearDown} = cloudi_core_i_status:
+                            durations_sum(DurationsStateDown,
+                                          TimeYearStart),
+    {ApproximateMonthDown,
+     NanoSecondsMonthDown} = cloudi_core_i_status:
+                             durations_sum(DurationsStateDown,
+                                           TimeMonthStart),
+    {ApproximateWeekDown,
+     NanoSecondsWeekDown} = cloudi_core_i_status:
+                            durations_sum(DurationsStateDown,
+                                          TimeWeekStart),
+    {ApproximateDayDown,
+     NanoSecondsDayDown} = cloudi_core_i_status:
+                           durations_sum(DurationsStateDown,
+                                         TimeDayStart),
+    Status0 = [],
+    Status1 = case cloudi_core_i_status:
+                   nanoseconds_to_availability_year(NanoSeconds,
+                                                    ApproximateYearDown,
+                                                    NanoSecondsYearDown) of
+        ?AVAILABILITY_ZERO ->
+            Status0;
+        AvailabilityYear ->
+            [{availability_year,
+              AvailabilityYear} | Status0]
+    end,
+    Status2 = case cloudi_core_i_status:
+                   nanoseconds_to_availability_month(NanoSeconds,
+                                                     ApproximateMonthDown,
+                                                     NanoSecondsMonthDown) of
+        ?AVAILABILITY_ZERO ->
+            Status1;
+        AvailabilityMonth ->
+            [{availability_month,
+              AvailabilityMonth} | Status1]
+    end,
+    Status3 = case cloudi_core_i_status:
+                   nanoseconds_to_availability_week(NanoSeconds,
+                                                    ApproximateWeekDown,
+                                                    NanoSecondsWeekDown) of
+        ?AVAILABILITY_ZERO ->
+            Status2;
+        AvailabilityWeek ->
+            [{availability_week,
+              AvailabilityWeek} | Status2]
+    end,
+    Status4 = [{availability_day,
+                cloudi_core_i_status:
+                nanoseconds_to_availability_day(NanoSeconds,
+                                                ApproximateDayDown,
+                                                NanoSecondsDayDown)} | Status3],
+    Status5 = if
+        TimeStart =< TimeMonthStart,
+        NanoSecondsYearDown > 0 ->
+            [{downtime_year_down,
+              cloudi_core_i_status:
+              nanoseconds_to_string_gt(NanoSecondsYearDown,
+                                       ApproximateYearDown)} |
+             Status4];
+        true ->
+            Status4
+    end,
+    Status6 = if
+        TimeStart =< TimeWeekStart,
+        NanoSecondsMonthDown > 0 orelse
+        NanoSecondsYearDown > 0 ->
+            [{downtime_month_down,
+              cloudi_core_i_status:
+              nanoseconds_to_string_gt(NanoSecondsMonthDown,
+                                       ApproximateMonthDown)} |
+             Status5];
+        true ->
+            Status5
+    end,
+    Status7 = if
+        TimeStart =< TimeDayStart,
+        NanoSecondsWeekDown > 0 orelse
+        NanoSecondsMonthDown > 0 orelse
+        NanoSecondsYearDown > 0 ->
+            [{downtime_week_down,
+              cloudi_core_i_status:
+              nanoseconds_to_string_gt(NanoSecondsWeekDown,
+                                       ApproximateWeekDown)} |
+             Status6];
+        true ->
+            Status6
+    end,
+    StatusN = if
+        NanoSecondsDayDown > 0 orelse
+        NanoSecondsWeekDown > 0 orelse
+        NanoSecondsMonthDown > 0 orelse
+        NanoSecondsYearDown > 0 ->
+            [{downtime_day_down,
+              cloudi_core_i_status:
+              nanoseconds_to_string_gt(NanoSecondsDayDown,
+                                       ApproximateDayDown)} |
+             Status7];
+        true ->
+            Status7
+    end,
+    [{tracked, Tracked},
+     {tracked_failures, erlang:integer_to_list(TCPFailedCount)} | StatusN].
+
+hosts_list_tcp_failed_time_ips(TCPFailureTimeIP, TimeOffset) ->
     maps:fold(fun(IP, TimeFailure, L) ->
         MicroSeconds = cloudi_timestamp:
                        convert(TimeFailure + TimeOffset,
@@ -511,7 +787,7 @@ hosts_list_tcp_failed_time(TCPFailureTime, TimeOffset) ->
           {time,
            cloudi_timestamp:
            microseconds_epoch_to_string(MicroSeconds)}] | L]
-    end, [], TCPFailureTime).
+    end, [], TCPFailureTimeIP).
 
 convert_term_to_erlang(Result) ->
     convert_term_to_erlang_string(Result).
