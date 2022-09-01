@@ -51,6 +51,7 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
+-include_lib("cloudi_core/include/cloudi_constants.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -define(DEFAULT_DATABASE,               undefined). % required argument, string
@@ -416,9 +417,9 @@ cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
     true = (is_list(UserName) andalso is_integer(hd(UserName))),
     true = (is_list(Password) andalso is_integer(hd(Password))),
     true = (is_integer(Port) andalso (Port > 0)),
-    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
     true = (Ping =:= undefined) orelse
-           (is_integer(Ping) andalso (Ping > 0) andalso (Ping =< TimeoutMax)),
+           (is_integer(Ping) andalso
+            (Ping > 0) andalso (Ping =< ?TIMEOUT_MAX_ERLANG)),
     true = (is_integer(TimeoutConnect) andalso (TimeoutConnect > 0)),
     true = (Encoding =:= utf8) orelse (Encoding =:= latin1),
     true = ((OutputType =:= both) orelse

@@ -24,6 +24,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 
+-include("cloudi_constants.hrl").
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Constants that should never be changed                                     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -129,9 +131,6 @@
 %                 managing service OS processes, like kill function calls
 -define(OS_COMMAND_POOL, cloudi_core_i_os_command_pool).
 
-% maximum timeout value for erlang:send_after/3, gen_server:call and
-% internal/external service requests
--define(TIMEOUT_MAX_ERLANG, 4294967295).
 % maximum timeout value for blocking on a response in Erlang source code
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
@@ -173,19 +172,6 @@
 -define(NANOSECONDS_IN_YEAR,
         (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
          ?HOURS_IN_DAY * ?DAYS_IN_YEAR)).
--define(NATIVE_TIME_IN_DAY,
-        cloudi_timestamp:
-        convert(?NANOSECONDS_IN_DAY, nanosecond, native)).
--define(NATIVE_TIME_IN_WEEK,
-        cloudi_timestamp:
-        convert(?NANOSECONDS_IN_WEEK, nanosecond, native)).
--define(NATIVE_TIME_IN_MONTH,
-        cloudi_timestamp:
-        convert(ceil(?NANOSECONDS_IN_MONTH), nanosecond, native)).
--define(NATIVE_TIME_IN_YEAR,
-        cloudi_timestamp:
-        convert(ceil(?NANOSECONDS_IN_YEAR), nanosecond, native)).
--define(AVAILABILITY_ZERO, "0 %").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Safe to tune without causing major internal problems                       %
@@ -534,11 +520,6 @@
 % interval to reload all internal services which have been configured to
 % reload their modules automatically
 -define(SERVICE_INTERNAL_RELOAD, 1000). % milliseconds
-
-% when tracking the durations of downtime during the past year, limit the
-% number of durations to this max to keep memory consumption low
-% (if durations are discarded, the downtime result is considered approximate)
--define(STATUS_DURATIONS_YEAR_MAX, 366).
 
 % nodes options limits (seconds)
 -define(NODES_RECONNECT_START_MIN, 1).

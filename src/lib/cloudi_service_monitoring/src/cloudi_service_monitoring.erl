@@ -47,7 +47,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -68,8 +68,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring).
@@ -103,6 +103,7 @@
          cloudi_service_terminate/3]).
 
 -include("cloudi_service_monitoring.hrl").
+-include_lib("cloudi_core/include/cloudi_constants.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service_api.hrl").
 
@@ -136,9 +137,6 @@
 -define(DEFAULT_INTERVAL,                     15). % seconds
 -define(DEFAULT_PREFIX,                 [cloudi]).
 -define(DEFAULT_USE_ASPECTS_ONLY,          false).
-
-% maximum timeout value for erlang:send_after/3 and gen_server:call
--define(TIMEOUT_MAX_ERLANG, 4294967295).
 
 -type interval() :: 1..(?TIMEOUT_MAX_ERLANG div 1000).
 

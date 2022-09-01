@@ -50,6 +50,7 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
+-include_lib("cloudi_core/include/cloudi_constants.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
@@ -62,7 +63,7 @@
         %  service configuration).
 -define(DEFAULT_LOG_EXECUTION_TIME,                true).
 -define(DEFAULT_RETRY,                                3).
-        % Max retries with a Timeout value of timeout_max
+        % Max retries with a Timeout value of ?TIMEOUT_MAX_ERLANG
         % before exiting with retry_max.
         % The Timeout value needs to be provided in the map_send_args()
         % and is typically increasing due to service request failures.
@@ -97,8 +98,6 @@
             :: non_neg_integer(),
         retry_delay
             :: non_neg_integer(),
-        timeout_max
-            :: cloudi_service:timeout_value_milliseconds(),
         map_requests
             :: #{cloudi_service:trans_id() := #map_send{}},
         time_running
@@ -139,8 +138,6 @@
             :: non_neg_integer(),
         retry_delay
             :: non_neg_integer(),
-        timeout_max
-            :: cloudi_service:timeout_value_milliseconds(),
         time_start
             :: cloudi_timestamp:seconds_monotonic()
     }).
@@ -282,7 +279,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     true = is_boolean(LogExecutionTime),
     true = is_integer(Retry) andalso (Retry >= 0),
     RetryDelayN = cloudi_args_type:
-                  period_to_milliseconds(RetryDelay0, 0, 4294967295),
+                  period_to_milliseconds(RetryDelay0, 0, ?TIMEOUT_MAX_ERLANG),
     true = ((Retry == 0) andalso (RetryDelayN == 0)) orelse
            ((Retry > 0) andalso (RetryDelayN >= 0)),
     case application:load(MapReduceModule) of
@@ -295,7 +292,6 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         {error, _} ->
             ok = cloudi_x_reltool_util:module_loaded(MapReduceModule)
     end,
-    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
     % cloudi_service_init/4 is always executed by the service process
     Service = self(),
     Service ! #init_begin{service = Service,
@@ -308,7 +304,6 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                           log_execution_time = LogExecutionTime,
                           retry = Retry,
                           retry_delay = RetryDelayN,
-                          timeout_max = TimeoutMax,
                           time_start = TimeStart},
     ok = cloudi_service:subscribe(Dispatcher, Name),
     {ok, #init_state{service = Service}}.
@@ -429,7 +424,6 @@ init(#init_begin{service = Service,
                  log_execution_time = LogExecutionTime,
                  retry = Retry,
                  retry_delay = RetryDelay,
-                 timeout_max = TimeoutMax,
                  time_start = TimeStart},
      Dispatcher) ->
     MapCount = cloudi_concurrency:count(Concurrency),
@@ -450,7 +444,6 @@ init(#init_begin{service = Service,
                             log_execution_time = LogExecutionTime,
                             retry = Retry,
                             retry_delay = RetryDelay,
-                            timeout_max = TimeoutMax,
                             map_requests = MapRequests,
                             time_running = TimeStart}};
                 {error, _} = Error ->
@@ -583,12 +576,11 @@ map_check_done(#state{map_requests = MapRequests} = State) ->
     end.
 
 retry(#map_send{send_args = [_Dispatcher, _Name, _Request,
-                             TimeoutMax],
+                             ?TIMEOUT_MAX_ERLANG],
                 retry_count = RetryCount} = MapRequest,
       #state{service = Service,
              retry = Retry,
-             retry_delay = RetryDelay,
-             timeout_max = TimeoutMax}) ->
+             retry_delay = RetryDelay}) ->
     if
         RetryCount < Retry ->
             retry_delay(RetryDelay, Service, MapRequest);
@@ -596,12 +588,11 @@ retry(#map_send{send_args = [_Dispatcher, _Name, _Request,
             erlang:exit(retry_max)
     end;
 retry(#map_send{send_args = [_Dispatcher, _Name, _Request,
-                             TimeoutMax, _PatternPid],
+                             ?TIMEOUT_MAX_ERLANG, _PatternPid],
                 retry_count = RetryCount} = MapRequest,
       #state{service = Service,
              retry = Retry,
-             retry_delay = RetryDelay,
-             timeout_max = TimeoutMax}) ->
+             retry_delay = RetryDelay}) ->
     if
         RetryCount < Retry ->
             retry_delay(RetryDelay, Service, MapRequest);
@@ -609,12 +600,11 @@ retry(#map_send{send_args = [_Dispatcher, _Name, _Request,
             erlang:exit(retry_max)
     end;
 retry(#map_send{send_args = [_Dispatcher, _Name, _RequestInfo, _Request,
-                             TimeoutMax, _Priority],
+                             ?TIMEOUT_MAX_ERLANG, _Priority],
                 retry_count = RetryCount} = MapRequest,
       #state{service = Service,
              retry = Retry,
-             retry_delay = RetryDelay,
-             timeout_max = TimeoutMax}) ->
+             retry_delay = RetryDelay}) ->
     if
         RetryCount < Retry ->
             retry_delay(RetryDelay, Service, MapRequest);
@@ -622,12 +612,11 @@ retry(#map_send{send_args = [_Dispatcher, _Name, _RequestInfo, _Request,
             erlang:exit(retry_max)
     end;
 retry(#map_send{send_args = [_Dispatcher, _Name, _RequestInfo, _Request,
-                             TimeoutMax, _Priority, _PatternPid],
+                             ?TIMEOUT_MAX_ERLANG, _Priority, _PatternPid],
                 retry_count = RetryCount} = MapRequest,
       #state{service = Service,
              retry = Retry,
-             retry_delay = RetryDelay,
-             timeout_max = TimeoutMax}) ->
+             retry_delay = RetryDelay}) ->
     if
         RetryCount < Retry ->
             retry_delay(RetryDelay, Service, MapRequest);

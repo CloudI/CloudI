@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-08-31 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_availability as a module for usage in internal
+      CloudI services (previously was named cloudi_core_i_status)
+    * Add the cloudi_core header files cloudi_availability.hrl and
+      cloudi_constants.hrl for usage in internal CloudI services
+    * Improve cloudi_service_health_check functionality
+        * Allow failed TCP IPs to expire when they are missing from
+          a valid DNS lookup response
+        * Add tcp_test function for request/response testing
+        * Improve configuration and hosts information
+
 2022-08-29 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add availability tracking to cloudi_service_health_check

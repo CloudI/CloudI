@@ -20,6 +20,9 @@
 %%% The native monotonic time is provided for when the failure occurred
 %%% (TimeFailure) and when the restore occurred (TimeRestored)
 %%% to provide the event duration.
+%%%
+%%% The availability and downtime of a host is based on the ability of all
+%%% of its IP addresses to accept TCP connections on the configured port.
 %%% @end
 %%%
 %%% MIT License
@@ -60,9 +63,15 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
+-include_lib("cloudi_core/include/cloudi_availability.hrl").
+-include_lib("cloudi_core/include/cloudi_constants.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -define(DEFAULT_HOSTS,                         []).
+-define(DEFAULT_IPV4,                        true).
+        % May be set for each host too.
+-define(DEFAULT_IPV6,                        true).
+        % May be set for each host too.
 -define(DEFAULT_DEBUG,                       true). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                error).
 
@@ -70,15 +79,16 @@
 -define(DEFAULT_PORT,                          80).
         % TCP port used for the host's TCP health check.
 -define(DEFAULT_INTERVAL,                       5). % seconds
--define(DEFAULT_IPV4,                        true).
--define(DEFAULT_IPV6,                        true).
 -define(DEFAULT_DNS_FAILURE,            undefined).
 -define(DEFAULT_DNS_RESTORED,           undefined).
 -define(DEFAULT_TCP_FAILURE,            undefined).
 -define(DEFAULT_TCP_RESTORED,           undefined).
+-define(DEFAULT_TCP_TEST,               undefined).
+        % If the TCP connection needs a request/response to test the
+        % server's liveness, this function can be provided to test
+        % the socket.  Otherwise, only the ability of the server to
+        % accept a TCP connection for the configured port is tested.
 
-% maximum timeout value for erlang:send_after/3 and gen_server:call
--define(TIMEOUT_MAX_ERLANG, 4294967295).
 % ensure timeouts do not delay the health check interval
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
@@ -110,13 +120,18 @@
          TimeFailure :: cloudi_timestamp:native_monotonic(),
          TimeRestored :: cloudi_timestamp:native_monotonic()) ->
         ok).
+-type tcp_test() ::
+    fun((Socket :: gen_tcp:socket(),
+         Timeout :: 1..?TIMEOUT_MAX_ERLANG) ->
+        ok | {error, atom()}).
 -export_type([hostname/0,
               tcp_port/0,
               interval/0,
               dns_failure/0,
               dns_restored/0,
               tcp_failure/0,
-              tcp_restored/0]).
+              tcp_restored/0,
+              tcp_test/0]).
 
 -record(host,
     {
@@ -155,7 +170,9 @@
         tcp_failure
             :: undefined | tcp_failure(),
         tcp_restored
-            :: undefined | tcp_restored()
+            :: undefined | tcp_restored(),
+        tcp_test
+            :: undefined | tcp_test()
     }).
 
 -record(state,
@@ -170,25 +187,11 @@
             :: cloudi:service_name_pattern(),
         hosts
             :: cloudi_x_trie:cloudi_x_trie(), % hostname() -> #host{}
-        durations_down = cloudi_core_i_status:durations_new()
-            :: cloudi_core_i_status:durations(hostname()),
+        durations_down = cloudi_availability:durations_new()
+            :: cloudi_availability:durations(hostname()),
         debug_level
             :: off | trace | debug | info | warn | error | fatal
     }).
-
--define(NATIVE_TIME_IN_DAY,
-        cloudi_timestamp:
-        convert(86400000000000, nanosecond, native)).
--define(NATIVE_TIME_IN_WEEK,
-        cloudi_timestamp:
-        convert(86400000000000 * 7, nanosecond, native)).
--define(NATIVE_TIME_IN_MONTH,
-        cloudi_timestamp:
-        convert(ceil(86400000000000 * 30.4375), nanosecond, native)).
--define(NATIVE_TIME_IN_YEAR,
-        cloudi_timestamp:
-        convert(ceil(86400000000000 * 365.25), nanosecond, native)).
--define(AVAILABILITY_ZERO, "0 %").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -201,15 +204,22 @@
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {hosts,                    ?DEFAULT_HOSTS},
+        {ipv4,                     ?DEFAULT_IPV4},
+        {ipv6,                     ?DEFAULT_IPV6},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Hosts,
+    [Hosts, IPv4Allowed, IPv6Allowed,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Hosts) andalso (Hosts /= []),
+    true = is_boolean(IPv4Allowed),
+    true = is_boolean(IPv6Allowed),
+    true = (IPv4Allowed /= false) orelse
+           (IPv6Allowed /= false),
     Service = cloudi_service:self(Dispatcher),
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     ProcessCount = cloudi_service:process_count(Dispatcher),
-    HostsLoaded = hosts_load(Hosts, ProcessIndex, ProcessCount, Service),
+    HostsLoaded = hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
+                             IPv4Allowed, IPv6Allowed),
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
@@ -279,8 +289,9 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
              hosts_list(Hosts, DurationsDown),
              <<"json">>};
         "hosts/" ++ Index ->
-            {ProcessIndexLastStr == Index,
-             lists:ukeymerge(1, Request, hosts_list(Hosts, DurationsDown)),
+            {(ProcessIndexLastStr == Index) orelse
+             (ProcessIndexLast >= ProcessCount),
+             lists:keymerge(1, Request, hosts_list(Hosts, DurationsDown)),
              element(2, cloudi_key_value:find(TextFormatKey, KeyValues0))}
     end,
     if
@@ -313,36 +324,40 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-hosts_load(Hosts, ProcessIndex, ProcessCount, Service) ->
+hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
+           IPv4Allowed, IPv6Allowed) ->
     hosts_load(Hosts, cloudi_x_trie:new(),
-               0, ProcessIndex, ProcessCount, Service).
+               0, ProcessIndex, ProcessCount, Service,
+               IPv4Allowed, IPv6Allowed).
 
-hosts_load([], HostsLoaded, _, _, _, _) ->
+hosts_load([], HostsLoaded, _, _, _, _, _, _) ->
     HostsLoaded;
 hosts_load([{Hostname, Args} | Hosts], HostsLoaded,
-           ProcessIndex, ProcessIndex, ProcessCount, Service) ->
+           ProcessIndex, ProcessIndex, ProcessCount, Service,
+           IPv4Allowed, IPv6Allowed) ->
     true = is_list(Hostname) andalso is_integer(hd(Hostname)),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     Defaults = [
         {port,                     ?DEFAULT_PORT},
         {interval,                 ?DEFAULT_INTERVAL},
-        {ipv4,                     ?DEFAULT_IPV4},
-        {ipv6,                     ?DEFAULT_IPV6},
+        {ipv4,                     IPv4Allowed},
+        {ipv6,                     IPv6Allowed},
         {dns_failure,              ?DEFAULT_DNS_FAILURE},
         {dns_restored,             ?DEFAULT_DNS_RESTORED},
         {tcp_failure,              ?DEFAULT_TCP_FAILURE},
-        {tcp_restored,             ?DEFAULT_TCP_RESTORED}],
-    [Port, Interval, IPv4Allowed, IPv6Allowed,
-     DNSFailure0, DNSRestored0, TCPFailure0,
-     TCPRestored0] = cloudi_proplists:take_values(Defaults, Args),
+        {tcp_restored,             ?DEFAULT_TCP_RESTORED},
+        {tcp_test,                 ?DEFAULT_TCP_TEST}],
+    [Port, Interval, IPv4AllowedHost, IPv6AllowedHost,
+     DNSFailure0, DNSRestored0, TCPFailure0, TCPRestored0,
+     TCPTest0] = cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port) andalso (Port > 0),
     true = is_integer(Interval) andalso
            (Interval > 0) andalso
            (Interval =< ?TIMEOUT_MAX_ERLANG div 1000),
-    true = is_boolean(IPv4Allowed),
-    true = is_boolean(IPv6Allowed),
-    true = (IPv4Allowed /= false) orelse
-           (IPv6Allowed /= false),
+    true = is_boolean(IPv4AllowedHost),
+    true = is_boolean(IPv6AllowedHost),
+    true = (IPv4AllowedHost /= false) orelse
+           (IPv6AllowedHost /= false),
     DNSFailureN = cloudi_args_type:
                   function_optional(DNSFailure0, 2),
     DNSRestoredN = cloudi_args_type:
@@ -351,28 +366,34 @@ hosts_load([{Hostname, Args} | Hosts], HostsLoaded,
                   function_optional(TCPFailure0, 4),
     TCPRestoredN = cloudi_args_type:
                    function_optional(TCPRestored0, 5),
+    TCPTestN = cloudi_args_type:
+               function_optional(TCPTest0, 2),
     TimeStart = cloudi_timestamp:native_monotonic(),
     erlang:send_after(Interval * 1000, Service, {host, Hostname}),
     HostLoaded = #host{name = Hostname,
-                       ipv4_allowed = IPv4Allowed,
-                       ipv6_allowed = IPv6Allowed,
+                       ipv4_allowed = IPv4AllowedHost,
+                       ipv6_allowed = IPv6AllowedHost,
                        port = Port,
                        interval = Interval,
                        start_time = TimeStart,
                        dns_failure = DNSFailureN,
                        dns_restored = DNSRestoredN,
                        tcp_failure = TCPFailureN,
-                       tcp_restored = TCPRestoredN},
+                       tcp_restored = TCPRestoredN,
+                       tcp_test = TCPTestN},
     hosts_load(Hosts, cloudi_x_trie:store(Hostname, HostLoaded, HostsLoaded),
                (ProcessIndex + 1) rem ProcessCount,
-               ProcessIndex, ProcessCount, Service);
+               ProcessIndex, ProcessCount, Service,
+               IPv4Allowed, IPv6Allowed);
 hosts_load([{Hostname, _} | Hosts], HostsLoaded,
-           Index, ProcessIndex, ProcessCount, Service) ->
+           Index, ProcessIndex, ProcessCount, Service,
+           IPv4Allowed, IPv6Allowed) ->
     true = is_list(Hostname) andalso is_integer(hd(Hostname)),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     hosts_load(Hosts, HostsLoaded,
                (Index + 1) rem ProcessCount,
-               ProcessIndex, ProcessCount, Service).
+               ProcessIndex, ProcessCount, Service,
+               IPv4Allowed, IPv6Allowed).
 
 health_check(Hostname,
              #state{service = Service,
@@ -438,9 +459,11 @@ health_check_tcp(#host{name = Hostname,
                        ipv6 = IPv6,
                        interval = Interval} = Host0,
                  DurationsDown, DebugLogLevel) ->
-    Timeout = timeout_tcp(IPv4, IPv6, Interval),
+    Timeout = (Interval * 1000 - ?TIMEOUT_DELTA) div
+              health_check_tcp_ips_checks(IPv4, IPv6),
     Host1 = health_check_tcp_ips(IPv4, Host0, inet, Timeout, DebugLogLevel),
-    HostN = health_check_tcp_ips(IPv6, Host1, inet6, Timeout, DebugLogLevel),
+    Host2 = health_check_tcp_ips(IPv6, Host1, inet6, Timeout, DebugLogLevel),
+    HostN = health_check_tcp_ips_expire(Host2, DebugLogLevel),
     #host{tcp_failed = TCPFailedOld,
           tcp_failed_time = TimeFailure,
           tcp_failed_time_ip = TCPFailedTimeIP} = HostN,
@@ -456,7 +479,7 @@ health_check_tcp(#host{name = Hostname,
                     TimeRestored = cloudi_timestamp:native_monotonic(),
                     {HostN#host{tcp_failed = false,
                                 tcp_failed_time = undefined},
-                     cloudi_core_i_status:
+                     cloudi_availability:
                      durations_store([Hostname],
                                      {TimeFailure, TimeRestored},
                                      DurationsDown)}
@@ -469,26 +492,65 @@ health_check_tcp(#host{name = Hostname,
 health_check_tcp_ips([], HostN, _, _, _) ->
     HostN;
 health_check_tcp_ips([IP | IPs],
-                     #host{port = Port} = Host0,
+                     #host{port = Port,
+                           tcp_test = TCPTest} = Host0,
                      Family, Timeout, DebugLogLevel) ->
     case gen_tcp:connect(IP, Port, [Family], Timeout) of
         {ok, Socket} ->
+            HostN = if
+                TCPTest =:= undefined ->
+                    tcp_restored(Host0, IP, Port, DebugLogLevel);
+                is_function(TCPTest) ->
+                    case TCPTest(Socket, Timeout) of
+                        ok ->
+                            tcp_restored(Host0, IP, Port, DebugLogLevel);
+                        {error, Reason} when is_atom(Reason) ->
+                            tcp_failure(Host0, IP, Port, Reason, DebugLogLevel)
+                    end
+            end,
             ok = gen_tcp:close(Socket),
-            HostN = tcp_restored(Host0, IP, Port, DebugLogLevel),
             health_check_tcp_ips(IPs, HostN, Family, Timeout, DebugLogLevel);
         {error, Reason} ->
             HostN = tcp_failure(Host0, IP, Port, Reason, DebugLogLevel),
             health_check_tcp_ips(IPs, HostN, Family, Timeout, DebugLogLevel)
     end.
 
-timeout_tcp([], [], Interval) ->
-    Interval * 1000 - ?TIMEOUT_DELTA;
-timeout_tcp([], IPv6, Interval) ->
-    (Interval * 1000 - ?TIMEOUT_DELTA) div length(IPv6);
-timeout_tcp(IPv4, [], Interval) ->
-    (Interval * 1000 - ?TIMEOUT_DELTA) div length(IPv4);
-timeout_tcp(IPv4, IPv6, Interval) ->
-    (Interval * 1000 - ?TIMEOUT_DELTA) div (length(IPv4) + length(IPv6)).
+health_check_tcp_ips_checks([], []) ->
+    1;
+health_check_tcp_ips_checks([], IPv6) ->
+    length(IPv6);
+health_check_tcp_ips_checks(IPv4, []) ->
+    length(IPv4);
+health_check_tcp_ips_checks(IPv4, IPv6) ->
+    length(IPv4) + length(IPv6).
+
+health_check_tcp_ips_expire(#host{dns_failed = true} = Host0, _) ->
+    Host0;
+health_check_tcp_ips_expire(#host{name = Hostname,
+                                  ipv4 = IPv4,
+                                  ipv6 = IPv6,
+                                  dns_failed = false,
+                                  tcp_failed_time_ip = TCPFailedTimeIP} = Host0,
+                            DebugLogLevel) ->
+    IPs = IPv4 ++ IPv6,
+    true = IPs /= [],
+    TCPFailedTimeIPNew = maps:filter(fun(IP, TimeFailure) ->
+        case lists:member(IP, IPs) of
+            true ->
+                true;
+            false ->
+                TimeExpired = cloudi_timestamp:native_monotonic(),
+                NanoSeconds = cloudi_timestamp:
+                              convert(TimeExpired - TimeFailure,
+                                      native, nanosecond),
+                ?LOG(DebugLogLevel,
+                     "\"~s\" TCP IP expired ~s after ~s",
+                     [Hostname, inet:ntoa(IP),
+                      cloudi_timestamp:nanoseconds_to_string(NanoSeconds)]),
+                false
+        end
+    end, TCPFailedTimeIP),
+    Host0#host{tcp_failed_time_ip = TCPFailedTimeIPNew}.
 
 dns_failure(#host{dns_failed = true} = Host, _, _) ->
     Host;
@@ -619,7 +681,7 @@ hosts_list(Hosts, DurationsDown) ->
             TimeFailure =:= undefined ->
                 DurationsDown;
             is_integer(TimeFailure) ->
-                cloudi_core_i_status:
+                cloudi_availability:
                 durations_store([Hostname],
                                 {TimeFailure, TimeNow},
                                 DurationsDown)
@@ -632,7 +694,7 @@ hosts_list(Hosts, DurationsDown) ->
                                        TimeDayStart, TimeWeekStart,
                                        TimeMonthStart, TimeYearStart,
                                        TimeStart, TCPFailedCount,
-                                       cloudi_core_i_status:
+                                       cloudi_availability:
                                        durations_state(Hostname,
                                                        DurationsDownTmp))],
         HostInfo1 = if
@@ -675,23 +737,23 @@ hosts_list_status(TimeNow,
     Tracked = cloudi_timestamp:
               nanoseconds_to_string(NanoSeconds),
     {ApproximateYearDown,
-     NanoSecondsYearDown} = cloudi_core_i_status:
+     NanoSecondsYearDown} = cloudi_availability:
                             durations_sum(DurationsStateDown,
                                           TimeYearStart),
     {ApproximateMonthDown,
-     NanoSecondsMonthDown} = cloudi_core_i_status:
+     NanoSecondsMonthDown} = cloudi_availability:
                              durations_sum(DurationsStateDown,
                                            TimeMonthStart),
     {ApproximateWeekDown,
-     NanoSecondsWeekDown} = cloudi_core_i_status:
+     NanoSecondsWeekDown} = cloudi_availability:
                             durations_sum(DurationsStateDown,
                                           TimeWeekStart),
     {ApproximateDayDown,
-     NanoSecondsDayDown} = cloudi_core_i_status:
+     NanoSecondsDayDown} = cloudi_availability:
                            durations_sum(DurationsStateDown,
                                          TimeDayStart),
     Status0 = [],
-    Status1 = case cloudi_core_i_status:
+    Status1 = case cloudi_availability:
                    nanoseconds_to_availability_year(NanoSeconds,
                                                     ApproximateYearDown,
                                                     NanoSecondsYearDown) of
@@ -701,7 +763,7 @@ hosts_list_status(TimeNow,
             [{availability_year,
               AvailabilityYear} | Status0]
     end,
-    Status2 = case cloudi_core_i_status:
+    Status2 = case cloudi_availability:
                    nanoseconds_to_availability_month(NanoSeconds,
                                                      ApproximateMonthDown,
                                                      NanoSecondsMonthDown) of
@@ -711,7 +773,7 @@ hosts_list_status(TimeNow,
             [{availability_month,
               AvailabilityMonth} | Status1]
     end,
-    Status3 = case cloudi_core_i_status:
+    Status3 = case cloudi_availability:
                    nanoseconds_to_availability_week(NanoSeconds,
                                                     ApproximateWeekDown,
                                                     NanoSecondsWeekDown) of
@@ -722,15 +784,15 @@ hosts_list_status(TimeNow,
               AvailabilityWeek} | Status2]
     end,
     Status4 = [{availability_day,
-                cloudi_core_i_status:
+                cloudi_availability:
                 nanoseconds_to_availability_day(NanoSeconds,
                                                 ApproximateDayDown,
                                                 NanoSecondsDayDown)} | Status3],
     Status5 = if
         TimeStart =< TimeMonthStart,
         NanoSecondsYearDown > 0 ->
-            [{downtime_year_down,
-              cloudi_core_i_status:
+            [{downtime_year,
+              cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsYearDown,
                                        ApproximateYearDown)} |
              Status4];
@@ -741,8 +803,8 @@ hosts_list_status(TimeNow,
         TimeStart =< TimeWeekStart,
         NanoSecondsMonthDown > 0 orelse
         NanoSecondsYearDown > 0 ->
-            [{downtime_month_down,
-              cloudi_core_i_status:
+            [{downtime_month,
+              cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsMonthDown,
                                        ApproximateMonthDown)} |
              Status5];
@@ -754,8 +816,8 @@ hosts_list_status(TimeNow,
         NanoSecondsWeekDown > 0 orelse
         NanoSecondsMonthDown > 0 orelse
         NanoSecondsYearDown > 0 ->
-            [{downtime_week_down,
-              cloudi_core_i_status:
+            [{downtime_week,
+              cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsWeekDown,
                                        ApproximateWeekDown)} |
              Status6];
@@ -767,8 +829,8 @@ hosts_list_status(TimeNow,
         NanoSecondsWeekDown > 0 orelse
         NanoSecondsMonthDown > 0 orelse
         NanoSecondsYearDown > 0 ->
-            [{downtime_day_down,
-              cloudi_core_i_status:
+            [{downtime_day,
+              cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsDayDown,
                                        ApproximateDayDown)} |
              Status7];

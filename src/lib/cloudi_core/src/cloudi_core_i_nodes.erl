@@ -54,6 +54,7 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+-include("cloudi_availability.hrl").
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -72,8 +73,8 @@
         nodes_dead :: list(node()),
         nodes_all :: list(node()),
         nodes_state :: nodes_state(),
-        nodes_down_durations = cloudi_core_i_status:durations_new()
-            :: cloudi_core_i_status:durations(node()),
+        nodes_down_durations = cloudi_availability:durations_new()
+            :: cloudi_availability:durations(node()),
         logging_redirect :: node() | undefined,
         reconnect_interval :: pos_integer(),
         reconnect_timer :: reference(),
@@ -401,7 +402,7 @@ reconfigure_nodes(NodeName, NodesNew,
     NodesDeadNew = reconfigure_nodes_dead(ListenNodes, NodesAllNew),
     NodesAliveNew = reconfigure_nodes_alive(NodesDeadNew, NodesAllNew),
     NodesStateNew = maps:with([node() | NodesAllNew], NodesStateOld),
-    NodesDownDurationsNew = cloudi_core_i_status:
+    NodesDownDurationsNew = cloudi_availability:
                             durations_copy(NodesAllNew, NodesDownDurationsOld),
     {NodesAliveNew, NodesDeadNew, NodesAllNew,
      NodesStateNew, NodesDownDurationsNew}.
@@ -450,7 +451,7 @@ track_nodeup(Node, ConnectNode,
             NodeState = {TimeStart, ConnectNode, undefined, Disconnects},
             Duration = {TimeDisconnect, TimeConnect},
             {maps:put(Node, NodeState, NodesState),
-             cloudi_core_i_status:
+             cloudi_availability:
              durations_store(NodeL, Duration, NodesDownDurations)};
         error ->
             NodeState = {TimeConnect, ConnectNode, undefined, 0},
@@ -508,34 +509,34 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 is_integer(TimeDisconnect) ->
                     % track ongoing downtime with a temporary duration
                     {true,
-                     cloudi_core_i_status:
+                     cloudi_availability:
                      durations_store([Node], {TimeDisconnect, TimeNow},
                                      NodesDownDurations)}
             end,
-            DurationsStateDown = cloudi_core_i_status:
+            DurationsStateDown = cloudi_availability:
                                  durations_state(Node, NodesDownDurationsTmp),
             NanoSeconds = cloudi_timestamp:
                           convert(TimeNow - TimeStart, native, nanosecond),
             Uptime = cloudi_timestamp:
                      nanoseconds_to_string(NanoSeconds),
             {ApproximateYearDisconnect,
-             NanoSecondsYearDisconnect} = cloudi_core_i_status:
+             NanoSecondsYearDisconnect} = cloudi_availability:
                                           durations_sum(DurationsStateDown,
                                                         TimeYearStart),
             {ApproximateMonthDisconnect,
-             NanoSecondsMonthDisconnect} = cloudi_core_i_status:
+             NanoSecondsMonthDisconnect} = cloudi_availability:
                                            durations_sum(DurationsStateDown,
                                                          TimeMonthStart),
             {ApproximateWeekDisconnect,
-             NanoSecondsWeekDisconnect} = cloudi_core_i_status:
+             NanoSecondsWeekDisconnect} = cloudi_availability:
                                           durations_sum(DurationsStateDown,
                                                         TimeWeekStart),
             {ApproximateDayDisconnect,
-             NanoSecondsDayDisconnect} = cloudi_core_i_status:
+             NanoSecondsDayDisconnect} = cloudi_availability:
                                          durations_sum(DurationsStateDown,
                                                        TimeDayStart),
             Status0 = [],
-            Status1 = case cloudi_core_i_status:
+            Status1 = case cloudi_availability:
                            nanoseconds_to_availability_year(
                                NanoSeconds,
                                ApproximateYearDisconnect,
@@ -546,7 +547,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                     [{availability_year,
                       AvailabilityYear} | Status0]
             end,
-            Status2 = case cloudi_core_i_status:
+            Status2 = case cloudi_availability:
                            nanoseconds_to_availability_month(
                                NanoSeconds,
                                ApproximateMonthDisconnect,
@@ -557,7 +558,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                     [{availability_month,
                       AvailabilityMonth} | Status1]
             end,
-            Status3 = case cloudi_core_i_status:
+            Status3 = case cloudi_availability:
                            nanoseconds_to_availability_week(
                                NanoSeconds,
                                ApproximateWeekDisconnect,
@@ -569,7 +570,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                       AvailabilityWeek} | Status2]
             end,
             Status4 = [{availability_day,
-                        cloudi_core_i_status:
+                        cloudi_availability:
                         nanoseconds_to_availability_day(
                             NanoSeconds,
                             ApproximateDayDisconnect,
@@ -578,7 +579,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 TimeStart =< TimeMonthStart,
                 NanoSecondsYearDisconnect > 0 ->
                     [{downtime_year_disconnected,
-                      cloudi_core_i_status:
+                      cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsYearDisconnect,
                                                ApproximateYearDisconnect)} |
                      Status4];
@@ -590,7 +591,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsMonthDisconnect > 0 orelse
                 NanoSecondsYearDisconnect > 0 ->
                     [{downtime_month_disconnected,
-                      cloudi_core_i_status:
+                      cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsMonthDisconnect,
                                                ApproximateMonthDisconnect)} |
                      Status5];
@@ -603,7 +604,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsMonthDisconnect > 0 orelse
                 NanoSecondsYearDisconnect > 0 ->
                     [{downtime_week_disconnected,
-                      cloudi_core_i_status:
+                      cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsWeekDisconnect,
                                                ApproximateWeekDisconnect)} |
                      Status6];
@@ -616,7 +617,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsMonthDisconnect > 0 orelse
                 NanoSecondsYearDisconnect > 0 ->
                     [{downtime_day_disconnected,
-                      cloudi_core_i_status:
+                      cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsDayDisconnect,
                                                ApproximateDayDisconnect)} |
                      Status7];

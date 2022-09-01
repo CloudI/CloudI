@@ -90,6 +90,7 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
+-include_lib("cloudi_core/include/cloudi_constants.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 -include_lib("cloudi_core/include/cloudi_crdt.hrl").
@@ -197,7 +198,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_boolean(RequestsExtendLiveness),
     true = is_integer(Retry) andalso (Retry >= 0),
     RetryDelayN = cloudi_args_type:
-                  period_to_milliseconds(RetryDelay0, 0, 4294967295),
+                  period_to_milliseconds(RetryDelay0, 0, ?TIMEOUT_MAX_ERLANG),
     true = ((Retry == 0) andalso (RetryDelayN == 0)) orelse
            ((Retry > 0) andalso (RetryDelayN >= 0)),
     ProcessIndex = cloudi_service:process_index(Dispatcher),

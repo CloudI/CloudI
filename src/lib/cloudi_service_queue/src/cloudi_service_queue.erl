@@ -108,6 +108,7 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
+-include_lib("cloudi_core/include/cloudi_constants.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
@@ -221,7 +222,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
            (Checksum =:= sha384) orelse (Checksum =:= sha512),
     true = is_integer(Retry) andalso (Retry >= 0),
     RetryDelayN = cloudi_args_type:
-                  period_to_milliseconds(RetryDelay0, 0, 4294967295),
+                  period_to_milliseconds(RetryDelay0, 0, ?TIMEOUT_MAX_ERLANG),
     true = ((Retry == 0) andalso (RetryDelayN == 0)) orelse
            ((Retry > 0) andalso (RetryDelayN >= 0)),
     true = ((Mode =:= destination) orelse (Mode =:= both)),

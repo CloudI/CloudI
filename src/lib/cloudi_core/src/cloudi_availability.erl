@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Status Data==
+%%% ==CloudI Availability Tracking Functionality==
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,11 +29,11 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018-2020 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2018-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_core_i_status).
+-module(cloudi_availability).
 -author('mjtruog at protonmail dot com').
 
 %% external interface
@@ -56,6 +56,14 @@
          nanoseconds_to_string_gt/2,
          nanoseconds_to_string_lt/2]).
 
+-include("cloudi_availability.hrl").
+-include("cloudi_core_i_constants.hrl").
+
+% when tracking the durations of downtime during the past year, limit the
+% number of durations to this max to keep memory consumption low
+% (if durations are discarded, the downtime result is considered approximate)
+-define(DURATIONS_YEAR_MAX, 366).
+
 -type nanoseconds() :: non_neg_integer().
 -type duration() ::
     {T0 :: cloudi_timestamp:native_monotonic(),
@@ -66,8 +74,6 @@
 -type durations(Key) ::
     #{Key := durations_state()}.
 -export_type([durations/1]).
-
--include("cloudi_core_i_constants.hrl").
 
 -spec durations_copy(KeyList :: list(),
                      DurationsLookup :: durations(any())) ->
@@ -128,7 +134,7 @@ durations_store_difference([_ | _] = KeyList, {_, T1} = Duration,
 
 durations_sum({DurationCount, DurationList}, T) ->
     durations_sum(DurationList, 0,
-                  DurationCount == ?STATUS_DURATIONS_YEAR_MAX, T).
+                  DurationCount == ?DURATIONS_YEAR_MAX, T).
 
 -spec nanoseconds_to_availability_day(NanoSecondsUptime :: nanoseconds()) ->
     cloudi_service_api:availability().
@@ -297,7 +303,7 @@ duration_clear([{_, T1} | DurationList], DurationCount, T)
     when T1 < T ->
     duration_clear(DurationList, DurationCount - 1, T);
 duration_clear([_ | DurationList], DurationCount, T)
-    when DurationCount >= ?STATUS_DURATIONS_YEAR_MAX ->
+    when DurationCount >= ?DURATIONS_YEAR_MAX ->
     % duration list becomes approximate when it hits max size
     duration_clear(DurationList, DurationCount - 1, T);
 duration_clear(DurationList, DurationCount, _) ->

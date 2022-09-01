@@ -2179,6 +2179,7 @@ timeout_sync(Dispatcher) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Maximum possible service request timeout (in milliseconds).===
+%% Use ?TIMEOUT_MAX_ERLANG directly from cloudi_constants.hrl instead.
 %% @end
 %%-------------------------------------------------------------------------
 

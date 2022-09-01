@@ -7,6 +7,7 @@
    {modules, [
         cloudi,
         cloudi_args_type,
+        cloudi_availability,
         cloudi_concurrency,
         cloudi_core_i_app,
         cloudi_core_i_configuration,
@@ -33,7 +34,6 @@
         cloudi_core_i_services_monitor,
         cloudi_core_i_socket,
         cloudi_core_i_spawn,
-        cloudi_core_i_status,
         cloudi_core_i_sup,
         cloudi_crdt,
         cloudi_future,
