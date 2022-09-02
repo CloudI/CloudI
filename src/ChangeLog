@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-09-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the cloudi_service_health_check arguments
+      dns_ip_added, dns_ip_removed_healthy and dns_ip_removed_failed
+      for tracking DNS lookup response changes
+    * Improve cloudi_service_health_check logging level use
+
 2022-08-31 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_availability as a module for usage in internal

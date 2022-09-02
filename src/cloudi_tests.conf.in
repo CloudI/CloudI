@@ -1238,8 +1238,7 @@
       [{hosts,
         [{"cloudi.org",
           [{interval, 5}, % seconds
-           {port, 80}]}]},
-       {debug_level, debug}]}]
+           {port, 80}]}]}]}]
 ]}.
 % automatic node detection with a UDP multicast group
 {nodes, automatic}.
