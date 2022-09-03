@@ -790,9 +790,15 @@ ERL_ARGS_FILE_PARSE="space_merge"
 if test "$ERLANG_OTP_VER_MAJOR" -ge 23 ; then
 ERL_ARGS_FILE_PARSE="exact"
 fi
+VM_CONFIG_INET_BACKEND_SOCKET=""
+# gen_udp multicast support is not yet present in Erlang/OTP 25 socket backend
+#if test "$ERLANG_OTP_VER_MAJOR" -ge 26 ; then
+#VM_CONFIG_INET_BACKEND_SOCKET="{inet_backend, socket},"
+#fi
 AC_SUBST(ERLC_OPTS)
 AC_SUBST(ERL_OPTS)
 AC_SUBST(ERL_ARGS_FILE_PARSE)
+AC_SUBST(VM_CONFIG_INET_BACKEND_SOCKET)
 
 # rebar dependency
 AC_ARG_VAR([REBAR],[rebar executable])

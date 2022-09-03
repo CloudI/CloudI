@@ -38,6 +38,23 @@ ERL_COMPILER_OPTIONS="[]"
 ERL_EPMD_ADDRESS=""
 ERL_EPMD_PORT="4369"
 
+# ensure configuration files are used to enforce user permissions
+unset DETS_DEBUG
+unset ERL_DEBUG_DIST
+unset ERL_EPMD_DIST_HIGH
+unset ERL_EPMD_DIST_LOW
+unset ERL_FULLSWEEP_AFTER
+unset ERL_INETRC
+unset ERL_INET_ETC_DIR
+unset ERL_INET_GETHOST_DEBUG
+unset ERL_MAX_ETS_TABLES
+unset ERL_MAX_PORTS
+unset ERL_THREAD_POOL_SIZE
+unset ESOCK_DEBUG_FILENAME
+unset ESOCK_USE_SOCKET_REGISTRY
+unset GLOBAL_HIGH_LEVEL_TRACE
+unset OTP_TEST_FEATURES
+
 # Default umask (u=rwx,g=rx,o=), if it wasn't provided to the configure script
 if [ -z "$CLOUDI_UMASK" ]; then
     CLOUDI_UMASK="0027"
