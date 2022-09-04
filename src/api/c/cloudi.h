@@ -96,8 +96,8 @@ typedef void (*cloudi_callback_t)(int const request_type,
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size,
+                                  char const * const source,
+                                  uint32_t const source_size,
                                   void * state,
                                   cloudi_instance_t * api);
 
@@ -189,8 +189,8 @@ int cloudi_forward(cloudi_instance_t * api,
                    uint32_t timeout,
                    int8_t const priority,
                    char const * const trans_id,
-                   char const * const pid,
-                   uint32_t const pid_size);
+                   char const * const source,
+                   uint32_t const source_size);
 
 int cloudi_forward_async(cloudi_instance_t * api,
                          char const * const name,
@@ -201,8 +201,8 @@ int cloudi_forward_async(cloudi_instance_t * api,
                          uint32_t timeout,
                          int8_t const priority,
                          char const * const trans_id,
-                         char const * const pid,
-                         uint32_t const pid_size);
+                         char const * const source,
+                         uint32_t const source_size);
 
 int cloudi_forward_sync(cloudi_instance_t * api,
                         char const * const name,
@@ -213,8 +213,8 @@ int cloudi_forward_sync(cloudi_instance_t * api,
                         uint32_t timeout,
                         int8_t const priority,
                         char const * const trans_id,
-                        char const * const pid,
-                        uint32_t const pid_size);
+                        char const * const source,
+                        uint32_t const source_size);
 
 int cloudi_return(cloudi_instance_t * api,
                   int const request_type,
@@ -226,8 +226,8 @@ int cloudi_return(cloudi_instance_t * api,
                   uint32_t const response_size,
                   uint32_t timeout,
                   char const * const trans_id,
-                  char const * const pid,
-                  uint32_t const pid_size);
+                  char const * const source,
+                  uint32_t const source_size);
 
 int cloudi_return_async(cloudi_instance_t * api,
                         char const * const name,
@@ -238,8 +238,8 @@ int cloudi_return_async(cloudi_instance_t * api,
                         uint32_t const response_size,
                         uint32_t timeout,
                         char const * const trans_id,
-                        char const * const pid,
-                        uint32_t const pid_size);
+                        char const * const source,
+                        uint32_t const source_size);
 
 int cloudi_return_sync(cloudi_instance_t * api,
                        char const * const name,
@@ -250,8 +250,8 @@ int cloudi_return_sync(cloudi_instance_t * api,
                        uint32_t const response_size,
                        uint32_t timeout,
                        char const * const trans_id,
-                       char const * const pid,
-                       uint32_t const pid_size);
+                       char const * const source,
+                       uint32_t const source_size);
 
 int cloudi_recv_async(cloudi_instance_t * api,
                       uint32_t timeout,

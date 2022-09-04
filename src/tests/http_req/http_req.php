@@ -61,7 +61,7 @@ class Task
 
     public function request($request_type, $name, $pattern,
                             $request_info, $request,
-                            $timeout, $priority, $trans_id, $pid)
+                            $timeout, $priority, $trans_id, $source)
     {
         $http_qs = \CloudI\API::info_key_value_parse($request);
         if (! isset($http_qs['value']))
@@ -83,7 +83,7 @@ class Task
         ));
         $this->api->return_($request_type, $name, $pattern,
                             $response_info, $response,
-                            $timeout, $trans_id, $pid);
+                            $timeout, $trans_id, $source);
     }
 }
 

@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -66,7 +66,7 @@ class Task(threading.Thread):
         print('terminate msg_size %s' % Task.api_name)
 
 def _request(api, request_type, name, pattern, request_info, request,
-             timeout, priority, trans_id, pid):
+             timeout, priority, trans_id, source):
     # pylint: disable=unused-argument
     # pylint: disable=too-many-arguments
     i = struct.unpack('=I', request[:4])[0]
@@ -79,7 +79,7 @@ def _request(api, request_type, name, pattern, request_info, request,
         i, Task.api_name, _DESTINATION, timeout,
     ))
     api.forward_(request_type, _DESTINATION, request_info, request,
-                 timeout, priority, trans_id, pid)
+                 timeout, priority, trans_id, source)
 
 def _main():
     thread_count = API.thread_count()

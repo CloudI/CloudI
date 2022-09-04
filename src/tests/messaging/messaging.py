@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -92,117 +92,117 @@ class Task(threading.Thread):
 
     def __sequence1_abcd(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/b/c/d')
         assert request == b'test1'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1_abc_(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/b/c/*')
         assert request == b'test2' or request == b'test3'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1_ab_d(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/b/*/d')
         assert request == b'test4' or request == b'test5'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1_a_cd(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/*/c/d')
         assert request == b'test6' or request == b'test7'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1__bcd(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + '*/b/c/d')
         assert request == b'test8' or request == b'test9'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1_ab__(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/b/*')
         assert request == b'test10'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1_a__d(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/*/d')
         assert request == b'test11'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1___cd(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + '*/c/d')
         assert request == b'test12'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1_a___(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/*')
         assert request == b'test13'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1____d(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + '*/d')
         assert request == b'test14'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1_____(self, request_type, name, pattern,
                          request_info, request,
-                         timeout, priority, trans_id, pid):
+                         timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + '*')
         assert request == b'test15'
         self.__api.return_(request_type, name, pattern,
-                           b'', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, source)
 
     def __sequence1(self, request_type, name, pattern,
                     request_info, request,
-                    timeout, priority, trans_id, pid):
+                    timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
@@ -331,75 +331,75 @@ class Task(threading.Thread):
         # start sequence2
         self.__api.send_async(self.__api.prefix() + 'sequence2', request)
         self.__api.return_(request_type, name, pattern,
-                           b'', b'end', timeout, trans_id, pid)
+                           b'', b'end', timeout, trans_id, source)
 
     def __sequence2_e1(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'1', timeout, trans_id, pid)
+                           b'', b'1', timeout, trans_id, source)
 
     def __sequence2_e2(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'2', timeout, trans_id, pid)
+                           b'', b'2', timeout, trans_id, source)
 
     def __sequence2_e3(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'3', timeout, trans_id, pid)
+                           b'', b'3', timeout, trans_id, source)
 
     def __sequence2_e4(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'4', timeout, trans_id, pid)
+                           b'', b'4', timeout, trans_id, source)
 
     def __sequence2_e5(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'5', timeout, trans_id, pid)
+                           b'', b'5', timeout, trans_id, source)
 
     def __sequence2_e6(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'6', timeout, trans_id, pid)
+                           b'', b'6', timeout, trans_id, source)
 
     def __sequence2_e7(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'7', timeout, trans_id, pid)
+                           b'', b'7', timeout, trans_id, source)
 
     def __sequence2_e8(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', b'8', timeout, trans_id, pid)
+                           b'', b'8', timeout, trans_id, source)
 
     def __sequence2(self, request_type, name, pattern,
                     request_info, request,
-                    timeout, priority, trans_id, pid):
+                    timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
@@ -447,11 +447,11 @@ class Task(threading.Thread):
         # start sequence3
         self.__api.send_async(self.__api.prefix() + 'sequence3', request)
         self.__api.return_(request_type, name, pattern,
-                           b'', b'end', timeout, trans_id, pid)
+                           b'', b'end', timeout, trans_id, source)
 
     def __sequence3_f1(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         request_i = int(request)
@@ -461,12 +461,12 @@ class Task(threading.Thread):
         self.__api.forward_(request_type, self.__api.prefix() + 'f2',
                             request_info,
                             ('%d' % request_new).encode('ascii'),
-                            timeout, priority, trans_id, pid)
+                            timeout, priority, trans_id, source)
         return None # execution doesn't get here
 
     def __sequence3_f2(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         request_i = int(request)
@@ -474,19 +474,19 @@ class Task(threading.Thread):
         self.__api.forward_(request_type, self.__api.prefix() + 'f1',
                             request_info,
                             ('%d' % request_new).encode('ascii'),
-                            timeout, priority, trans_id, pid)
+                            timeout, priority, trans_id, source)
 
     def __sequence3_g1(self, request_type, name, pattern,
                        request_info, request,
-                       timeout, priority, trans_id, pid):
+                       timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         self.__api.return_(request_type, name, pattern,
-                           b'', request + b'suffix', timeout, trans_id, pid)
+                           b'', request + b'suffix', timeout, trans_id, source)
 
     def __sequence3(self, request_type, name, pattern,
                     request_info, request,
-                    timeout, priority, trans_id, pid):
+                    timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
@@ -518,7 +518,7 @@ class Task(threading.Thread):
             ('%d' % iteration).encode('ascii'),
         )
         self.__api.return_(request_type, name, pattern,
-                           b'', b'end', timeout, trans_id, pid)
+                           b'', b'end', timeout, trans_id, source)
 
 def _main():
     thread_count = API.thread_count()

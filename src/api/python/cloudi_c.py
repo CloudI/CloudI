@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -157,73 +157,73 @@ class API(object):
         ])
 
     def forward_(self, request_type, name, request_info, request,
-                 timeout, priority, trans_id, pid):
+                 timeout, priority, trans_id, source):
         """
         forwards a service request to a different service name
         """
         # pylint: disable=too-many-arguments
         if request_type == API.ASYNC:
             self.forward_async(name, request_info, request,
-                               timeout, priority, trans_id, pid)
+                               timeout, priority, trans_id, source)
         elif request_type == API.SYNC:
             self.forward_sync(name, request_info, request,
-                              timeout, priority, trans_id, pid)
+                              timeout, priority, trans_id, source)
         else:
             raise InvalidInputException()
 
     def forward_async(self, name, request_info, request,
-                      timeout, priority, trans_id, pid):
+                      timeout, priority, trans_id, source):
         """
         forwards an asynchronous service request to a different service name
         """
         # pylint: disable=too-many-arguments
         self.__api.forward_async(name, request_info, request,
-                                 timeout, priority, trans_id, pid)
+                                 timeout, priority, trans_id, source)
         raise ForwardAsyncException()
 
     def forward_sync(self, name, request_info, request,
-                     timeout, priority, trans_id, pid):
+                     timeout, priority, trans_id, source):
         """
         forwards a synchronous service request to a different service name
         """
         # pylint: disable=too-many-arguments
         self.__api.forward_sync(name, request_info, request,
-                                timeout, priority, trans_id, pid)
+                                timeout, priority, trans_id, source)
         raise ForwardSyncException()
 
     def return_(self, request_type, name, pattern, response_info, response,
-                timeout, trans_id, pid):
+                timeout, trans_id, source):
         """
         provides a response to a service request
         """
         # pylint: disable=too-many-arguments
         if request_type == API.ASYNC:
             self.return_async(name, pattern, response_info, response,
-                              timeout, trans_id, pid)
+                              timeout, trans_id, source)
         elif request_type == API.SYNC:
             self.return_sync(name, pattern, response_info, response,
-                             timeout, trans_id, pid)
+                             timeout, trans_id, source)
         else:
             raise InvalidInputException()
 
     def return_async(self, name, pattern, response_info, response,
-                     timeout, trans_id, pid):
+                     timeout, trans_id, source):
         """
         provides a response to an asynchronous service request
         """
         # pylint: disable=too-many-arguments
         self.__api.return_async(name, pattern, response_info, response,
-                                timeout, trans_id, pid)
+                                timeout, trans_id, source)
         raise ReturnAsyncException()
 
     def return_sync(self, name, pattern, response_info, response,
-                    timeout, trans_id, pid):
+                    timeout, trans_id, source):
         """
         provides a response to a synchronous service request
         """
         # pylint: disable=too-many-arguments
         self.__api.return_sync(name, pattern, response_info, response,
-                               timeout, trans_id, pid)
+                               timeout, trans_id, source)
         raise ReturnSyncException()
 
     def recv_async(self, timeout=None, trans_id=None, consume=None):

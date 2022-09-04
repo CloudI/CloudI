@@ -89,117 +89,117 @@ class Task
 
     public function sequence1_abcd($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . 'a/b/c/d');
         assert($request == 'test1');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1_abc_($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . 'a/b/c/*');
         assert($request == 'test2' || $request == 'test3');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1_ab_d($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . 'a/b/*/d');
         assert($request == 'test4' || $request == 'test5');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1_a_cd($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . 'a/*/c/d');
         assert($request == 'test6' || $request == 'test7');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1__bcd($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . '*/b/c/d');
         assert($request == 'test8' || $request == 'test9');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1_ab__($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . 'a/b/*');
         assert($request == 'test10');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1_a__d($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . 'a/*/d');
         assert($request == 'test11');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1___cd($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . '*/c/d');
         assert($request == 'test12');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1_a___($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . 'a/*');
         assert($request == 'test13');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1____d($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . '*/d');
         assert($request == 'test14');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1_____($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         assert($pattern == $this->api->prefix() . '*');
         assert($request == 'test15');
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request, $timeout, $trans_id, $pid);
+                            '', $request, $timeout, $trans_id, $source);
     }
 
     public function sequence1($request_type, $name, $pattern,
                               $request_info, $request,
-                              $timeout, $priority, $trans_id, $pid)
+                              $timeout, $priority, $trans_id, $source)
     {
         // consume all the 'end' responses from all sequences handled
         // by this service
@@ -303,76 +303,76 @@ class Task
         // start sequence2
         $this->api->send_async($this->api->prefix() . 'sequence2', $request);
         $this->api->return_($request_type, $name, $pattern,
-                            '', 'end', $timeout, $trans_id, $pid);
+                            '', 'end', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e1($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '1', $timeout, $trans_id, $pid);
+                            '', '1', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e2($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '2', $timeout, $trans_id, $pid);
+                            '', '2', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e3($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '3', $timeout, $trans_id, $pid);
+                            '', '3', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e4($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '4', $timeout, $trans_id, $pid);
+                            '', '4', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e5($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '5', $timeout, $trans_id, $pid);
+                            '', '5', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e6($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '6', $timeout, $trans_id, $pid);
+                            '', '6', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e7($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '7', $timeout, $trans_id, $pid);
+                            '', '7', $timeout, $trans_id, $source);
     }
 
     public function sequence2_e8($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', '8', $timeout, $trans_id, $pid);
+                            '', '8', $timeout, $trans_id, $source);
     }
 
     public function sequence2($request_type, $name, $pattern,
                               $request_info, $request,
-                              $timeout, $priority, $trans_id, $pid)
+                              $timeout, $priority, $trans_id, $source)
     {
         echo "messaging sequence2 start php ($request)\n";
         while (true)
@@ -418,12 +418,12 @@ class Task
         # start sequence3
         $this->api->send_async($this->api->prefix() . 'sequence3', $request);
         $this->api->return_($request_type, $name, $pattern,
-                            '', 'end', $timeout, $trans_id, $pid);
+                            '', 'end', $timeout, $trans_id, $source);
     }
 
     public function sequence3_f1($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $request_i = intval($request);
         if ($request_i == 4)
@@ -432,32 +432,33 @@ class Task
         $this->api->forward_($request_type,
                              $this->api->prefix() . 'f2', $request_info,
                              strval($request_new),
-                             $timeout, $priority, $trans_id, $pid);
+                             $timeout, $priority, $trans_id, $source);
     }
 
     public function sequence3_f2($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $request_i = intval($request);
         $request_new = $request_i - 1; // one step back
         $this->api->forward_($request_type,
                              $this->api->prefix() . 'f1', $request_info,
                              strval($request_new),
-                             $timeout, $priority, $trans_id, $pid);
+                             $timeout, $priority, $trans_id, $source);
     }
 
     public function sequence3_g1($request_type, $name, $pattern,
                                  $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->api->return_($request_type, $name, $pattern,
-                            '', $request . 'suffix', $timeout, $trans_id, $pid);
+                            '', $request . 'suffix',
+                            $timeout, $trans_id, $source);
     }
 
     public function sequence3($request_type, $name, $pattern,
                               $request_info, $request,
-                              $timeout, $priority, $trans_id, $pid)
+                              $timeout, $priority, $trans_id, $source)
     {
         echo "messaging sequence3 start php ($request)\n";
         $test1_id = $this->api->send_async(
@@ -477,7 +478,7 @@ class Task
         $this->api->send_async($this->api->prefix() . 'sequence1',
                                strval($iteration));
         $this->api->return_($request_type, $name, $pattern,
-                            '', 'end', $timeout, $trans_id, $pid);
+                            '', 'end', $timeout, $trans_id, $source);
     }
 }
 

@@ -226,18 +226,18 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 crdt = CRDTN}}.
 
 cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, Pid,
+                              Timeout, Priority, TransId, Source,
                               #state{crdt = CRDT0} = State, Dispatcher) ->
     case cloudi_service_name:parse(Name, Pattern) of
         [FunnelName] ->
             request(FunnelName,
                     RequestType, Name, Pattern, RequestInfo, Request,
-                    Timeout, Priority, TransId, Pid, State, Dispatcher);
+                    Timeout, Priority, TransId, Source, State, Dispatcher);
         [] ->
             {ok, CRDTN} = cloudi_crdt:
                           handle_request(RequestType, Name, Pattern,
                                          RequestInfo, Request,
-                                         Timeout, Priority, TransId, Pid,
+                                         Timeout, Priority, TransId, Source,
                                          CRDT0, Dispatcher),
             {noreply, State#state{crdt = CRDTN}}
     end.
@@ -428,7 +428,7 @@ crdt_data_restart(Data, State, Dispatcher) ->
 
 request(FunnelName,
         RequestType, Name, Pattern, RequestInfo, Request,
-        Timeout, Priority, TransId, Pid,
+        Timeout, Priority, TransId, Source,
         #state{requests_extend_liveness = RequestsExtendLiveness,
                crdt = CRDT0} = State, Dispatcher) ->
     RequestKey = {FunnelName, RequestInfo, Request},
@@ -436,7 +436,7 @@ request(FunnelName,
         {ok, #request{response = {ResponseInfo, Response}}} ->
             {reply, ResponseInfo, Response, State};
         _ ->
-            Pending = [{RequestType, Timeout, TransId, Pid}],
+            Pending = [{RequestType, Timeout, TransId, Source}],
             SenderIdRequest = request_sender_id(RequestKey, CRDT0, Dispatcher),
             RequestValue = #request{name = Name,
                                     pattern = Pattern,
@@ -581,7 +581,7 @@ response_store_crdt(ResponseData, RequestValue) ->
 
 response_return([], _, _, _, _, _, _) ->
     ok;
-response_return([{RequestType, Timeout, TransId, Pid} | Pending],
+response_return([{RequestType, Timeout, TransId, Source} | Pending],
                 Name, Pattern, ResponseInfo, Response,
                 MicroSecondsNow, Dispatcher) ->
     MilliSecondsElapsed = (MicroSecondsNow -
@@ -591,7 +591,7 @@ response_return([{RequestType, Timeout, TransId, Pid} | Pending],
             cloudi_service:return_nothrow(Dispatcher, RequestType,
                                           Name, Pattern,
                                           ResponseInfo, Response,
-                                          Timeout, TransId, Pid);
+                                          Timeout, TransId, Source);
         true ->
             ok
     end,

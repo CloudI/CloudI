@@ -195,7 +195,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, ResultsName, ResultsName,
                               _RequestInfo, Request,
-                              _Timeout, _Priority, _TransId, _Pid,
+                              _Timeout, _Priority, _TransId, _Source,
                               #state{process_count = ProcessCount,
                                      results_name = ResultsName,
                                      results_count = ResultsCount,

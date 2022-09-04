@@ -307,7 +307,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, Name, Pattern,
                               _RequestInfo, Request,
-                              _Timeout, _Priority, _TransId, _Pid,
+                              _Timeout, _Priority, _TransId, _Source,
                               State, _Dispatcher) ->
     {Response,
      StateNew} = case cloudi_service_name:parse_with_suffix(Name, Pattern) of

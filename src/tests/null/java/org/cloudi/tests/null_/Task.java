@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -44,7 +44,7 @@ public class Task implements Runnable
                           String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
-                          byte[] trans_id, OtpErlangPid pid)
+                          byte[] trans_id, OtpErlangPid source)
         throws API.ReturnAsyncException,
                API.ReturnSyncException,
                API.InvalidInputException

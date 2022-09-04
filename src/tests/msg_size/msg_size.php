@@ -61,7 +61,7 @@ class Task
 
     public function request($request_type, $name, $pattern,
                             $request_info, $request,
-                            $timeout, $priority, $trans_id, $pid)
+                            $timeout, $priority, $trans_id, $source)
     {
         list(, $i) = unpack('L', substr($request, 0, 4));
         if ($i == 1073741823)
@@ -73,7 +73,7 @@ class Task
              " (with timeout {$timeout} ms)\n";
         $this->api->forward_($request_type, DESTINATION,
                              $request_info, $request,
-                             $timeout, $priority, $trans_id, $pid);
+                             $timeout, $priority, $trans_id, $source);
     }
 }
 

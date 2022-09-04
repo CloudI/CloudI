@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -46,9 +46,9 @@ return_ :: CloudI.T () -> RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO (CloudI.Response ())
 return_ api0 requestType name pattern
-    responseInfo response timeout transId pid = do
+    responseInfo response timeout transId source = do
     CloudI.return_ api0
-        requestType name pattern responseInfo response timeout transId pid
+        requestType name pattern responseInfo response timeout transId source
     return $ CloudI.Null ((), api0)
 
 empty :: ByteString
@@ -57,101 +57,112 @@ empty = ByteString.empty
 sequence1ABCD :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1ABCD requestType name pattern _ request timeout _ transId pid _ api =
+sequence1ABCD requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "a/b/c/d")))
     assert (request == Char8.pack "test1")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1ABCX :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1ABCX requestType name pattern _ request timeout _ transId pid _ api =
+sequence1ABCX requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "a/b/c/*")))
     assert (request == Char8.pack "test2" || request == Char8.pack "test3")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1ABXD :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1ABXD requestType name pattern _ request timeout _ transId pid _ api =
+sequence1ABXD requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "a/b/*/d")))
     assert (request == Char8.pack "test4" || request == Char8.pack "test5")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1AXCD :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1AXCD requestType name pattern _ request timeout _ transId pid _ api =
+sequence1AXCD requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "a/*/c/d")))
     assert (request == Char8.pack "test6" || request == Char8.pack "test7")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1XBCD :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1XBCD requestType name pattern _ request timeout _ transId pid _ api =
+sequence1XBCD requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "*/b/c/d")))
     assert (request == Char8.pack "test8" || request == Char8.pack "test9")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1ABX :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1ABX requestType name pattern _ request timeout _ transId pid _ api =
+sequence1ABX requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "a/b/*")))
     assert (request == Char8.pack "test10")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1AXD :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1AXD requestType name pattern _ request timeout _ transId pid _ api =
+sequence1AXD requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "a/*/d")))
     assert (request == Char8.pack "test11")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1XCD :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1XCD requestType name pattern _ request timeout _ transId pid _ api =
+sequence1XCD requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "*/c/d")))
     assert (request == Char8.pack "test12")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1AX :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1AX requestType name pattern _ request timeout _ transId pid _ api =
+sequence1AX requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "a/*")))
     assert (request == Char8.pack "test13")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1XD :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1XD requestType name pattern _ request timeout _ transId pid _ api =
+sequence1XD requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "*/d")))
     assert (request == Char8.pack "test14")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sequence1X :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1X requestType name pattern _ request timeout _ transId pid _ api =
+sequence1X requestType name pattern
+    _ request timeout _ transId source _ api =
     assert (pattern ==
         (ByteString.append (CloudI.prefix api) (Char8.pack "*")))
     assert (request == Char8.pack "test15")
-    return_ api requestType name pattern empty request timeout transId pid
+    return_ api requestType name pattern empty request timeout transId source
 
 sendAsync :: CloudI.T () -> String -> String -> IO (ByteString, CloudI.T ())
 sendAsync api0 suffix request = do
@@ -167,7 +178,7 @@ sendAsync api0 suffix request = do
 sequence1 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence1 requestType name pattern _ request timeout _ transId pid _ api0 =
+sequence1 requestType name pattern _ request timeout _ transId source _ api0 =
     let wait api1 = do
             waitValue <- CloudI.recvAsync api1 (Just 1000) Nothing Nothing
             case waitValue of
@@ -257,68 +268,70 @@ sequence1 requestType name pattern _ request timeout _ transId pid _ api0 =
     putStrLn $ "messaging sequence1 end haskell (" ++ requestNew ++ ")"
     (_, api53) <- sendAsync api52 "sequence2" requestNew
     let response = Char8.pack "end"
-    return_ api53 requestType name pattern empty response timeout transId pid
+    return_ api53 requestType name pattern
+        empty response timeout transId source
 
 sequence2E1 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E1 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E1 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "1" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2E2 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E2 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E2 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "2" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2E3 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E3 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E3 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "3" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2E4 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E4 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E4 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "4" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2E5 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E5 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E5 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "5" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2E6 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E6 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E6 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "6" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2E7 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E7 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E7 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "7" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2E8 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2E8 requestType name pattern _ _ timeout _ transId pid _ api =
+sequence2E8 requestType name pattern _ _ timeout _ transId source _ api =
     let response = Char8.pack "8" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence2 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence2 requestType name pattern _ request timeout _ transId pid _ api0 = do
+sequence2 requestType name pattern
+    _ request timeout _ transId source _ api0 = do
     let iteration = read $ Char8.unpack request :: Int
         requestNew = show iteration
     putStrLn $ "messaging sequence2 start haskell (" ++ requestNew ++ ")"
@@ -380,13 +393,13 @@ sequence2 requestType name pattern _ request timeout _ transId pid _ api0 = do
     putStrLn $ "messaging sequence2 end haskell (" ++ requestNew ++ ")"
     (_, api8) <- sendAsync api7 "sequence3" requestNew
     let response = Char8.pack "end"
-    return_ api8 requestType name pattern empty response timeout transId pid
+    return_ api8 requestType name pattern empty response timeout transId source
 
 sequence3F1 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
 sequence3F1 requestType _ _
-    requestInfo request timeout priority transId pid _ api =
+    requestInfo request timeout priority transId source _ api =
     let requestI = read $ Char8.unpack request :: Int in
     if requestI == 4 then
         return $ CloudI.Response (Char8.pack "done", (), api)
@@ -395,33 +408,34 @@ sequence3F1 requestType _ _
         CloudI.forward_ api requestType
             (ByteString.append (CloudI.prefix api) (Char8.pack "f2"))
             requestInfo (Char8.pack $ show requestNew)
-            timeout priority transId pid
+            timeout priority transId source
         return $ CloudI.Null ((), api)
 
 sequence3F2 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
 sequence3F2 requestType _ _
-    requestInfo request timeout priority transId pid _ api =
+    requestInfo request timeout priority transId source _ api =
     let requestI = read $ Char8.unpack request :: Int
         requestNew = requestI - 1 in do -- 1 step back
     CloudI.forward_ api requestType
         (ByteString.append (CloudI.prefix api) (Char8.pack "f1"))
         requestInfo (Char8.pack $ show requestNew)
-        timeout priority transId pid
+        timeout priority transId source
     return $ CloudI.Null ((), api)
 
 sequence3G1 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence3G1 requestType name pattern _ request timeout _ transId pid _ api =
+sequence3G1 requestType name pattern _ request timeout _ transId source _ api =
     let response = ByteString.append request $ Char8.pack "suffix" in
-    return_ api requestType name pattern empty response timeout transId pid
+    return_ api requestType name pattern empty response timeout transId source
 
 sequence3 :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-sequence3 requestType name pattern _ request timeout _ transId pid _ api0 = do
+sequence3 requestType name pattern
+    _ request timeout _ transId source _ api0 = do
     let iteration = read $ Char8.unpack request :: Int
         requestOld = show iteration
     putStrLn $ "messaging sequence3 start haskell (" ++ requestOld ++ ")"
@@ -453,7 +467,7 @@ sequence3 requestType name pattern _ request timeout _ transId pid _ api0 = do
                     let response = Char8.pack "end"
                     return_ api4
                         requestType name pattern empty response
-                        timeout transId pid
+                        timeout transId source
 
 task :: Int -> IO ()
 task threadIndex = do

@@ -424,16 +424,17 @@ CloudI.API.prototype.mcast_async = function (name, request, callback,
 
 CloudI.API.prototype.forward_ = function (request_type, name,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority,
+                                          trans_id, source) {
     var API = this;
     switch (request_type) {
         case API.ASYNC:
             API.forward_async(name, request_info, request,
-                              timeout, priority, trans_id, pid);
+                              timeout, priority, trans_id, source);
             return;
         case API.SYNC:
             API.forward_sync(name, request_info, request,
-                             timeout, priority, trans_id, pid);
+                             timeout, priority, trans_id, source);
             return;
         default:
             throw new InvalidInputException();
@@ -442,42 +443,42 @@ CloudI.API.prototype.forward_ = function (request_type, name,
 
 CloudI.API.prototype.forward_async = function (name, request_info, request,
                                                timeout, priority,
-                                               trans_id, pid) {
+                                               trans_id, source) {
     this._poll_wait(function (API) {
         API._send([new Erlang.OtpErlangAtom('forward_async'), name,
                    new Erlang.OtpErlangBinary(request_info),
                    new Erlang.OtpErlangBinary(request),
                    timeout, priority,
-                   new Erlang.OtpErlangBinary(trans_id), pid]);
+                   new Erlang.OtpErlangBinary(trans_id), source]);
         throw new ForwardAsyncException();
     });
 };
 
 CloudI.API.prototype.forward_sync = function (name, request_info, request,
                                               timeout, priority,
-                                              trans_id, pid) {
+                                              trans_id, source) {
     this._poll_wait(function (API) {
         API._send([new Erlang.OtpErlangAtom('forward_sync'), name,
                    new Erlang.OtpErlangBinary(request_info),
                    new Erlang.OtpErlangBinary(request),
                    timeout, priority,
-                   new Erlang.OtpErlangBinary(trans_id), pid]);
+                   new Erlang.OtpErlangBinary(trans_id), source]);
         throw new ForwardSyncException();
     });
 };
 
 CloudI.API.prototype.return_ = function (request_type, name, pattern,
                                          response_info, response,
-                                         timeout, trans_id, pid) {
+                                         timeout, trans_id, source) {
     var API = this;
     switch (request_type) {
         case API.ASYNC:
             API.return_async(name, pattern, response_info, response,
-                             timeout, trans_id, pid);
+                             timeout, trans_id, source);
             return;
         case API.SYNC:
             API.return_sync(name, pattern, response_info, response,
-                            timeout, trans_id, pid);
+                            timeout, trans_id, source);
             return;
         default:
             throw new InvalidInputException();
@@ -486,24 +487,24 @@ CloudI.API.prototype.return_ = function (request_type, name, pattern,
 
 CloudI.API.prototype.return_async = function (name, pattern,
                                               response_info, response,
-                                              timeout, trans_id, pid) {
+                                              timeout, trans_id, source) {
     this._poll_wait(function (API) {
         API._send([new Erlang.OtpErlangAtom('return_async'), name, pattern,
                    new Erlang.OtpErlangBinary(response_info),
                    new Erlang.OtpErlangBinary(response),
-                   timeout, new Erlang.OtpErlangBinary(trans_id), pid]);
+                   timeout, new Erlang.OtpErlangBinary(trans_id), source]);
         throw new ReturnAsyncException();
     });
 };
 
 CloudI.API.prototype.return_sync = function (name, pattern,
                                              response_info, response,
-                                             timeout, trans_id, pid) {
+                                             timeout, trans_id, source) {
     this._poll_wait(function (API) {
         API._send([new Erlang.OtpErlangAtom('return_sync'), name, pattern,
                    new Erlang.OtpErlangBinary(response_info),
                    new Erlang.OtpErlangBinary(response),
-                   timeout, new Erlang.OtpErlangBinary(trans_id), pid]);
+                   timeout, new Erlang.OtpErlangBinary(trans_id), source]);
         throw new ReturnSyncException();
     });
 };
@@ -569,13 +570,14 @@ CloudI.API.prototype.priority_default = function () {
 CloudI.API.prototype._null_response = function (request_type, name, pattern,
                                                 request_info, request,
                                                 timeout, priority,
-                                                trans_id, pid) {
+                                                trans_id, source) {
     return '';
 };
 
 CloudI.API.prototype._callback = function (command, name, pattern,
                                            request_info, request,
-                                           timeout, priority, trans_id, pid) {
+                                           timeout, priority,
+                                           trans_id, source) {
     var API = this;
     var function_queue = API._callbacks[pattern];
     var f;
@@ -632,7 +634,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     try {
                         API.return_async(name, pattern,
                                          response_info, response,
-                                         timeout, trans_id, pid);
+                                         timeout, trans_id, source);
                     }
                     catch (err_new) {
                         err_new = undefined;
@@ -647,7 +649,8 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 var response = f.obj_f.call(f.obj,
                                             API.ASYNC, name, pattern,
                                             request_info, request,
-                                            timeout, priority, trans_id, pid);
+                                            timeout, priority,
+                                            trans_id, source);
                 if (typeof response === 'undefined') {
                     return;
                 }
@@ -670,7 +673,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 try {
                     API.return_async(name, pattern,
                                      response_info, response,
-                                     timeout, trans_id, pid);
+                                     timeout, trans_id, source);
                 }
                 catch (err_new) {
                     err_new = undefined;
@@ -722,7 +725,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     try {
                         API.return_sync(name, pattern,
                                         response_info, response,
-                                        timeout, trans_id, pid);
+                                        timeout, trans_id, source);
                     }
                     catch (err_new) {
                         err_new = undefined;
@@ -737,7 +740,8 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 var response = f.obj_f.call(f.obj,
                                             API.SYNC, name, pattern,
                                             request_info, request,
-                                            timeout, priority, trans_id, pid);
+                                            timeout, priority,
+                                            trans_id, source);
                 if (typeof response === 'undefined') {
                     return;
                 }
@@ -760,7 +764,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 try {
                     API.return_sync(name, pattern,
                                     response_info, response,
-                                    timeout, trans_id, pid);
+                                    timeout, trans_id, source);
                 }
                 catch (err_new) {
                     err_new = undefined;
@@ -887,15 +891,15 @@ CloudI.API.prototype._poll_request = function (data) {
                 j = i + 16;
                 var trans_id = data.slice(i, j);
                 i = j;
-                var pid_size = unpackUint32(i, data);
+                var source_size = unpackUint32(i, data);
                 i += 4;
-                j = i + pid_size;
-                var pid = data.slice(i, j);
+                j = i + source_size;
+                var source = data.slice(i, j);
                 i = j;
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
                 }
-                Erlang.binary_to_term(pid, function (err, pid_object) {
+                Erlang.binary_to_term(source, function (err, source_object) {
                     if (err) {
                         API._exception(err);
                         API._poll_terminate();
@@ -904,7 +908,7 @@ CloudI.API.prototype._poll_request = function (data) {
                         API._callback(command, name, pattern,
                                       request_info, request,
                                       request_timeout, priority,
-                                      trans_id, pid_object);
+                                      trans_id, source_object);
                     }
                 });
                 return;

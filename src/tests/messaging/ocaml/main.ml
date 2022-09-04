@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -28,79 +28,80 @@
  *)
 
 let return api
-  request_type name pattern response_info response timeout trans_id pid =
+  request_type name pattern response_info response timeout trans_id source =
   match Cloudi.return_ api
-    request_type name pattern response_info response timeout trans_id pid with
+    request_type name pattern response_info response
+    timeout trans_id source with
   | Error (error) ->
     Cloudi.NullError (error)
   | Ok _ ->
     Cloudi.Null
 
 let sequence1_abcd
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "a/b/c/d")) ;
   assert (request = "test1") ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1_abc_
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "a/b/c/*")) ;
   assert ((request = "test2") || (request = "test3")) ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1_ab_d
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "a/b/*/d")) ;
   assert ((request = "test4") || (request = "test5")) ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1_a_cd
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "a/*/c/d")) ;
   assert ((request = "test6") || (request = "test7")) ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1__bcd
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "*/b/c/d")) ;
   assert ((request = "test8") || (request = "test9")) ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1_ab__
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "a/b/*")) ;
   assert (request = "test10") ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1_a__d
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "a/*/d")) ;
   assert (request = "test11") ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1___cd
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "*/c/d")) ;
   assert (request = "test12") ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1_a___
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "a/*")) ;
   assert (request = "test13") ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1____d
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "*/d")) ;
   assert (request = "test14") ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let sequence1_____
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   assert (pattern = ((Cloudi.prefix api) ^ "*")) ;
   assert (request = "test15") ;
-  return api request_type name pattern "" request timeout trans_id pid
+  return api request_type name pattern "" request timeout trans_id source
 
 let send_async api suffix request =
   match Cloudi.send_async api ((Cloudi.prefix api) ^ suffix) request with
@@ -110,7 +111,8 @@ let send_async api suffix request =
   | Ok (trans_id) ->
     trans_id
 
-let sequence1 request_type name pattern _ request timeout _ trans_id pid _ api =
+let sequence1
+  request_type name pattern _ request timeout _ trans_id source _ api =
   let rec wait () =
     (* consume all the "end" responses from all sequences handled
        by this service *)
@@ -199,33 +201,42 @@ let sequence1 request_type name pattern _ request timeout _ trans_id pid _ api =
   print_endline ("messaging sequence1 end ocaml (" ^ request ^ ")") ;
   (* start sequence2 *)
   let _ = send_async api "sequence2" request in
-  return api request_type name pattern "" "end" timeout trans_id pid
+  return api request_type name pattern "" "end" timeout trans_id source
 
-let sequence2_e1 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "1" timeout trans_id pid
+let sequence2_e1
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "1" timeout trans_id source
 
-let sequence2_e2 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "2" timeout trans_id pid
+let sequence2_e2
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "2" timeout trans_id source
 
-let sequence2_e3 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "3" timeout trans_id pid
+let sequence2_e3
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "3" timeout trans_id source
 
-let sequence2_e4 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "4" timeout trans_id pid
+let sequence2_e4
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "4" timeout trans_id source
 
-let sequence2_e5 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "5" timeout trans_id pid
+let sequence2_e5
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "5" timeout trans_id source
 
-let sequence2_e6 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "6" timeout trans_id pid
+let sequence2_e6
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "6" timeout trans_id source
 
-let sequence2_e7 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "7" timeout trans_id pid
+let sequence2_e7
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "7" timeout trans_id source
 
-let sequence2_e8 request_type name pattern _ _ timeout _ trans_id pid _ api =
-  return api request_type name pattern "" "8" timeout trans_id pid
+let sequence2_e8
+  request_type name pattern _ _ timeout _ trans_id source _ api =
+  return api request_type name pattern "" "8" timeout trans_id source
 
-let sequence2 request_type name pattern _ request timeout _ trans_id pid _ api =
+let sequence2
+  request_type name pattern _ request timeout _ trans_id source _ api =
   print_endline ("messaging sequence2 start ocaml (" ^ request ^ ")") ;
   let rec recv_asyncs_loop () =
     (* the sending process is excluded from the services that receive
@@ -277,20 +288,20 @@ let sequence2 request_type name pattern _ request timeout _ trans_id pid _ api =
   print_endline ("messaging sequence2 end ocaml (" ^ request ^ ")") ;
   (* start sequence3 *)
   let _ = send_async api "sequence3" request in
-  return api request_type name pattern "" "end" timeout trans_id pid
+  return api request_type name pattern "" "end" timeout trans_id source
 
 let forward api
-  request_type suffix request_info request timeout priority trans_id pid =
+  request_type suffix request_info request timeout priority trans_id source =
   match Cloudi.forward_ api
     request_type ((Cloudi.prefix api) ^ suffix) request_info request
-    timeout priority trans_id pid with
+    timeout priority trans_id source with
   | Error (error) ->
     Cloudi.NullError (error)
   | Ok _ ->
     Cloudi.Null
 
 let sequence3_f1
-  request_type _ _ request_info request timeout priority trans_id pid _ api =
+  request_type _ _ request_info request timeout priority trans_id source _ api =
   let request_i = int_of_string request in
   if request_i = 4 then
     Cloudi.Response ("done")
@@ -298,22 +309,23 @@ let sequence3_f1
     let request_new = request_i + 2 in (* two steps forward *)
     forward api
       request_type "f2" request_info (string_of_int request_new)
-      timeout priority trans_id pid
+      timeout priority trans_id source
 
 let sequence3_f2
-  request_type _ _ request_info request timeout priority trans_id pid _ api =
+  request_type _ _ request_info request timeout priority trans_id source _ api =
   let request_i = int_of_string request in
   let request_new = request_i - 1 in (* one step back *)
   forward api
     request_type "f1" request_info (string_of_int request_new)
-    timeout priority trans_id pid
+    timeout priority trans_id source
 
 let sequence3_g1
-  request_type name pattern _ request timeout _ trans_id pid _ api =
+  request_type name pattern _ request timeout _ trans_id source _ api =
   return api
-    request_type name pattern "" (request ^ "suffix") timeout trans_id pid
+    request_type name pattern "" (request ^ "suffix") timeout trans_id source
 
-let sequence3 request_type name pattern _ request timeout _ trans_id pid _ api =
+let sequence3
+  request_type name pattern _ request timeout _ trans_id source _ api =
   print_endline ("messaging sequence3 start ocaml (" ^ request ^ ")") ;
   let test1_id = send_async api "f1" "0" in
   match Cloudi.recv_async api ~trans_id:test1_id with
@@ -338,7 +350,7 @@ let sequence3 request_type name pattern _ request timeout _ trans_id pid _ api =
           iteration
       in
       let _ = send_async api "sequence1" (string_of_int iteration_new) in
-      return api request_type name pattern "" "end" timeout trans_id pid)
+      return api request_type name pattern "" "end" timeout trans_id source)
   | Ok _ ->
     prerr_endline "timeout!" ;
     raise Exit

@@ -753,14 +753,14 @@ handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
                      Timeout :: cloudi_service:timeout_value_milliseconds(),
                      Priority :: cloudi_service:priority_value(),
                      TransId :: cloudi_service:trans_id(),
-                     Pid :: cloudi_service:source(),
+                     Source :: cloudi_service:source(),
                      State :: state(),
                      Dispatcher :: cloudi_service:dispatcher()) ->
     {ok, StateNew :: state()} |
     {ignored, State :: state()}.
 
 handle_request(RequestType, ServiceNameFull, ServiceNameFull,
-               _RequestInfo, Request, Timeout, _Priority, TransId, Pid,
+               _RequestInfo, Request, Timeout, _Priority, TransId, Source,
                #cloudi_crdt{service_name_full = ServiceNameFull,
                             node_id = NodeId,
                             vclock = VClock,
@@ -785,7 +785,8 @@ handle_request(RequestType, ServiceNameFull, ServiceNameFull,
     end,
     ok = cloudi_service:return_nothrow(Dispatcher, RequestType,
                                        ServiceNameFull, ServiceNameFull,
-                                       <<>>, Response, Timeout, TransId, Pid),
+                                       <<>>, Response,
+                                       Timeout, TransId, Source),
     {ok, StateNew};
 handle_request(_, _, _, _, _, _, _, _, _, State, _) ->
     {ignored, State}.

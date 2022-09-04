@@ -233,7 +233,7 @@ class API(object):
         return self.__poll_request(None, False)
 
     def forward_(self, request_type, name, request_info, request,
-                 timeout, priority, trans_id, pid):
+                 timeout, priority, trans_id, source):
         """
         forwards a service request to a different service name
         """
@@ -241,16 +241,16 @@ class API(object):
         if request_type == API.ASYNC:
             self.forward_async(name,
                                request_info, request,
-                               timeout, priority, trans_id, pid)
+                               timeout, priority, trans_id, source)
         elif request_type == API.SYNC:
             self.forward_sync(name,
                               request_info, request,
-                              timeout, priority, trans_id, pid)
+                              timeout, priority, trans_id, source)
         else:
             raise InvalidInputException()
 
     def forward_async(self, name, request_info, request,
-                      timeout, priority, trans_id, pid):
+                      timeout, priority, trans_id, source):
         """
         forwards an asynchronous service request to a different service name
         """
@@ -259,11 +259,11 @@ class API(object):
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority,
-                                    OtpErlangBinary(trans_id), pid)))
+                                    OtpErlangBinary(trans_id), source)))
         raise ForwardAsyncException()
 
     def forward_sync(self, name, request_info, request,
-                     timeout, priority, trans_id, pid):
+                     timeout, priority, trans_id, source):
         """
         forwards a synchronous service request to a different service name
         """
@@ -272,11 +272,11 @@ class API(object):
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority,
-                                    OtpErlangBinary(trans_id), pid)))
+                                    OtpErlangBinary(trans_id), source)))
         raise ForwardSyncException()
 
     def return_(self, request_type, name, pattern, response_info, response,
-                timeout, trans_id, pid):
+                timeout, trans_id, source):
         """
         provides a response to a service request
         """
@@ -284,16 +284,16 @@ class API(object):
         if request_type == API.ASYNC:
             self.return_async(name, pattern,
                               response_info, response,
-                              timeout, trans_id, pid)
+                              timeout, trans_id, source)
         elif request_type == API.SYNC:
             self.return_sync(name, pattern,
                              response_info, response,
-                             timeout, trans_id, pid)
+                             timeout, trans_id, source)
         else:
             raise InvalidInputException()
 
     def return_async(self, name, pattern, response_info, response,
-                     timeout, trans_id, pid):
+                     timeout, trans_id, source):
         """
         provides a response to an asynchronous service request
         """
@@ -302,11 +302,11 @@ class API(object):
                                     name, pattern,
                                     OtpErlangBinary(response_info),
                                     OtpErlangBinary(response), timeout,
-                                    OtpErlangBinary(trans_id), pid)))
+                                    OtpErlangBinary(trans_id), source)))
         raise ReturnAsyncException()
 
     def return_sync(self, name, pattern, response_info, response,
-                    timeout, trans_id, pid):
+                    timeout, trans_id, source):
         """
         provides a response to a synchronous service request
         """
@@ -315,7 +315,7 @@ class API(object):
                                     name, pattern,
                                     OtpErlangBinary(response_info),
                                     OtpErlangBinary(response), timeout,
-                                    OtpErlangBinary(trans_id), pid)))
+                                    OtpErlangBinary(trans_id), source)))
         raise ReturnSyncException()
 
     def recv_async(self, timeout=None, trans_id=None, consume=True):
@@ -392,14 +392,14 @@ class API(object):
 
     def __null_response(self, request_type, name, pattern,
                         request_info, request,
-                        timeout, priority, trans_id, pid):
+                        timeout, priority, trans_id, source):
         # pylint: disable=no-self-use
         # pylint: disable=too-many-arguments
         # pylint: disable=unused-argument
         return b''
 
     def __callback(self, command, name, pattern, request_info, request,
-                   timeout, priority, trans_id, pid):
+                   timeout, priority, trans_id, source):
         # pylint: disable=too-many-arguments
         # pylint: disable=bare-except
         # pylint: disable=too-many-return-statements
@@ -418,7 +418,7 @@ class API(object):
             try:
                 response = function(API.ASYNC, name, pattern,
                                     request_info, request,
-                                    timeout, priority, trans_id, pid)
+                                    timeout, priority, trans_id, source)
                 if isinstance(response, tuple):
                     response_info, response = response
                     if not isinstance(response_info, (bytes, TypeUnicode)):
@@ -464,7 +464,7 @@ class API(object):
             try:
                 self.return_async(name, pattern,
                                   response_info, response,
-                                  timeout, trans_id, pid)
+                                  timeout, trans_id, source)
             except ReturnAsyncException:
                 pass
             return
@@ -472,7 +472,7 @@ class API(object):
             try:
                 response = function(API.SYNC, name, pattern,
                                     request_info, request,
-                                    timeout, priority, trans_id, pid)
+                                    timeout, priority, trans_id, source)
                 if isinstance(response, tuple):
                     response_info, response = response
                     if not isinstance(response_info, (bytes, TypeUnicode)):
@@ -518,7 +518,7 @@ class API(object):
             try:
                 self.return_sync(name, pattern,
                                  response_info, response,
-                                 timeout, trans_id, pid)
+                                 timeout, trans_id, source)
             except ReturnSyncException:
                 pass
             return
@@ -631,11 +631,11 @@ class API(object):
                  )
                 i, j = j, j + request_size + 1 + 4 + 1 + 16 + 4
                 (request, _, request_timeout, priority, trans_id,
-                 pid_size) = struct.unpack(
+                 source_size) = struct.unpack(
                      '=%dscIb16sI' % request_size, data[i:j]
                  )
-                i, j = j, j + pid_size
-                pid = data[i:j]
+                i, j = j, j + source_size
+                source = data[i:j]
                 if j != data_size:
                     assert external is True
                     if not self.__handle_events(external, data, data_size, j):
@@ -646,7 +646,7 @@ class API(object):
                                 pattern.decode('utf-8'),
                                 request_info, request,
                                 request_timeout, priority, trans_id,
-                                binary_to_term(pid))
+                                binary_to_term(source))
                 if self.__terminate:
                     return False
             elif command in (_MESSAGE_RECV_ASYNC, _MESSAGE_RETURN_SYNC):

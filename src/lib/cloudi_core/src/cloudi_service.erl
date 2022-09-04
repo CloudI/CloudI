@@ -9,15 +9,18 @@
 %%% The user module should export:
 %%%
 %%%   cloudi_service_init(Args, Prefix, Timeout, Dispatcher)
+%%%
 %%%    ==> {ok, State}
 %%%        {stop, Reason}
 %%%        {stop, Reason, State}
 %%%               State = undefined, if not returned
-%%%               Reason = restart | shutdown | Term, terminate(State) is called
+%%%               Reason = restart | shutdown | Term
 %%%
 %%%   cloudi_service_handle_request(RequestType, Name, Pattern,
-%%%                                 RequestInfo, Request, Timeout, Priority,
-%%%                                 TransId, Pid, State, Dispatcher)
+%%%                                 RequestInfo, Request,
+%%%                                 Timeout, Priority, TransId, Source,
+%%%                                 State, Dispatcher)
+%%%
 %%%    ==> {reply, Response, StateNew}
 %%%        {reply, ResponseInfo, Response, StateNew}
 %%%        {forward, NameNext, RequestInfoNext, RequestNext, StateNew}
@@ -25,17 +28,19 @@
 %%%         TimeoutNext, PriorityNext, StateNew}
 %%%        {noreply, StateNew}
 %%%        {stop, Reason, StateNew}
-%%%               Reason = restart | shutdown | Term, terminate(State) is called
+%%%               Reason = restart | shutdown | Term
 %%%
 %%%   cloudi_service_handle_info(Request, State, Dispatcher)
 %%%
 %%%    ==> {noreply, State}
 %%%        {stop, Reason, StateNew}
-%%%               Reason = restart | shutdown | Term, terminate(State) is called
+%%%               Reason = restart | shutdown | Term
 %%%
-%%%   cloudi_service_terminate(Reason, Timeout,
-%%%                            State) Let the user module clean up
-%%%        always called when the service terminates
+%%%   cloudi_service_terminate(Reason, Timeout, State)
+%%%
+%%%        Always called when the service terminates
+%%%        (either due to a stop tuple return value,
+%%%         an error/exit/throw exception or an exit signal).
 %%%
 %%%    ==> ok
 %%%
@@ -195,7 +200,12 @@
               trans_id/0,
               pattern_pid/0]).
 
+% Dispatcher Erlang Process of a CloudI Service that will send the
+% service request.
 -type dispatcher() :: pid().
+% Source Erlang Process of a CloudI Service that will receive the
+% service request response.  The same Erlang process receives the
+% CloudI Service's incoming service requests based on its subscriptions.
 -type source() :: pid().
 -export_type([dispatcher/0,
               source/0]).
@@ -1710,18 +1720,18 @@ mcast_async_passive(Dispatcher, Name, RequestInfo, Request,
               Timeout :: timeout_value_milliseconds(),
               Priority :: priority(),
               TransId :: trans_id(),
-              Pid :: pid()) ->
+              Source :: source()) ->
     no_return().
 
 forward(Dispatcher, 'send_async', Name, RequestInfo, Request,
-        Timeout, Priority, TransId, Pid) ->
+        Timeout, Priority, TransId, Source) ->
     forward_async(Dispatcher, Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Pid);
+                  Timeout, Priority, TransId, Source);
 
 forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
-        Timeout, Priority, TransId, Pid) ->
+        Timeout, Priority, TransId, Source) ->
     forward_sync(Dispatcher, Name, RequestInfo, Request,
-                 Timeout, Priority, TransId, Pid).
+                 Timeout, Priority, TransId, Source).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1736,20 +1746,20 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                     Timeout :: timeout_value_milliseconds(),
                     Priority :: priority(),
                     TransId :: trans_id(),
-                    Pid :: pid()) ->
+                    Source :: source()) ->
     no_return().
 
 forward_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
-              Timeout, Priority, TransId, Pid)
+              Timeout, Priority, TransId, Source)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
-         is_binary(TransId), is_pid(Pid),
+         is_binary(TransId), is_pid(Source),
          Timeout >= ?TIMEOUT_FORWARD_ASYNC_MIN,
          Timeout =< ?TIMEOUT_FORWARD_ASYNC_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     erlang:throw({cloudi_service_forward,
                   {'cloudi_service_forward_async_retry', Name,
                    RequestInfo, Request,
-                   Timeout, Priority, TransId, Pid}}).
+                   Timeout, Priority, TransId, Source}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1764,20 +1774,20 @@ forward_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                    Timeout :: timeout_value_milliseconds(),
                    Priority :: priority(),
                    TransId :: trans_id(),
-                   Pid :: pid()) ->
+                   Source :: source()) ->
     no_return().
 
 forward_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
-             Timeout, Priority, TransId, Pid)
+             Timeout, Priority, TransId, Source)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
-         is_binary(TransId), is_pid(Pid),
+         is_binary(TransId), is_pid(Source),
          Timeout >= ?TIMEOUT_FORWARD_SYNC_MIN,
          Timeout =< ?TIMEOUT_FORWARD_SYNC_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     erlang:throw({cloudi_service_forward,
                   {'cloudi_service_forward_sync_retry', Name,
                    RequestInfo, Request,
-                   Timeout, Priority, TransId, Pid}}).
+                   Timeout, Priority, TransId, Source}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1822,18 +1832,18 @@ return(Dispatcher, ResponseInfo, Response)
              Response :: response(),
              Timeout :: timeout_value_milliseconds(),
              TransId :: trans_id(),
-             Pid :: pid()) ->
+             Source :: source()) ->
     no_return().
 
 return(Dispatcher, 'send_async', Name, Pattern, ResponseInfo, Response,
-       Timeout, TransId, Pid) ->
+       Timeout, TransId, Source) ->
     return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
-                 Timeout, TransId, Pid);
+                 Timeout, TransId, Source);
 
 return(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
-       Timeout, TransId, Pid) ->
+       Timeout, TransId, Source) ->
     return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
-                Timeout, TransId, Pid).
+                Timeout, TransId, Source).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1848,19 +1858,19 @@ return(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
                    Response :: response(),
                    Timeout :: timeout_value_milliseconds(),
                    TransId :: trans_id(),
-                   Pid :: pid()) ->
+                   Source :: source()) ->
     no_return().
 
 return_async(Dispatcher, [NameC | _] = Name, [PatternC | _] = Pattern,
-             ResponseInfo, Response, Timeout, TransId, Pid)
+             ResponseInfo, Response, Timeout, TransId, Source)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
-         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         is_integer(Timeout), is_binary(TransId), is_pid(Source),
          Timeout >= ?TIMEOUT_RETURN_ASYNC_MIN,
          Timeout =< ?TIMEOUT_RETURN_ASYNC_MAX ->
     erlang:throw({cloudi_service_return,
                   {'cloudi_service_return_async', Name, Pattern,
                    ResponseInfo, Response,
-                   Timeout, TransId, Pid}}).
+                   Timeout, TransId, Source}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1875,19 +1885,19 @@ return_async(Dispatcher, [NameC | _] = Name, [PatternC | _] = Pattern,
                   Response :: response(),
                   Timeout :: timeout_value_milliseconds(),
                   TransId :: trans_id(),
-                  Pid :: pid()) ->
+                  Source :: source()) ->
     no_return().
 
 return_sync(Dispatcher, [NameC | _] = Name, [PatternC | _] = Pattern,
-            ResponseInfo, Response, Timeout, TransId, Pid)
+            ResponseInfo, Response, Timeout, TransId, Source)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
-         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         is_integer(Timeout), is_binary(TransId), is_pid(Source),
          Timeout >= ?TIMEOUT_RETURN_SYNC_MIN,
          Timeout =< ?TIMEOUT_RETURN_SYNC_MAX ->
     erlang:throw({cloudi_service_return,
                   {'cloudi_service_return_sync', Name, Pattern,
                    ResponseInfo, Response,
-                   Timeout, TransId, Pid}}).
+                   Timeout, TransId, Source}}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1908,31 +1918,31 @@ return_sync(Dispatcher, [NameC | _] = Name, [PatternC | _] = Pattern,
                      Response :: response(),
                      Timeout :: timeout_value_milliseconds(),
                      TransId :: trans_id(),
-                     Pid :: pid()) ->
+                     Source :: source()) ->
     ok.
 
 return_nothrow(Dispatcher, 'send_async',
                [NameC | _] = Name, [PatternC | _] = Pattern,
-               ResponseInfo, Response, Timeout, TransId, Pid)
+               ResponseInfo, Response, Timeout, TransId, Source)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
-         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         is_integer(Timeout), is_binary(TransId), is_pid(Source),
          Timeout >= ?TIMEOUT_RETURN_ASYNC_MIN,
          Timeout =< ?TIMEOUT_RETURN_ASYNC_MAX ->
-    Pid ! {'cloudi_service_return_async', Name, Pattern,
-           ResponseInfo, Response,
-           Timeout, TransId, Pid},
+    Source ! {'cloudi_service_return_async', Name, Pattern,
+              ResponseInfo, Response,
+              Timeout, TransId, Source},
     ok;
 
 return_nothrow(Dispatcher, 'send_sync',
                [NameC | _] = Name, [PatternC | _] = Pattern,
-               ResponseInfo, Response, Timeout, TransId, Pid)
+               ResponseInfo, Response, Timeout, TransId, Source)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
-         is_integer(Timeout), is_binary(TransId), is_pid(Pid),
+         is_integer(Timeout), is_binary(TransId), is_pid(Source),
          Timeout >= ?TIMEOUT_RETURN_SYNC_MIN,
          Timeout =< ?TIMEOUT_RETURN_SYNC_MAX ->
-    Pid ! {'cloudi_service_return_sync', Name, Pattern,
-           ResponseInfo, Response,
-           Timeout, TransId, Pid},
+    Source ! {'cloudi_service_return_sync', Name, Pattern,
+              ResponseInfo, Response,
+              Timeout, TransId, Source},
     ok.
 
 %%-------------------------------------------------------------------------
@@ -2179,7 +2189,8 @@ timeout_sync(Dispatcher) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Maximum possible service request timeout (in milliseconds).===
-%% Use ?TIMEOUT_MAX_ERLANG directly from cloudi_constants.hrl instead.
+%% Use ?TIMEOUT_MAX_ERLANG directly from cloudi_constants.hrl instead,
+%% if possible.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -2243,17 +2254,17 @@ duo_mode(Dispatcher) ->
 %% ===Get a list of all service name patterns a service request source is subscribed to.===
 %% The source pid can be found at:
 %%
-%% `cloudi_service_handle_request(_, _, _, _, _, _, _, _, Pid, _, _)'
+%% `cloudi_service_handle_request(_, _, _, _, _, _, _, _, Source, _, _)'
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec source_subscriptions(Dispatcher :: dispatcher(),
-                           Pid :: source()) ->
+                           Source :: source()) ->
     list(service_name_pattern()).
 
-source_subscriptions(Dispatcher, Pid)
-    when is_pid(Pid) ->
-    gen_server:call(Dispatcher, {source_subscriptions, Pid}, infinity).
+source_subscriptions(Dispatcher, Source)
+    when is_pid(Source) ->
+    gen_server:call(Dispatcher, {source_subscriptions, Source}, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

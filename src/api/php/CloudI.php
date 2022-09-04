@@ -215,75 +215,75 @@ class API
     }
 
     public function forward_($request_type, $name, $request_info, $request,
-                             $timeout, $priority, $trans_id, $pid)
+                             $timeout, $priority, $trans_id, $source)
     {
         switch ($request_type)
         {
             case API::$ASYNC:
                 $this->forward_async($name, $request_info, $request,
-                                     $timeout, $priority, $trans_id, $pid);
+                                     $timeout, $priority, $trans_id, $source);
             case API::$SYNC:
                 $this->forward_sync($name, $request_info, $request,
-                                    $timeout, $priority, $trans_id, $pid);
+                                    $timeout, $priority, $trans_id, $source);
         }
     }
 
     public function forward_async($name, $request_info, $request,
-                                  $timeout, $priority, $trans_id, $pid)
+                                  $timeout, $priority, $trans_id, $source)
     {
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('forward_async'), $name,
                   new \Erlang\OtpErlangBinary($request_info),
                   new \Erlang\OtpErlangBinary($request), $timeout, $priority,
-                  new \Erlang\OtpErlangBinary($trans_id), $pid)));
+                  new \Erlang\OtpErlangBinary($trans_id), $source)));
         throw new ForwardAsyncException();
     }
 
     public function forward_sync($name, $request_info, $request,
-                                 $timeout, $priority, $trans_id, $pid)
+                                 $timeout, $priority, $trans_id, $source)
     {
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('forward_sync'), $name,
                   new \Erlang\OtpErlangBinary($request_info),
                   new \Erlang\OtpErlangBinary($request), $timeout, $priority,
-                  new \Erlang\OtpErlangBinary($trans_id), $pid)));
+                  new \Erlang\OtpErlangBinary($trans_id), $source)));
         throw new ForwardSyncException();
     }
 
     public function return_($request_type, $name, $pattern,
                             $response_info, $response,
-                            $timeout, $trans_id, $pid)
+                            $timeout, $trans_id, $source)
     {
         switch ($request_type)
         {
             case API::$ASYNC:
                 $this->return_async($name, $pattern, $response_info, $response,
-                                    $timeout, $trans_id, $pid);
+                                    $timeout, $trans_id, $source);
             case API::$SYNC:
                 $this->return_sync($name, $pattern, $response_info, $response,
-                                   $timeout, $trans_id, $pid);
+                                   $timeout, $trans_id, $source);
         }
     }
 
     public function return_async($name, $pattern, $response_info, $response,
-                                 $timeout, $trans_id, $pid)
+                                 $timeout, $trans_id, $source)
     {
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('return_async'), $name, $pattern,
                   new \Erlang\OtpErlangBinary($response_info),
                   new \Erlang\OtpErlangBinary($response), $timeout,
-                  new \Erlang\OtpErlangBinary($trans_id), $pid)));
+                  new \Erlang\OtpErlangBinary($trans_id), $source)));
         throw new ReturnAsyncException();
     }
 
     public function return_sync($name, $pattern, $response_info, $response,
-                                $timeout, $trans_id, $pid)
+                                $timeout, $trans_id, $source)
     {
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('return_sync'), $name, $pattern,
                   new \Erlang\OtpErlangBinary($response_info),
                   new \Erlang\OtpErlangBinary($response), $timeout,
-                  new \Erlang\OtpErlangBinary($trans_id), $pid)));
+                  new \Erlang\OtpErlangBinary($trans_id), $source)));
         throw new ReturnSyncException();
     }
 
@@ -352,14 +352,14 @@ class API
 
     private function null_response($request_type, $name, $pattern,
                                    $request_info, $request,
-                                   $timeout, $priority, $trans_id, $pid)
+                                   $timeout, $priority, $trans_id, $source)
     {
         return '';
     }
 
     private function callback($command, $name, $pattern,
                               $request_info, $request,
-                              $timeout, $priority, $trans_id, $pid)
+                              $timeout, $priority, $trans_id, $source)
     {
         if (! isset($this->callbacks[$pattern]))
         {
@@ -381,7 +381,7 @@ class API
                                                API::$ASYNC, $name, $pattern,
                                                $request_info, $request,
                                                $timeout, $priority,
-                                               $trans_id, $pid);
+                                               $trans_id, $source);
                     if (is_array($response))
                     {
                         assert(count($response) == 2);
@@ -449,7 +449,7 @@ class API
                 {
                     $this->return_async($name, $pattern,
                                         $response_info, $response,
-                                        $timeout, $trans_id, $pid);
+                                        $timeout, $trans_id, $source);
                 }
                 catch (ReturnAsyncException $e)
                 {
@@ -462,7 +462,7 @@ class API
                                                API::$SYNC, $name, $pattern,
                                                $request_info, $request,
                                                $timeout, $priority,
-                                               $trans_id, $pid);
+                                               $trans_id, $source);
                     if (is_array($response))
                     {
                         assert(count($response) == 2);
@@ -530,7 +530,7 @@ class API
                 {
                     $this->return_sync($name, $pattern,
                                        $response_info, $response,
-                                       $timeout, $trans_id, $pid);
+                                       $timeout, $trans_id, $source);
                 }
                 catch (ReturnSyncException $e)
                 {
@@ -705,9 +705,9 @@ class API
                     $i += $j; $j = 16;
                     $trans_id = substr($data, $i, $j);
                     $i += $j; $j = 4;
-                    list(, $pid_size) = unpack('L', substr($data, $i, $j));
-                    $i += $j; $j = $pid_size;
-                    $pid = substr($data, $i, $j);
+                    list(, $source_size) = unpack('L', substr($data, $i, $j));
+                    $i += $j; $j = $source_size;
+                    $source = substr($data, $i, $j);
                     $i += $j;
                     if ($i != $data_size)
                     {
@@ -722,7 +722,7 @@ class API
                     $this->callback($command, $name, $pattern,
                                     $request_info, $request,
                                     $request_timeout, $priority, $trans_id,
-                                    \Erlang\binary_to_term($pid));
+                                    \Erlang\binary_to_term($source));
                     if ($this->terminate)
                     {
                         return false;

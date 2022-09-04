@@ -166,66 +166,70 @@ module CloudI
         end
 
         def forward_(request_type, name, request_info, request,
-                     timeout, priority, trans_id, pid)
+                     timeout, priority, trans_id, source)
             case request_type
             when ASYNC
                 forward_async(name, request_info, request,
-                              timeout, priority, trans_id, pid)
+                              timeout, priority, trans_id, source)
             when SYNC
                 forward_sync(name, request_info, request,
-                             timeout, priority, trans_id, pid)
+                             timeout, priority, trans_id, source)
             end
         end
 
         def forward_async(name, request_info, request,
-                          timeout, priority, trans_id, pid)
+                          timeout, priority, trans_id, source)
             send(Erlang.term_to_binary([:forward_async, name,
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
                                         timeout, priority,
-                                        OtpErlangBinary.new(trans_id), pid]))
+                                        OtpErlangBinary.new(trans_id),
+                                        source]))
             raise ForwardAsyncException
         end
 
         def forward_sync(name, request_info, request,
-                         timeout, priority, trans_id, pid)
+                         timeout, priority, trans_id, source)
             send(Erlang.term_to_binary([:forward_sync, name,
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
                                         timeout, priority,
-                                        OtpErlangBinary.new(trans_id), pid]))
+                                        OtpErlangBinary.new(trans_id),
+                                        source]))
             raise ForwardSyncException
         end
 
         def return_(request_type, name, pattern, response_info, response,
-                    timeout, trans_id, pid)
+                    timeout, trans_id, source)
             case request_type
             when ASYNC
                 return_async(name, pattern, response_info, response,
-                             timeout, trans_id, pid)
+                             timeout, trans_id, source)
             when SYNC
                 return_sync(name, pattern, response_info, response,
-                            timeout, trans_id, pid)
+                            timeout, trans_id, source)
             end
         end
 
         def return_async(name, pattern, response_info, response,
-                         timeout, trans_id, pid)
+                         timeout, trans_id, source)
             send(Erlang.term_to_binary([:return_async, name, pattern,
                                         OtpErlangBinary.new(response_info),
                                         OtpErlangBinary.new(response),
                                         timeout,
-                                        OtpErlangBinary.new(trans_id), pid]))
+                                        OtpErlangBinary.new(trans_id),
+                                        source]))
             raise ReturnAsyncException
         end
 
         def return_sync(name, pattern, response_info, response,
-                        timeout, trans_id, pid)
+                        timeout, trans_id, source)
             send(Erlang.term_to_binary([:return_sync, name, pattern,
                                         OtpErlangBinary.new(response_info),
                                         OtpErlangBinary.new(response),
                                         timeout,
-                                        OtpErlangBinary.new(trans_id), pid]))
+                                        OtpErlangBinary.new(trans_id),
+                                        source]))
             raise ReturnSyncException
         end
 
@@ -243,12 +247,12 @@ module CloudI
         end
 
         def null_response(request_type, name, pattern, request_info, request,
-                          timeout, priority, trans_id, pid)
+                          timeout, priority, trans_id, source)
             return ''
         end
 
         def callback(command, name, pattern, request_info, request,
-                     timeout, priority, trans_id, pid)
+                     timeout, priority, trans_id, source)
             function_queue = @callbacks.fetch(pattern, nil)
             if function_queue.nil?
                 function = method(:null_response)
@@ -262,7 +266,8 @@ module CloudI
                 begin
                     response = function.call(ASYNC, name, pattern,
                                              request_info, request,
-                                             timeout, priority, trans_id, pid)
+                                             timeout, priority,
+                                             trans_id, source)
                     if response.kind_of?(Array)
                         API.assert{response.length == 2}
                         response_info = response[0]
@@ -317,14 +322,15 @@ module CloudI
                 end
                 begin
                     return_async(name, pattern, response_info, response,
-                                 timeout, trans_id, pid)
+                                 timeout, trans_id, source)
                 rescue ReturnAsyncException
                 end
             when MESSAGE_SEND_SYNC
                 begin
                     response = function.call(SYNC, name, pattern,
                                              request_info, request,
-                                             timeout, priority, trans_id, pid)
+                                             timeout, priority,
+                                             trans_id, source)
                     if response.kind_of?(Array)
                         API.assert{response.length == 2}
                         response_info = response[0]
@@ -379,7 +385,7 @@ module CloudI
                 end
                 begin
                     return_sync(name, pattern, response_info, response,
-                                timeout, trans_id, pid)
+                                timeout, trans_id, source)
                 rescue ReturnSyncException
                 end
             else
@@ -514,9 +520,9 @@ module CloudI
                     request_timeout = tmp[1]
                     priority = tmp[2]
                     trans_id = tmp[3]
-                    pid_size = tmp[4]
-                    i += j; j = pid_size
-                    pid = data[i, j]
+                    source_size = tmp[4]
+                    i += j; j = source_size
+                    source = data[i, j]
                     i += j
                     if i != data_size
                         API.assert{external == true}
@@ -527,7 +533,7 @@ module CloudI
                     data.clear()
                     callback(command, name, pattern, request_info, request,
                              request_timeout, priority, trans_id,
-                             Erlang.binary_to_term(pid))
+                             Erlang.binary_to_term(source))
                     if @terminate
                         return false
                     end

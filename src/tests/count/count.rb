@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -63,7 +63,7 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def request(request_type, name, pattern, request_info, request,
-                        timeout, priority, trans_id, pid)
+                        timeout, priority, trans_id, source)
                 if @count == 4294967295
                     @count = 0
                 else
@@ -73,7 +73,8 @@ if __FILE__ == $PROGRAM_NAME
                 response = "#{@count}"
                 response_info = CloudI::API.info_key_value_new({})
                 @api.return_(request_type, name, pattern,
-                             response_info, response, timeout, trans_id, pid)
+                             response_info, response,
+                             timeout, trans_id, source)
             end
         end
 

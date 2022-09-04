@@ -61,7 +61,7 @@ class Task
 
     public function request($request_type, $name, $pattern,
                             $request_info, $request,
-                            $timeout, $priority, $trans_id, $pid)
+                            $timeout, $priority, $trans_id, $source)
     {
         if ($this->count == 4294967295)
         {
@@ -76,7 +76,7 @@ class Task
         $response_info = \CloudI\API::info_key_value_new(array());
         $this->api->return_($request_type, $name, $pattern,
                             $response_info, $response,
-                            $timeout, $trans_id, $pid);
+                            $timeout, $trans_id, $source);
     }
 }
 

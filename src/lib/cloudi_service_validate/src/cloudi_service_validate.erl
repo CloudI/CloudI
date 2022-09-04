@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2015-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_validate).
@@ -166,7 +166,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 failures_dest_max_period = FailuresDstMaxPeriod}}.
 
 cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, SrcPid,
+                              Timeout, Priority, TransId, Source,
                               #state{validate_request_info = RequestInfoF,
                                      validate_request = RequestF,
                                      requests = Requests} = State,
@@ -189,20 +189,20 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                                          pattern = Pattern,
                                          timeout = Timeout,
                                          trans_id = TransId,
-                                         source = SrcPid,
+                                         source = Source,
                                          destination = DstPid},
                             {noreply,
                              State#state{requests = maps:put(ValidateTransId,
                                                              ValidateRequest,
                                                              Requests)}};
                         {error, timeout} ->
-                            request_failed(SrcPid, State)
+                            request_failed(Source, State)
                     end;
                 {error, timeout} ->
-                    request_failed(SrcPid, State)
+                    request_failed(Source, State)
             end;
         false ->
-            request_failed(SrcPid, State)
+            request_failed(Source, State)
     end.
 
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
@@ -229,7 +229,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
               name = Name,
               pattern = Pattern,
               trans_id = TransId,
-              source = SrcPid,
+              source = Source,
               destination = DstPid},
      NewRequests} = maps:take(ValidateTransId, Requests),
     case validate(ResponseInfoF, ResponseF,
@@ -238,13 +238,13 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
             cloudi_service:return_nothrow(Dispatcher, RequestType,
                                           Name, Pattern,
                                           ResponseInfo, Response,
-                                          Timeout, TransId, SrcPid),
+                                          Timeout, TransId, Source),
             {noreply, State#state{requests = NewRequests}};
         false ->
             {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
                                                 FailuresSrcMaxCount,
                                                 FailuresSrcMaxPeriod,
-                                                SrcPid, FailuresSrc),
+                                                Source, FailuresSrc),
             if
                 DeadSrc =:= true ->
                     ok;
@@ -252,7 +252,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                     cloudi_service:return_nothrow(Dispatcher, RequestType,
                                                   Name, Pattern,
                                                   <<>>, <<>>,
-                                                  Timeout, TransId, SrcPid)
+                                                  Timeout, TransId, Source)
             end,
             {_, NewFailuresDst} = failure(FailuresDstDie,
                                           FailuresDstMaxCount,
@@ -283,13 +283,13 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
               pattern = Pattern,
               timeout = Timeout,
               trans_id = TransId,
-              source = SrcPid,
+              source = Source,
               destination = DstPid},
      NewRequests} = maps:take(ValidateTransId, Requests),
     {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
                                         FailuresSrcMaxPeriod,
-                                        SrcPid, FailuresSrc),
+                                        Source, FailuresSrc),
     if
         DeadSrc =:= true ->
             ok;
@@ -297,7 +297,7 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
             cloudi_service:return_nothrow(Dispatcher, RequestType,
                                           Name, Pattern,
                                           <<>>, <<>>,
-                                          Timeout, TransId, SrcPid)
+                                          Timeout, TransId, Source)
     end,
     {_, NewFailuresDst} = failure(FailuresDstDie,
                                   FailuresDstMaxCount,
@@ -350,7 +350,7 @@ validate(RInfoF, undefined, RInfo, _) ->
 validate(RInfoF, RF, RInfo, R) ->
     validate_f_return(RInfoF(RInfo)) andalso validate_f_return(RF(RInfo, R)).
 
-request_failed(SrcPid,
+request_failed(Source,
                #state{failures_source_die = FailuresSrcDie,
                       failures_source_max_count = FailuresSrcMaxCount,
                       failures_source_max_period = FailuresSrcMaxPeriod,
@@ -358,7 +358,7 @@ request_failed(SrcPid,
     {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
                                         FailuresSrcMaxPeriod,
-                                        SrcPid, FailuresSrc),
+                                        Source, FailuresSrc),
     if
         DeadSrc =:= true ->
             {noreply,

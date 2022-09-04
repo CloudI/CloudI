@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@ import (
 	"sync"
 )
 
-func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, data interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
+func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, source cloudi.Source, data interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	os.Stdout.WriteString("null go\n")
 	return nil, nil, nil
 }

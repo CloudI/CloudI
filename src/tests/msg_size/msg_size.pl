@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -42,7 +42,7 @@ sub task
         my $task_request = sub
         {
             my ($request_type, $name, $pattern, $request_info, $request,
-                $timeout, $priority, $trans_id, $pid) = @_;
+                $timeout, $priority, $trans_id, $source) = @_;
             my $i = unpack('L', substr($request, 0, 4));
             if ($i == 1073741823)
             {
@@ -57,7 +57,7 @@ sub task
             print "forward #$i perl to $name_next " .
                   "(with timeout $timeout ms)\n";
             $api->forward_($request_type, $name_next, $request_info, $request,
-                           $timeout, $priority, $trans_id, $pid);
+                           $timeout, $priority, $trans_id, $source);
         };
 
         # run

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2020 Michael Truog
-%%% @version 1.8.1 {@date} {@time}
+%%% @copyright 2017-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_count).
@@ -90,7 +90,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, _Request,
-                              _Timeout, _Priority, _TransId, _Pid,
+                              _Timeout, _Priority, _TransId, _Source,
                               #state{mode = isolated,
                                      count = Count0} = State, _Dispatcher) ->
     CountN = update(Count0),
@@ -100,12 +100,12 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
     {reply, ResponseInfo, Response, State#state{count = CountN}};
 cloudi_service_handle_request(RequestType, Name, Pattern,
                               RequestInfo, Request,
-                              Timeout, Priority, TransId, Pid,
+                              Timeout, Priority, TransId, Source,
                               #state{mode = crdt,
                                      crdt = CRDT0} = State, Dispatcher) ->
     case cloudi_crdt:handle_request(RequestType, Name, Pattern,
                                     RequestInfo, Request,
-                                    Timeout, Priority, TransId, Pid,
+                                    Timeout, Priority, TransId, Source,
                                     CRDT0, Dispatcher) of
         {ok, CRDTN} ->
             {noreply, State#state{crdt = CRDTN}};

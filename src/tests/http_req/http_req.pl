@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,7 @@ sub task
         my $task_request = sub
         {
             my ($request_type, $name, $pattern, $request_info, $request,
-                $timeout, $priority, $trans_id, $pid) = @_;
+                $timeout, $priority, $trans_id, $source) = @_;
             my %http_qs = CloudI::API::info_key_value_parse($request);
             my $response;
             if (! defined($http_qs{'value'}))
@@ -63,7 +63,7 @@ sub task
             });
             $api->return_($request_type, $name, $pattern,
                           $response_info, $response,
-                          $timeout, $trans_id, $pid);
+                          $timeout, $trans_id, $source);
         };
 
         # run

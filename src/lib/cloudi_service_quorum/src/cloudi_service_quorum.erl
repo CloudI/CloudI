@@ -210,7 +210,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 failures_dest_max_period = FailuresDstMaxPeriod}}.
 
 cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, SrcPid,
+                              Timeout, Priority, TransId, Source,
                               #state{quorum = Quorum,
                                      validate_request_info = RequestInfoF,
                                      validate_request = RequestF} = State,
@@ -246,19 +246,19 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                     end,
                     if
                         CountRequired =:= undefined ->
-                            request_failed(SrcPid, State);
+                            request_failed(Source, State);
                         true ->
                             mcast(PatternPids, QuorumName,
                                   RequestType, Name, Pattern,
                                   RequestInfo, Request,
-                                  Timeout, Priority, TransId, SrcPid,
+                                  Timeout, Priority, TransId, Source,
                                   CountRequired, State, Dispatcher)
                     end;
                 {error, timeout} ->
-                    request_failed(SrcPid, State)
+                    request_failed(Source, State)
             end;
         false ->
-            request_failed(SrcPid, State)
+            request_failed(Source, State)
     end.
 
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
@@ -285,12 +285,12 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                            Dispatcher) ->
     {#pending{trans_id = TransId,
               dest = DstPid},
-     NewPending} = maps:take(QuorumTransId, Pending),
+     PendingNew} = maps:take(QuorumTransId, Pending),
     #request{% return data
              request_type = RequestType,
              name = Name,
              pattern = Pattern,
-             source = SrcPid,
+             source = Source,
              % quorum data
              count_required = CountRequired,
              count_total = CountTotal,
@@ -298,11 +298,11 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
              count_correct = CountCorrect,
              responses = Responses,
              returned = Returned} = Request = maps:get(TransId, Requests),
-    NewCountResponses = CountResponses + 1,
+    CountResponsesNew = CountResponses + 1,
     case validate(ResponseInfoF, ResponseF,
                   ResponseInfo, Response) of
         true ->
-            NewRequests = if
+            RequestsNew = if
                 Returned =:= false ->
                     Key = if
                         UseResponseInfo =:= true ->
@@ -316,88 +316,88 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                         error ->
                             1
                     end,
-                    NewCountCorrect = erlang:max(Count, CountCorrect),
-                    NewReturned = if
+                    CountCorrectNew = erlang:max(Count, CountCorrect),
+                    ReturnedNew = if
                         Count == CountRequired ->
                             cloudi_service:
                             return_nothrow(Dispatcher, RequestType,
                                            Name, Pattern,
                                            ResponseInfo, Response,
-                                           Timeout, TransId, SrcPid),
+                                           Timeout, TransId, Source),
                             true;
-                        (NewCountResponses == CountTotal) orelse
-                        ((NewCountCorrect +
-                          (CountTotal - NewCountResponses)) < CountRequired) ->
+                        (CountResponsesNew == CountTotal) orelse
+                        ((CountCorrectNew +
+                          (CountTotal - CountResponsesNew)) < CountRequired) ->
                             cloudi_service:
                             return_nothrow(Dispatcher, RequestType,
                                            Name, Pattern,
                                            <<>>, <<>>,
-                                           Timeout, TransId, SrcPid),
+                                           Timeout, TransId, Source),
                             true;
                         true ->
                             Returned
                     end,
                     if
-                        NewCountResponses == CountTotal ->
+                        CountResponsesNew == CountTotal ->
                             maps:remove(TransId, Requests);
-                        NewCountResponses < CountTotal ->
-                            NewResponses = orddict:store(Key, Count, Responses),
+                        CountResponsesNew < CountTotal ->
+                            ResponsesNew = orddict:store(Key, Count, Responses),
                             maps:put(TransId,
                                      Request#request{
-                                         count_responses = NewCountResponses,
-                                         count_correct = NewCountCorrect,
-                                         responses = NewResponses,
-                                         returned = NewReturned},
+                                         count_responses = CountResponsesNew,
+                                         count_correct = CountCorrectNew,
+                                         responses = ResponsesNew,
+                                         returned = ReturnedNew},
                                      Requests)
                     end;
-                NewCountResponses == CountTotal ->
+                CountResponsesNew == CountTotal ->
                     maps:remove(TransId, Requests);
-                NewCountResponses < CountTotal ->
+                CountResponsesNew < CountTotal ->
                     maps:put(TransId,
                              Request#request{
-                                 count_responses = NewCountResponses},
+                                 count_responses = CountResponsesNew},
                              Requests)
             end,
-            {noreply, State#state{requests = NewRequests,
-                                  pending = NewPending}};
+            {noreply, State#state{requests = RequestsNew,
+                                  pending = PendingNew}};
         false ->
-            {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
+            {DeadSrc, FailuresSrcNew} = failure(FailuresSrcDie,
                                                 FailuresSrcMaxCount,
                                                 FailuresSrcMaxPeriod,
-                                                SrcPid, FailuresSrc),
-            {_, NewFailuresDst} = failure(FailuresDstDie,
+                                                Source, FailuresSrc),
+            {_, FailuresDstNew} = failure(FailuresDstDie,
                                           FailuresDstMaxCount,
                                           FailuresDstMaxPeriod,
                                           DstPid, FailuresDst),
-            NewReturned = if
+            ReturnedNew = if
                 DeadSrc =:= true ->
                     true;
                 (Returned =:= false) andalso
-                ((NewCountResponses == CountTotal) orelse
+                ((CountResponsesNew == CountTotal) orelse
                  ((CountCorrect +
-                   (CountTotal - NewCountResponses)) < CountRequired)) ->
+                   (CountTotal - CountResponsesNew)) < CountRequired)) ->
                     cloudi_service:return_nothrow(Dispatcher, RequestType,
                                                   Name, Pattern,
                                                   <<>>, <<>>,
-                                                  Timeout, TransId, SrcPid),
+                                                  Timeout, TransId, Source),
                     true;
                 true ->
                     Returned
             end,
-            NewRequests = if
-                NewCountResponses == CountTotal ->
+            RequestsNew = if
+                CountResponsesNew == CountTotal ->
                     maps:remove(TransId, Requests);
-                NewCountResponses < CountTotal ->
+                CountResponsesNew < CountTotal ->
                     maps:put(TransId,
                              Request#request{
-                                 count_responses = NewCountResponses,
-                                 returned = NewReturned},
+                                 count_responses = CountResponsesNew,
+                                 returned = ReturnedNew},
                              Requests)
             end,
-            {noreply, State#state{failures_source = NewFailuresSrc,
-                                  failures_dest = NewFailuresDst,
-                                  requests = NewRequests,
-                                  pending = NewPending}}
+            {noreply, State#state{failures_source = FailuresSrcNew,
+                                  failures_dest = FailuresDstNew,
+                                  requests = RequestsNew,
+                                  pending = PendingNew}}
                 
     end;
 
@@ -419,56 +419,56 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QuorumTransId},
                            Dispatcher) ->
     {#pending{trans_id = TransId,
               dest = DstPid},
-     NewPending} = maps:take(QuorumTransId, Pending),
+     PendingNew} = maps:take(QuorumTransId, Pending),
     #request{% return data
              request_type = RequestType,
              name = Name,
              pattern = Pattern,
              timeout = Timeout,
-             source = SrcPid,
+             source = Source,
              % quorum data
              count_required = CountRequired,
              count_total = CountTotal,
              count_responses = CountResponses,
              count_correct = CountCorrect,
              returned = Returned} = Request = maps:get(TransId, Requests),
-    NewCountResponses = CountResponses + 1,
-    {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
+    CountResponsesNew = CountResponses + 1,
+    {DeadSrc, FailuresSrcNew} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
                                         FailuresSrcMaxPeriod,
-                                        SrcPid, FailuresSrc),
-    {_, NewFailuresDst} = failure(FailuresDstDie,
+                                        Source, FailuresSrc),
+    {_, FailuresDstNew} = failure(FailuresDstDie,
                                   FailuresDstMaxCount,
                                   FailuresDstMaxPeriod,
                                   DstPid, FailuresDst),
-    NewReturned = if
+    ReturnedNew = if
         DeadSrc =:= true ->
             true;
         (Returned =:= false) andalso
-        ((NewCountResponses == CountTotal) orelse
+        ((CountResponsesNew == CountTotal) orelse
          ((CountCorrect +
-           (CountTotal - NewCountResponses)) < CountRequired)) ->
+           (CountTotal - CountResponsesNew)) < CountRequired)) ->
             cloudi_service:return_nothrow(Dispatcher, RequestType,
                                           Name, Pattern,
                                           <<>>, <<>>,
-                                          Timeout, TransId, SrcPid),
+                                          Timeout, TransId, Source),
             true;
         true ->
             Returned
     end,
-    NewRequests = if
-        NewCountResponses == CountTotal ->
+    RequestsNew = if
+        CountResponsesNew == CountTotal ->
             maps:remove(TransId, Requests);
-        NewCountResponses < CountTotal ->
+        CountResponsesNew < CountTotal ->
             maps:put(TransId,
-                     Request#request{count_responses = NewCountResponses,
-                                     returned = NewReturned},
+                     Request#request{count_responses = CountResponsesNew,
+                                     returned = ReturnedNew},
                      Requests)
     end,
-    {noreply, State#state{failures_source = NewFailuresSrc,
-                          failures_dest = NewFailuresDst,
-                          requests = NewRequests,
-                          pending = NewPending}};
+    {noreply, State#state{failures_source = FailuresSrcNew,
+                          failures_dest = FailuresDstNew,
+                          requests = RequestsNew,
+                          pending = PendingNew}};
 
 cloudi_service_handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
                            #state{failures_source_die = FailuresSrcDie,
@@ -476,20 +476,20 @@ cloudi_service_handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
                                   failures_dest_die = FailuresDstDie,
                                   failures_dest = FailuresDst} = State,
                            _Dispatcher) ->
-    NewFailuresSrc = if
+    FailuresSrcNew = if
         FailuresSrcDie =:= true ->
             maps:remove(Pid, FailuresSrc);
         FailuresSrcDie =:= false ->
             FailuresSrc
     end,
-    NewFailuresDst = if
+    FailuresDstNew = if
         FailuresDstDie =:= true ->
             maps:remove(Pid, FailuresDst);
         FailuresDstDie =:= false ->
             FailuresDst
     end,
-    {noreply, State#state{failures_source = NewFailuresSrc,
-                          failures_dest = NewFailuresDst}};
+    {noreply, State#state{failures_source = FailuresSrcNew,
+                          failures_dest = FailuresDstNew}};
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
@@ -532,40 +532,40 @@ mcast_send([{_, DstPid} = PatternPid | PatternPids],
 
 mcast(PatternPids, QuorumName,
       RequestType, Name, Pattern, RequestInfo, Request,
-      Timeout, Priority, TransId, SrcPid, CountRequired,
+      Timeout, Priority, TransId, Source, CountRequired,
       #state{requests = Requests,
              pending = Pending} = State, Dispatcher) ->
     {CountSent,
-     NewPending} = mcast_send(PatternPids, Pending, QuorumName,
+     PendingNew} = mcast_send(PatternPids, Pending, QuorumName,
                               RequestInfo, Request,
                               Timeout, Priority, TransId, Dispatcher),
     if
         CountSent >= CountRequired ->
-            NewRequests = maps:put(TransId,
+            RequestsNew = maps:put(TransId,
                                    #request{request_type = RequestType,
                                             name = Name,
                                             pattern = Pattern,
                                             timeout = Timeout,
-                                            source = SrcPid,
+                                            source = Source,
                                             count_required = CountRequired,
                                             count_total = CountSent,
                                             returned = false},
                                    Requests),
-            {noreply, State#state{requests = NewRequests,
-                                  pending = NewPending}};
+            {noreply, State#state{requests = RequestsNew,
+                                  pending = PendingNew}};
         true ->
-            NewRequests = maps:put(TransId,
+            RequestsNew = maps:put(TransId,
                                    #request{request_type = RequestType,
                                             name = Name,
                                             pattern = Pattern,
                                             timeout = Timeout,
-                                            source = SrcPid,
+                                            source = Source,
                                             count_required = CountRequired,
                                             count_total = CountSent,
                                             returned = true},
                                    Requests),
-            {reply, <<>>, State#state{requests = NewRequests,
-                                      pending = NewPending}}
+            {reply, <<>>, State#state{requests = RequestsNew,
+                                      pending = PendingNew}}
     end.
 
 validate_f_return(Value) when is_boolean(Value) ->
@@ -580,22 +580,22 @@ validate(RInfoF, undefined, RInfo, _) ->
 validate(RInfoF, RF, RInfo, R) ->
     validate_f_return(RInfoF(RInfo)) andalso validate_f_return(RF(RInfo, R)).
 
-request_failed(SrcPid,
+request_failed(Source,
                #state{failures_source_die = FailuresSrcDie,
                       failures_source_max_count = FailuresSrcMaxCount,
                       failures_source_max_period = FailuresSrcMaxPeriod,
                       failures_source = FailuresSrc} = State) ->
-    {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
+    {DeadSrc, FailuresSrcNew} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
                                         FailuresSrcMaxPeriod,
-                                        SrcPid, FailuresSrc),
+                                        Source, FailuresSrc),
     if
         DeadSrc =:= true ->
             {noreply,
-             State#state{failures_source = NewFailuresSrc}};
+             State#state{failures_source = FailuresSrcNew}};
         DeadSrc =:= false ->
             {reply, <<>>,
-             State#state{failures_source = NewFailuresSrc}}
+             State#state{failures_source = FailuresSrcNew}}
     end.
 
 failure(false, _, _, _, Failures) ->
@@ -618,25 +618,25 @@ failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     end.
 
 failure_store(FailureList, FailureCount, MaxCount, Pid, Failures) ->
-    NewFailures = maps:put(Pid, FailureList, Failures),
+    FailuresNew = maps:put(Pid, FailureList, Failures),
     if
         FailureCount == MaxCount ->
             failure_kill(Pid),
-            {true, NewFailures};
+            {true, FailuresNew};
         true ->
-            {false, NewFailures}
+            {false, FailuresNew}
     end.
 
 failure_check(SecondsNow, FailureList, MaxCount, infinity, Pid, Failures) ->
-    NewFailureCount = erlang:length(FailureList),
-    failure_store([SecondsNow | FailureList], NewFailureCount + 1,
+    FailureCountNew = erlang:length(FailureList),
+    failure_store([SecondsNow | FailureList], FailureCountNew + 1,
                   MaxCount, Pid, Failures);
 failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
-    {NewFailureCount,
-     NewFailureList} = cloudi_timestamp:seconds_filter_monotonic(FailureList,
+    {FailureCountNew,
+     FailureListNew} = cloudi_timestamp:seconds_filter_monotonic(FailureList,
                                                                  SecondsNow,
                                                                  MaxPeriod),
-    failure_store([SecondsNow | NewFailureList], NewFailureCount + 1,
+    failure_store([SecondsNow | FailureListNew], FailureCountNew + 1,
                   MaxCount, Pid, Failures).
 
 failure_kill(Pid) ->

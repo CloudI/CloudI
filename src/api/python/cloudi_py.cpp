@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -604,8 +604,8 @@ class callback : public CloudI::API::function_object_c
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             Py_ssize_t const request_info_size_tmp = request_info_size;
             Py_ssize_t const request_size_tmp = request_size;
@@ -621,7 +621,7 @@ class callback : public CloudI::API::function_object_c
                                             request_info, request_info_size_tmp,
                                             request, request_size_tmp, timeout,
                                             static_cast<int>(priority),
-                                            trans_id, 16, pid, pid_size);
+                                            trans_id, 16, source, source_size);
             if (! args)
             {
                 PyErr_Print();
@@ -849,14 +849,14 @@ class callback : public CloudI::API::function_object_c
                     api.return_async(name, pattern,
                                      response_info, response_info_size,
                                      response, response_size,
-                                     timeout, trans_id, pid, pid_size);
+                                     timeout, trans_id, source, source_size);
                 }
                 else if (request_type == CloudI::API::SYNC)
                 {
                     api.return_sync(name, pattern,
                                     response_info, response_info_size,
                                     response, response_size,
-                                    timeout, trans_id, pid, pid_size);
+                                    timeout, trans_id, source, source_size);
                 }
                 else
                 {
@@ -1146,14 +1146,14 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
     int8_t priority;
     char const * trans_id;
     uint32_t trans_id_size = 0;
-    char const * pid;
-    uint32_t pid_size = 0;
+    char const * source;
+    uint32_t source_size = 0;
     if (! PyArg_ParseTuple(args,
                            "s" BUILDVALUE_BYTES BUILDVALUE_BYTES "IB"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":forward_async",
                            &name, &request_info, &request_info_size_tmp,
                            &request, &request_size_tmp, &timeout, &priority,
-                           &trans_id, &trans_id_size, &pid, &pid_size))
+                           &trans_id, &trans_id_size, &source, &source_size))
     {
         return NULL;
     }
@@ -1177,7 +1177,7 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
                                     request_info, request_info_size,
                                     request, request_size,
                                     timeout, priority,
-                                    trans_id, pid, pid_size);
+                                    trans_id, source, source_size);
     }
     catch (CloudI::API::forward_async_exception const &)
     {
@@ -1208,14 +1208,14 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
     int8_t priority;
     char const * trans_id;
     uint32_t trans_id_size = 0;
-    char const * pid;
-    uint32_t pid_size = 0;
+    char const * source;
+    uint32_t source_size = 0;
     if (! PyArg_ParseTuple(args,
                            "s" BUILDVALUE_BYTES BUILDVALUE_BYTES "IB"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":forward_sync",
                            &name, &request_info, &request_info_size_tmp,
                            &request, &request_size_tmp, &timeout, &priority,
-                           &trans_id, &trans_id_size, &pid, &pid_size))
+                           &trans_id, &trans_id_size, &source, &source_size))
     {
         return NULL;
     }
@@ -1239,7 +1239,7 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
                                    request_info, request_info_size,
                                    request, request_size,
                                    timeout, priority,
-                                   trans_id, pid, pid_size);
+                                   trans_id, source, source_size);
     }
     catch (CloudI::API::forward_sync_exception const &)
     {
@@ -1270,15 +1270,15 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
     uint32_t timeout;
     char const * trans_id;
     uint32_t trans_id_size = 0;
-    char const * pid;
-    uint32_t pid_size = 0;
+    char const * source;
+    uint32_t source_size = 0;
     if (! PyArg_ParseTuple(args,
                            "ss" BUILDVALUE_BYTES BUILDVALUE_BYTES "I"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":return_async",
                            &name, &pattern,
                            &response_info, &response_info_size_tmp,
                            &response, &response_size_tmp, &timeout,
-                           &trans_id, &trans_id_size, &pid, &pid_size))
+                           &trans_id, &trans_id_size, &source, &source_size))
     {
         return NULL;
     }
@@ -1301,7 +1301,7 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
         result = api->return_async(name, pattern,
                                    response_info, response_info_size,
                                    response, response_size,
-                                   timeout, trans_id, pid, pid_size);
+                                   timeout, trans_id, source, source_size);
     }
     catch (CloudI::API::return_async_exception const &)
     {
@@ -1332,15 +1332,15 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
     uint32_t timeout;
     char const * trans_id;
     uint32_t trans_id_size = 0;
-    char const * pid;
-    uint32_t pid_size = 0;
+    char const * source;
+    uint32_t source_size = 0;
     if (! PyArg_ParseTuple(args,
                            "ss" BUILDVALUE_BYTES BUILDVALUE_BYTES "I"
                            BUILDVALUE_BYTES BUILDVALUE_BYTES ":return_sync",
                            &name, &pattern,
                            &response_info, &response_info_size_tmp,
                            &response, &response_size_tmp, &timeout,
-                           &trans_id, &trans_id_size, &pid, &pid_size))
+                           &trans_id, &trans_id_size, &source, &source_size))
     {
         return NULL;
     }
@@ -1363,7 +1363,7 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
         result = api->return_sync(name, pattern,
                                   response_info, response_info_size,
                                   response, response_size,
-                                  timeout, trans_id, pid, pid_size);
+                                  timeout, trans_id, source, source_size);
     }
     catch (CloudI::API::return_sync_exception const &)
     {

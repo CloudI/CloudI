@@ -204,7 +204,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               RequestInfo, Request,
-                              Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Source,
                               #state{debug_level = DebugLogLevel} = State,
                               _Dispatcher) ->
     {Status, Output} = request(Request, Timeout, State),

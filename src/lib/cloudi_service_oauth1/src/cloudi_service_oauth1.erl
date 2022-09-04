@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2014-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1).
@@ -253,7 +253,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 prefix_length = erlang:length(Prefix)}}.
 
 cloudi_service_handle_request(_RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Source,
                               #state{prefix_length = PrefixLength} = State,
                               Dispatcher) ->
     Suffix = lists:nthtail(PrefixLength, Pattern),

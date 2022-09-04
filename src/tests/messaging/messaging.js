@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -89,99 +89,99 @@ Task.prototype.run = function () {
 };
 Task.prototype.sequence1_abcd = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + 'a/b/c/d');
     assert(request.toString('binary') == 'test1');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1_abc_ = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + 'a/b/c/*');
     assert(request.toString('binary') == 'test2' ||
            request.toString('binary') == 'test3');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1_ab_d = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + 'a/b/*/d');
     assert(request.toString('binary') == 'test4' ||
            request.toString('binary') == 'test5');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1_a_cd = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + 'a/*/c/d');
     assert(request.toString('binary') == 'test6' ||
            request.toString('binary') == 'test7');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1__bcd = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + '*/b/c/d');
     assert(request.toString('binary') == 'test8' ||
            request.toString('binary') == 'test9');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1_ab__ = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + 'a/b/*');
     assert(request.toString('binary') == 'test10');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1_a__d = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + 'a/*/d');
     assert(request.toString('binary') == 'test11');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1___cd = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + '*/c/d');
     assert(request.toString('binary') == 'test12');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1_a___ = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + 'a/*');
     assert(request.toString('binary') == 'test13');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1____d = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + '*/d');
     assert(request.toString('binary') == 'test14');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1_____ = function (request_type, name, pattern,
                                           request_info, request,
-                                          timeout, priority, trans_id, pid) {
+                                          timeout, priority, trans_id, source) {
     assert(pattern == this._api.prefix() + '*');
     assert(request.toString('binary') == 'test15');
     this._api.return_(request_type, name, pattern,
-                      '', request, timeout, trans_id, pid);
+                      '', request, timeout, trans_id, source);
 };
 Task.prototype.sequence1 = function (request_type, name, pattern,
                                      request_info, request,
-                                     timeout, priority, trans_id, pid) {
+                                     timeout, priority, trans_id, source) {
     var Task = this;
     var old_request;
     old_request = function (tmp, old_response, tmp) {
@@ -305,7 +305,7 @@ Task.prototype.sequence1 = function (request_type, name, pattern,
         // start sequence2
         Task._api.send_async(Task._api.prefix() + 'sequence2', request);
         Task._api.return_(request_type, name, pattern,
-                          '', 'end', timeout, trans_id, pid);
+                          '', 'end', timeout, trans_id, source);
         });});});});});});});});});});});});});});});
         });});});});});});});});});});});});});});});
     };
@@ -313,55 +313,55 @@ Task.prototype.sequence1 = function (request_type, name, pattern,
 };
 Task.prototype.sequence2_e1 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '1', timeout, trans_id, pid);
+                      '', '1', timeout, trans_id, source);
 };
 Task.prototype.sequence2_e2 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '2', timeout, trans_id, pid);
+                      '', '2', timeout, trans_id, source);
 };
 Task.prototype.sequence2_e3 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '3', timeout, trans_id, pid);
+                      '', '3', timeout, trans_id, source);
 };
 Task.prototype.sequence2_e4 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '4', timeout, trans_id, pid);
+                      '', '4', timeout, trans_id, source);
 };
 Task.prototype.sequence2_e5 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '5', timeout, trans_id, pid);
+                      '', '5', timeout, trans_id, source);
 };
 Task.prototype.sequence2_e6 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '6', timeout, trans_id, pid);
+                      '', '6', timeout, trans_id, source);
 };
 Task.prototype.sequence2_e7 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '7', timeout, trans_id, pid);
+                      '', '7', timeout, trans_id, source);
 };
 Task.prototype.sequence2_e8 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', '8', timeout, trans_id, pid);
+                      '', '8', timeout, trans_id, source);
 };
 Task.prototype.sequence2 = function (request_type, name, pattern,
                                      request_info, request,
-                                     timeout, priority, trans_id, pid) {
+                                     timeout, priority, trans_id, source) {
     var Task = this;
     CloudI.stdout_write('messaging sequence2 start javascript (' +
                         request + ')\n');
@@ -400,7 +400,7 @@ Task.prototype.sequence2 = function (request_type, name, pattern,
                     Task._api.send_async(Task._api.prefix() + 'sequence3',
                                          request);
                     Task._api.return_(request_type, name, pattern,
-                                      '', 'end', timeout, trans_id, pid);
+                                      '', 'end', timeout, trans_id, source);
                 }
                 };};
                 Task._api.recv_async(cb(i), undefined, e_ids[i]);
@@ -433,32 +433,32 @@ Task.prototype.sequence2 = function (request_type, name, pattern,
 };
 Task.prototype.sequence3_f1 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     var request_i = parseInt(request);
     if (request_i == 4) {
         return 'done';
     }
     var request_new = request_i + 2; // two steps forward
     this._api.forward_(request_type, this._api.prefix() + 'f2', request_info,
-                       '' + request_new, timeout, priority, trans_id, pid);
+                       '' + request_new, timeout, priority, trans_id, source);
 };
 Task.prototype.sequence3_f2 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     var request_i = parseInt(request);
     var request_new = request_i - 1; // one step back
     this._api.forward_(request_type, this._api.prefix() + 'f1', request_info,
-                       '' + request_new, timeout, priority, trans_id, pid);
+                       '' + request_new, timeout, priority, trans_id, source);
 };
 Task.prototype.sequence3_g1 = function (request_type, name, pattern,
                                         request_info, request,
-                                        timeout, priority, trans_id, pid) {
+                                        timeout, priority, trans_id, source) {
     this._api.return_(request_type, name, pattern,
-                      '', request + 'suffix', timeout, trans_id, pid);
+                      '', request + 'suffix', timeout, trans_id, source);
 };
 Task.prototype.sequence3 = function (request_type, name, pattern,
                                      request_info, request,
-                                     timeout, priority, trans_id, pid) {
+                                     timeout, priority, trans_id, source) {
     var Task = this;
     CloudI.stdout_write('messaging sequence3 start javascript (' +
                         request + ')\n');
@@ -479,7 +479,7 @@ Task.prototype.sequence3 = function (request_type, name, pattern,
     }
     Task._api.send_async(Task._api.prefix() + 'sequence1', '' + iteration);
     Task._api.return_(request_type, name, pattern,
-                      '', 'end', timeout, trans_id, pid);
+                      '', 'end', timeout, trans_id, source);
     });
     }, undefined, test1_id);
     });

@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -56,7 +56,7 @@ class _Task(threading.Thread):
         print('terminate echo python_c')
 
     def __request(self, request_type, name, pattern, request_info, request,
-                  timeout, priority, trans_id, pid):
+                  timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         # pylint: disable=no-self-use

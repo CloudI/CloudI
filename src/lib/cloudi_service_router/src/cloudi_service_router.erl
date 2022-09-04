@@ -289,7 +289,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 destinations = Destinations}}.
 
 cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, SrcPid,
+                              Timeout, Priority, TransId, Source,
                               #state{validate_request_info = RequestInfoF,
                                      validate_request = RequestF,
                                      destinations = Destinations} = State,
@@ -301,18 +301,18 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                 {ok, #destination_forward{} = Destination} ->
                     destination_forward(RequestType, Name, Pattern,
                                         RequestInfo, Request,
-                                        Timeout, Priority, TransId, SrcPid,
+                                        Timeout, Priority, TransId, Source,
                                         Destination, State);
                 {ok, #destination_return{} = Destination} ->
                     destination_return(RequestType, Name, Pattern,
                                        RequestInfo, Request,
-                                       Timeout, Priority, TransId, SrcPid,
+                                       Timeout, Priority, TransId, Source,
                                        Destination, State);
                 error ->
-                    request_failed(SrcPid, State)
+                    request_failed(Source, State)
             end;
         false ->
-            request_failed(SrcPid, State)
+            request_failed(Source, State)
     end.
 
 cloudi_service_handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
@@ -342,7 +342,7 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%%------------------------------------------------------------------------
 
 destination_forward(RequestType, Name, Pattern, RequestInfo, Request,
-                    Timeout, Priority, TransId, SrcPid,
+                    Timeout, Priority, TransId, Source,
                     Destination,
                     #state{destinations = Destinations} = State) ->
     {NameNext, DestinationNew} = destination_pick(Destination),
@@ -356,18 +356,18 @@ destination_forward(RequestType, Name, Pattern, RequestInfo, Request,
                                     Destinations),
             forward(RequestType, Name, Pattern, NameNew,
                     RequestInfo, Request,
-                    Timeout, Priority, TransId, SrcPid,
+                    Timeout, Priority, TransId, Source,
                     DestinationNew,
                     State#state{
                         destinations = DestinationsNew});
         {error, Reason} ->
             ?LOG_ERROR("(~p -> ~p) error: ~p",
                        [Name, NameNext, Reason]),
-            request_failed(SrcPid, State)
+            request_failed(Source, State)
     end.
 
 destination_return(_RequestType, Name, Pattern, _RequestInfo, _Request,
-                   _Timeout, _Priority, _TransId, SrcPid,
+                   _Timeout, _Priority, _TransId, Source,
                    #destination_return{
                        http_redirect = HttpRedirect} = Destination,
                    State) ->
@@ -382,7 +382,7 @@ destination_return(_RequestType, Name, Pattern, _RequestInfo, _Request,
         {error, Reason} ->
             ?LOG_ERROR("(~p http_redirect ~p) error: ~p",
                        [Name, HttpRedirect, Reason]),
-            request_failed(SrcPid, State)
+            request_failed(Source, State)
     end.
 
 destination_pick(#destination_forward{service_names = {Name}} = Destination) ->
@@ -438,11 +438,11 @@ forward(_, _, _, NameNew, RequestInfo, Request,
         #destination_forward{remote = undefined}, State) ->
     {forward, NameNew, RequestInfo, Request, Timeout, Priority, State};
 forward(RequestType, Name, Pattern, NameNew, RequestInfo, Request,
-        Timeout, Priority, TransId, SrcPid,
+        Timeout, Priority, TransId, Source,
         #destination_forward{remote = Remote}, State) ->
     Forward = cloudi_service_router_client:
               forward(RequestType, Name, Pattern, NameNew, RequestInfo, Request,
-                      Timeout, Priority, TransId, SrcPid, Remote),
+                      Timeout, Priority, TransId, Source, Remote),
     if
         Forward =:= ok ->
             {noreply, State};
@@ -462,7 +462,7 @@ validate(RInfoF, undefined, RInfo, _) ->
 validate(RInfoF, RF, RInfo, R) ->
     validate_f_return(RInfoF(RInfo)) andalso validate_f_return(RF(RInfo, R)).
 
-request_failed(SrcPid,
+request_failed(Source,
                #state{failures_source_die = FailuresSrcDie,
                       failures_source_max_count = FailuresSrcMaxCount,
                       failures_source_max_period = FailuresSrcMaxPeriod,
@@ -470,7 +470,7 @@ request_failed(SrcPid,
     {DeadSrc, FailuresSrcNew} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
                                         FailuresSrcMaxPeriod,
-                                        SrcPid, FailuresSrc),
+                                        Source, FailuresSrc),
     if
         DeadSrc =:= true ->
             {noreply,

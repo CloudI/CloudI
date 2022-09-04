@@ -688,7 +688,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, Name, _Pattern,
                               RequestInfo, Request,
-                              Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Source,
                               #state{module = Module,
                                      profile = Profile,
                                      input_type = InputType,

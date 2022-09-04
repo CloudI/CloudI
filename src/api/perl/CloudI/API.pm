@@ -297,16 +297,16 @@ sub forward_
 {
     my $self = shift;
     my ($request_type, $name, $request_info, $request,
-        $timeout, $priority, $trans_id, $pid) = @_;
+        $timeout, $priority, $trans_id, $source) = @_;
     if ($request_type == ASYNC)
     {
         $self->forward_async($name, $request_info, $request,
-                             $timeout, $priority, $trans_id, $pid);
+                             $timeout, $priority, $trans_id, $source);
     }
     elsif ($request_type == SYNC)
     {
         $self->forward_sync($name, $request_info, $request,
-                            $timeout, $priority, $trans_id, $pid);
+                            $timeout, $priority, $trans_id, $source);
     }
     else
     {
@@ -318,12 +318,12 @@ sub forward_async
 {
     my $self = shift;
     my ($name, $request_info, $request,
-        $timeout, $priority, $trans_id, $pid) = @_;
+        $timeout, $priority, $trans_id, $source) = @_;
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('forward_async'), $name,
         Erlang::OtpErlangBinary->new($request_info),
         Erlang::OtpErlangBinary->new($request), $timeout, $priority,
-        Erlang::OtpErlangBinary->new($trans_id), $pid]));
+        Erlang::OtpErlangBinary->new($trans_id), $source]));
     die CloudI::ForwardAsyncException->new();
 }
 
@@ -331,12 +331,12 @@ sub forward_sync
 {
     my $self = shift;
     my ($name, $request_info, $request,
-        $timeout, $priority, $trans_id, $pid) = @_;
+        $timeout, $priority, $trans_id, $source) = @_;
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('forward_sync'), $name,
         Erlang::OtpErlangBinary->new($request_info),
         Erlang::OtpErlangBinary->new($request), $timeout, $priority,
-        Erlang::OtpErlangBinary->new($trans_id), $pid]));
+        Erlang::OtpErlangBinary->new($trans_id), $source]));
     die CloudI::ForwardSyncException->new();
 }
 
@@ -344,16 +344,16 @@ sub return_
 {
     my $self = shift;
     my ($request_type, $name, $pattern, $response_info, $response,
-        $timeout, $trans_id, $pid) = @_;
+        $timeout, $trans_id, $source) = @_;
     if ($request_type == ASYNC)
     {
         $self->return_async($name, $pattern, $response_info, $response,
-                            $timeout, $trans_id, $pid);
+                            $timeout, $trans_id, $source);
     }
     elsif ($request_type == SYNC)
     {
         $self->return_sync($name, $pattern, $response_info, $response,
-                           $timeout, $trans_id, $pid);
+                           $timeout, $trans_id, $source);
     }
     else
     {
@@ -365,12 +365,12 @@ sub return_async
 {
     my $self = shift;
     my ($name, $pattern, $response_info, $response,
-        $timeout, $trans_id, $pid) = @_;
+        $timeout, $trans_id, $source) = @_;
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('return_async'), $name, $pattern,
         Erlang::OtpErlangBinary->new($response_info),
         Erlang::OtpErlangBinary->new($response), $timeout,
-        Erlang::OtpErlangBinary->new($trans_id), $pid]));
+        Erlang::OtpErlangBinary->new($trans_id), $source]));
     die CloudI::ReturnAsyncException->new();
 }
 
@@ -378,12 +378,12 @@ sub return_sync
 {
     my $self = shift;
     my ($name, $pattern, $response_info, $response,
-        $timeout, $trans_id, $pid) = @_;
+        $timeout, $trans_id, $source) = @_;
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('return_sync'), $name, $pattern,
         Erlang::OtpErlangBinary->new($response_info),
         Erlang::OtpErlangBinary->new($response), $timeout,
-        Erlang::OtpErlangBinary->new($trans_id), $pid]));
+        Erlang::OtpErlangBinary->new($trans_id), $source]));
     die CloudI::ReturnSyncException->new();
 }
 
@@ -476,7 +476,7 @@ sub _null_response
 {
     my $self = shift;
     my ($request_type, $name, $pattern, $request_info, $request,
-        $timeout, $priority, $trans_id, $pid) = @_;
+        $timeout, $priority, $trans_id, $source) = @_;
     return '';
 }
 
@@ -484,7 +484,7 @@ sub _callback
 {
     my $self = shift;
     my ($command, $name, $pattern, $request_info, $request,
-        $timeout, $priority, $trans_id, $pid) = @_;
+        $timeout, $priority, $trans_id, $source) = @_;
     my $function;
     if (! defined($self->{_callbacks}{$pattern}))
     {
@@ -505,7 +505,7 @@ sub _callback
             ($response_info,
              $response) = &$function(ASYNC, $name, $pattern,
                                      $request_info, $request,
-                                     $timeout, $priority, $trans_id, $pid);
+                                     $timeout, $priority, $trans_id, $source);
             if (! defined($response))
             {
                 $response = $response_info;
@@ -567,7 +567,7 @@ sub _callback
         eval
         {
             $self->return_async($name, $pattern, $response_info, $response,
-                                $timeout, $trans_id, $pid);
+                                $timeout, $trans_id, $source);
         };
         $e = $@;
         if ($e)
@@ -586,7 +586,7 @@ sub _callback
             ($response_info,
              $response) = &$function(SYNC, $name, $pattern,
                                      $request_info, $request,
-                                     $timeout, $priority, $trans_id, $pid);
+                                     $timeout, $priority, $trans_id, $source);
             if (! defined($response))
             {
                 $response = $response_info;
@@ -648,7 +648,7 @@ sub _callback
         eval
         {
             $self->return_sync($name, $pattern, $response_info, $response,
-                               $timeout, $trans_id, $pid);
+                               $timeout, $trans_id, $source);
         };
         $e = $@;
         if ($e)
@@ -846,10 +846,10 @@ sub _poll_request
                 $request_timeout,
                 $priority,
                 $trans_id,
-                $pid_size) = unpack("a$request_size x L c a16 L",
+                $source_size) = unpack("a$request_size x L c a16 L",
                                     substr($data, $i, $j));
-            $i += $j; $j = $pid_size;
-            my $pid = substr($data, $i, $j);
+            $i += $j; $j = $source_size;
+            my $source = substr($data, $i, $j);
             $i += $j;
             if ($i != $data_size)
             {
@@ -863,7 +863,7 @@ sub _poll_request
             $self->_callback($command, $name, $pattern,
                              $request_info, $request,
                              $request_timeout, $priority, $trans_id,
-                             Erlang::binary_to_term($pid));
+                             Erlang::binary_to_term($source));
             if ($self->{_terminate})
             {
                 return 0;

@@ -308,7 +308,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     end.
 
 cloudi_service_handle_request(_RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, _Pid,
+                              Timeout, Priority, TransId, _Source,
                               #state{prefix = Prefix,
                                      lookup = Lookup,
                                      content_types = ContentTypes,

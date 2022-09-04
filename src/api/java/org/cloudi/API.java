@@ -88,7 +88,7 @@ public class API
         public Object invoke(Integer request_type, String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
-                             byte[] trans_id, OtpErlangPid pid)
+                             byte[] trans_id, OtpErlangPid source)
         {
             return ("").getBytes();
         }
@@ -561,7 +561,7 @@ public class API
      * @param timeout       the request timeout in milliseconds
      * @param priority      the priority of this request
      * @param trans_id      the transaction ID
-     * @param pid           the request's source process ID
+     * @param source        the request's source process ID
      *
      * @throws ForwardAsyncException async service request was forwarded
      * @throws ForwardSyncException sync service request was forwarded
@@ -574,17 +574,17 @@ public class API
                          final Integer timeout,
                          final Byte priority,
                          final byte[] trans_id,
-                         final OtpErlangPid pid)
+                         final OtpErlangPid source)
         throws ForwardAsyncException,
                ForwardSyncException,
                InvalidInputException
     {
         if (request_type == API.ASYNC)
             forward_async(name, request_info, request,
-                          timeout, priority, trans_id, pid);
+                          timeout, priority, trans_id, source);
         else if (request_type == API.SYNC)
             forward_sync(name, request_info, request,
-                         timeout, priority, trans_id, pid);
+                         timeout, priority, trans_id, source);
         else
             throw new InvalidInputException();
     }
@@ -599,7 +599,7 @@ public class API
      * @param timeout       the request timeout in milliseconds
      * @param priority      the priority of this request
      * @param trans_id      the transaction ID
-     * @param pid           the request's source process ID
+     * @param source        the request's source process ID
      *
      * @throws ForwardAsyncException async service request was forwarded
      */
@@ -609,7 +609,7 @@ public class API
                               Integer timeout,
                               final Byte priority,
                               final byte[] trans_id,
-                              final OtpErlangPid pid)
+                              final OtpErlangPid source)
         throws ForwardAsyncException
     {
         try
@@ -623,7 +623,7 @@ public class API
                                              new OtpErlangUInt(timeout),
                                              new OtpErlangInt(priority),
                                              new OtpErlangBinary(trans_id),
-                                             pid};
+                                             source};
             forward_async.write_any(new OtpErlangTuple(tuple));
             send(forward_async);
         }
@@ -645,7 +645,7 @@ public class API
      * @param timeout       the request timeout in milliseconds
      * @param priority      the priority of this request
      * @param trans_id      the transaction ID
-     * @param pid           the request's source process ID
+     * @param source        the request's source process ID
      *
      * @throws ForwardSyncException sync service request was forwarded
      */
@@ -655,7 +655,7 @@ public class API
                              Integer timeout,
                              final Byte priority,
                              final byte[] trans_id,
-                             final OtpErlangPid pid)
+                             final OtpErlangPid source)
         throws ForwardSyncException
     {
         try
@@ -669,7 +669,7 @@ public class API
                                              new OtpErlangUInt(timeout),
                                              new OtpErlangInt(priority),
                                              new OtpErlangBinary(trans_id),
-                                             pid};
+                                             source};
             forward_sync.write_any(new OtpErlangTuple(tuple));
             send(forward_sync);
         }
@@ -691,7 +691,7 @@ public class API
      * @param response       the response data
      * @param timeout        the request timeout in milliseconds
      * @param trans_id       the transaction ID
-     * @param pid            the request's source process ID
+     * @param source         the request's source process ID
      *
      * @throws ReturnAsyncException async service request returned
      * @throws ReturnSyncException sync service request returned
@@ -704,17 +704,17 @@ public class API
                         final byte[] response,
                         final Integer timeout,
                         final byte[] trans_id,
-                        final OtpErlangPid pid)
+                        final OtpErlangPid source)
         throws ReturnAsyncException,
                ReturnSyncException,
                InvalidInputException
     {
         if (request_type == API.ASYNC)
             return_async(name, pattern, response_info, response,
-                         timeout, trans_id, pid);
+                         timeout, trans_id, source);
         else if (request_type == API.SYNC)
             return_sync(name, pattern, response_info, response,
-                        timeout, trans_id, pid);
+                        timeout, trans_id, source);
         else
             throw new InvalidInputException();
     }
@@ -728,7 +728,7 @@ public class API
      * @param response       the response data
      * @param timeout        the request timeout in milliseconds
      * @param trans_id       the transaction ID
-     * @param pid            the request's source process ID
+     * @param source         the request's source process ID
      *
      * @throws ReturnAsyncException async service request returned
      */
@@ -738,7 +738,7 @@ public class API
                              byte[] response,
                              Integer timeout,
                              final byte[] trans_id,
-                             final OtpErlangPid pid)
+                             final OtpErlangPid source)
         throws ReturnAsyncException
     {
         try
@@ -752,7 +752,7 @@ public class API
                                              new OtpErlangBinary(response),
                                              new OtpErlangUInt(timeout),
                                              new OtpErlangBinary(trans_id),
-                                             pid};
+                                             source};
             return_async.write_any(new OtpErlangTuple(tuple));
             send(return_async);
         }
@@ -773,7 +773,7 @@ public class API
      * @param response       the response data
      * @param timeout        the request timeout in milliseconds
      * @param trans_id       the transaction ID
-     * @param pid            the request's source process ID
+     * @param source         the request's source process ID
      *
      * @throws ReturnSyncException sync service request returned
      */
@@ -783,7 +783,7 @@ public class API
                             byte[] response,
                             Integer timeout,
                             final byte[] trans_id,
-                            final OtpErlangPid pid)
+                            final OtpErlangPid source)
         throws ReturnSyncException
     {
         try
@@ -797,7 +797,7 @@ public class API
                                              new OtpErlangBinary(response),
                                              new OtpErlangUInt(timeout),
                                              new OtpErlangBinary(trans_id),
-                                             pid};
+                                             source};
             return_sync.write_any(new OtpErlangTuple(tuple));
             send(return_sync);
         }
@@ -1045,7 +1045,7 @@ public class API
                           final Integer timeout,
                           final Byte priority,
                           final byte[] trans_id,
-                          final OtpErlangPid pid)
+                          final OtpErlangPid source)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -1069,13 +1069,13 @@ public class API
                 Object response = callback.invoke(API.ASYNC, name, pattern,
                                                   request_info, request,
                                                   timeout, priority,
-                                                  trans_id, pid);
+                                                  trans_id, source);
                 if (response == null)
                 {
                     return_async(name, pattern,
                                  ("").getBytes(),
                                  ("").getBytes(),
-                                 timeout, trans_id, pid);
+                                 timeout, trans_id, source);
                 }
                 else if (response.getClass() == byte[][].class)
                 {
@@ -1090,7 +1090,7 @@ public class API
                     return_async(name, pattern,
                                  response_info_value,
                                  response_value,
-                                 timeout, trans_id, pid);
+                                 timeout, trans_id, source);
 
                 }
                 else if (response.getClass() == byte[].class)
@@ -1098,14 +1098,14 @@ public class API
                     return_async(name, pattern,
                                  ("").getBytes(),
                                  (byte[]) response,
-                                 timeout, trans_id, pid);
+                                 timeout, trans_id, source);
                 }
                 else
                 {
                     return_async(name, pattern,
                                  ("").getBytes(),
                                  response.toString().getBytes(),
-                                 timeout, trans_id, pid);
+                                 timeout, trans_id, source);
                 }
                 return;
             }
@@ -1154,7 +1154,7 @@ public class API
                 return_async(name, pattern,
                              ("").getBytes(),
                              ("").getBytes(),
-                             timeout, trans_id, pid);
+                             timeout, trans_id, source);
             }
             catch (ReturnAsyncException e_return)
             {
@@ -1168,13 +1168,13 @@ public class API
                 Object response = callback.invoke(API.SYNC, name, pattern,
                                                   request_info, request,
                                                   timeout, priority,
-                                                  trans_id, pid);
+                                                  trans_id, source);
                 if (response == null)
                 {
                     return_sync(name, pattern,
                                 ("").getBytes(),
                                 ("").getBytes(),
-                                timeout, trans_id, pid);
+                                timeout, trans_id, source);
                 }
                 else if (response.getClass() == byte[][].class)
                 {
@@ -1189,7 +1189,7 @@ public class API
                     return_sync(name, pattern,
                                 response_info_value,
                                 response_value,
-                                timeout, trans_id, pid);
+                                timeout, trans_id, source);
 
                 }
                 else if (response.getClass() == byte[].class)
@@ -1197,14 +1197,14 @@ public class API
                     return_sync(name, pattern,
                                 ("").getBytes(),
                                 (byte[]) response,
-                                timeout, trans_id, pid);
+                                timeout, trans_id, source);
                 }
                 else
                 {
                     return_sync(name, pattern,
                                 ("").getBytes(),
                                 response.toString().getBytes(),
-                                timeout, trans_id, pid);
+                                timeout, trans_id, source);
                 }
                 return;
             }
@@ -1253,7 +1253,7 @@ public class API
                 return_sync(name, pattern,
                             ("").getBytes(),
                             ("").getBytes(),
-                            timeout, trans_id, pid);
+                            timeout, trans_id, source);
             }
             catch (ReturnSyncException e_return)
             {
@@ -1406,8 +1406,8 @@ public class API
                         int request_timeout = buffer.getInt();
                         byte priority = buffer.get();
                         byte[] trans_id = API.getBytes(buffer, 16);
-                        int pid_size = buffer.getInt();
-                        OtpErlangPid pid = API.getPid(buffer, pid_size);
+                        int source_size = buffer.getInt();
+                        OtpErlangPid source = API.getPid(buffer, source_size);
                         if (buffer.hasRemaining())
                         {
                             assert external;
@@ -1415,7 +1415,7 @@ public class API
                                 return Boolean.FALSE;
                         }
                         callback(command, name, pattern, request_info, request,
-                                 request_timeout, priority, trans_id, pid);
+                                 request_timeout, priority, trans_id, source);
                         if (this.terminate)
                             return Boolean.FALSE;
                         break;

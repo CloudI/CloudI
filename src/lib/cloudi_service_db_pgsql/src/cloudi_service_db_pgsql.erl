@@ -328,7 +328,7 @@ cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, Request,
-                              Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Source,
                               #state{output_type = OutputType,
                                      external_format = ExternalFormat} = State,
                               _Dispatcher) ->

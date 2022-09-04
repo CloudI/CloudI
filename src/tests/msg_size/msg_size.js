@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -56,7 +56,7 @@ Task.prototype.run = function () {
 };
 Task.prototype.request = function (request_type, name, pattern,
                                    request_info, request,
-                                   timeout, priority, trans_id, pid) {
+                                   timeout, priority, trans_id, source) {
     var Task = this;
     var i = (new Uint32Array((new Uint8Array([request[0],
                                               request[1],
@@ -76,7 +76,7 @@ Task.prototype.request = function (request_type, name, pattern,
     process.stdout.write('forward #' + i + ' javascript to ' + DESTINATION +
                          ' (with timeout ' + timeout + ' ms)\n');
     Task._api.forward_(request_type, DESTINATION, request_info, request,
-                       timeout, priority, trans_id, pid);
+                       timeout, priority, trans_id, source);
 };
 
 assert(CloudI.API.thread_count() == 1);

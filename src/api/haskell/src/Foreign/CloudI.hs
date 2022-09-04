@@ -424,7 +424,8 @@ forward_ api0 Instance.SYNC = forwardSync api0
 forwardAsyncI :: Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO (Result (Instance.T s))
-forwardAsyncI api0 name responseInfo response timeout priority transId pid = do
+forwardAsyncI api0 name responseInfo response
+    timeout priority transId source = do
     let forwardTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "forward_async")
             , Erlang.OtpErlangString name
@@ -433,7 +434,7 @@ forwardAsyncI api0 name responseInfo response timeout priority transId pid = do
             , Erlang.OtpErlangInteger timeout
             , Erlang.OtpErlangInteger priority
             , Erlang.OtpErlangBinary transId
-            , Erlang.OtpErlangPid pid]
+            , Erlang.OtpErlangPid source]
     case Erlang.termToBinary forwardTerms (-1) of
         Left err ->
             return $ Left $ show err
@@ -445,9 +446,10 @@ forwardAsyncI api0 name responseInfo response timeout priority transId pid = do
 forwardAsync :: Typeable s => Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO ()
-forwardAsync api0 name responseInfo response timeout priority transId pid = do
+forwardAsync api0 name responseInfo response
+    timeout priority transId source = do
     result <- forwardAsyncI api0
-        name responseInfo response timeout priority transId pid
+        name responseInfo response timeout priority transId source
     case result of
         Left err ->
             error err
@@ -457,7 +459,8 @@ forwardAsync api0 name responseInfo response timeout priority transId pid = do
 forwardSyncI :: Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO (Result (Instance.T s))
-forwardSyncI api0 name responseInfo response timeout priority transId pid = do
+forwardSyncI api0 name responseInfo response
+    timeout priority transId source = do
     let forwardTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "forward_sync")
             , Erlang.OtpErlangString name
@@ -466,7 +469,7 @@ forwardSyncI api0 name responseInfo response timeout priority transId pid = do
             , Erlang.OtpErlangInteger timeout
             , Erlang.OtpErlangInteger priority
             , Erlang.OtpErlangBinary transId
-            , Erlang.OtpErlangPid pid]
+            , Erlang.OtpErlangPid source]
     case Erlang.termToBinary forwardTerms (-1) of
         Left err ->
             return $ Left $ show err
@@ -478,9 +481,10 @@ forwardSyncI api0 name responseInfo response timeout priority transId pid = do
 forwardSync :: Typeable s => Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO ()
-forwardSync api0 name responseInfo response timeout priority transId pid = do
+forwardSync api0 name responseInfo response
+    timeout priority transId source = do
     result <- forwardSyncI api0
-        name responseInfo response timeout priority transId pid
+        name responseInfo response timeout priority transId source
     case result of
         Left err ->
             error err
@@ -498,7 +502,8 @@ return_ api0 Instance.SYNC = returnSync api0
 returnAsyncI :: Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO (Result (Instance.T s))
-returnAsyncI api0 name pattern responseInfo response timeout transId pid = do
+returnAsyncI api0 name pattern responseInfo response
+    timeout transId source = do
     let returnTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "return_async")
             , Erlang.OtpErlangString name
@@ -507,7 +512,7 @@ returnAsyncI api0 name pattern responseInfo response timeout transId pid = do
             , Erlang.OtpErlangBinary response
             , Erlang.OtpErlangInteger timeout
             , Erlang.OtpErlangBinary transId
-            , Erlang.OtpErlangPid pid]
+            , Erlang.OtpErlangPid source]
     case Erlang.termToBinary returnTerms (-1) of
         Left err ->
             return $ Left $ show err
@@ -519,9 +524,10 @@ returnAsyncI api0 name pattern responseInfo response timeout transId pid = do
 returnAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO ()
-returnAsync api0 name pattern responseInfo response timeout transId pid = do
+returnAsync api0 name pattern responseInfo response
+    timeout transId source = do
     result <- returnAsyncI api0
-        name pattern responseInfo response timeout transId pid
+        name pattern responseInfo response timeout transId source
     case result of
         Left err ->
             error err
@@ -531,7 +537,8 @@ returnAsync api0 name pattern responseInfo response timeout transId pid = do
 returnSyncI :: Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO (Result (Instance.T s))
-returnSyncI api0 name pattern responseInfo response timeout transId pid = do
+returnSyncI api0 name pattern responseInfo response
+    timeout transId source = do
     let returnTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "return_sync")
             , Erlang.OtpErlangString name
@@ -540,7 +547,7 @@ returnSyncI api0 name pattern responseInfo response timeout transId pid = do
             , Erlang.OtpErlangBinary response
             , Erlang.OtpErlangInteger timeout
             , Erlang.OtpErlangBinary transId
-            , Erlang.OtpErlangPid pid]
+            , Erlang.OtpErlangPid source]
     case Erlang.termToBinary returnTerms (-1) of
         Left err ->
             return $ Left $ show err
@@ -552,9 +559,10 @@ returnSyncI api0 name pattern responseInfo response timeout transId pid = do
 returnSync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO ()
-returnSync api0 name pattern responseInfo response timeout transId pid = do
+returnSync api0 name pattern responseInfo response
+    timeout transId source = do
     result <- returnSyncI api0
-        name pattern responseInfo response timeout transId pid
+        name pattern responseInfo response timeout transId source
     case result of
         Left err ->
             error err
@@ -690,7 +698,7 @@ callback api0@Instance.T{
       Instance.state = state
     , Instance.callbacks = callbacks}
     (requestType, name, pattern, requestInfo, request,
-     timeout, priority, transId, pid) = do
+     timeout, priority, transId, source) = do
     let (callbackF, callbacksNew) = case Map.lookup pattern callbacks of
             Nothing ->
                 (nullResponse, callbacks)
@@ -706,7 +714,7 @@ callback api0@Instance.T{
         Instance.ASYNC -> do
             callbackResultAsyncValue <- Exception.try $
                 callbackF requestType name pattern
-                requestInfo request timeout priority transId pid
+                requestInfo request timeout priority transId source
                 state api1
             case callbackResultAsyncValue of
                 Left (Terminate api2) ->
@@ -737,7 +745,7 @@ callback api0@Instance.T{
         Instance.SYNC -> do
             callbackResultSyncValue <- Exception.try $
                 callbackF requestType name pattern
-                requestInfo request timeout priority transId pid
+                requestInfo request timeout priority transId source
                 state api1
             case callbackResultSyncValue of
                 Left (Terminate api2) ->
@@ -778,24 +786,26 @@ callback api0@Instance.T{
                     return $ Right api3
                 ReturnI (responseInfo, response, state', api3) ->
                     returnAsyncI api3{Instance.state = state'}
-                        name pattern responseInfo response timeout transId pid
+                        name pattern responseInfo response
+                        timeout transId source
                 ForwardI (name', requestInfo', request', timeout', priority',
                           state', api3) ->
                     forwardAsyncI api3{Instance.state = state'}
                         name' requestInfo' request'
-                        timeout' priority' transId pid
+                        timeout' priority' transId source
         Instance.SYNC ->
             case callbackResultType of
                 Finished api3 ->
                     return $ Right api3
                 ReturnI (responseInfo, response, state', api3) ->
                     returnSyncI api3{Instance.state = state'}
-                        name pattern responseInfo response timeout transId pid
+                        name pattern responseInfo response
+                        timeout transId source
                 ForwardI (name', requestInfo', request', timeout', priority',
                           state', api3) ->
                     forwardSyncI api3{Instance.state = state'}
                         name' requestInfo' request'
-                        timeout' priority' transId pid
+                        timeout' priority' transId source
 
 handleEvents :: [Message] -> Instance.T s -> Bool -> Word32 ->
     Get ([Message], Instance.T s)
@@ -886,13 +896,13 @@ pollRequestDataGet messages api0 external = do
             timeout <- Get.getWord32host
             priority <- Get.getInt8
             transId <- Get.getByteString 16
-            pidSize <- Get.getWord32host
-            pidData <- Get.getLazyByteString $ fromIntegral pidSize
+            sourceSize <- Get.getWord32host
+            sourceData <- Get.getLazyByteString $ fromIntegral sourceSize
             empty <- Get.isEmpty
-            case Erlang.binaryToTerm pidData of
+            case Erlang.binaryToTerm sourceData of
                 Left err ->
                     fail $ show err
-                Right (Erlang.OtpErlangPid (pid)) ->
+                Right (Erlang.OtpErlangPid (source)) ->
                     let requestType =
                             if cmd == messageSendAsync then
                                 Instance.ASYNC
@@ -901,7 +911,7 @@ pollRequestDataGet messages api0 external = do
                         messagesNew = (MessageSend (
                             requestType, name, pattern, requestInfo, request,
                             fromIntegral timeout, fromIntegral priority,
-                            transId, pid)):messages in
+                            transId, source)):messages in
                     if not empty then
                         handleEvents messagesNew api0 external 0
                     else

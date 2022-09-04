@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -64,7 +64,7 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def request(request_type, name, pattern, request_info, request,
-                        timeout, priority, trans_id, pid)
+                        timeout, priority, trans_id, source)
                 http_qs = CloudI::API.info_key_value_parse(request)
                 value = http_qs.fetch('value', nil)
                 response = if value.nil?
@@ -80,7 +80,7 @@ if __FILE__ == $PROGRAM_NAME
                     "content-type" => "text/xml; charset=utf-8"
                 })
                 @api.return_(request_type, name, pattern,
-                             response_info, response, timeout, trans_id, pid)
+                             response_info, response, timeout, trans_id, source)
             end
         end
 

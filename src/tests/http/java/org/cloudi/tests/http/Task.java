@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -43,7 +43,7 @@ public class Task implements Runnable
     public void text(Integer request_type, String name, String pattern,
                      byte[] request_info, byte[] request,
                      Integer timeout, Byte priority,
-                     byte[] trans_id, OtpErlangPid pid)
+                     byte[] trans_id, OtpErlangPid source)
                      throws API.ReturnAsyncException,
                             API.ReturnSyncException,
                             API.InvalidInputException
@@ -53,7 +53,7 @@ public class Task implements Runnable
         assert value.equals("Test Text") : value;
         this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("Test Response").getBytes(),
-                         timeout, trans_id, pid);
+                         timeout, trans_id, source);
     }
  
     public void run()

@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -37,7 +37,7 @@ type serviceState struct {
 	count uint32
 }
 
-func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
+func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, source cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	stateP := state.(*serviceState)
 	if stateP.count == 4294967295 {
 		stateP.count = 0
@@ -52,7 +52,7 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 	if err != nil {
 		return nil, nil, err
 	}
-	api.Return(requestType, name, pattern, responseInfo, response, timeout, transId, pid)
+	api.Return(requestType, name, pattern, responseInfo, response, timeout, transId, source)
 	// execution doesn't reach here
 	return nil, nil, nil
 }

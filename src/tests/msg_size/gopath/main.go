@@ -5,7 +5,7 @@ package main
 //
 // MIT License
 //
-// Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -39,7 +39,7 @@ const (
 	msg_size    = 2097152 // 2 MB
 )
 
-func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
+func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, source cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	if len(request) != msg_size {
 		panic(fmt.Errorf("len(requesst) != %d", msg_size))
 	}
@@ -52,7 +52,7 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 	}
 	os.Stdout.WriteString(fmt.Sprintf("forward #%d go to %s (with timeout %d ms)\n", *i, destination, timeout))
 	copy(request[:4], iData[:])
-	api.Forward(requestType, destination, requestInfo, request, timeout, priority, transId, pid)
+	api.Forward(requestType, destination, requestInfo, request, timeout, priority, transId, source)
 	// execution doesn't reach here
 	return nil, nil, nil
 }

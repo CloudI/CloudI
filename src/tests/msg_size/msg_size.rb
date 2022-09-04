@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -56,7 +56,7 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def request(request_type, name, pattern, request_info, request,
-                        timeout, priority, trans_id, pid)
+                        timeout, priority, trans_id, source)
                 i = request[0,4].unpack('L')[0]
                 if i == 1073741823
                     i = 0
@@ -69,7 +69,7 @@ if __FILE__ == $PROGRAM_NAME
                 $stdout.puts "forward ##{i} ruby to #{name_next} " \
                              "(with timeout #{timeout} ms)"
                 @api.forward_(request_type, name_next, request_info, request,
-                              timeout, priority, trans_id, pid)
+                              timeout, priority, trans_id, source)
             end
         end
 

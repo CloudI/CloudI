@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -79,7 +79,7 @@ sub _request
 {
     my $self = shift;
     my ($request_type, $name, $pattern, $request_info, $request,
-        $timeout, $priority, $trans_id, $pid) = @_;
+        $timeout, $priority, $trans_id, $source) = @_;
     if ($self->{count} == 4294967295)
     {
         $self->{count} = 0;
@@ -93,7 +93,7 @@ sub _request
     my $response_info = CloudI::API::info_key_value_new({});
     $self->{api}->return_($request_type, $name, $pattern,
                           $response_info, $response,
-                          $timeout, $trans_id, $pid);
+                          $timeout, $trans_id, $source);
 }
 
 {

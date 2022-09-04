@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-09-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change CloudI API parameter name pid to source
+    * Improve cloudi_service_health_check
+        * Ensure host ip addresses are ordered and unique
+        * Add environment variable use in hostnames
+
 2022-09-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi shell script environment variable cleanup

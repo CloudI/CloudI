@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -35,7 +35,7 @@ module ServiceState = struct
     {count = 0}
 end
 
-let request request_type name pattern _ _ timeout _ trans_id pid state api =
+let request request_type name pattern _ _ timeout _ trans_id source state api =
   let {ServiceState.count; _} = state in
   let count_new = if count == 1073741823 then 0 else count + 1 in
   state.ServiceState.count <- count_new ;
@@ -43,7 +43,8 @@ let request request_type name pattern _ _ timeout _ trans_id pid state api =
   let response = string_of_int count_new
   and response_info = Cloudi.info_key_value_new (Hashtbl.create 1) in
   match Cloudi.return_ api
-    request_type name pattern response_info response timeout trans_id pid with
+    request_type name pattern response_info response
+    timeout trans_id source with
   | Error (error) ->
     Cloudi.NullError (error)
   | Ok _ ->

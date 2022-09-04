@@ -144,7 +144,7 @@ cloudi_service_init([], Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, Name, _Pattern,
                               _RequestInfo, Request,
-                              Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Source,
                               #state{prefix = Prefix} = State, _Dispatcher) ->
     Response = case cloudi_service_name:suffix(Prefix, Name) of
         "rpc/" ++ MethodSuffix ->

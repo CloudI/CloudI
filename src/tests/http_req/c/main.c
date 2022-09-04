@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -45,8 +45,8 @@ static void request(int const request_type,
                     uint32_t timeout,
                     int8_t priority,
                     char const * const trans_id,
-                    char const * const pid,
-                    uint32_t const pid_size,
+                    char const * const source,
+                    uint32_t const source_size,
                     void * state,
                     cloudi_instance_t * api)
 {
@@ -86,7 +86,7 @@ static void request(int const request_type,
     cloudi_return(api, request_type, name, pattern,
                   response_info, response_info_size,
                   response, strlen(response),
-                  timeout, trans_id, pid, pid_size);
+                  timeout, trans_id, source, source_size);
 }
 
 void process_requests(void * p)

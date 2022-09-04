@@ -372,7 +372,7 @@ let recv api : (string * int, string) result =
       Ok ((data, String.length data)))
 
 let forward_async_i
-  api name request_info request timeout priority trans_id pid :
+  api name request_info request timeout priority trans_id source :
   (unit, string) result =
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
@@ -383,24 +383,24 @@ let forward_async_i
       Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangInteger (priority);
       Erlang.OtpErlangBinary (trans_id);
-      Erlang.OtpErlangPid (pid)])) with
+      Erlang.OtpErlangPid (source)])) with
   | Error (error) ->
     Error (error)
   | Ok (forward) ->
     send api forward
 
 let forward_async
-  api name request_info request timeout priority trans_id pid :
+  api name request_info request timeout priority trans_id source :
   (unit, string) result =
   match forward_async_i
-    api name request_info request timeout priority trans_id pid with
+    api name request_info request timeout priority trans_id source with
   | Error (error) ->
     Error (error)
   | Ok _ ->
     raise ForwardAsync
 
 let forward_sync_i
-  api name request_info request timeout priority trans_id pid :
+  api name request_info request timeout priority trans_id source :
   (unit, string) result =
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
@@ -411,33 +411,35 @@ let forward_sync_i
       Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangInteger (priority);
       Erlang.OtpErlangBinary (trans_id);
-      Erlang.OtpErlangPid (pid)])) with
+      Erlang.OtpErlangPid (source)])) with
   | Error (error) ->
     Error (error)
   | Ok (forward) ->
     send api forward
 
 let forward_sync
-  api name request_info request timeout priority trans_id pid :
+  api name request_info request timeout priority trans_id source :
   (unit, string) result =
   match forward_sync_i
-    api name request_info request timeout priority trans_id pid with
+    api name request_info request timeout priority trans_id source with
   | Error (error) ->
     Error (error)
   | Ok _ ->
     raise ForwardSync
 
 let forward_
-  api request_type name request_info request timeout priority trans_id pid :
+  api request_type name request_info request timeout priority trans_id source :
   (unit, string) result =
   match request_type with
   | ASYNC ->
-    forward_async api name request_info request timeout priority trans_id pid
+    forward_async api name request_info request
+      timeout priority trans_id source
   | SYNC ->
-    forward_sync api name request_info request timeout priority trans_id pid
+    forward_sync api name request_info request
+      timeout priority trans_id source
 
 let return_async_i
-  api name pattern response_info response timeout trans_id pid :
+  api name pattern response_info response timeout trans_id source :
   (unit, string) result =
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
@@ -448,24 +450,24 @@ let return_async_i
       Erlang.OtpErlangBinary (response);
       Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangBinary (trans_id);
-      Erlang.OtpErlangPid (pid)])) with
+      Erlang.OtpErlangPid (source)])) with
   | Error (error) ->
     Error (error)
   | Ok (return) ->
     send api return
 
 let return_async
-  api name pattern response_info response timeout trans_id pid :
+  api name pattern response_info response timeout trans_id source :
   (unit, string) result =
   match return_async_i
-    api name pattern response_info response timeout trans_id pid with
+    api name pattern response_info response timeout trans_id source with
   | Error (error) ->
     Error (error)
   | Ok _ ->
     raise ReturnAsync
 
 let return_sync_i
-  api name pattern response_info response timeout trans_id pid :
+  api name pattern response_info response timeout trans_id source :
   (unit, string) result =
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
@@ -476,30 +478,32 @@ let return_sync_i
       Erlang.OtpErlangBinary (response);
       Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangBinary (trans_id);
-      Erlang.OtpErlangPid (pid)])) with
+      Erlang.OtpErlangPid (source)])) with
   | Error (error) ->
     Error (error)
   | Ok (return) ->
     send api return
 
 let return_sync
-  api name pattern response_info response timeout trans_id pid :
+  api name pattern response_info response timeout trans_id source :
   (unit, string) result =
   match return_sync_i
-    api name pattern response_info response timeout trans_id pid with
+    api name pattern response_info response timeout trans_id source with
   | Error (error) ->
     Error (error)
   | Ok _ ->
     raise ReturnSync
 
 let return_
-  api request_type name pattern response_info response timeout trans_id pid :
+  api request_type name pattern response_info response timeout trans_id source :
   (unit, string) result =
   match request_type with
   | ASYNC ->
-    return_async api name pattern response_info response timeout trans_id pid
+    return_async api name pattern response_info response
+      timeout trans_id source
   | SYNC ->
-    return_sync api name pattern response_info response timeout trans_id pid
+    return_sync api name pattern response_info response
+      timeout trans_id source
 
 let handle_events api ext data data_size i cmd : (bool, string) result =
   let i_cmd =
@@ -629,7 +633,7 @@ let rec poll_request_loop api timeout ext poll_timer: (bool, string) result =
 
 and callback
   api request_type name pattern request_info request
-  timeout priority trans_id pid : (bool option, string) result =
+  timeout priority trans_id source : (bool option, string) result =
   let {Instance.fatal_exceptions; state; callbacks; _} = api in
   let callback_get () =
     let function_queue = Hashtbl.find callbacks pattern in
@@ -647,7 +651,7 @@ and callback
       try Some (
         callback_f
           request_type name pattern request_info request
-          timeout priority trans_id pid state api)
+          timeout priority trans_id source state api)
       with
         | Terminate ->
           Some (Null)
@@ -678,7 +682,7 @@ and callback
       try Some (
         callback_f
           request_type name pattern request_info request
-          timeout priority trans_id pid state api)
+          timeout priority trans_id source state api)
       with
         | Terminate ->
           Some (Null)
@@ -732,20 +736,20 @@ and callback
         Ok (())
       | ReturnI (response_info, response) ->
         return_async_i
-          api name pattern response_info response timeout trans_id pid
+          api name pattern response_info response timeout trans_id source
       | ForwardI (name_, request_info_, request_, timeout_, priority_) ->
         forward_async_i
-          api name_ request_info_ request_ timeout_ priority_ trans_id pid)
+          api name_ request_info_ request_ timeout_ priority_ trans_id source)
     | SYNC -> (
       match callback_result_type with
       | Finished ->
         Ok (())
       | ReturnI (response_info, response) ->
         return_sync_i
-          api name pattern response_info response timeout trans_id pid
+          api name pattern response_info response timeout trans_id source
       | ForwardI (name_, request_info_, request_, timeout_, priority_) ->
         forward_sync_i
-          api name_ request_info_ request_ timeout_ priority_ trans_id pid)
+          api name_ request_info_ request_ timeout_ priority_ trans_id source)
   in
   match return_result with
   | Error (error) ->
@@ -862,11 +866,11 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                 match unpack_uint32_native i8 data with
                 | Error (error) ->
                   Error (error)
-                | Ok (pid_size) ->
+                | Ok (source_size) ->
                   let i9 = i8 + 4 in
-                  let pid_data = String.sub data i9 pid_size
-                  and i10 = i9 + pid_size in
-                  match Erlang.binary_to_term pid_data with
+                  let source_data = String.sub data i9 source_size
+                  and i10 = i9 + source_size in
+                  match Erlang.binary_to_term source_data with
                   | Error (error) ->
                     Error (error)
                   | Ok (
@@ -888,7 +892,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                     | Erlang.OtpErlangReference _
                     | Erlang.OtpErlangFunction _) ->
                     Error (message_decoding_error)
-                  | Ok (Erlang.OtpErlangPid (pid)) ->
+                  | Ok (Erlang.OtpErlangPid (source)) ->
                     let handled =
                       if i10 <> data_size then
                         handle_events api ext data data_size i10 0
@@ -910,7 +914,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                       let callback_result =
                         callback
                           api request_type name pattern request_info request
-                          timeout priority trans_id pid in
+                          timeout priority trans_id source in
                       if api.Instance.terminate then
                         Ok (Some false)
                       else

@@ -59,7 +59,7 @@ class Task
 
     public function request($request_type, $name, $pattern,
                             $request_info, $request,
-                            $timeout, $priority, $trans_id, $pid)
+                            $timeout, $priority, $trans_id, $source)
     {
         echo "null php\n";
         return null;

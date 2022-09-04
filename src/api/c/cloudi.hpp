@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -447,8 +447,8 @@ class API
                      uint32_t timeout,
                      int8_t const priority,
                      char const * const trans_id,
-                     char const * const pid,
-                     uint32_t const pid_size) const;
+                     char const * const source,
+                     uint32_t const source_size) const;
 
         inline int forward_(int const request_type,
                             std::string const & name,
@@ -459,8 +459,8 @@ class API
                             uint32_t timeout,
                             int8_t const priority,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size) const
+                            char const * const source,
+                            uint32_t const source_size) const
         {
             return forward_(request_type,
                             name.c_str(),
@@ -471,8 +471,8 @@ class API
                             timeout,
                             priority,
                             trans_id,
-                            pid,
-                            pid_size);
+                            source,
+                            source_size);
         }
 
         int forward_async(char const * const name,
@@ -483,8 +483,8 @@ class API
                           uint32_t timeout,
                           int8_t const priority,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size) const;
+                          char const * const source,
+                          uint32_t const source_size) const;
 
         inline int forward_async(std::string const & name,
                                  void const * const request_info,
@@ -494,8 +494,8 @@ class API
                                  uint32_t timeout,
                                  int8_t const priority,
                                  char const * const trans_id,
-                                 char const * const pid,
-                                 uint32_t const pid_size) const
+                                 char const * const source,
+                                 uint32_t const source_size) const
         {
             return forward_async(name.c_str(),
                                  request_info,
@@ -505,8 +505,8 @@ class API
                                  timeout,
                                  priority,
                                  trans_id,
-                                 pid,
-                                 pid_size);
+                                 source,
+                                 source_size);
         }
 
         int forward_sync(char const * const name,
@@ -517,8 +517,8 @@ class API
                          uint32_t timeout,
                          int8_t const priority,
                          char const * const trans_id,
-                         char const * const pid,
-                         uint32_t const pid_size) const;
+                         char const * const source,
+                         uint32_t const source_size) const;
 
         inline int forward_sync(std::string const & name,
                                 void const * const request_info,
@@ -528,8 +528,8 @@ class API
                                 uint32_t timeout,
                                 int8_t const priority,
                                 char const * const trans_id,
-                                char const * const pid,
-                                uint32_t const pid_size) const
+                                char const * const source,
+                                uint32_t const source_size) const
         {
             return forward_sync(name.c_str(),
                                 request_info,
@@ -539,8 +539,8 @@ class API
                                 timeout,
                                 priority,
                                 trans_id,
-                                pid,
-                                pid_size);
+                                source,
+                                source_size);
         }
 
         int return_(int const request_type,
@@ -552,8 +552,8 @@ class API
                     uint32_t const response_size,
                     uint32_t timeout,
                     char const * const trans_id,
-                    char const * const pid,
-                    uint32_t const pid_size) const;
+                    char const * const source,
+                    uint32_t const source_size) const;
 
         inline int return_(int const request_type,
                            std::string const & name,
@@ -564,8 +564,8 @@ class API
                            uint32_t const response_size,
                            uint32_t timeout,
                            char const * const trans_id,
-                           char const * const pid,
-                           uint32_t const pid_size) const
+                           char const * const source,
+                           uint32_t const source_size) const
         {
             return return_(request_type,
                            name.c_str(),
@@ -576,8 +576,8 @@ class API
                            response_size,
                            timeout,
                            trans_id,
-                           pid,
-                           pid_size);
+                           source,
+                           source_size);
         }
 
         int return_async(char const * const name,
@@ -588,8 +588,8 @@ class API
                          uint32_t const response_size,
                          uint32_t timeout,
                          char const * const trans_id,
-                         char const * const pid,
-                         uint32_t const pid_size) const;
+                         char const * const source,
+                         uint32_t const source_size) const;
 
         inline int return_async(std::string const & name,
                                 std::string const & pattern,
@@ -599,8 +599,8 @@ class API
                                 uint32_t const response_size,
                                 uint32_t timeout,
                                 char const * const trans_id,
-                                char const * const pid,
-                                uint32_t const pid_size) const
+                                char const * const source,
+                                uint32_t const source_size) const
         {
             return return_async(name.c_str(),
                                 pattern.c_str(),
@@ -610,8 +610,8 @@ class API
                                 response_size,
                                 timeout,
                                 trans_id,
-                                pid,
-                                pid_size);
+                                source,
+                                source_size);
         }
 
         int return_sync(char const * const name,
@@ -622,8 +622,8 @@ class API
                         uint32_t const response_size,
                         uint32_t timeout,
                         char const * const trans_id,
-                        char const * const pid,
-                        uint32_t const pid_size) const;
+                        char const * const source,
+                        uint32_t const source_size) const;
 
         inline int return_sync(std::string const & name,
                                std::string const & pattern,
@@ -633,8 +633,8 @@ class API
                                uint32_t const response_size,
                                uint32_t timeout,
                                char const * const trans_id,
-                               char const * const pid,
-                               uint32_t const pid_size) const
+                               char const * const source,
+                               uint32_t const source_size) const
         {
             return return_sync(name.c_str(),
                                pattern.c_str(),
@@ -644,8 +644,8 @@ class API
                                response_size,
                                timeout,
                                trans_id,
-                               pid,
-                               pid_size);
+                               source,
+                               source_size);
         }
 
         int recv_async() const;
@@ -955,8 +955,8 @@ class API::callback_function_cxx_or1 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             m_object(m_api,
                      request_type,
@@ -969,8 +969,8 @@ class API::callback_function_cxx_or1 : public callback_function_generic
                      timeout,
                      priority,
                      trans_id,
-                     pid,
-                     pid_size);
+                     source,
+                     source_size);
         }
     private:
         function_object_cxx_const const & m_object;
@@ -996,8 +996,8 @@ class API::callback_function_cxx_or2 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             m_object(m_api,
                      request_type,
@@ -1010,8 +1010,8 @@ class API::callback_function_cxx_or2 : public callback_function_generic
                      timeout,
                      priority,
                      trans_id,
-                     pid,
-                     pid_size);
+                     source,
+                     source_size);
         }
     private:
         function_object_c_const const & m_object;
@@ -1037,8 +1037,8 @@ class API::callback_function_cxx_or3 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             m_object(m_api,
                      request_type,
@@ -1051,8 +1051,8 @@ class API::callback_function_cxx_or3 : public callback_function_generic
                      timeout,
                      priority,
                      trans_id,
-                     pid,
-                     pid_size);
+                     source,
+                     source_size);
         }
     private:
         function_object_cxx & m_object;
@@ -1078,8 +1078,8 @@ class API::callback_function_cxx_or4 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             m_object(m_api,
                      request_type,
@@ -1092,8 +1092,8 @@ class API::callback_function_cxx_or4 : public callback_function_generic
                      timeout,
                      priority,
                      trans_id,
-                     pid,
-                     pid_size);
+                     source,
+                     source_size);
         }
     private:
         function_object_c & m_object;
@@ -1122,8 +1122,8 @@ class API::callback_function_cxx_op1 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             (*m_object)(m_api,
                         request_type,
@@ -1136,8 +1136,8 @@ class API::callback_function_cxx_op1 : public callback_function_generic
                         timeout,
                         priority,
                         trans_id,
-                        pid,
-                        pid_size);
+                        source,
+                        source_size);
         }
     private:
         function_object_cxx * const m_object;
@@ -1166,8 +1166,8 @@ class API::callback_function_cxx_op2 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             (*m_object)(m_api,
                         request_type,
@@ -1180,8 +1180,8 @@ class API::callback_function_cxx_op2 : public callback_function_generic
                         timeout,
                         priority,
                         trans_id,
-                        pid,
-                        pid_size);
+                        source,
+                        source_size);
         }
     private:
         function_object_c * const m_object;
@@ -1219,8 +1219,8 @@ class API::callback_function_cxx_s1 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             (*m_f)(m_api,
                    request_type,
@@ -1233,8 +1233,8 @@ class API::callback_function_cxx_s1 : public callback_function_generic
                    timeout,
                    priority,
                    trans_id,
-                   pid,
-                   pid_size);
+                   source,
+                   source_size);
         }
     private:
         API const m_api;
@@ -1284,8 +1284,8 @@ class API::callback_function_cxx_s2 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             (*m_f)(m_api,
                    request_type,
@@ -1298,8 +1298,8 @@ class API::callback_function_cxx_s2 : public callback_function_generic
                    timeout,
                    priority,
                    trans_id,
-                   pid,
-                   pid_size);
+                   source,
+                   source_size);
         }
     private:
         API const m_api;
@@ -1351,8 +1351,8 @@ class API::callback_function_cxx_m1 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             (m_object.*m_f)(m_api,
                             request_type,
@@ -1365,8 +1365,8 @@ class API::callback_function_cxx_m1 : public callback_function_generic
                             timeout,
                             priority,
                             trans_id,
-                            pid,
-                            pid_size);
+                            source,
+                            source_size);
         }
     private:
         T & m_object;
@@ -1419,8 +1419,8 @@ class API::callback_function_cxx_m2 : public callback_function_generic
                                   uint32_t timeout,
                                   int8_t priority,
                                   char const * const trans_id,
-                                  char const * const pid,
-                                  uint32_t const pid_size)
+                                  char const * const source,
+                                  uint32_t const source_size)
         {
             (m_object.*m_f)(m_api,
                             request_type,
@@ -1433,8 +1433,8 @@ class API::callback_function_cxx_m2 : public callback_function_generic
                             timeout,
                             priority,
                             trans_id,
-                            pid,
-                            pid_size);
+                            source,
+                            source_size);
         }
     private:
         T & m_object;

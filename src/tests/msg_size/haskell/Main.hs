@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -50,7 +50,7 @@ request_ :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
 request_ requestType _ _
-    requestInfo request timeout priority transId pid state api =
+    requestInfo request timeout priority transId source state api =
     let destination = Char8.pack destination_
         decode = do
             i <- Get.getWord32host
@@ -66,7 +66,7 @@ request_ requestType _ _
         " (with timeout " ++ (show timeout) ++ " ms)"
     CloudI.forward_ api
         requestType destination
-        requestInfo requestNew timeout priority transId pid
+        requestInfo requestNew timeout priority transId source
     return $ CloudI.Null (state, api)
 
 task :: Int -> IO ()

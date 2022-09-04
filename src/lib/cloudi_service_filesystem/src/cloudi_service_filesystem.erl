@@ -585,7 +585,7 @@ cloudi_service_init(Args, Prefix, _, Dispatcher) ->
 
 cloudi_service_handle_request(_RequestType, Name, _Pattern,
                               RequestInfo, Request,
-                              Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Source,
                               #state{files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix
                                      } = State, Dispatcher) ->

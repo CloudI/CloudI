@@ -149,7 +149,7 @@
         timeout :: cloudi_service:timeout_value_milliseconds(),
         priority :: cloudi_service:priority(),
         trans_id :: cloudi_service:trans_id(),
-        pid :: cloudi_service:source()
+        source :: cloudi_service:source()
     }).
 -type request_destination_mode() :: #destination_request{}.
 % fault_isolation: both
@@ -250,7 +250,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 retry_f = RetryF}}.
 
 cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, Pid,
+                              Timeout, Priority, TransId, Source,
                               #state{service = Service,
                                      file_size_limit = FileSizeLimit,
                                      logging = Logging,
@@ -265,7 +265,7 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                                         timeout = Timeout,
                                         priority = Priority,
                                         trans_id = TransId,
-                                        pid = Pid},
+                                        source = Source},
     case cloudi_write_ahead_logging:
          store_start(ChunkRequest, Logging) of
         {Chunk, NextLogging} ->
@@ -285,7 +285,7 @@ cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
             {reply, <<>>, State}
     end;
 cloudi_service_handle_request(_RequestType, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, _Pid,
+                              Timeout, Priority, TransId, _Source,
                               #state{service = Service,
                                      file_size_limit = FileSizeLimit,
                                      logging = Logging,
@@ -345,14 +345,14 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                           name = Name,
                           pattern = Pattern,
                           trans_id = TransId,
-                          pid = Pid},
+                          source = Source},
      NewLogging} = cloudi_write_ahead_logging:
                    erase(QueueTransId, Logging),
     % PERSISTENCE END:
     % at this point the service request is no longer persisted
     cloudi_service:return_nothrow(Dispatcher, RequestType, Name, Pattern,
                                   ResponseInfo, Response,
-                                  Timeout, TransId, Pid),
+                                  Timeout, TransId, Source),
     {noreply, State#state{logging = NewLogging}};
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,
@@ -453,11 +453,11 @@ retry(#destination_request{name = Name,
                            timeout = Timeout,
                            priority = Priority,
                            trans_id = TransId,
-                           pid = Pid}, true, destination,
+                           source = Source}, true, destination,
       Dispatcher, Service) ->
     Age = (cloudi_trans_id:microseconds() -
            cloudi_trans_id:microseconds(TransId)) div 1000 + 100, % milliseconds
-    case erlang:is_process_alive(Pid) of
+    case erlang:is_process_alive(Source) of
         false ->
             {error, timeout};
         true when Age >= Timeout ->

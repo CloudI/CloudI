@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -185,15 +185,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "a/b/c/d"));
             assert(request_size == 6);
             assert(::memcmp(request, "test1", 6) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1_abc_(CloudI::API const & api,
@@ -207,8 +207,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "a/b/c/*"));
             assert(request_size == 6);
@@ -216,7 +216,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                    ::memcmp(request, "test3", 6) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1_ab_d(CloudI::API const & api,
@@ -230,8 +230,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "a/b/*/d"));
             assert(request_size == 6);
@@ -239,7 +239,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                    ::memcmp(request, "test5", 6) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1_a_cd(CloudI::API const & api,
@@ -253,8 +253,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "a/*/c/d"));
             assert(request_size == 6);
@@ -262,7 +262,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                    ::memcmp(request, "test7", 6) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1__bcd(CloudI::API const & api,
@@ -276,8 +276,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "*/b/c/d"));
             assert(request_size == 6);
@@ -285,7 +285,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                    ::memcmp(request, "test9", 6) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1_ab__(CloudI::API const & api,
@@ -299,15 +299,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "a/b/*"));
             assert(request_size == 7);
             assert(::memcmp(request, "test10", 7) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1_a__d(CloudI::API const & api,
@@ -321,15 +321,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "a/*/d"));
             assert(request_size == 7);
             assert(::memcmp(request, "test11", 7) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1___cd(CloudI::API const & api,
@@ -343,15 +343,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "*/c/d"));
             assert(request_size == 7);
             assert(::memcmp(request, "test12", 7) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1_a___(CloudI::API const & api,
@@ -365,15 +365,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "a/*"));
             assert(request_size == 7);
             assert(::memcmp(request, "test13", 7) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1____d(CloudI::API const & api,
@@ -387,15 +387,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "*/d"));
             assert(request_size == 7);
             assert(::memcmp(request, "test14", 7) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1_____(CloudI::API const & api,
@@ -409,15 +409,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
                             uint32_t timeout,
                             int8_t /*priority*/,
                             char const * const trans_id,
-                            char const * const pid,
-                            uint32_t const pid_size)
+                            char const * const source,
+                            uint32_t const source_size)
         {
             assert(pattern == (std::string(api.prefix()) + "*"));
             assert(request_size == 7);
             assert(::memcmp(request, "test15", 7) == 0);
             api.return_(request_type, name, pattern,
                         "", 0, request, request_size,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence1(CloudI::API const & api,
@@ -431,8 +431,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                        uint32_t timeout,
                        int8_t /*priority*/,
                        char const * const trans_id,
-                       char const * const pid,
-                       uint32_t const pid_size)
+                       char const * const source,
+                       uint32_t const source_size)
         {
             int result;
             result = api.recv_async(1000);
@@ -698,7 +698,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                                     request, request_size);
             assert(result == CloudI::API::return_value::success);
             api.return_(request_type, name, pattern, "", 0, "end", 4,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e1(CloudI::API const & api,
@@ -712,11 +712,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "1", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e2(CloudI::API const & api,
@@ -730,11 +730,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "2", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e3(CloudI::API const & api,
@@ -748,11 +748,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "3", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e4(CloudI::API const & api,
@@ -766,11 +766,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "4", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e5(CloudI::API const & api,
@@ -784,11 +784,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "5", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e6(CloudI::API const & api,
@@ -802,11 +802,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "6", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e7(CloudI::API const & api,
@@ -820,11 +820,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "7", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2_e8(CloudI::API const & api,
@@ -838,11 +838,11 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             api.return_(request_type, name, pattern, "", 0, "8", 2,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence2(CloudI::API const & api,
@@ -856,8 +856,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                        uint32_t timeout,
                        int8_t /*priority*/,
                        char const * const trans_id,
-                       char const * const pid,
-                       uint32_t const pid_size)
+                       char const * const source,
+                       uint32_t const source_size)
         {
             int result;
             std::cout << "messaging sequence2 start c++ (" <<
@@ -904,7 +904,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                                     request, request_size);
             assert(result == CloudI::API::return_value::success);
             api.return_(request_type, name, pattern, "", 0, "end", 4,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence3_f1(CloudI::API const & api,
@@ -918,8 +918,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t priority,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             assert(request_size == 2);
             long const request_i =
@@ -928,7 +928,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
             if (request_i == 4)
             {
                 api.return_(request_type, name, pattern, "", 0, "done", 5,
-                            timeout, trans_id, pid, pid_size);
+                            timeout, trans_id, source, source_size);
                 assert(false);
                 return;
             }
@@ -937,7 +937,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
             std::string const & s = request_new.str();
             api.forward_(request_type, std::string(api.prefix()) + "f2",
                          "", 0, s.c_str(), s.size() + 1,
-                         timeout, priority, trans_id, pid, pid_size);
+                         timeout, priority, trans_id, source, source_size);
         }
 
         void sequence3_f2(CloudI::API const & api,
@@ -951,8 +951,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t priority,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             assert(request_size == 2);
             long const request_i =
@@ -963,7 +963,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
             std::string const & s = request_new.str();
             api.forward_(request_type, std::string(api.prefix()) + "f1",
                          "", 0, s.c_str(), s.size() + 1,
-                         timeout, priority, trans_id, pid, pid_size);
+                         timeout, priority, trans_id, source, source_size);
         }
 
         void sequence3_g1(CloudI::API const & api,
@@ -977,14 +977,14 @@ class task : public thread_pool_input<thread_data, task_output_data>
                           uint32_t timeout,
                           int8_t /*priority*/,
                           char const * const trans_id,
-                          char const * const pid,
-                          uint32_t const pid_size)
+                          char const * const source,
+                          uint32_t const source_size)
         {
             std::string s(reinterpret_cast<char const *>(request));
             s += "suffix";
             api.return_(request_type, name, pattern,
                         "", 0, s.c_str(), s.size() + 1,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         void sequence3(CloudI::API const & api,
@@ -998,8 +998,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                        uint32_t timeout,
                        int8_t /*priority*/,
                        char const * const trans_id,
-                       char const * const pid,
-                       uint32_t const pid_size)
+                       char const * const source,
+                       uint32_t const source_size)
         {
             int result;
             std::cout << "messaging sequence3 start c++ (" <<
@@ -1037,7 +1037,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                                     "sequence1", s.c_str(), s.size() + 1);
             assert(result == CloudI::API::return_value::success);
             api.return_(request_type, name, pattern, "", 0, "end", 4,
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
         }
 
         bool m_stop_default;

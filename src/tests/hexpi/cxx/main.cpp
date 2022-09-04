@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -93,8 +93,8 @@ class task : public thread_pool_input<thread_data, task_output_data>
                    uint32_t timeout,
                    int8_t /*priority*/,
                    char const * const trans_id,
-                   char const * const pid,
-                   uint32_t const pid_size)
+                   char const * const source,
+                   uint32_t const source_size)
         {
             uint32_t const * parameters =
                 reinterpret_cast<uint32_t const *>(request);
@@ -138,7 +138,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
 
             api.return_(request_type, name, pattern, "", 0,
                         pi_result.c_str(), pi_result.size(),
-                        timeout, trans_id, pid, pid_size);
+                        timeout, trans_id, source, source_size);
             std::cout << "execution never gets here" << std::endl;
         }
 

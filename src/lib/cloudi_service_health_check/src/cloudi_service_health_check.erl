@@ -361,14 +361,15 @@ hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
            IPv4Allowed, IPv6Allowed) ->
     hosts_load(Hosts, cloudi_x_trie:new(),
                0, ProcessIndex, ProcessCount, Service,
-               IPv4Allowed, IPv6Allowed).
+               IPv4Allowed, IPv6Allowed, cloudi_environment:lookup()).
 
-hosts_load([], HostsLoaded, _, _, _, _, _, _) ->
+hosts_load([], HostsLoaded, _, _, _, _, _, _, _) ->
     HostsLoaded;
-hosts_load([{Hostname, Args} | Hosts], HostsLoaded,
+hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
            ProcessIndex, ProcessIndex, ProcessCount, Service,
-           IPv4Allowed, IPv6Allowed) ->
-    true = is_list(Hostname) andalso is_integer(hd(Hostname)),
+           IPv4Allowed, IPv6Allowed, Environment) ->
+    true = is_list(HostnameRaw),
+    Hostname = cloudi_environment:transform(HostnameRaw, Environment),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     Defaults = [
         {port,                     ?DEFAULT_PORT},
@@ -430,16 +431,17 @@ hosts_load([{Hostname, Args} | Hosts], HostsLoaded,
     hosts_load(Hosts, cloudi_x_trie:store(Hostname, HostLoaded, HostsLoaded),
                (ProcessIndex + 1) rem ProcessCount,
                ProcessIndex, ProcessCount, Service,
-               IPv4Allowed, IPv6Allowed);
-hosts_load([{Hostname, _} | Hosts], HostsLoaded,
+               IPv4Allowed, IPv6Allowed, Environment);
+hosts_load([{HostnameRaw, _} | Hosts], HostsLoaded,
            Index, ProcessIndex, ProcessCount, Service,
-           IPv4Allowed, IPv6Allowed) ->
-    true = is_list(Hostname) andalso is_integer(hd(Hostname)),
+           IPv4Allowed, IPv6Allowed, Environment) ->
+    true = is_list(HostnameRaw),
+    Hostname = cloudi_environment:transform(HostnameRaw, Environment),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     hosts_load(Hosts, HostsLoaded,
                (Index + 1) rem ProcessCount,
                ProcessIndex, ProcessCount, Service,
-               IPv4Allowed, IPv6Allowed).
+               IPv4Allowed, IPv6Allowed, Environment).
 
 health_check(Hostname,
              #state{service = Service,
@@ -483,7 +485,7 @@ health_check_dns_ipv4(#host{name = Hostname,
                             ipv6_allowed = IPv6Allowed} = Host) ->
     case inet:getaddrs(Hostname, inet) of
         {ok, IPv4} ->
-            {ok, Host#host{ipv4 = IPv4}};
+            {ok, Host#host{ipv4 = lists:usort(IPv4)}};
         {error, nxdomain} when IPv6Allowed =:= true ->
             {ok, Host#host{ipv4 = []}};
         {error, _} = Error ->
@@ -496,7 +498,7 @@ health_check_dns_ipv6(#host{name = Hostname,
                             ipv4_allowed = IPv4Allowed} = Host) ->
     case inet:getaddrs(Hostname, inet6) of
         {ok, IPv6} ->
-            {ok, Host#host{ipv6 = IPv6}};
+            {ok, Host#host{ipv6 = lists:usort(IPv6)}};
         {error, nxdomain} when IPv4Allowed =:= true ->
             {ok, Host#host{ipv6 = []}};
         {error, _} = Error ->
