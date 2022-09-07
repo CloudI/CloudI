@@ -1145,6 +1145,7 @@ log_init({error, Reason}, State) ->
     end.
 
 log_config_set(#config_logging{file = FilePath,
+                               file_sync = FileSync,
                                stdout = Stdout,
                                level = MainLevel,
                                queue_mode_async = QueueModeAsync,
@@ -1162,7 +1163,8 @@ log_config_set(#config_logging{file = FilePath,
                 {Stdout, fun log_config_stdout_set/2},
                 {SyslogConfig, fun log_config_syslog_set/2},
                 {FormattersConfig, fun log_config_formatters_set/2}],
-               State#state{queue_pending = 0,
+               State#state{file_sync = FileSync,
+                           queue_pending = 0,
                            queue_mode_async = QueueModeAsync,
                            queue_mode_sync = QueueModeSync,
                            queue_mode_overload = QueueModeOverload,

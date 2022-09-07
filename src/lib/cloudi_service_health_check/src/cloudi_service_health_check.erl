@@ -251,6 +251,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Service = cloudi_service:self(Dispatcher),
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     ProcessCount = cloudi_service:process_count(Dispatcher),
+    ProcessCountMin = cloudi_service:process_count_min(Dispatcher),
+    ProcessCountMax = cloudi_service:process_count_max(Dispatcher),
+    true = (ProcessCountMin =:= ProcessCountMax) andalso
+           (ProcessCountMin =:= ProcessCount),
     HostsLoaded = hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
                              IPv4Allowed, IPv6Allowed),
     true = is_boolean(Debug),
@@ -452,11 +456,11 @@ health_check(Hostname,
     #host{ipv4 = IPv4Old,
           ipv6 = IPv6Old,
           interval = Interval} = Host0,
+    erlang:send_after(Interval * 1000, Service, {host, Hostname}),
     Host1 = health_check_dns(Host0),
     Host2 = health_check_update_ips(Host1, IPv4Old, IPv6Old, DebugLogLevel),
     {HostN,
      DurationsDownNew} = health_check_tcp(Host2, DurationsDown),
-    erlang:send_after(Interval * 1000, Service, {host, Hostname}),
     State#state{hosts = cloudi_x_trie:store(Hostname, HostN, Hosts),
                 durations_down = DurationsDownNew}.
 

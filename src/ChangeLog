@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-09-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix the logging_set CloudI Service API usage of file_sync
+      configuration
+    * Improve cloudi_service_health_check interval timing
+
 2022-09-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change CloudI API parameter name pid to source
