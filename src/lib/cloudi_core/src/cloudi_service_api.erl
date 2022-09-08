@@ -792,6 +792,7 @@
               service_proplist/0,
               service/0]).
 
+-type bytes_value() :: pos_integer().
 % `"99.9999998 %"'
 -type availability() ::
     nonempty_list($0..$9 | $. | $  | $%).
@@ -825,7 +826,8 @@
 % `"0.0"'
 -type float_string_ge_0() ::
     nonempty_list($0..$9 | $.).
--export_type([availability/0,
+-export_type([bytes_value/0,
+              availability/0,
               availability_approx/0,
               nanoseconds_string/0,
               nanoseconds_string_signed/0,
@@ -843,6 +845,7 @@
                   {module, atom()} |
                   {count_process, pos_integer()} |
                   {pids_erlang, list(pid())} |
+                  {size_erlang, bytes_value()} |
                   {suspended, boolean()} |
                   {uptime_total, nanoseconds_string()} |
                   {uptime_running, nanoseconds_string()} |
@@ -884,6 +887,7 @@
                   {count_thread, pos_integer()} |
                   {pids_os, list(pos_integer())} |
                   {pids_erlang, list(pid())} |
+                  {size_erlang, bytes_value()} |
                   {suspended, boolean()} |
                   {uptime_total, nanoseconds_string()} |
                   {uptime_running, nanoseconds_string()} |

@@ -598,13 +598,13 @@ health_check_tcp_ips([IP | IPs],
                         ok ->
                             tcp_restored(Host0, IP, Port);
                         {error, Reason} when is_atom(Reason) ->
-                            tcp_failure(Host0, IP, Port, Reason)
+                            tcp_failure(Host0, IP, Port, Reason, Timeout)
                     end
             end,
             ok = gen_tcp:close(Socket),
             health_check_tcp_ips(IPs, HostN, Family, Timeout);
         {error, Reason} ->
-            HostN = tcp_failure(Host0, IP, Port, Reason),
+            HostN = tcp_failure(Host0, IP, Port, Reason, Timeout),
             health_check_tcp_ips(IPs, HostN, Family, Timeout)
     end.
 
@@ -710,15 +710,22 @@ tcp_failure(#host{name = Hostname,
                   tcp_failed_time = TCPFailedTime,
                   tcp_failed_time_ip = TCPFailedTimeIP,
                   tcp_failure = TCPFailure} = Host,
-            IP, Port, Reason) ->
+            IP, Port, Reason, Timeout) ->
     case maps:is_key(IP, TCPFailedTimeIP) of
         true ->
             Host;
         false ->
             % executed for each ip address failure
             TimeFailure = cloudi_timestamp:native_monotonic(),
-            ?LOG_ERROR("\"~s\" TCP failure: ~s port ~w failed: ~s",
-                       [Hostname, inet:ntoa(IP), Port, Reason]),
+            ReasonInfo = if
+                Reason =:= timeout ->
+                    cloudi_string:format(" (after ~w milliseconds)",
+                                         [Timeout]);
+                true ->
+                    ""
+            end,
+            ?LOG_ERROR("\"~s\" TCP failure: ~s port ~w failed: ~s~s",
+                       [Hostname, inet:ntoa(IP), Port, Reason, ReasonInfo]),
             if
                 TCPFailure =:= undefined ->
                     ok;

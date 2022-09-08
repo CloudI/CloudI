@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-09-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_health_check log output for the
+      timeout value when a TCP timeout occurs
+    * Add CloudI Service API services_status response size_erlang
+      value Erlang type specification
+
 2022-09-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix the logging_set CloudI Service API usage of file_sync
