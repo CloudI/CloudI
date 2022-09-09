@@ -5,24 +5,31 @@
 %%% @doc
 %%% ==Health Check CloudI Service==
 %%% Each interval, do a DNS lookup of a hostname (if a hostname was provided)
-%%% and attempt to open a TCP port on each IP address to determine if it is
-%%% healthy.
+%%% and check the health of each IP address.
 %%%
-%%% A dns_failure function and/or a tcp_failure function can be provided for
-%%% execution when the health check fails.  The DNS failure will only occur
-%%% once for each hostname provided and old IP address information will still
-%%% be used for the TCP port check.  A TCP failure can occur for each
-%%% IP address.  If any of the IP addresses had a TCP failure the host's
-%%% tcp_failed boolean will be set to true.
+%%% Any DNS failure can have custom functions for the event with the
+%%% dns_failure function and/or the dns_restored function.  The DNS failure
+%%% will only occur once for each hostname provided and old IP address
+%%% information will still be used for the health check.
 %%%
-%%% A dns_restored function and/or a tcp_restored function can be provided for
-%%% execution when the health check succeeds after previously failing.
-%%% The native monotonic time is provided for when the failure occurred
-%%% (TimeFailure) and when the restore occurred (TimeRestored)
-%%% to provide the event duration.
+%%% The health check uses either a TCP port number or a single ping request
+%%% to each of the IP addresses associated with the hostname.
+%%% If any of the IP addresses had a failure the host's health_failed boolean
+%%% will be set to true.  The availability and downtime of a host is based
+%%% on whether all IP addresses pass the health check.
 %%%
-%%% The availability and downtime of a host is based on the ability of all
-%%% of its IP addresses to accept TCP connections on the configured port.
+%%% Any TCP health check failure can have custom functions for the event with
+%%% the tcp_failure function and/or the tcp_restored function.
+%%% A tcp_test function custom function can be provided if the TCP socket
+%%% needs additional health check criteria.
+%%%
+%%% Any ping health check failure can have custom functions for the event with
+%%% the ping failure function and/or the ping_restored function.
+%%%
+%%% All _failure custom functions are provided with the failure Reason
+%%% as a parameter.  All _restored custom functions are provided with
+%%% the native monotonic time when the failure occurred (TimeFailure) and
+%%% when the restore occurred (TimeRestored) to provide the event duration.
 %%%
 %%% A dns_ip_added function can be provided for execution when an IP address
 %%% is added after a successful DNS lookup response.
@@ -75,6 +82,8 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -define(DEFAULT_HOSTS,                         []).
+-define(DEFAULT_INTERVAL,                       5). % seconds
+        % May be set for each host too.
 -define(DEFAULT_IPV4,                        true).
         % May be set for each host too.
 -define(DEFAULT_IPV6,                        true).
@@ -83,9 +92,11 @@
 -define(DEFAULT_DEBUG_LEVEL,                debug).
 
 % hosts configuration arguments
+-define(DEFAULT_HEALTH,                       tcp).
+        % Set to ping if no TCP port is available for the
+        % health check.
 -define(DEFAULT_PORT,                          80).
         % TCP port used for the host's TCP health check.
--define(DEFAULT_INTERVAL,                       5). % seconds
 -define(DEFAULT_DNS_FAILURE,            undefined).
 -define(DEFAULT_DNS_RESTORED,           undefined).
 -define(DEFAULT_DNS_IP_ADDED,           undefined).
@@ -98,6 +109,8 @@
         % server's liveness, this function can be provided to test
         % the socket.  Otherwise, only the ability of the server to
         % accept a TCP connection for the configured port is tested.
+-define(DEFAULT_PING_FAILURE,           undefined).
+-define(DEFAULT_PING_RESTORED,          undefined).
 
 % ensure timeouts do not delay the health check interval
 -define(TIMEOUT_DELTA, 100). % milliseconds
@@ -148,6 +161,17 @@
     fun((Socket :: gen_tcp:socket(),
          Timeout :: 1..?TIMEOUT_MAX_ERLANG) ->
         ok | {error, atom()}).
+-type ping_failure() ::
+    fun((Name :: hostname(),
+         IP :: inet:ip_address(),
+         Reason :: string()) ->
+        ok).
+-type ping_restored() ::
+    fun((Name :: hostname(),
+         IP :: inet:ip_address(),
+         TimeFailure :: cloudi_timestamp:native_monotonic(),
+         TimeRestored :: cloudi_timestamp:native_monotonic()) ->
+        ok).
 -export_type([hostname/0,
               tcp_port/0,
               interval/0,
@@ -158,7 +182,9 @@
               dns_ip_removed_failed/0,
               tcp_failure/0,
               tcp_restored/0,
-              tcp_test/0]).
+              tcp_test/0,
+              ping_failure/0,
+              ping_restored/0]).
 
 -record(host,
     {
@@ -172,12 +198,16 @@
             :: list(inet:ip6_address()),
         ipv6_allowed
             :: boolean(),
+        health
+            :: tcp | ping,
         port
             :: tcp_port(),
         interval
             :: interval(),
         start_time
             :: cloudi_timestamp:native_monotonic(),
+        dns_disabled = false
+            :: boolean(), % name is an IP address
         dns_failed = false
             :: boolean(),
         dns_failed_time = undefined
@@ -192,20 +222,24 @@
             :: undefined | dns_ip_removed_healthy(),
         dns_ip_removed_failed
             :: undefined | dns_ip_removed_failed(),
-        tcp_failed = false
+        health_failed = false
             :: boolean(),
-        tcp_failed_count = 0
+        health_failed_count = 0
             :: non_neg_integer(),
-        tcp_failed_time = undefined
+        health_failed_time = undefined
             :: undefined | cloudi_timestamp:native_monotonic(),
-        tcp_failed_time_ip = #{}
+        health_failed_time_ip = #{}
             :: #{inet:ip_address() := cloudi_timestamp:native_monotonic()},
         tcp_failure
             :: undefined | tcp_failure(),
         tcp_restored
             :: undefined | tcp_restored(),
         tcp_test
-            :: undefined | tcp_test()
+            :: undefined | tcp_test(),
+        ping_failure
+            :: undefined | ping_failure(),
+        ping_restored
+            :: undefined | ping_restored()
     }).
 
 -record(state,
@@ -237,13 +271,17 @@
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {hosts,                    ?DEFAULT_HOSTS},
+        {interval,                 ?DEFAULT_INTERVAL},
         {ipv4,                     ?DEFAULT_IPV4},
         {ipv6,                     ?DEFAULT_IPV6},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Hosts, IPv4Allowed, IPv6Allowed,
+    [Hosts, IntervalDefault, IPv4Allowed, IPv6Allowed,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Hosts) andalso (Hosts /= []),
+    true = is_integer(IntervalDefault) andalso
+           (IntervalDefault > 0) andalso
+           (IntervalDefault =< ?TIMEOUT_MAX_ERLANG div 1000),
     true = is_boolean(IPv4Allowed),
     true = is_boolean(IPv6Allowed),
     true = (IPv4Allowed /= false) orelse
@@ -256,7 +294,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = (ProcessCountMin =:= ProcessCountMax) andalso
            (ProcessCountMin =:= ProcessCount),
     HostsLoaded = hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
-                             IPv4Allowed, IPv6Allowed),
+                             IntervalDefault, IPv4Allowed, IPv6Allowed),
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
@@ -362,22 +400,24 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
-           IPv4Allowed, IPv6Allowed) ->
+           IntervalDefault, IPv4Allowed, IPv6Allowed) ->
     hosts_load(Hosts, cloudi_x_trie:new(),
                0, ProcessIndex, ProcessCount, Service,
-               IPv4Allowed, IPv6Allowed, cloudi_environment:lookup()).
+               IntervalDefault, IPv4Allowed, IPv6Allowed,
+               cloudi_environment:lookup()).
 
-hosts_load([], HostsLoaded, _, _, _, _, _, _, _) ->
+hosts_load([], HostsLoaded, _, _, _, _, _, _, _, _) ->
     HostsLoaded;
 hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
            ProcessIndex, ProcessIndex, ProcessCount, Service,
-           IPv4Allowed, IPv6Allowed, Environment) ->
+           IntervalDefault, IPv4Allowed, IPv6Allowed, Environment) ->
     true = is_list(HostnameRaw),
     Hostname = cloudi_environment:transform(HostnameRaw, Environment),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     Defaults = [
+        {health,                   ?DEFAULT_HEALTH},
         {port,                     ?DEFAULT_PORT},
-        {interval,                 ?DEFAULT_INTERVAL},
+        {interval,                 IntervalDefault},
         {ipv4,                     IPv4Allowed},
         {ipv6,                     IPv6Allowed},
         {dns_failure,              ?DEFAULT_DNS_FAILURE},
@@ -387,11 +427,13 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
         {dns_ip_removed_failed,    ?DEFAULT_DNS_IP_REMOVED_FAILED},
         {tcp_failure,              ?DEFAULT_TCP_FAILURE},
         {tcp_restored,             ?DEFAULT_TCP_RESTORED},
-        {tcp_test,                 ?DEFAULT_TCP_TEST}],
-    [Port, Interval, IPv4AllowedHost, IPv6AllowedHost,
+        {tcp_test,                 ?DEFAULT_TCP_TEST},
+        {ping_failure,             ?DEFAULT_PING_FAILURE},
+        {ping_restored,            ?DEFAULT_PING_RESTORED}],
+    [Health, Port, Interval, IPv4AllowedHost, IPv6AllowedHost,
      DNSFailure0, DNSRestored0, DNSIPAdded0, DNSIPRemovedHealthy0,
-     DNSIPRemovedFailed0, TCPFailure0, TCPRestored0,
-     TCPTest0] = cloudi_proplists:take_values(Defaults, Args),
+     DNSIPRemovedFailed0, TCPFailure0, TCPRestored0, TCPTest0, PingFailure0,
+     PingRestored0] = cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port) andalso (Port > 0),
     true = is_integer(Interval) andalso
            (Interval > 0) andalso
@@ -416,36 +458,67 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
                    function_optional(TCPRestored0, 5),
     TCPTestN = cloudi_args_type:
                function_optional(TCPTest0, 2),
+    PingFailureN = cloudi_args_type:
+                   function_optional(PingFailure0, 3),
+    PingRestoredN = cloudi_args_type:
+                    function_optional(PingRestored0, 4),
+    if
+        Health =:= tcp ->
+            undefined = PingFailureN,
+            undefined = PingRestoredN;
+        Health =:= ping ->
+            undefined = TCPFailureN,
+            undefined = TCPRestoredN,
+            undefined = TCPTestN
+    end,
     TimeStart = cloudi_timestamp:native_monotonic(),
     erlang:send_after(Interval * 1000, Service, {host, Hostname}),
-    HostLoaded = #host{name = Hostname,
-                       ipv4_allowed = IPv4AllowedHost,
-                       ipv6_allowed = IPv6AllowedHost,
-                       port = Port,
-                       interval = Interval,
-                       start_time = TimeStart,
-                       dns_failure = DNSFailureN,
-                       dns_restored = DNSRestoredN,
-                       dns_ip_added = DNSIPAddedN,
-                       dns_ip_removed_healthy = DNSIPRemovedHealthyN,
-                       dns_ip_removed_failed = DNSIPRemovedFailedN,
-                       tcp_failure = TCPFailureN,
-                       tcp_restored = TCPRestoredN,
-                       tcp_test = TCPTestN},
-    hosts_load(Hosts, cloudi_x_trie:store(Hostname, HostLoaded, HostsLoaded),
+    HostLoaded0 = #host{name = Hostname,
+                        ipv4_allowed = IPv4AllowedHost,
+                        ipv6_allowed = IPv6AllowedHost,
+                        health = Health,
+                        port = Port,
+                        interval = Interval,
+                        start_time = TimeStart,
+                        dns_failure = DNSFailureN,
+                        dns_restored = DNSRestoredN,
+                        dns_ip_added = DNSIPAddedN,
+                        dns_ip_removed_healthy = DNSIPRemovedHealthyN,
+                        dns_ip_removed_failed = DNSIPRemovedFailedN,
+                        tcp_failure = TCPFailureN,
+                        tcp_restored = TCPRestoredN,
+                        tcp_test = TCPTestN,
+                        ping_failure = PingFailureN,
+                        ping_restored = PingRestoredN},
+    HostLoadedN = case inet:parse_ipv4_address(Hostname) of
+        {ok, IPv4} ->
+            true = IPv4AllowedHost,
+            HostLoaded0#host{ipv4 = [IPv4],
+                             dns_disabled = true};
+        {error, einval} ->
+            case inet:parse_ipv6_address(Hostname) of
+                {ok, IPv6} ->
+                    true = IPv6AllowedHost,
+                    HostLoaded0#host{ipv6 = [IPv6],
+                                     dns_disabled = true};
+                {error, einval} ->
+                    HostLoaded0
+            end
+    end,
+    hosts_load(Hosts, cloudi_x_trie:store(Hostname, HostLoadedN, HostsLoaded),
                (ProcessIndex + 1) rem ProcessCount,
                ProcessIndex, ProcessCount, Service,
-               IPv4Allowed, IPv6Allowed, Environment);
+               IntervalDefault, IPv4Allowed, IPv6Allowed, Environment);
 hosts_load([{HostnameRaw, _} | Hosts], HostsLoaded,
            Index, ProcessIndex, ProcessCount, Service,
-           IPv4Allowed, IPv6Allowed, Environment) ->
+           IntervalDefault, IPv4Allowed, IPv6Allowed, Environment) ->
     true = is_list(HostnameRaw),
     Hostname = cloudi_environment:transform(HostnameRaw, Environment),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     hosts_load(Hosts, HostsLoaded,
                (Index + 1) rem ProcessCount,
                ProcessIndex, ProcessCount, Service,
-               IPv4Allowed, IPv6Allowed, Environment).
+               IntervalDefault, IPv4Allowed, IPv6Allowed, Environment).
 
 health_check(Hostname,
              #state{service = Service,
@@ -455,19 +528,38 @@ health_check(Hostname,
     Host0 = cloudi_x_trie:fetch(Hostname, Hosts),
     #host{ipv4 = IPv4Old,
           ipv6 = IPv6Old,
-          interval = Interval} = Host0,
+          health = Health,
+          interval = Interval,
+          dns_disabled = DNSDisabled} = Host0,
     erlang:send_after(Interval * 1000, Service, {host, Hostname}),
-    Host1 = health_check_dns(Host0),
+    TimeoutTotal = Interval * 1000 - ?TIMEOUT_DELTA,
+    TimeoutDNS = if
+        DNSDisabled =:= true ->
+            0;
+        DNSDisabled =:= false ->
+            TimeoutTotal div 2
+    end,
+    TimeoutHealth = TimeoutTotal - TimeoutDNS,
+    Host1 = health_check_dns(Host0, TimeoutDNS),
     Host2 = health_check_update_ips(Host1, IPv4Old, IPv6Old, DebugLogLevel),
     {HostN,
-     DurationsDownNew} = health_check_tcp(Host2, DurationsDown),
+     DurationsDownNew} = if
+        Health =:= tcp ->
+            health_check_status_tcp(Host2, DurationsDown, TimeoutHealth);
+        Health =:= ping ->
+            health_check_status_ping(Host2, DurationsDown, TimeoutHealth)
+    end,
     State#state{hosts = cloudi_x_trie:store(Hostname, HostN, Hosts),
                 durations_down = DurationsDownNew}.
 
-health_check_dns(Host0) ->
-    case health_check_dns_ipv4(Host0) of
+health_check_dns(#host{dns_disabled = true} = Host0, _) ->
+    Host0;
+health_check_dns(Host0, TimeoutDNS) ->
+    TimeoutDNSIPv4 = TimeoutDNS div 2,
+    TimeoutDNSIPv6 = TimeoutDNS - TimeoutDNSIPv4,
+    case health_check_dns_ipv4(Host0, TimeoutDNSIPv4) of
         {ok, Host1} ->
-            case health_check_dns_ipv6(Host1) of
+            case health_check_dns_ipv6(Host1, TimeoutDNSIPv6) of
                 {ok, #host{ipv4 = IPv4,
                            ipv6 = IPv6} = HostN} ->
                     if
@@ -483,11 +575,13 @@ health_check_dns(Host0) ->
             dns_failure(Host0, Reason)
     end.
 
-health_check_dns_ipv4(#host{ipv4_allowed = false} = Host) ->
+health_check_dns_ipv4(#host{ipv4_allowed = false} = Host, _) ->
     {ok, Host};
 health_check_dns_ipv4(#host{name = Hostname,
-                            ipv6_allowed = IPv6Allowed} = Host) ->
-    case inet:getaddrs(Hostname, inet) of
+                            ipv6_allowed = IPv6Allowed} = Host,
+                      Timeout) ->
+    % XXX Erlang/OTP inet:getaddrs/3 is undocumented and fails to timeout
+    case inet:getaddrs(Hostname, inet, Timeout) of
         {ok, IPv4} ->
             {ok, Host#host{ipv4 = lists:usort(IPv4)}};
         {error, nxdomain} when IPv6Allowed =:= true ->
@@ -496,11 +590,13 @@ health_check_dns_ipv4(#host{name = Hostname,
             Error
     end.
 
-health_check_dns_ipv6(#host{ipv6_allowed = false} = Host) ->
+health_check_dns_ipv6(#host{ipv6_allowed = false} = Host, _) ->
     {ok, Host};
 health_check_dns_ipv6(#host{name = Hostname,
-                            ipv4_allowed = IPv4Allowed} = Host) ->
-    case inet:getaddrs(Hostname, inet6) of
+                            ipv4_allowed = IPv4Allowed} = Host,
+                      Timeout) ->
+    % XXX Erlang/OTP inet:getaddrs/3 is undocumented and fails to timeout
+    case inet:getaddrs(Hostname, inet6, Timeout) of
         {ok, IPv6} ->
             {ok, Host#host{ipv6 = lists:usort(IPv6)}};
         {error, nxdomain} when IPv4Allowed =:= true ->
@@ -535,59 +631,33 @@ health_check_update_ips_added([IP | IPs], IPsOld0, Host0, DebugLogLevel) ->
 health_check_update_ips_removed([], HostN, _) ->
     HostN;
 health_check_update_ips_removed([IPOld | IPsOld],
-                                #host{tcp_failed_time_ip =
-                                          TCPFailedTimeIP} = Host0,
+                                #host{health_failed_time_ip =
+                                          HealthFailedTimeIP} = Host0,
                                 DebugLogLevel) ->
-    HostN = case maps:take(IPOld, TCPFailedTimeIP) of
+    HostN = case maps:take(IPOld, HealthFailedTimeIP) of
         error ->
             dns_ip_removed_healthy(Host0, IPOld, DebugLogLevel);
-        {TimeFailure, TCPFailedTimeIPNew} ->
-            dns_ip_removed_failed(Host0#host{tcp_failed_time_ip =
-                                                 TCPFailedTimeIPNew},
+        {TimeFailure, HealthFailedTimeIPNew} ->
+            dns_ip_removed_failed(Host0#host{health_failed_time_ip =
+                                                 HealthFailedTimeIPNew},
                                   IPOld, TimeFailure)
     end,
     health_check_update_ips_removed(IPsOld, HostN, DebugLogLevel).
 
-health_check_tcp(#host{name = Hostname,
-                       ipv4 = IPv4,
-                       ipv6 = IPv6,
-                       interval = Interval} = Host0,
-                 DurationsDown) ->
-    Timeout = (Interval * 1000 - ?TIMEOUT_DELTA) div
-              health_check_tcp_ips_checks(IPv4, IPv6),
-    Host1 = health_check_tcp_ips(IPv4, Host0, inet, Timeout),
-    HostN = health_check_tcp_ips(IPv6, Host1, inet6, Timeout),
-    #host{tcp_failed = TCPFailedOld,
-          tcp_failed_time = TimeFailure,
-          tcp_failed_time_ip = TCPFailedTimeIP} = HostN,
-    if
-        TCPFailedTimeIP == #{} ->
-            if
-                TimeFailure =:= undefined ->
-                    false = TCPFailedOld,
-                    {HostN,
-                     DurationsDown};
-                is_integer(TimeFailure) ->
-                    true = TCPFailedOld,
-                    TimeRestored = cloudi_timestamp:native_monotonic(),
-                    {HostN#host{tcp_failed = false,
-                                tcp_failed_time = undefined},
-                     cloudi_availability:
-                     durations_store([Hostname],
-                                     {TimeFailure, TimeRestored},
-                                     DurationsDown)}
-            end;
-        true ->
-            {HostN#host{tcp_failed = true},
-             DurationsDown}
-    end.
+health_check_status_tcp(#host{ipv4 = IPv4,
+                              ipv6 = IPv6} = Host0,
+                        DurationsDown, TimeoutHealth) ->
+    Timeout = TimeoutHealth div health_check_status_ips_checks(IPv4, IPv6),
+    Host1 = health_check_status_tcp_ips(IPv4, Host0, inet, Timeout),
+    HostN = health_check_status_tcp_ips(IPv6, Host1, inet6, Timeout),
+    health_check_status_ips_update(HostN, DurationsDown).
 
-health_check_tcp_ips([], HostN, _, _) ->
+health_check_status_tcp_ips([], HostN, _, _) ->
     HostN;
-health_check_tcp_ips([IP | IPs],
-                     #host{port = Port,
-                           tcp_test = TCPTest} = Host0,
-                     Family, Timeout) ->
+health_check_status_tcp_ips([IP | IPs],
+                            #host{port = Port,
+                                  tcp_test = TCPTest} = Host0,
+                            Family, Timeout) ->
     case gen_tcp:connect(IP, Port, [Family], Timeout) of
         {ok, Socket} ->
             HostN = if
@@ -602,20 +672,79 @@ health_check_tcp_ips([IP | IPs],
                     end
             end,
             ok = gen_tcp:close(Socket),
-            health_check_tcp_ips(IPs, HostN, Family, Timeout);
+            health_check_status_tcp_ips(IPs, HostN, Family, Timeout);
         {error, Reason} ->
             HostN = tcp_failure(Host0, IP, Port, Reason, Timeout),
-            health_check_tcp_ips(IPs, HostN, Family, Timeout)
+            health_check_status_tcp_ips(IPs, HostN, Family, Timeout)
     end.
 
-health_check_tcp_ips_checks([], []) ->
+health_check_status_ping(#host{ipv4 = IPv4,
+                               ipv6 = IPv6} = Host0,
+                         DurationsDown, TimeoutHealth) ->
+    Timeout = TimeoutHealth div health_check_status_ips_checks(IPv4, IPv6),
+    HostN = health_check_status_ping_ips(IPv4 ++ IPv6, Host0, Timeout),
+    health_check_status_ips_update(HostN, DurationsDown).
+
+health_check_status_ping_ips([], HostN, _) ->
+    HostN;
+health_check_status_ping_ips([IP | IPs],
+                             #host{} = Host0,
+                             Timeout) ->
+    HostN = case cloudi_os_process:shell("ping -c 1 -w ~w ~s",
+                                         [erlang:max(1, Timeout div 1000),
+                                          inet:ntoa(IP)]) of
+        {0, _} ->
+            ping_restored(Host0, IP);
+        {Status, Output} ->
+            StatusStr = if
+                Status > 128 ->
+                    cloudi_os_process:signal_to_string(Status - 128);
+                true ->
+                    erlang:integer_to_list(Status)
+            end,
+            Reason = cloudi_string:
+                     format("ping exited with ~s (stdout/stderr below)~n~ts",
+                            [StatusStr, erlang:iolist_to_binary(Output)]),
+            ping_failure(Host0, IP, Reason)
+    end,
+    health_check_status_ping_ips(IPs, HostN, Timeout).
+
+health_check_status_ips_checks([], []) ->
     1;
-health_check_tcp_ips_checks([], IPv6) ->
+health_check_status_ips_checks([], IPv6) ->
     length(IPv6);
-health_check_tcp_ips_checks(IPv4, []) ->
+health_check_status_ips_checks(IPv4, []) ->
     length(IPv4);
-health_check_tcp_ips_checks(IPv4, IPv6) ->
+health_check_status_ips_checks(IPv4, IPv6) ->
     length(IPv4) + length(IPv6).
+
+health_check_status_ips_update(#host{name = Hostname,
+                                     health_failed = HealthFailedOld,
+                                     health_failed_time = TimeFailure,
+                                     health_failed_time_ip =
+                                         HealthFailedTimeIP} = Host,
+                               DurationsDown) ->
+    if
+        HealthFailedTimeIP == #{} ->
+            if
+                TimeFailure =:= undefined ->
+                    false = HealthFailedOld,
+                    {Host,
+                     DurationsDown};
+                is_integer(TimeFailure) ->
+                    true = HealthFailedOld,
+                    TimeRestored = cloudi_timestamp:native_monotonic(),
+                    {Host#host{health_failed = false,
+                               health_failed_time = undefined},
+                     cloudi_availability:
+                     durations_store([Hostname],
+                                     {TimeFailure, TimeRestored},
+                                     DurationsDown)}
+            end;
+        true ->
+            {Host#host{health_failed = true},
+             DurationsDown}
+    end.
 
 dns_failure(#host{dns_failed = true} = Host, _) ->
     Host;
@@ -706,12 +835,12 @@ dns_ip_removed_failed(#host{name = Hostname,
     Host.
 
 tcp_failure(#host{name = Hostname,
-                  tcp_failed_count = TCPFailedCount,
-                  tcp_failed_time = TCPFailedTime,
-                  tcp_failed_time_ip = TCPFailedTimeIP,
+                  health_failed_count = HealthFailedCount,
+                  health_failed_time = HealthFailedTime,
+                  health_failed_time_ip = HealthFailedTimeIP,
                   tcp_failure = TCPFailure} = Host,
             IP, Port, Reason, Timeout) ->
-    case maps:is_key(IP, TCPFailedTimeIP) of
+    case maps:is_key(IP, HealthFailedTimeIP) of
         true ->
             Host;
         false ->
@@ -732,30 +861,31 @@ tcp_failure(#host{name = Hostname,
                 is_function(TCPFailure) ->
                     ok = TCPFailure(Hostname, IP, Port, Reason)
             end,
-            {TCPFailedCountNew,
-             TCPFailedTimeNew} = if
-                TCPFailedTime =:= undefined ->
+            {HealthFailedCountNew,
+             HealthFailedTimeNew} = if
+                HealthFailedTime =:= undefined ->
                     % first ip address to fail recently
-                    {TCPFailedCount + 1,
+                    {HealthFailedCount + 1,
                      TimeFailure};
-                is_integer(TCPFailedTime) ->
-                    {TCPFailedCount,
-                     TCPFailedTime}
+                is_integer(HealthFailedTime) ->
+                    {HealthFailedCount,
+                     HealthFailedTime}
             end,
-            TCPFailedTimeIPNew = maps:put(IP, TimeFailure, TCPFailedTimeIP),
-            Host#host{tcp_failed_count = TCPFailedCountNew,
-                      tcp_failed_time = TCPFailedTimeNew,
-                      tcp_failed_time_ip = TCPFailedTimeIPNew}
+            HealthFailedTimeIPNew = maps:put(IP, TimeFailure,
+                                             HealthFailedTimeIP),
+            Host#host{health_failed_count = HealthFailedCountNew,
+                      health_failed_time = HealthFailedTimeNew,
+                      health_failed_time_ip = HealthFailedTimeIPNew}
     end.
 
 tcp_restored(#host{name = Hostname,
-                   tcp_failed_time_ip = TCPFailedTimeIP,
+                   health_failed_time_ip = HealthFailedTimeIP,
                    tcp_restored = TCPRestored} = Host,
              IP, Port) ->
-    case maps:take(IP, TCPFailedTimeIP) of
+    case maps:take(IP, HealthFailedTimeIP) of
         error ->
             Host;
-        {TimeFailure, TCPFailedTimeIPNew} ->
+        {TimeFailure, HealthFailedTimeIPNew} ->
             % executed for each ip address restored
             TimeRestored = cloudi_timestamp:native_monotonic(),
             NanoSeconds = cloudi_timestamp:convert(TimeRestored - TimeFailure,
@@ -770,7 +900,68 @@ tcp_restored(#host{name = Hostname,
                     ok = TCPRestored(Hostname, IP, Port,
                                      TimeFailure, TimeRestored)
             end,
-            Host#host{tcp_failed_time_ip = TCPFailedTimeIPNew}
+            Host#host{health_failed_time_ip = HealthFailedTimeIPNew}
+    end.
+
+ping_failure(#host{name = Hostname,
+                   health_failed_count = HealthFailedCount,
+                   health_failed_time = HealthFailedTime,
+                   health_failed_time_ip = HealthFailedTimeIP,
+                   ping_failure = PingFailure} = Host,
+             IP, Reason) ->
+    case maps:is_key(IP, HealthFailedTimeIP) of
+        true ->
+            Host;
+        false ->
+            % executed for each ip address failure
+            TimeFailure = cloudi_timestamp:native_monotonic(),
+            ?LOG_ERROR("\"~s\" ping failure: ~s failed: ~s",
+                       [Hostname, inet:ntoa(IP), Reason]),
+            if
+                PingFailure =:= undefined ->
+                    ok;
+                is_function(PingFailure) ->
+                    ok = PingFailure(Hostname, IP, Reason)
+            end,
+            {HealthFailedCountNew,
+             HealthFailedTimeNew} = if
+                HealthFailedTime =:= undefined ->
+                    % first ip address to fail recently
+                    {HealthFailedCount + 1,
+                     TimeFailure};
+                is_integer(HealthFailedTime) ->
+                    {HealthFailedCount,
+                     HealthFailedTime}
+            end,
+            HealthFailedTimeIPNew = maps:put(IP, TimeFailure,
+                                             HealthFailedTimeIP),
+            Host#host{health_failed_count = HealthFailedCountNew,
+                      health_failed_time = HealthFailedTimeNew,
+                      health_failed_time_ip = HealthFailedTimeIPNew}
+    end.
+
+ping_restored(#host{name = Hostname,
+                    health_failed_time_ip = HealthFailedTimeIP,
+                    ping_restored = PingRestored} = Host,
+              IP) ->
+    case maps:take(IP, HealthFailedTimeIP) of
+        error ->
+            Host;
+        {TimeFailure, HealthFailedTimeIPNew} ->
+            % executed for each ip address restored
+            TimeRestored = cloudi_timestamp:native_monotonic(),
+            NanoSeconds = cloudi_timestamp:convert(TimeRestored - TimeFailure,
+                                                   native, nanosecond),
+            ?LOG_ERROR("\"~s\" ping restored: ~s after ~s",
+                       [Hostname, inet:ntoa(IP),
+                        cloudi_timestamp:nanoseconds_to_string(NanoSeconds)]),
+            if
+                PingRestored =:= undefined ->
+                    ok;
+                is_function(PingRestored) ->
+                    ok = PingRestored(Hostname, IP, TimeFailure, TimeRestored)
+            end,
+            Host#host{health_failed_time_ip = HealthFailedTimeIPNew}
     end.
 
 hosts_list(Hosts, DurationsDown) ->
@@ -785,15 +976,17 @@ hosts_list(Hosts, DurationsDown) ->
                                   ipv4_allowed = IPv4Allowed,
                                   ipv6 = IPv6,
                                   ipv6_allowed = IPv6Allowed,
+                                  health = Health,
                                   port = Port,
                                   interval = Interval,
                                   start_time = TimeStart,
                                   dns_failed = DNSFailed,
                                   dns_failed_time = DNSFailedTime,
-                                  tcp_failed = TCPFailed,
-                                  tcp_failed_count = TCPFailedCount,
-                                  tcp_failed_time = TimeFailure,
-                                  tcp_failed_time_ip = TCPFailedTimeIP}, L) ->
+                                  health_failed = HealthFailed,
+                                  health_failed_count = HealthFailedCount,
+                                  health_failed_time = TimeFailure,
+                                  health_failed_time_ip = HealthFailedTimeIP},
+                            L) ->
         DurationsDownTmp = if
             TimeFailure =:= undefined ->
                 DurationsDown;
@@ -803,14 +996,15 @@ hosts_list(Hosts, DurationsDown) ->
                                 {TimeFailure, TimeNow},
                                 DurationsDown)
         end,
-        HostInfo0 = [{tcp_failed, TCPFailed},
-                     {tcp_failed_time,
-                      hosts_list_tcp_failed_time_ips(TCPFailedTimeIP,
-                                                     TimeOffset)} |
+        HostInfo0 = [{health, Health},
+                     {health_failed, HealthFailed},
+                     {health_failed_time,
+                      hosts_list_health_failed_time_ips(HealthFailedTimeIP,
+                                                        TimeOffset)} |
                      hosts_list_status(TimeNow,
                                        TimeDayStart, TimeWeekStart,
                                        TimeMonthStart, TimeYearStart,
-                                       TimeStart, TCPFailedCount,
+                                       TimeStart, HealthFailedCount,
                                        cloudi_availability:
                                        durations_state(Hostname,
                                                        DurationsDownTmp))],
@@ -826,20 +1020,25 @@ hosts_list(Hosts, DurationsDown) ->
                   microseconds_epoch_to_string(DNSFailedMicroSeconds)} |
                  HostInfo0]
         end,
-        HostInfo2 = [{port, Port},
-                     {interval, Interval},
+        HostInfo2 = [{interval, Interval},
                      {dns_failed, DNSFailed} | HostInfo1],
         HostInfo3 = if
-            IPv6Allowed =:= true ->
-                [{ipv6, [inet:ntoa(IP) || IP <- IPv6]} | HostInfo2];
-            IPv6Allowed =:= false ->
+            Health =:= tcp ->
+                [{port, Port} | HostInfo2];
+            Health =:= ping ->
                 HostInfo2
+        end,
+        HostInfo4 = if
+            IPv6Allowed =:= true ->
+                [{ipv6, [inet:ntoa(IP) || IP <- IPv6]} | HostInfo3];
+            IPv6Allowed =:= false ->
+                HostInfo3
         end,
         HostInfoN = if
             IPv4Allowed =:= true ->
-                [{ipv4, [inet:ntoa(IP) || IP <- IPv4]} | HostInfo3];
+                [{ipv4, [inet:ntoa(IP) || IP <- IPv4]} | HostInfo4];
             IPv4Allowed =:= false ->
-                HostInfo3
+                HostInfo4
         end,
         [{Hostname, HostInfoN} | L]
     end, [], Hosts).
@@ -957,7 +1156,7 @@ hosts_list_status(TimeNow,
     [{tracked, Tracked},
      {tracked_failures, erlang:integer_to_list(TCPFailedCount)} | StatusN].
 
-hosts_list_tcp_failed_time_ips(TCPFailureTimeIP, TimeOffset) ->
+hosts_list_health_failed_time_ips(HealthFailedTimeIP, TimeOffset) ->
     maps:fold(fun(IP, TimeFailure, L) ->
         MicroSeconds = cloudi_timestamp:
                        convert(TimeFailure + TimeOffset,
@@ -966,7 +1165,7 @@ hosts_list_tcp_failed_time_ips(TCPFailureTimeIP, TimeOffset) ->
           {time,
            cloudi_timestamp:
            microseconds_epoch_to_string(MicroSeconds)}] | L]
-    end, [], TCPFailureTimeIP).
+    end, [], HealthFailedTimeIP).
 
 convert_term_to_erlang(Result) ->
     convert_term_to_erlang_string(Result).
