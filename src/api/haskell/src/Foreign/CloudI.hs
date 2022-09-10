@@ -79,7 +79,7 @@ module Foreign.CloudI
 
 import Prelude hiding (init,length,(<>))
 import Data.Bits (shiftL,(.|.))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust,fromMaybe)
 import Data.Typeable (Typeable)
 import qualified Control.Exception as Exception
 import qualified Control.Concurrent as Concurrent
@@ -1175,17 +1175,17 @@ recv api0@Instance.T{
     (bufferRecvHeader, bufferRecvHeaderSize) <- recvBuffer
         bufferRecv bufferRecvSize 4 socketHandle bufferSize
     let header0 = Builder.toLazyByteString bufferRecvHeader
-        Just (byte0, header1) = LazyByteString.uncons header0
-        Just (byte1, header2) = LazyByteString.uncons header1
-        Just (byte2, header3) = LazyByteString.uncons header2
-        Just (byte3, headerRemaining) = LazyByteString.uncons header3
+        (byte0, header1) = fromJust $ LazyByteString.uncons header0
+        (byte1, header2) = fromJust $ LazyByteString.uncons header1
+        (byte2, header3) = fromJust $ LazyByteString.uncons header2
+        (byte3, remaining) = fromJust $ LazyByteString.uncons header3
         total = fromIntegral $
             (fromIntegral byte0 :: Word32) `shiftL` 24 .|.
             (fromIntegral byte1 :: Word32) `shiftL` 16 .|.
             (fromIntegral byte2 :: Word32) `shiftL` 8 .|.
             (fromIntegral byte3 :: Word32) :: Int
     (bufferRecvAll, bufferRecvAllSize) <- recvBuffer
-        (Builder.lazyByteString headerRemaining)
+        (Builder.lazyByteString remaining)
         (bufferRecvHeaderSize - 4) total socketHandle bufferSize
     let bufferRecvAllStr = Builder.toLazyByteString bufferRecvAll
         (bufferRecvData, bufferRecvNew) =

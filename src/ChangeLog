@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-09-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_health_check error_level argument and
+      additional debug log output
+    * Fix Haskell CloudI API 9.x warning
+
 2022-09-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_health_check ping health functionality
