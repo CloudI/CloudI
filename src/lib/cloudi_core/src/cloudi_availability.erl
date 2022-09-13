@@ -382,7 +382,8 @@ durations_sum_with_view([{T0Old, T1} | DurationList], NativeDowntime, View,
 durations_view_incr(I, I, View) ->
     durations_view_incr(I, View);
 durations_view_incr(I0, I1, View) ->
-    durations_view_incr(I0 + 1, I1, durations_view_incr(I0, View)).
+    durations_view_incr((I0 rem tuple_size(View)) + 1, I1,
+                        durations_view_incr(I0, View)).
 
 durations_view_incr(I, View) ->
     C0 = element(I, View),
