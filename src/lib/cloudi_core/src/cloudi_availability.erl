@@ -401,8 +401,9 @@ durations_view_index(year, T, TimeOffset) ->
     % 1/3rd of a month per character
     {{DateYYYY, DateMM, DateDD},
      _} = cloudi_timestamp:datetime_utc(T + TimeOffset),
-    DateMM * 3 + trunc((DateDD - 1) /
-                       (calendar:last_day_of_the_month(DateYYYY, DateMM) / 3));
+    MonthFraction = (DateDD - 1) /
+                    (calendar:last_day_of_the_month(DateYYYY, DateMM) / 3),
+    1 + (DateMM - 1) * 3 + trunc(MonthFraction);
 durations_view_index(month, T, TimeOffset) ->
     % 1 day per character
     {{_, _, DateDD}, _} = cloudi_timestamp:datetime_utc(T + TimeOffset),
@@ -411,11 +412,13 @@ durations_view_index(week, T, TimeOffset) ->
     % 4 hours per character
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, _, _}} = cloudi_timestamp:datetime_utc(T + TimeOffset),
-    (calendar:day_of_the_week(DateYYYY, DateMM, DateDD) - 1) * 6 + TimeHH div 4;
+    % DayOfWeek = 1 for Monday with week starting on Monday (ISO 8601)
+    DayOfWeek = calendar:day_of_the_week(DateYYYY, DateMM, DateDD),
+    1 + (DayOfWeek - 1) * 6 + TimeHH div 4;
 durations_view_index(day, T, TimeOffset) ->
     % 30 minutes per character
     {_, {TimeHH, TimeMM, _}} = cloudi_timestamp:datetime_utc(T + TimeOffset),
-    TimeHH * 2 + TimeMM div 30.
+    1 + TimeHH * 2 + TimeMM div 30.
 
 durations_view_new(TPeriod) ->
     Size = if % not including | character
