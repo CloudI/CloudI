@@ -45,6 +45,7 @@
          durations_store/3,
          durations_store_difference/4,
          durations_sum/2,
+         durations_sum_with_view/5,
          nanoseconds_to_availability_day/1,
          nanoseconds_to_availability_day/3,
          nanoseconds_to_availability_week/1,
@@ -71,6 +72,11 @@
 -type durations_state() ::
     {DurationCount :: non_neg_integer(),
      DurationList :: list(duration())}.
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
 -type durations(Key) ::
     #{Key := durations_state()}.
 -export_type([durations/1]).
@@ -135,6 +141,19 @@ durations_store_difference([_ | _] = KeyList, {_, T1} = Duration,
 durations_sum({DurationCount, DurationList}, T) ->
     durations_sum(DurationList, 0,
                   DurationCount == ?DURATIONS_YEAR_MAX, T).
+
+-spec durations_sum_with_view(durations_state(),
+                              T :: cloudi_timestamp:native_monotonic(),
+                              TNow :: cloudi_timestamp:native_monotonic(),
+                              TPeriod :: year | month | week | day,
+                              TimeOffset :: integer()) ->
+    {boolean(), nanoseconds(), nonempty_string()}.
+
+durations_sum_with_view({DurationCount, DurationList},
+                        T, TNow, TPeriod, TimeOffset) ->
+    durations_sum_with_view(DurationList, 0, durations_view_new(TPeriod),
+                            DurationCount == ?DURATIONS_YEAR_MAX,
+                            T, TNow, TPeriod, TimeOffset).
 
 -spec nanoseconds_to_availability_day(NanoSecondsUptime :: nanoseconds()) ->
     cloudi_service_api:availability().
@@ -312,19 +331,107 @@ duration_clear(DurationList, DurationCount, _) ->
 durations_sum([], NativeDowntime, Approximate, _) ->
     {Approximate,
      cloudi_timestamp:convert(NativeDowntime, native, nanosecond)};
-durations_sum([{T0, T1} | DurationList], NativeDowntime, Approximate, T) ->
-    if
-        T0 >= T ->
-            durations_sum(DurationList, NativeDowntime + (T1 - T0),
-                          Approximate, T);
+durations_sum([{T0Old, T1} | DurationList], NativeDowntime, Approximate, T) ->
+    T0 = if
+        T0Old >= T ->
+            T0Old;
         T1 > T ->
-            durations_sum(DurationList, NativeDowntime + (T1 - T),
-                          Approximate, T);
+            T;
         true ->
+            undefined
+    end,
+    if
+        T0 =:= undefined ->
             % only older entries remain and their presence
             % implies the result is not approximate
-            durations_sum([], NativeDowntime, false, T)
+            durations_sum([], NativeDowntime, false, T);
+        true ->
+            durations_sum(DurationList, NativeDowntime + (T1 - T0),
+                          Approximate, T)
     end.
+
+durations_sum_with_view([], NativeDowntime, View,
+                        Approximate, _, TNow, TPeriod, TimeOffset) ->
+    {Approximate,
+     cloudi_timestamp:convert(NativeDowntime, native, nanosecond),
+     durations_view_to_string(View, TNow, TPeriod, TimeOffset)};
+durations_sum_with_view([{T0Old, T1} | DurationList], NativeDowntime, View,
+                        Approximate, T, TNow, TPeriod, TimeOffset) ->
+    T0 = if
+        T0Old >= T ->
+            T0Old;
+        T1 > T ->
+            T;
+        true ->
+            undefined
+    end,
+    if
+        T0 =:= undefined ->
+            % only older entries remain and their presence
+            % implies the result is not approximate
+            durations_sum_with_view([], NativeDowntime, View,
+                                    false, T, TNow, TPeriod, TimeOffset);
+        true ->
+            I0 = durations_view_index(TPeriod, T0, TimeOffset),
+            I1 = durations_view_index(TPeriod, T1, TimeOffset),
+            durations_sum_with_view(DurationList, NativeDowntime + (T1 - T0),
+                                    durations_view_incr(I0, I1, View),
+                                    Approximate, T, TNow, TPeriod, TimeOffset)
+    end.
+
+durations_view_incr(I, I, View) ->
+    durations_view_incr(I, View);
+durations_view_incr(I0, I1, View) ->
+    durations_view_incr(I0 + 1, I1, durations_view_incr(I0, View)).
+
+durations_view_incr(I, View) ->
+    C0 = element(I, View),
+    CN = if
+        C0 == $  ->
+            $1;
+        C0 == $9; C0 == $X ->
+            $X;
+        C0 >= $1, C0 =< $8 ->
+            C0 + 1
+    end,
+    erlang:setelement(I, View, CN).
+
+durations_view_index(year, T, TimeOffset) ->
+    % 1/3rd of a month per character
+    {{DateYYYY, DateMM, DateDD},
+     _} = cloudi_timestamp:datetime_utc(T + TimeOffset),
+    DateMM * 3 + trunc((DateDD - 1) /
+                       (calendar:last_day_of_the_month(DateYYYY, DateMM) / 3));
+durations_view_index(month, T, TimeOffset) ->
+    % 1 day per character
+    {{_, _, DateDD}, _} = cloudi_timestamp:datetime_utc(T + TimeOffset),
+    DateDD;
+durations_view_index(week, T, TimeOffset) ->
+    % 4 hours per character
+    {{DateYYYY, DateMM, DateDD},
+     {TimeHH, _, _}} = cloudi_timestamp:datetime_utc(T + TimeOffset),
+    (calendar:day_of_the_week(DateYYYY, DateMM, DateDD) - 1) * 6 + TimeHH div 4;
+durations_view_index(day, T, TimeOffset) ->
+    % 30 minutes per character
+    {_, {TimeHH, TimeMM, _}} = cloudi_timestamp:datetime_utc(T + TimeOffset),
+    TimeHH * 2 + TimeMM div 30.
+
+durations_view_new(TPeriod) ->
+    Size = if % not including | character
+        TPeriod =:= year ->
+            36; % 1/3rd of a month per character
+        TPeriod =:= month ->
+            31; % 1 day per character
+        TPeriod =:= week ->
+            42; % 4 hours per character
+        TPeriod =:= day ->
+            48 % 30 minutes per character
+    end,
+    erlang:list_to_tuple(lists:duplicate(Size, $ )).
+
+durations_view_to_string(View, TNow, TPeriod, TimeOffset) ->
+    I = durations_view_index(TPeriod, TNow, TimeOffset),
+    cloudi_lists:insert(I + 1, $|, erlang:tuple_to_list(View)).
 
 availability_to_string(Availability, true) ->
     case availability_to_string(Availability) of

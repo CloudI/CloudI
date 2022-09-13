@@ -1009,12 +1009,12 @@ ping_restored(#host{name = Hostname,
     end.
 
 hosts_list(Hosts, DurationsDown) ->
-    TimeOffset = erlang:time_offset(),
     TimeNow = cloudi_timestamp:native_monotonic(),
     TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
     TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
     TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
+    TimeOffset = erlang:time_offset(),
     cloudi_x_trie:foldr(fun(Hostname,
                             #host{ipv4 = IPv4,
                                   ipv4_allowed = IPv4Allowed,
@@ -1048,6 +1048,7 @@ hosts_list(Hosts, DurationsDown) ->
                      hosts_list_status(TimeNow,
                                        TimeDayStart, TimeWeekStart,
                                        TimeMonthStart, TimeYearStart,
+                                       TimeOffset,
                                        TimeStart, HealthFailedCount,
                                        cloudi_availability:
                                        durations_state(Hostname,
@@ -1089,7 +1090,7 @@ hosts_list(Hosts, DurationsDown) ->
 
 hosts_list_status(TimeNow,
                   TimeDayStart, TimeWeekStart,
-                  TimeMonthStart, TimeYearStart,
+                  TimeMonthStart, TimeYearStart, TimeOffset,
                   TimeStart, TCPFailedCount,
                   DurationsStateDown) ->
     NanoSeconds = cloudi_timestamp:
@@ -1097,21 +1098,37 @@ hosts_list_status(TimeNow,
     Tracked = cloudi_timestamp:
               nanoseconds_to_string(NanoSeconds),
     {ApproximateYearDown,
-     NanoSecondsYearDown} = cloudi_availability:
-                            durations_sum(DurationsStateDown,
-                                          TimeYearStart),
+     NanoSecondsYearDown,
+     ViewYearDown} = cloudi_availability:
+                     durations_sum_with_view(DurationsStateDown,
+                                             TimeYearStart,
+                                             TimeNow,
+                                             year,
+                                             TimeOffset),
     {ApproximateMonthDown,
-     NanoSecondsMonthDown} = cloudi_availability:
-                             durations_sum(DurationsStateDown,
-                                           TimeMonthStart),
+     NanoSecondsMonthDown,
+     ViewMonthDown} = cloudi_availability:
+                      durations_sum_with_view(DurationsStateDown,
+                                              TimeMonthStart,
+                                              TimeNow,
+                                              month,
+                                              TimeOffset),
     {ApproximateWeekDown,
-     NanoSecondsWeekDown} = cloudi_availability:
-                            durations_sum(DurationsStateDown,
-                                          TimeWeekStart),
+     NanoSecondsWeekDown,
+     ViewWeekDown} = cloudi_availability:
+                     durations_sum_with_view(DurationsStateDown,
+                                             TimeWeekStart,
+                                             TimeNow,
+                                             week,
+                                             TimeOffset),
     {ApproximateDayDown,
-     NanoSecondsDayDown} = cloudi_availability:
-                           durations_sum(DurationsStateDown,
-                                         TimeDayStart),
+     NanoSecondsDayDown,
+     ViewDayDown} = cloudi_availability:
+                    durations_sum_with_view(DurationsStateDown,
+                                            TimeDayStart,
+                                            TimeNow,
+                                            day,
+                                            TimeOffset),
     Status0 = [],
     Status1 = case cloudi_availability:
                    nanoseconds_to_availability_year(NanoSeconds,
@@ -1148,54 +1165,90 @@ hosts_list_status(TimeNow,
                 nanoseconds_to_availability_day(NanoSeconds,
                                                 ApproximateDayDown,
                                                 NanoSecondsDayDown)} | Status3],
+    DowntimeYear = TimeStart =< TimeMonthStart andalso
+                   NanoSecondsYearDown > 0,
+    DowntimeMonth = TimeStart =< TimeWeekStart andalso
+                    (NanoSecondsMonthDown > 0 orelse
+                     NanoSecondsYearDown > 0),
+    DowntimeWeek = TimeStart =< TimeDayStart andalso
+                   (NanoSecondsWeekDown > 0 orelse
+                    NanoSecondsMonthDown > 0 orelse
+                    NanoSecondsYearDown > 0),
+    DowntimeDay = NanoSecondsDayDown > 0 orelse
+                  NanoSecondsWeekDown > 0 orelse
+                  NanoSecondsMonthDown > 0 orelse
+                  NanoSecondsYearDown > 0,
     Status5 = if
-        TimeStart =< TimeMonthStart,
-        NanoSecondsYearDown > 0 ->
+        DowntimeYear =:= true ->
+            [{outages_year,
+              ViewYearDown} |
+             Status4];
+        DowntimeYear =:= false ->
+            Status4
+    end,
+    Status6 = if
+        DowntimeMonth =:= true ->
+            [{outages_month,
+              ViewMonthDown} |
+             Status5];
+        DowntimeMonth =:= false ->
+            Status5
+    end,
+    Status7 = if
+        DowntimeWeek =:= true ->
+            [{outages_week,
+              ViewWeekDown} |
+             Status6];
+        DowntimeWeek =:= false ->
+            Status6
+    end,
+    Status8 = if
+        DowntimeDay =:= true ->
+            [{outages_day,
+              ViewDayDown} |
+             Status7];
+        DowntimeDay =:= false ->
+            Status7
+    end,
+    Status9 = if
+        DowntimeYear =:= true ->
             [{downtime_year,
               cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsYearDown,
                                        ApproximateYearDown)} |
-             Status4];
-        true ->
-            Status4
+             Status8];
+        DowntimeYear =:= false ->
+            Status8
     end,
-    Status6 = if
-        TimeStart =< TimeWeekStart,
-        NanoSecondsMonthDown > 0 orelse
-        NanoSecondsYearDown > 0 ->
+    Status10 = if
+        DowntimeMonth =:= true ->
             [{downtime_month,
               cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsMonthDown,
                                        ApproximateMonthDown)} |
-             Status5];
-        true ->
-            Status5
+             Status9];
+        DowntimeMonth =:= false ->
+            Status9
     end,
-    Status7 = if
-        TimeStart =< TimeDayStart,
-        NanoSecondsWeekDown > 0 orelse
-        NanoSecondsMonthDown > 0 orelse
-        NanoSecondsYearDown > 0 ->
+    Status11 = if
+        DowntimeWeek =:= true ->
             [{downtime_week,
               cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsWeekDown,
                                        ApproximateWeekDown)} |
-             Status6];
-        true ->
-            Status6
+             Status10];
+        DowntimeWeek =:= false ->
+            Status10
     end,
     StatusN = if
-        NanoSecondsDayDown > 0 orelse
-        NanoSecondsWeekDown > 0 orelse
-        NanoSecondsMonthDown > 0 orelse
-        NanoSecondsYearDown > 0 ->
+        DowntimeDay =:= true ->
             [{downtime_day,
               cloudi_availability:
               nanoseconds_to_string_gt(NanoSecondsDayDown,
                                        ApproximateDayDown)} |
-             Status7];
-        true ->
-            Status7
+             Status11];
+        DowntimeDay =:= false ->
+            Status11
     end,
     [{tracked, Tracked},
      {tracked_failures, erlang:integer_to_list(TCPFailedCount)} | StatusN].

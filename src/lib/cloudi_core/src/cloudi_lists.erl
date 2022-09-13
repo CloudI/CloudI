@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2009-2022 Michael Truog
+%%% @version 2.0.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_lists).
@@ -40,6 +40,7 @@
 -export([delete_all/2,
          delete_checked/2,
          index/2,
+         insert/3,
          iodata_to_list/1,
          itera/3,
          itera2/4,
@@ -107,6 +108,28 @@ index(Item, [Item | _], I) ->
     I;
 index(Item, [_ | T], I) ->
     index(Item, T, I + 1).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Insert the item into the list based on the provided index.===
+%% The integer index is 1-based.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec insert(Index :: pos_integer(),
+             Item :: any(),
+             L :: list()) ->
+    nonempty_list().
+
+insert(Index, Item, L) when Index >= 1 ->
+    insert(L, 1, Index, Item).
+
+insert([], _, _, Item) ->
+    [Item];
+insert(L, Index, Index, Item) ->
+    [Item | L];
+insert([H | T], I, Index, Item) ->
+    [H | insert(T, I + 1, Index, Item)].
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -281,6 +304,7 @@ module_test_() ->
         {"delete_all tests", ?_assertOk(t_delete_all())},
         {"delete_checked tests", ?_assertOk(t_delete_checked())},
         {"index tests", ?_assertOk(t_index())},
+        {"insert tests", ?_assertOk(t_insert())},
         {"iodata_to_list tests", ?_assertOk(t_iodata_to_list())},
         {"itera tests", ?_assertOk(t_itera())},
         {"itera2 tests", ?_assertOk(t_itera2())},
@@ -302,6 +326,12 @@ t_delete_checked() ->
 t_index() ->
     4 = index(d, [a, b, c, d, e]),
     undefined = index(f, [a, b, c, d, e]),
+    ok.
+
+t_insert() ->
+    [a, b, c] = insert(1, a, [b, c]),
+    [a, b, c, d, e] = insert(4, d, [a, b, c, e]),
+    [a, b, c, d, e, f] = insert(6, f, [a, b, c, d, e]),
     ok.
 
 t_iodata_to_list() ->
