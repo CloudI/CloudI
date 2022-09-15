@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-09-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve outages text visual representation accuracy
+      for the CloudI Service API services_status response and
+      cloudi_service_health_check hosts information
+
 2022-09-12 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add outages text visual representation to the CloudI Service API

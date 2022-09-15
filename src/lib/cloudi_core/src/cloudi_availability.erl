@@ -151,9 +151,10 @@ durations_sum({DurationCount, DurationList}, T) ->
 
 durations_sum_with_view({DurationCount, DurationList},
                         T, TNow, TPeriod, TimeOffset) ->
-    durations_sum_with_view(DurationList, 0, durations_view_new(TPeriod),
+    {Tv, View} = durations_view_new(TNow, TPeriod, TimeOffset),
+    durations_sum_with_view(DurationList, 0,
                             DurationCount == ?DURATIONS_YEAR_MAX,
-                            T, TNow, TPeriod, TimeOffset).
+                            View, Tv, T, TNow, TPeriod, TimeOffset).
 
 -spec nanoseconds_to_availability_day(NanoSecondsUptime :: nanoseconds()) ->
     cloudi_service_api:availability().
@@ -332,52 +333,58 @@ durations_sum([], NativeDowntime, Approximate, _) ->
     {Approximate,
      cloudi_timestamp:convert(NativeDowntime, native, nanosecond)};
 durations_sum([{T0Old, T1} | DurationList], NativeDowntime, Approximate, T) ->
-    T0 = if
-        T0Old >= T ->
-            T0Old;
-        T1 > T ->
-            T;
-        true ->
-            undefined
-    end,
+    T0 = duration_t0(T0Old, T1, T),
     if
         T0 =:= undefined ->
             % only older entries remain and their presence
             % implies the result is not approximate
             durations_sum([], NativeDowntime, false, T);
-        true ->
-            durations_sum(DurationList, NativeDowntime + (T1 - T0),
-                          Approximate, T)
+        is_integer(T0) ->
+            durations_sum(DurationList,
+                          NativeDowntime + (T1 - T0), Approximate, T)
     end.
 
-durations_sum_with_view([], NativeDowntime, View,
-                        Approximate, _, TNow, TPeriod, TimeOffset) ->
+durations_sum_with_view([], NativeDowntime, Approximate,
+                        View, _, _, TNow, TPeriod, TimeOffset) ->
     {Approximate,
      cloudi_timestamp:convert(NativeDowntime, native, nanosecond),
      durations_view_to_string(View, TNow, TPeriod, TimeOffset)};
-durations_sum_with_view([{T0Old, T1} | DurationList], NativeDowntime, View,
-                        Approximate, T, TNow, TPeriod, TimeOffset) ->
-    T0 = if
-        T0Old >= T ->
-            T0Old;
-        T1 > T ->
-            T;
-        true ->
-            undefined
-    end,
+durations_sum_with_view([{T0Old, T1} | DurationList],
+                        NativeDowntime, Approximate,
+                        View, Tv, T, TNow, TPeriod, TimeOffset) ->
+    T0 = duration_t0(T0Old, T1, T),
     if
         T0 =:= undefined ->
             % only older entries remain and their presence
             % implies the result is not approximate
-            durations_sum_with_view([], NativeDowntime, View,
-                                    false, T, TNow, TPeriod, TimeOffset);
-        true ->
-            I0 = durations_view_index(TPeriod, T0, TimeOffset),
-            I1 = durations_view_index(TPeriod, T1, TimeOffset),
-            durations_sum_with_view(DurationList, NativeDowntime + (T1 - T0),
-                                    durations_view_incr(I0, I1, View),
-                                    Approximate, T, TNow, TPeriod, TimeOffset)
+            durations_sum_with_view([], NativeDowntime, false,
+                                    View, Tv, T, TNow, TPeriod, TimeOffset);
+        is_integer(T0) ->
+            Tv0 = duration_t0(T0Old, T1, Tv),
+            ViewNew = if
+                Tv0 =:= undefined ->
+                    % do not put an old duration in the current view character
+                    View;
+                is_integer(Tv0) ->
+                    durations_view_incr(durations_view_index(TPeriod, Tv0,
+                                                             TimeOffset),
+                                        durations_view_index(TPeriod, T1,
+                                                             TimeOffset),
+                                        View)
+            end,
+            durations_sum_with_view(DurationList,
+                                    NativeDowntime + (T1 - T0), Approximate,
+                                    ViewNew, Tv, T, TNow, TPeriod, TimeOffset)
     end.
+
+duration_t0(T0, _, T)
+    when T0 >= T ->
+    T0;
+duration_t0(_, T1, T)
+    when T1 > T ->
+    T;
+duration_t0(_, _, _) ->
+    undefined.
 
 durations_view_incr(I, I, View) ->
     durations_view_incr(I, View);
@@ -420,18 +427,27 @@ durations_view_index(day, T, TimeOffset) ->
     {_, {TimeHH, TimeMM, _}} = cloudi_timestamp:datetime_utc(T + TimeOffset),
     1 + TimeHH * 2 + TimeMM div 30.
 
-durations_view_new(TPeriod) ->
-    Size = if % not including | character
+durations_view_new(TNow, TPeriod, TimeOffset) ->
+    % Size does not include the | character
+    {Size,
+     TCharacter} = if
         TPeriod =:= year ->
-            36; % 1/3rd of a month per character
+            {36,
+             ?NATIVE_TIME_IN_MONTH div 3}; % 1/3rd of a month per character
         TPeriod =:= month ->
-            31; % 1 day per character
+            {31,
+             ?NATIVE_TIME_IN_DAY}; % 1 day per character
         TPeriod =:= week ->
-            42; % 4 hours per character
+            {42,
+             ?NATIVE_TIME_IN_DAY div 6}; % 4 hours per character
         TPeriod =:= day ->
-            48 % 30 minutes per character
+            {48,
+             ?NATIVE_TIME_IN_DAY div 48} % 30 minutes per character
     end,
-    erlang:list_to_tuple(lists:duplicate(Size, $ )).
+    % TStart is the beginning of the current character in the view
+    TStart = ((TNow + TimeOffset) div TCharacter) * TCharacter - TimeOffset,
+    {TStart - (Size - 1) * TCharacter,
+     erlang:list_to_tuple(lists:duplicate(Size, $ ))}.
 
 durations_view_to_string(View, TNow, TPeriod, TimeOffset) ->
     I = durations_view_index(TPeriod, TNow, TimeOffset),
