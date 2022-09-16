@@ -4,6 +4,18 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==Quick Random Number Generation With Cached Data==
+%%% Use this module for data from crypto:strong_rand_bytes/1 while avoiding
+%%% the high latency normally associated with crypto:strong_rand_bytes/1
+%%% usage.  Data is cached to minimize the latency from each
+%%% crypto:strong_rand_bytes/1 function call.
+%%%
+%%% The cache_size option may be provided to either the init/1 function or
+%%% the new/1 function to adjust the amount of data cached.  The cache_size
+%%% value should vary based on the amount of random data consumed for a
+%%% single function call and can be set based on higher-level system testing.
+%%% If the cache_size option is not provided, the default set in the
+%%% quickrand Erlang/OTP application env cache_size configuration parameter
+%%% is used (64 KB is the default setting).
 %%% @end
 %%%
 %%% MIT License

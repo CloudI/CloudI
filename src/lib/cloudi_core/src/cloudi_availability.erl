@@ -445,7 +445,7 @@ durations_view_new(TNow, TPeriod, TimeOffset) ->
              ?NATIVE_TIME_IN_DAY div 48} % 30 minutes per character
     end,
     % TStart is the beginning of the current character in the view
-    TStart = ((TNow + TimeOffset) div TCharacter) * TCharacter - TimeOffset,
+    TStart = TNow - abs(TNow + TimeOffset) rem TCharacter,
     {TStart - (Size - 1) * TCharacter,
      erlang:list_to_tuple(lists:duplicate(Size, $ ))}.
 

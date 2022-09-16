@@ -64,8 +64,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit c30eb6445b784196c424f7754d61b09700cf15a9`
-- `Sat May 14 21:23:56 UTC 2022`
+- `commit 2e82140b30bbf548726f98b836bc469cabcfb075`
+- `Thu Sep 15 03:16:51 UTC 2022`
 - `MIT`
 
 `reltool_util`
@@ -109,8 +109,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
-- `commit 9a3d8f742981900fa276ec3331de1ba7fd545bb2`
-- `Sun May  8 01:31:41 UTC 2022`
+- `commit 1187cf9d7239f93d487c63c4d51b1f508475024c`
+- `Thu Sep 15 03:16:51 UTC 2022`
 - `MIT`
 
 `varpool`
