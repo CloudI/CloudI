@@ -401,7 +401,10 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
     end.
 
 cloudi_service_handle_info({host, Hostname}, State, _Dispatcher) ->
-    {noreply, health_check(Hostname, State)}.
+    {noreply, health_check(Hostname, State)};
+cloudi_service_handle_info({_, inet_getaddrs, _}, State, _Dispatcher) ->
+    % old inet_getaddrs/3 message
+    {noreply, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
@@ -595,8 +598,7 @@ health_check_dns_ipv4(#host{ipv4_allowed = false} = Host, _) ->
 health_check_dns_ipv4(#host{name = Hostname,
                             ipv6_allowed = IPv6Allowed} = Host,
                       Timeout) ->
-    % XXX Erlang/OTP inet:getaddrs/3 is undocumented and fails to timeout
-    case inet:getaddrs(Hostname, inet, Timeout) of
+    case inet_getaddrs(Hostname, inet, Timeout) of
         {ok, IPv4} ->
             {ok, Host#host{ipv4 = lists:usort(IPv4)}};
         {error, nxdomain} when IPv6Allowed =:= true ->
@@ -610,8 +612,7 @@ health_check_dns_ipv6(#host{ipv6_allowed = false} = Host, _) ->
 health_check_dns_ipv6(#host{name = Hostname,
                             ipv4_allowed = IPv4Allowed} = Host,
                       Timeout) ->
-    % XXX Erlang/OTP inet:getaddrs/3 is undocumented and fails to timeout
-    case inet:getaddrs(Hostname, inet6, Timeout) of
+    case inet_getaddrs(Hostname, inet6, Timeout) of
         {ok, IPv6} ->
             {ok, Host#host{ipv6 = lists:usort(IPv6)}};
         {error, nxdomain} when IPv4Allowed =:= true ->
@@ -867,6 +868,25 @@ dns_ip_removed_failed(#host{name = Hostname,
             ok = DNSIPRemovedFailed(Hostname, IP, TimeFailure, TimeRemoved)
     end,
     Host.
+
+inet_getaddrs(Hostname, Family, Timeout) ->
+    % Erlang/OTP inet:getaddrs/3 is undocumented and fails to timeout
+    % (in Erlang/OTP 25.0)
+    % so a temporary process is used here for ensuring a timeout is possible
+    Parent = self(),
+    Pid = erlang:spawn_link(fun() ->
+        Parent ! {self(), inet_getaddrs,
+                  inet:getaddrs(Hostname, Family, Timeout)}
+    end),
+    receive
+        {Pid, inet_getaddrs, Result} ->
+            Result
+    after
+        Timeout ->
+            true = erlang:unlink(Pid),
+            true = erlang:exit(Pid, kill),
+            {error, nxdomain}
+    end.
 
 tcp_failure(#host{name = Hostname,
                   health_failed_count = HealthFailedCount,
