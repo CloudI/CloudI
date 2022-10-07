@@ -793,6 +793,27 @@
               service/0]).
 
 -type bytes_value() :: pos_integer().
+% integer count of outages during a time period as an ASCII byte
+% (`"X"' >= 10 and `"|"' is the cursor marking the current time)
+-type outage_byte() :: $1..$9 | $X | $| | $ .
+% 48 bytes, each represents 30 minutes, with | byte cursor (49 total)
+% first byte time period starts at 00:00 UTC
+% `"                            |                    "'
+-type outages_day_string() ::
+    nonempty_list(outage_byte()).
+% 42 bytes, each represents 4 hours, with | byte cursor (43 total)
+% first byte time period starts on Monday (ISO 8601) at 00:00 UTC
+% `"                         |1                "'
+-type outages_week_string() ::
+    nonempty_list(outage_byte()).
+% 31 bytes, each represents 1 day of a month, with | byte cursor (32 total)
+% `"       |                      1 "'
+-type outages_month_string() ::
+    nonempty_list(outage_byte()).
+% 36 bytes, each represents 1/3rd of a month, with | byte cursor (37 total)
+% `"    1  |                             "'
+-type outages_year_string() ::
+    nonempty_list(outage_byte()).
 % `"99.9999998 %"'
 -type availability() ::
     nonempty_list($0..$9 | $. | $  | $%).
@@ -827,6 +848,11 @@
 -type float_string_ge_0() ::
     nonempty_list($0..$9 | $.).
 -export_type([bytes_value/0,
+              outage_byte/0,
+              outages_day_string/0,
+              outages_week_string/0,
+              outages_month_string/0,
+              outages_year_string/0,
               availability/0,
               availability_approx/0,
               nanoseconds_string/0,
@@ -855,6 +881,10 @@
                   {downtime_week_restarting, nanoseconds_string_approx_gt()} |
                   {downtime_month_restarting, nanoseconds_string_approx_gt()} |
                   {downtime_year_restarting, nanoseconds_string_approx_gt()} |
+                  {outages_day_restarting, outages_day_string()} |
+                  {outages_week_restarting, outages_week_string()} |
+                  {outages_month_restarting, outages_month_string()} |
+                  {outages_year_restarting, outages_year_string()} |
                   {interrupt_day_updating, nanoseconds_string_approx_gt()} |
                   {interrupt_week_updating, nanoseconds_string_approx_gt()} |
                   {interrupt_month_updating, nanoseconds_string_approx_gt()} |
@@ -897,6 +927,10 @@
                   {downtime_week_restarting, nanoseconds_string_approx_gt()} |
                   {downtime_month_restarting, nanoseconds_string_approx_gt()} |
                   {downtime_year_restarting, nanoseconds_string_approx_gt()} |
+                  {outages_day_restarting, outages_day_string()} |
+                  {outages_week_restarting, outages_week_string()} |
+                  {outages_month_restarting, outages_month_string()} |
+                  {outages_year_restarting, outages_year_string()} |
                   {interrupt_day_updating, nanoseconds_string_approx_gt()} |
                   {interrupt_week_updating, nanoseconds_string_approx_gt()} |
                   {interrupt_month_updating, nanoseconds_string_approx_gt()} |
@@ -1140,6 +1174,10 @@
                   {downtime_week_disconnected, nanoseconds_string_approx_gt()} |
                   {downtime_month_disconnected, nanoseconds_string_approx_gt()} |
                   {downtime_year_disconnected, nanoseconds_string_approx_gt()} |
+                  {outages_day_disconnected, outages_day_string()} |
+                  {outages_week_disconnected, outages_week_string()} |
+                  {outages_month_disconnected, outages_month_string()} |
+                  {outages_year_disconnected, outages_year_string()} |
                   {availability_day, availability_approx()} |
                   {availability_week, availability_approx()} |
                   {availability_month, availability_approx()} |

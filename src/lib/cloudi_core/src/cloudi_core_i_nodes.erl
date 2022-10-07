@@ -487,16 +487,18 @@ nodes_status(NodesSelection, TimeNow, NodesDownDurations, NodesState,
     TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
     TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
+    TimeOffset = erlang:time_offset(),
     CostDefault = maps:get(default, Cost, undefined),
     nodes_status(NodesSelection, [], TimeNow, TimeDayStart, TimeWeekStart,
-                 TimeMonthStart, TimeYearStart, NodesDownDurations, NodesState,
+                 TimeMonthStart, TimeYearStart, TimeOffset,
+                 NodesDownDurations, NodesState,
                  Cost, CostDefault, CostPrecision).
 
-nodes_status([], StatusList, _, _, _, _, _, _, _, _, _, _) ->
+nodes_status([], StatusList, _, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
 nodes_status([Node | NodesSelection], StatusList, TimeNow,
              TimeDayStart, TimeWeekStart,
-             TimeMonthStart, TimeYearStart,
+             TimeMonthStart, TimeYearStart, TimeOffset,
              NodesDownDurations, NodesState,
              Cost, CostDefault, CostPrecision) ->
     case maps:find(Node, NodesState) of
@@ -520,21 +522,37 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
             Uptime = cloudi_timestamp:
                      nanoseconds_to_string(NanoSeconds),
             {ApproximateYearDisconnect,
-             NanoSecondsYearDisconnect} = cloudi_availability:
-                                          durations_sum(DurationsStateDown,
-                                                        TimeYearStart),
+             NanoSecondsYearDisconnect,
+             ViewYearDisconnect} = cloudi_availability:
+                                   durations_sum_with_view(DurationsStateDown,
+                                                           TimeYearStart,
+                                                           TimeNow,
+                                                           year,
+                                                           TimeOffset),
             {ApproximateMonthDisconnect,
-             NanoSecondsMonthDisconnect} = cloudi_availability:
-                                           durations_sum(DurationsStateDown,
-                                                         TimeMonthStart),
+             NanoSecondsMonthDisconnect,
+             ViewMonthDisconnect} = cloudi_availability:
+                                    durations_sum_with_view(DurationsStateDown,
+                                                            TimeMonthStart,
+                                                            TimeNow,
+                                                            month,
+                                                            TimeOffset),
             {ApproximateWeekDisconnect,
-             NanoSecondsWeekDisconnect} = cloudi_availability:
-                                          durations_sum(DurationsStateDown,
-                                                        TimeWeekStart),
+             NanoSecondsWeekDisconnect,
+             ViewWeekDisconnect} = cloudi_availability:
+                                   durations_sum_with_view(DurationsStateDown,
+                                                           TimeWeekStart,
+                                                           TimeNow,
+                                                           week,
+                                                           TimeOffset),
             {ApproximateDayDisconnect,
-             NanoSecondsDayDisconnect} = cloudi_availability:
-                                         durations_sum(DurationsStateDown,
-                                                       TimeDayStart),
+             NanoSecondsDayDisconnect,
+             ViewDayDisconnect} = cloudi_availability:
+                                  durations_sum_with_view(DurationsStateDown,
+                                                          TimeDayStart,
+                                                          TimeNow,
+                                                          day,
+                                                          TimeOffset),
             Status0 = [],
             Status1 = case cloudi_availability:
                            nanoseconds_to_availability_year(
@@ -575,77 +593,113 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                             NanoSeconds,
                             ApproximateDayDisconnect,
                             NanoSecondsDayDisconnect)} | Status3],
+            DowntimeYearDisconnect = TimeStart =< TimeMonthStart andalso
+                                     NanoSecondsYearDisconnect > 0,
+            DowntimeMonthDisconnect = TimeStart =< TimeWeekStart andalso
+                                      (NanoSecondsMonthDisconnect > 0 orelse
+                                       NanoSecondsYearDisconnect > 0),
+            DowntimeWeekDisconnect = TimeStart =< TimeDayStart andalso
+                                     (NanoSecondsWeekDisconnect > 0 orelse
+                                      NanoSecondsMonthDisconnect > 0 orelse
+                                      NanoSecondsYearDisconnect > 0),
+            DowntimeDayDisconnect = NanoSecondsDayDisconnect > 0 orelse
+                                    NanoSecondsWeekDisconnect > 0 orelse
+                                    NanoSecondsMonthDisconnect > 0 orelse
+                                    NanoSecondsYearDisconnect > 0,
             Status5 = if
-                TimeStart =< TimeMonthStart,
-                NanoSecondsYearDisconnect > 0 ->
+                DowntimeYearDisconnect =:= true ->
+                    [{outages_year_disconnected,
+                      ViewYearDisconnect} |
+                     Status4];
+                DowntimeYearDisconnect =:= false ->
+                    Status4
+            end,
+            Status6 = if
+                DowntimeMonthDisconnect =:= true ->
+                    [{outages_month_disconnected,
+                      ViewMonthDisconnect} |
+                     Status5];
+                DowntimeMonthDisconnect =:= false ->
+                    Status5
+            end,
+            Status7 = if
+                DowntimeWeekDisconnect =:= true ->
+                    [{outages_week_disconnected,
+                      ViewWeekDisconnect} |
+                     Status6];
+                DowntimeWeekDisconnect =:= false ->
+                    Status6
+            end,
+            Status8 = if
+                DowntimeDayDisconnect =:= true ->
+                    [{outages_day_disconnected,
+                      ViewDayDisconnect} |
+                     Status7];
+                DowntimeDayDisconnect =:= false ->
+                    Status7
+            end,
+            Status9 = if
+                DowntimeYearDisconnect =:= true ->
                     [{downtime_year_disconnected,
                       cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsYearDisconnect,
                                                ApproximateYearDisconnect)} |
-                     Status4];
-                true ->
-                    Status4
+                     Status8];
+                DowntimeYearDisconnect =:= false ->
+                    Status8
             end,
-            Status6 = if
-                TimeStart =< TimeWeekStart,
-                NanoSecondsMonthDisconnect > 0 orelse
-                NanoSecondsYearDisconnect > 0 ->
+            Status10 = if
+                DowntimeMonthDisconnect =:= true ->
                     [{downtime_month_disconnected,
                       cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsMonthDisconnect,
                                                ApproximateMonthDisconnect)} |
-                     Status5];
-                true ->
-                    Status5
+                     Status9];
+                DowntimeMonthDisconnect =:= false ->
+                    Status9
             end,
-            Status7 = if
-                TimeStart =< TimeDayStart,
-                NanoSecondsWeekDisconnect > 0 orelse
-                NanoSecondsMonthDisconnect > 0 orelse
-                NanoSecondsYearDisconnect > 0 ->
+            Status11 = if
+                DowntimeWeekDisconnect =:= true ->
                     [{downtime_week_disconnected,
                       cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsWeekDisconnect,
                                                ApproximateWeekDisconnect)} |
-                     Status6];
-                true ->
-                    Status6
+                     Status10];
+                DowntimeWeekDisconnect =:= false ->
+                    Status10
             end,
-            Status8 = if
-                NanoSecondsDayDisconnect > 0 orelse
-                NanoSecondsWeekDisconnect > 0 orelse
-                NanoSecondsMonthDisconnect > 0 orelse
-                NanoSecondsYearDisconnect > 0 ->
+            Status12 = if
+                DowntimeDayDisconnect =:= true ->
                     [{downtime_day_disconnected,
                       cloudi_availability:
                       nanoseconds_to_string_gt(NanoSecondsDayDisconnect,
                                                ApproximateDayDisconnect)} |
-                     Status7];
-                true ->
-                    Status7
+                     Status11];
+                DowntimeDayDisconnect =:= false ->
+                    Status11
             end,
-            Status9 = if
+            Status13 = if
                 LocalNode =:= true ->
-                    Status8;
+                    Status12;
                 LocalNode =:= false ->
                     [{connection, ConnectNode},
                      {tracked_disconnects,
                       erlang:integer_to_list(Disconnects)},
-                     {disconnected, Disconnected} | Status8]
+                     {disconnected, Disconnected} | Status12]
             end,
-            Status10 = node_status_cost(maps:get(Node, Cost, CostDefault),
+            Status14 = node_status_cost(maps:get(Node, Cost, CostDefault),
                                         NanoSeconds, CostPrecision,
-                                        LocalNode, Status9),
+                                        LocalNode, Status13),
             StatusN = if
                 LocalNode =:= true ->
-                    [{uptime, Uptime} | Status10];
+                    [{uptime, Uptime} | Status14];
                 LocalNode =:= false ->
-                    [{tracked, Uptime} | Status10]
+                    [{tracked, Uptime} | Status14]
             end,
             nodes_status(NodesSelection,
                          [{Node, StatusN} | StatusList], TimeNow,
                          TimeDayStart, TimeWeekStart,
-                         TimeMonthStart, TimeYearStart,
+                         TimeMonthStart, TimeYearStart, TimeOffset,
                          NodesDownDurations, NodesState,
                          Cost, CostDefault, CostPrecision);
         error ->

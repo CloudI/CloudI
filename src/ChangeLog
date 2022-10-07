@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2022-10-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add outages text visual representation to the CloudI Service API
+      nodes_status response for the tracked downtime of disconnected nodes
+      (only a local view based on the local connection to a remote node)
+
 2022-09-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update jinterface
