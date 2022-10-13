@@ -1,6 +1,6 @@
 # [CloudI 2.0.5](https://cloudi.org)
 
-[![Build Status](https://app.travis-ci.com/CloudI/CloudI.svg?branch=develop)](https://app.travis-ci.com/CloudI/CloudI) [![CloudI IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.oftc.net/?randomnick=1&channels=cloudi) [![Project Stats](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI)
+[![Build Status](https://app.travis-ci.com/CloudI/CloudI.svg?branch=develop)](https://app.travis-ci.com/CloudI/CloudI) [![Project Status](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI) [![IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.oftc.net/?randomnick=1&channels=cloudi) [![Twitter](https://img.shields.io/twitter/follow/CloudI_org?style=social)](https://twitter.com/intent/follow?screen_name=CloudI_org) [:mailbox: email](https://lists.osdn.me/mailman/listinfo/cloudi-questions)
 
 ## LICENSE
 
