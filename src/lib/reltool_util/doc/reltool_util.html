@@ -14,9 +14,9 @@
    <h3><a name="reltool_Utility_Functions">reltool Utility Functions</a></h3>
    All the functions here are probably considered unorthodox, but
    are useful for runtime usage of applications and releases.
-<p>Copyright © 2013-2020 Michael Truog</p>
+<p>Copyright © 2013-2022 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.1 Nov 26 2020 15:09:40
+<p><b>Version:</b> 2.0.5 Oct 11 2022 19:38:33
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -164,6 +164,7 @@
 <h3 class="function"><a name="application_env-1">application_env/1</a></h3>
 <div class="spec">
 <p><tt>application_env(Application::atom()) -&gt; {ok, [{atom(), any()}]} | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_application's_env_settings.">Get the application's env settings.</a></h4>
   Only get the env settings from the application's .app file.</p>
@@ -171,6 +172,7 @@
 <h3 class="function"><a name="application_loaded-1">application_loaded/1</a></h3>
 <div class="spec">
 <p><tt>application_loaded(Application::atom()) -&gt; {ok, {atom(), string()}} | {error, {not_found, atom()}}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Check_if_an_application_is_currently_loaded.">Check if an application is currently loaded.</a></h4>
 </p>
@@ -178,6 +180,7 @@
 <h3 class="function"><a name="application_modules-1">application_modules/1</a></h3>
 <div class="spec">
 <p><tt>application_modules(Application::atom()) -&gt; {ok, [atom()]} | {error, {modules_missing, atom()}}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Retrieve_a_list_of_application_modules.">Retrieve a list of application modules.</a></h4>
 </p>
@@ -185,6 +188,7 @@
 <h3 class="function"><a name="application_modules-2">application_modules/2</a></h3>
 <div class="spec">
 <p><tt>application_modules(Application::atom(), Options::[{atom(), any()}]) -&gt; {ok, [atom()]} | {error, {modules_missing, atom()}}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Retrieve_a_list_of_application_modules_with_filter_options.">Retrieve a list of application modules with filter options.</a></h4>
   Options can contain {behavior, ModuleName} to list all the modules
@@ -194,6 +198,7 @@
 <h3 class="function"><a name="application_purged-1">application_purged/1</a></h3>
 <div class="spec">
 <p><tt>application_purged(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Purge_a_loaded_application's_modules_and_unload_the_application.">Purge a loaded application's modules and unload the application.</a></h4>
   The application is stopped if it is running, but its dependencies are
@@ -202,6 +207,7 @@
 <h3 class="function"><a name="application_purged-2">application_purged/2</a></h3>
 <div class="spec">
 <p><tt>application_purged(Application::atom(), Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Purge_a_loaded_application's_modules_and_unload_the_application_with_a_specific_timeout.">Purge a loaded application's modules and unload the application with a specific timeout.</a></h4>
   The application is stopped if it is running, but its dependencies are
@@ -210,6 +216,7 @@
 <h3 class="function"><a name="application_remove-1">application_remove/1</a></h3>
 <div class="spec">
 <p><tt>application_remove(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies.">Stop and purge the modules of an application and all of its dependencies.</a></h4>
   Only application dependencies that are not required for other
@@ -218,6 +225,7 @@
 <h3 class="function"><a name="application_remove-2">application_remove/2</a></h3>
 <div class="spec">
 <p><tt>application_remove(Application::atom(), Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies_with_a_timeout.">Stop and purge the modules of an application and all of its dependencies with a timeout.</a></h4>
   Only application dependencies that are not required for other
@@ -226,6 +234,7 @@
 <h3 class="function"><a name="application_remove-3">application_remove/3</a></h3>
 <div class="spec">
 <p><tt>application_remove(Application::atom(), Timeout::pos_integer() | infinity, Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_and_purge_the_modules_of_an_application_and_all_of_its_dependencies_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop and purge the modules of an application and all of its dependencies with a timeout and a list of applications to ignore.</a></h4>
   Only application dependencies that are not required for other
@@ -234,6 +243,7 @@
 <h3 class="function"><a name="application_running-1">application_running/1</a></h3>
 <div class="spec">
 <p><tt>application_running(Application::atom()) -&gt; {ok, {atom(), string()}} | {error, application_controller_timeout | {not_found, atom()}}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Check_if_an_application_is_currently_running.">Check if an application is currently running.</a></h4>
 </p>
@@ -241,6 +251,7 @@
 <h3 class="function"><a name="application_running-2">application_running/2</a></h3>
 <div class="spec">
 <p><tt>application_running(Application::atom(), Timeout::pos_integer() | infinity) -&gt; {ok, {atom(), string()}} | {error, application_controller_timeout | {not_found, atom()}}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Check_if_an_application_is_currently_running_with_a_timeout.">Check if an application is currently running with a timeout.</a></h4>
 </p>
@@ -248,6 +259,7 @@
 <h3 class="function"><a name="application_start-1">application_start/1</a></h3>
 <div class="spec">
 <p><tt>application_start(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>
 </p>
@@ -255,6 +267,7 @@
 <h3 class="function"><a name="application_start-2">application_start/2</a></h3>
 <div class="spec">
 <p><tt>application_start(Application::atom(), Env::[{atom(), any()}]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration.">Start all the dependent applications manually with a specific configuration.</a></h4>
 </p>
@@ -262,6 +275,7 @@
 <h3 class="function"><a name="application_start-3">application_start/3</a></h3>
 <div class="spec">
 <p><tt>application_start(Application::atom(), Env::[{atom(), any()}], Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration_and_timeout.">Start all the dependent applications manually with a specific configuration and timeout.</a></h4>
 </p>
@@ -269,6 +283,7 @@
 <h3 class="function"><a name="application_stop-1">application_stop/1</a></h3>
 <div class="spec">
 <p><tt>application_stop(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_an_application_and_its_dependencies.">Stop an application and its dependencies.</a></h4>
   Only stop dependencies that are not required for other applications.</p>
@@ -276,6 +291,7 @@
 <h3 class="function"><a name="application_stop-2">application_stop/2</a></h3>
 <div class="spec">
 <p><tt>application_stop(Application::atom(), Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_an_application_and_its_dependencies_with_a_list_of_applications_to_ignore.">Stop an application and its dependencies with a list of applications to ignore.</a></h4>
   Only stop dependencies that are not required for other applications.</p>
@@ -283,6 +299,7 @@
 <h3 class="function"><a name="applications_remove-3">applications_remove/3</a></h3>
 <div class="spec">
 <p><tt>applications_remove(Applications::[atom()], Timeout::pos_integer() | infinity, Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_and_purge_the_modules_of_all_applications_and_their_dependencies_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop and purge the modules of all applications and their dependencies with a timeout and a list of applications to ignore.</a></h4>
   Only application dependencies that are not required for other
@@ -291,6 +308,7 @@
 <h3 class="function"><a name="applications_start-1">applications_start/1</a></h3>
 <div class="spec">
 <p><tt>applications_start(Applications::[atom() | {atom(), list()}, ...]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>
 </p>
@@ -298,6 +316,7 @@
 <h3 class="function"><a name="applications_start-2">applications_start/2</a></h3>
 <div class="spec">
 <p><tt>applications_start(Applications::[atom() | {atom(), list()}, ...], Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_all_the_dependent_applications_manually.">Start all the dependent applications manually.</a></h4>
 </p>
@@ -305,6 +324,7 @@
 <h3 class="function"><a name="boot_remove-1">boot_remove/1</a></h3>
 <div class="spec">
 <p><tt>boot_remove(FilePath::string()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_everything_specified_within_a_boot_file.">Stop everything specified within a boot file.</a></h4>
   A boot file is used when first starting the Erlang VM.  This function checks
@@ -319,6 +339,7 @@
 <h3 class="function"><a name="boot_remove-2">boot_remove/2</a></h3>
 <div class="spec">
 <p><tt>boot_remove(FilePath::string(), Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_everything_specified_within_a_boot_file_with_a_timeout.">Stop everything specified within a boot file with a timeout.</a></h4>
   A boot file is used when first starting the Erlang VM.  This function checks
@@ -333,6 +354,7 @@
 <h3 class="function"><a name="boot_remove-3">boot_remove/3</a></h3>
 <div class="spec">
 <p><tt>boot_remove(FilePath::string(), Timeout::pos_integer() | infinity, Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_everything_specified_within_a_boot_file_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop everything specified within a boot file with a timeout and a list of applications to ignore.</a></h4>
   A boot file is used when first starting the Erlang VM.  This function checks
@@ -347,6 +369,7 @@
 <h3 class="function"><a name="boot_start-1">boot_start/1</a></h3>
 <div class="spec">
 <p><tt>boot_start(FilePath::string()) -&gt; {ok, [atom()]} | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_everything_specified_within_a_boot_file.">Start everything specified within a boot file.</a></h4>
   A boot file is used when first starting the Erlang VM.  This function checks
@@ -361,6 +384,7 @@
 <h3 class="function"><a name="config_load-1">config_load/1</a></h3>
 <div class="spec">
 <p><tt>config_load(FilePath::string()) -&gt; {ok, [atom()]} | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Load_a_config_file_from_a_release.">Load a config file from a release.</a></h4>
   All applications with configuration values are loaded if they are not
@@ -369,6 +393,7 @@
 <h3 class="function"><a name="ensure_application_loaded-1">ensure_application_loaded/1</a></h3>
 <div class="spec">
 <p><tt>ensure_application_loaded(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Make_sure_an_application_is_loaded.">Make sure an application is loaded.</a></h4>
 </p>
@@ -376,6 +401,7 @@
 <h3 class="function"><a name="ensure_application_started-1">ensure_application_started/1</a></h3>
 <div class="spec">
 <p><tt>ensure_application_started(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Make_sure_an_application_is_started.">Make sure an application is started.</a></h4>
 </p>
@@ -383,6 +409,7 @@
 <h3 class="function"><a name="ensure_application_stopped-1">ensure_application_stopped/1</a></h3>
 <div class="spec">
 <p><tt>ensure_application_stopped(Application::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Make_sure_an_application_is_stopped.">Make sure an application is stopped.</a></h4>
 </p>
@@ -390,6 +417,7 @@
 <h3 class="function"><a name="is_deprecated-3">is_deprecated/3</a></h3>
 <div class="spec">
 <p><tt>is_deprecated(Module::module(), Function::atom(), Arity::non_neg_integer()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Check_if_a_module_function_is_marked_as_deprecated.">Check if a module function is marked as deprecated.</a></h4>
   The value false will always be returned if the beam file was stripped.</p>
@@ -397,6 +425,7 @@
 <h3 class="function"><a name="is_module_loaded-1">is_module_loaded/1</a></h3>
 <div class="spec">
 <p><tt>is_module_loaded(Module::atom()) -&gt; ok | {error, timeout}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>
 </p>
@@ -404,6 +433,7 @@
 <h3 class="function"><a name="is_module_loaded-2">is_module_loaded/2</a></h3>
 <div class="spec">
 <p><tt>is_module_loaded(Module::atom(), Timeout::non_neg_integer()) -&gt; {ok, non_neg_integer()} | {error, timeout}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>
   Return a new timeout value with the elapsed time subtracted.</p>
@@ -411,6 +441,7 @@
 <h3 class="function"><a name="module_behaviours-1">module_behaviours/1</a></h3>
 <div class="spec">
 <p><tt>module_behaviours(Module::module()) -&gt; [module()]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="List_the_behaviours_used_by_a_module.">List the behaviours used by a module.</a></h4>
   The information will not be present if the beam file was stripped.</p>
@@ -418,6 +449,7 @@
 <h3 class="function"><a name="module_exports-1">module_exports/1</a></h3>
 <div class="spec">
 <p><tt>module_exports(Module::atom()) -&gt; [{atom(), pos_integer()}]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="List_the_exported_functions_of_a_module.">List the exported functions of a module.</a></h4>
 </p>
@@ -425,6 +457,7 @@
 <h3 class="function"><a name="module_load-1">module_load/1</a></h3>
 <div class="spec">
 <p><tt>module_load(Module::atom()) -&gt; ok | {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Load_a_module.">Load a module.</a></h4>
 </p>
@@ -432,6 +465,7 @@
 <h3 class="function"><a name="module_loaded-1">module_loaded/1</a></h3>
 <div class="spec">
 <p><tt>module_loaded(Module::atom()) -&gt; ok | {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Make_sure_a_module_is_loaded.">Make sure a module is loaded.</a></h4>
   If the module is not loaded, attempt to load it.</p>
@@ -439,6 +473,7 @@
 <h3 class="function"><a name="module_purged-1">module_purged/1</a></h3>
 <div class="spec">
 <p><tt>module_purged(Module::atom()) -&gt; ok | {error, timeout}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Make_sure_a_module_is_purged.">Make sure a module is purged.</a></h4>
   If the module is not loaded, ignore it.</p>
@@ -446,6 +481,7 @@
 <h3 class="function"><a name="module_purged-2">module_purged/2</a></h3>
 <div class="spec">
 <p><tt>module_purged(Module::atom(), Timeout::non_neg_integer() | infinity) -&gt; ok | {error, timeout}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Make_sure_a_module_is_purged_with_a_timeout.">Make sure a module is purged with a timeout.</a></h4>
   If the module is not loaded, ignore it.</p>
@@ -453,6 +489,7 @@
 <h3 class="function"><a name="module_reload-1">module_reload/1</a></h3>
 <div class="spec">
 <p><tt>module_reload(Module::atom()) -&gt; ok | {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Reload_a_module.">Reload a module.</a></h4>
 </p>
@@ -460,6 +497,7 @@
 <h3 class="function"><a name="module_unload-1">module_unload/1</a></h3>
 <div class="spec">
 <p><tt>module_unload(Module::atom()) -&gt; ok | {error, not_loaded | not_unloaded}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Unload_a_module.">Unload a module.</a></h4>
 </p>
@@ -467,6 +505,7 @@
 <h3 class="function"><a name="module_version-1">module_version/1</a></h3>
 <div class="spec">
 <p><tt>module_version(Module::atom()) -&gt; [any()]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Provide_the_current_version_of_the_module.">Provide the current version of the module.</a></h4>
   A list is returned with an entry for each use of the -vsn attribute
@@ -477,6 +516,7 @@
 <h3 class="function"><a name="modules_purged-2">modules_purged/2</a></h3>
 <div class="spec">
 <p><tt>modules_purged(Modules::[atom()], Timeout::non_neg_integer() | infinity) -&gt; ok | {error, timeout}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Make_sure_modules_are_purged_with_a_timeout.">Make sure modules are purged with a timeout.</a></h4>
   If a module is not loaded, ignore it.</p>
@@ -484,6 +524,7 @@
 <h3 class="function"><a name="modules_reload-1">modules_reload/1</a></h3>
 <div class="spec">
 <p><tt>modules_reload(Modules::[atom(), ...]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Reload_a_list_of_modules.">Reload a list of modules.</a></h4>
 </p>
@@ -491,6 +532,7 @@
 <h3 class="function"><a name="script_remove-1">script_remove/1</a></h3>
 <div class="spec">
 <p><tt>script_remove(FilePath::string()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_everything_specified_within_a_script_file.">Stop everything specified within a script file.</a></h4>
   A script file is the input used when creating a boot file, which is the
@@ -507,6 +549,7 @@
 <h3 class="function"><a name="script_remove-2">script_remove/2</a></h3>
 <div class="spec">
 <p><tt>script_remove(FilePath::string(), Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_everything_specified_within_a_script_file_with_a_timeout.">Stop everything specified within a script file with a timeout.</a></h4>
   A script file is the input used when creating a boot file, which is the
@@ -523,6 +566,7 @@
 <h3 class="function"><a name="script_remove-3">script_remove/3</a></h3>
 <div class="spec">
 <p><tt>script_remove(FilePath::string(), Timeout::pos_integer() | infinity, Ignore::[atom()]) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Stop_everything_specified_within_a_script_file_with_a_timeout_and_a_list_of_applications_to_ignore.">Stop everything specified within a script file with a timeout and a list of applications to ignore.</a></h4>
   A script file is the input used when creating a boot file, which is the
@@ -539,6 +583,7 @@
 <h3 class="function"><a name="script_start-1">script_start/1</a></h3>
 <div class="spec">
 <p><tt>script_start(FilePath::string()) -&gt; {ok, [atom()]} | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_everything_specified_within_a_script_file.">Start everything specified within a script file.</a></h4>
   A script file is the input used when creating a boot file, which is the

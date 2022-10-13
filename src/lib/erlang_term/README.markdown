@@ -1,7 +1,7 @@
 Erlang Term Info (Memory Consumption)
 =====================================
 
-[![Build Status](https://secure.travis-ci.org/okeuday/erlang_term.png?branch=master)](http://travis-ci.org/okeuday/erlang_term)
+[![Build Status](https://app.travis-ci.com/okeuday/erlang_term.svg?branch=master)](https://app.travis-ci.com/okeuday/erlang_term)
 
 Purpose
 -------

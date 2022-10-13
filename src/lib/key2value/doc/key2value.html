@@ -13,9 +13,9 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Key2Value">Key2Value</a></h3>
    Maintain 2 lookups for 2 separate keys and 1 value.
-<p>Copyright © 2011-2020 Michael Truog</p>
+<p>Copyright © 2011-2022 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.2 May 26 2021 18:41:37
+<p><b>Version:</b> 2.0.5 Oct 11 2022 19:23:05
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -29,7 +29,7 @@
 <h2><a name="types">Data Types</a></h2>
 
 <h3 class="typedecl"><a name="type-dict_proxy">dict_proxy()</a></h3>
-<p><tt>dict_proxy(Key, Value) = <a href="dict.html#type-dict">dict:dict</a>(Key, Value)</tt></p>
+<p><tt>dict_proxy(Key, Value) = <a href="/home/george/organized/work/erlang/stdlib/doc/dict.html#type-dict">dict:dict</a>(Key, Value)</tt></p>
 
 
 <h3 class="typedecl"><a name="type-key1">key1()</a></h3>
@@ -53,24 +53,47 @@
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#erase-3">erase/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#erase1-2">erase1/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#erase2-2">erase2/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#fetch1-2">fetch1/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#fetch2-2">fetch2/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#find1-2">find1/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#find2-2">find2/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#fold1-3">fold1/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#fold2-3">fold2/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#is_key1-2">is_key1/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#is_key2-2">is_key2/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#new-0">new/0</a></td><td></td></tr>
-<tr><td valign="top"><a href="#new-1">new/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#size1-1">size1/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#size2-1">size2/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#store-4">store/4</a></td><td></td></tr>
-<tr><td valign="top"><a href="#update1-3">update1/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#update2-3">update2/3</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#erase-3">erase/3</a></td><td>
+  <h4><a name="Erase_a_single_value.">Erase a single value.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#erase1-2">erase1/2</a></td><td>
+  <h4><a name="Erase_all_values_with_key1.">Erase all values with key1.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#erase2-2">erase2/2</a></td><td>
+  <h4><a name="Erase_all_values_with_key2.">Erase all values with key2.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#fetch1-2">fetch1/2</a></td><td>
+  <h4><a name="Fetch_a_value_with_key1.">Fetch a value with key1.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#fetch2-2">fetch2/2</a></td><td>
+  <h4><a name="Fetch_a_value_with_key2.">Fetch a value with key2.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#find1-2">find1/2</a></td><td>
+  <h4><a name="Find_a_value_with_key1.">Find a value with key1.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#find2-2">find2/2</a></td><td>
+  <h4><a name="Find_a_value_with_key2.">Find a value with key2.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#fold1-3">fold1/3</a></td><td>
+  <h4><a name="Fold_over_all_values_based_on_key1.">Fold over all values based on key1.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#fold2-3">fold2/3</a></td><td>
+  <h4><a name="Fold_over_all_values_based_on_key2.">Fold over all values based on key2.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_key1-2">is_key1/2</a></td><td>
+  <h4><a name="Check_if_key1_has_at_least_one_value.">Check if key1 has at least one value.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_key2-2">is_key2/2</a></td><td>
+  <h4><a name="Check_if_key2_has_at_least_one_value.">Check if key2 has at least one value.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#map1-3">map1/3</a></td><td>
+  <h4><a name="Map_over_all_key1_values_that_exist.">Map over all key1 values that exist.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#map2-3">map2/3</a></td><td>
+  <h4><a name="Map_over_all_key2_values_that_exist.">Map over all key2 values that exist.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_a_new_lookup.">Create a new lookup.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Create_a_new_lookup_with_a_module_that_provides_a_dict_interface.">Create a new lookup with a module that provides a dict interface.</a></h4>
+  maps is supported, though it does not provide a dict interface.</td></tr>
+<tr><td valign="top"><a href="#size1-1">size1/1</a></td><td>
+  <h4><a name="Size_based_on_key1.">Size based on key1.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#size2-1">size2/1</a></td><td>
+  <h4><a name="Size_based_on_key2.">Size based on key2.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#store-4">store/4</a></td><td>
+  <h4><a name="Store_a_value_with_key1_and_key2.">Store a value with key1 and key2.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update1-3">update1/3</a></td><td>
+  <h4><a name="Update_a_value_that_exists_with_key1.">Update a value that exists with key1.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update2-3">update2/3</a></td><td>
+  <h4><a name="Update_a_value_that_exists_with_key2.">Update a value that exists with key2.</a></h4>.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
@@ -79,109 +102,161 @@
 <div class="spec">
 <p><tt>erase(K1::<a href="#type-key1">key1()</a>, K2::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Erase_a_single_value.">Erase a single value.</a></h4>
+</p>
 
 <h3 class="function"><a name="erase1-2">erase1/2</a></h3>
 <div class="spec">
 <p><tt>erase1(K::<a href="#type-key1">key1()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Erase_all_values_with_key1.">Erase all values with key1.</a></h4>
+</p>
 
 <h3 class="function"><a name="erase2-2">erase2/2</a></h3>
 <div class="spec">
 <p><tt>erase2(K::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Erase_all_values_with_key2.">Erase all values with key2.</a></h4>
+</p>
 
 <h3 class="function"><a name="fetch1-2">fetch1/2</a></h3>
 <div class="spec">
 <p><tt>fetch1(K::<a href="#type-key1">key1()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {list(), any()}</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Fetch_a_value_with_key1.">Fetch a value with key1.</a></h4>
+</p>
 
 <h3 class="function"><a name="fetch2-2">fetch2/2</a></h3>
 <div class="spec">
 <p><tt>fetch2(K::<a href="#type-key2">key2()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {list(), any()}</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Fetch_a_value_with_key2.">Fetch a value with key2.</a></h4>
+</p>
 
 <h3 class="function"><a name="find1-2">find1/2</a></h3>
 <div class="spec">
 <p><tt>find1(K::<a href="#type-key1">key1()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {ok, {list(), any()}} | error</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Find_a_value_with_key1.">Find a value with key1.</a></h4>
+</p>
 
 <h3 class="function"><a name="find2-2">find2/2</a></h3>
 <div class="spec">
 <p><tt>find2(K::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {ok, {list(), any()}} | error</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Find_a_value_with_key2.">Find a value with key2.</a></h4>
+</p>
 
 <h3 class="function"><a name="fold1-3">fold1/3</a></h3>
 <div class="spec">
 <p><tt>fold1(F::fun((<a href="#type-key1">key1()</a>, [<a href="#type-key2">key2()</a>], <a href="#type-value">value()</a>, any()) -&gt; any()), A0::any(), State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; any()</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Fold_over_all_values_based_on_key1.">Fold over all values based on key1.</a></h4>
+</p>
 
 <h3 class="function"><a name="fold2-3">fold2/3</a></h3>
 <div class="spec">
 <p><tt>fold2(F::fun(([<a href="#type-key1">key1()</a>], <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>, any()) -&gt; any()), A0::any(), State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; any()</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Fold_over_all_values_based_on_key2.">Fold over all values based on key2.</a></h4>
+</p>
 
 <h3 class="function"><a name="is_key1-2">is_key1/2</a></h3>
 <div class="spec">
 <p><tt>is_key1(K::<a href="#type-key1">key1()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; boolean()</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Check_if_key1_has_at_least_one_value.">Check if key1 has at least one value.</a></h4>
+</p>
 
 <h3 class="function"><a name="is_key2-2">is_key2/2</a></h3>
 <div class="spec">
 <p><tt>is_key2(K::<a href="#type-key2">key2()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; boolean()</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Check_if_key2_has_at_least_one_value.">Check if key2 has at least one value.</a></h4>
+</p>
+
+<h3 class="function"><a name="map1-3">map1/3</a></h3>
+<div class="spec">
+<p><tt>map1(K1::<a href="#type-key1">key1()</a>, F::fun((<a href="#type-value">value()</a>) -&gt; <a href="#type-value">value()</a>), Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Map_over_all_key1_values_that_exist.">Map over all key1 values that exist.</a></h4>
+</p>
+
+<h3 class="function"><a name="map2-3">map2/3</a></h3>
+<div class="spec">
+<p><tt>map2(K2::<a href="#type-key2">key2()</a>, F::fun((<a href="#type-value">value()</a>) -&gt; <a href="#type-value">value()</a>), Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Map_over_all_key2_values_that_exist.">Map over all key2 values that exist.</a></h4>
+</p>
 
 <h3 class="function"><a name="new-0">new/0</a></h3>
 <div class="spec">
 <p><tt>new() -&gt; <a href="#type-key2value_dict">key2value_dict</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Create_a_new_lookup.">Create a new lookup.</a></h4>
+</p>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
 <p><tt>new(Module::atom()) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Create_a_new_lookup_with_a_module_that_provides_a_dict_interface.">Create a new lookup with a module that provides a dict interface.</a></h4>
+  maps is supported, though it does not provide a dict interface.</p>
 
 <h3 class="function"><a name="size1-1">size1/1</a></h3>
 <div class="spec">
 <p><tt>size1(Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; non_neg_integer()</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Size_based_on_key1.">Size based on key1.</a></h4>
+</p>
 
 <h3 class="function"><a name="size2-1">size2/1</a></h3>
 <div class="spec">
 <p><tt>size2(Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; non_neg_integer()</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Size_based_on_key2.">Size based on key2.</a></h4>
+</p>
 
 <h3 class="function"><a name="store-4">store/4</a></h3>
 <div class="spec">
 <p><tt>store(K1::<a href="#type-key1">key1()</a>, K2::<a href="#type-key2">key2()</a>, V::<a href="#type-value">value()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Store_a_value_with_key1_and_key2.">Store a value with key1 and key2.</a></h4>
+</p>
 
 <h3 class="function"><a name="update1-3">update1/3</a></h3>
 <div class="spec">
 <p><tt>update1(K1::<a href="#type-key1">key1()</a>, F::fun((<a href="#type-value">value()</a>) -&gt; <a href="#type-value">value()</a>), Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Update_a_value_that_exists_with_key1.">Update a value that exists with key1.</a></h4>
+</p>
 
 <h3 class="function"><a name="update2-3">update2/3</a></h3>
 <div class="spec">
 <p><tt>update2(K2::<a href="#type-key2">key2()</a>, F::fun((<a href="#type-value">value()</a>) -&gt; <a href="#type-value">value()</a>), Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Update_a_value_that_exists_with_key2.">Update a value that exists with key2.</a></h4>
+</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>

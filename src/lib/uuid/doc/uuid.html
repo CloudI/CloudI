@@ -27,9 +27,9 @@ methods are provided as specified within the RFC.</p>
    The ordered version 1 variant is not present in the RFC,
    though it is the most standards-compliant way of providing
    timestamp UUID ordering.
-<p>Copyright © 2011-2020 Michael Truog</p>
+<p>Copyright © 2011-2022 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.1 Nov 26 2020 14:44:38
+<p><b>Version:</b> 2.0.5 Oct 11 2022 19:12:17
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -124,8 +124,8 @@ methods are provided as specified within the RFC.</p>
   RAND_bytes within OpenSSL.</td></tr>
 <tr><td valign="top"><a href="#get_v4-1">get_v4/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_v4_urandom-0">get_v4_urandom/0</a></td><td>
-  <h4><a name="Get_a_v4_UUID_(using_Wichmann-Hill_2006).">Get a v4 UUID (using Wichmann-Hill 2006).</a></h4>
-  random_wh06_int:uniform/1 repeats every 2.66e36 (2^121) approx.</td></tr>
+  <h4><a name="Get_a_v4_UUID_(using_a_256-bit_Marsaglia_multiply-with-carry_PRNG).">Get a v4 UUID (using a 256-bit Marsaglia multiply-with-carry PRNG).</a></h4>
+  quickrand:mwc256_128/1 repeats every 5.79e76 (2^255) approx.</td></tr>
 <tr><td valign="top"><a href="#get_v5-1">get_v5/1</a></td><td>
   <h4><a name="Get_a_v5_UUID.">Get a v5 UUID.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_v5-2">get_v5/2</a></td><td>
@@ -179,20 +179,23 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v1-1">get_v1/1</a></h3>
 <div class="spec">
 <p><tt>get_v1(State::<a href="#type-state">state()</a>) -&gt; {<a href="#type-uuid">uuid()</a>, StateNew::<a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_v1_UUID.">Get a v1 UUID.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_v1_datetime-1">get_v1_datetime/1</a></h3>
 <div class="spec">
-<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>) -&gt; <a href="#type-iso8601">iso8601()</a></tt><br></p>
+<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="/home/george/organized/work/erlang/erts/doc/erlang.html#type-timestamp">erlang:timestamp()</a>) -&gt; <a href="#type-iso8601">iso8601()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_an_ISO8601_datetime_in_UTC_from_a_v1_UUID's_time_value.">Get an ISO8601 datetime in UTC from a v1 UUID's time value.</a></h4>
   http://www.w3.org/TR/NOTE-datetime</p>
 
 <h3 class="function"><a name="get_v1_datetime-2">get_v1_datetime/2</a></h3>
 <div class="spec">
-<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>, MicroSecondsOffset::integer()) -&gt; <a href="#type-iso8601">iso8601()</a></tt><br></p>
+<p><tt>get_v1_datetime(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a> | <a href="/home/george/organized/work/erlang/erts/doc/erlang.html#type-timestamp">erlang:timestamp()</a>, MicroSecondsOffset::integer()) -&gt; <a href="#type-iso8601">iso8601()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_an_ISO8601_datetime_in_UTC_from_a_v1_UUID's_time_value_with_an_offset_in_microseconds.">Get an ISO8601 datetime in UTC from a v1 UUID's time value with an offset in microseconds.</a></h4>
   http://www.w3.org/TR/NOTE-datetime</p>
@@ -200,6 +203,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v1_time-0">get_v1_time/0</a></h3>
 <div class="spec">
 <p><tt>get_v1_time() -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
   The result is an integer in microseconds since the UNIX epoch.
@@ -208,6 +212,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v1_time-1">get_v1_time/1</a></h3>
 <div class="spec">
 <p><tt>get_v1_time(Uuid_state::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
   The result is an integer in microseconds since the UNIX epoch.
@@ -216,6 +221,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v3-1">get_v3/1</a></h3>
 <div class="spec">
 <p><tt>get_v3(Data::binary()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_v3_UUID.">Get a v3 UUID.</a></h4>
 </p>
@@ -223,6 +229,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v3-2">get_v3/2</a></h3>
 <div class="spec">
 <p><tt>get_v3(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_v3_UUID_in_a_particular_namespace.">Get a v3 UUID in a particular namespace.</a></h4>
 </p>
@@ -230,6 +237,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v3_compat-1">get_v3_compat/1</a></h3>
 <div class="spec">
 <p><tt>get_v3_compat(Data::binary()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_compatible_v3_UUID.">Get a compatible v3 UUID.</a></h4>
   Do not use all bits from the checksum so that the UUID matches external
@@ -238,6 +246,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v3_compat-2">get_v3_compat/2</a></h3>
 <div class="spec">
 <p><tt>get_v3_compat(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_compatible_v3_UUID_in_a_particular_namespace.">Get a compatible v3 UUID in a particular namespace.</a></h4>
   Do not use all bits from the checksum so that the UUID matches external
@@ -246,6 +255,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v4-0">get_v4/0</a></h3>
 <div class="spec">
 <p><tt>get_v4() -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_v4_UUID_(using_crypto/openssl).">Get a v4 UUID (using crypto/openssl).</a></h4>
   crypto:strong_rand_bytes/1 repeats in the same way as
@@ -254,23 +264,22 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v4-1">get_v4/1</a></h3>
 <div class="spec">
 <p><tt>get_v4(Cache::strong | cached | <a href="deps/quickrand/doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>) -&gt; <a href="#type-uuid">uuid()</a> | {<a href="#type-uuid">uuid()</a>, <a href="deps/quickrand/doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>}</tt><br></p>
+<p> </p>
 </div>
 
 <h3 class="function"><a name="get_v4_urandom-0">get_v4_urandom/0</a></h3>
 <div class="spec">
 <p><tt>get_v4_urandom() -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
-  <h4><a name="Get_a_v4_UUID_(using_Wichmann-Hill_2006).">Get a v4 UUID (using Wichmann-Hill 2006).</a></h4>
-  random_wh06_int:uniform/1 repeats every 2.66e36 (2^121) approx.
-  (see B.A. Wichmann and I.D.Hill, in
-   'Generating good pseudo-random numbers',
-   Computational Statistics and Data Analysis 51 (2006) 1614-1622)
-  a single random_wh06_int:uniform/1 call can provide a maximum of 124 bits
-  (see random_wh06_int.erl for details)</p>
+  <h4><a name="Get_a_v4_UUID_(using_a_256-bit_Marsaglia_multiply-with-carry_PRNG).">Get a v4 UUID (using a 256-bit Marsaglia multiply-with-carry PRNG).</a></h4>
+  quickrand:mwc256_128/1 repeats every 5.79e76 (2^255) approx.
+  (see quickrand.erl for details)</p>
 
 <h3 class="function"><a name="get_v5-1">get_v5/1</a></h3>
 <div class="spec">
 <p><tt>get_v5(Data::binary()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_v5_UUID.">Get a v5 UUID.</a></h4>
 </p>
@@ -278,6 +287,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v5-2">get_v5/2</a></h3>
 <div class="spec">
 <p><tt>get_v5(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_v5_UUID_in_a_particular_namespace.">Get a v5 UUID in a particular namespace.</a></h4>
 </p>
@@ -285,6 +295,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v5_compat-1">get_v5_compat/1</a></h3>
 <div class="spec">
 <p><tt>get_v5_compat(Data::binary()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_compatible_v5_UUID.">Get a compatible v5 UUID.</a></h4>
   Do not use all bits from the checksum so that the UUID matches external
@@ -293,6 +304,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="get_v5_compat-2">get_v5_compat/2</a></h3>
 <div class="spec">
 <p><tt>get_v5_compat(Namespace::dns | url | oid | x500 | binary(), Data::iodata()) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_compatible_v5_UUID_in_a_particular_namespace.">Get a compatible v5 UUID in a particular namespace.</a></h4>
   Do not use all bits from the checksum so that the UUID matches external
@@ -301,6 +313,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="increment-1">increment/1</a></h3>
 <div class="spec">
 <p><tt>increment(Uuid_state::<a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a>) -&gt; <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Increment_the_clock_sequence_of_v1_UUID_state_or_a_UUID.">Increment the clock sequence of v1 UUID state or a UUID.</a></h4>
   Call to increment the clock sequence counter after the system clock has
@@ -311,6 +324,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="is_uuid-1">is_uuid/1</a></h3>
 <div class="spec">
 <p><tt>is_uuid(X1::any()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Is_the_term_a_UUID?">Is the term a UUID?</a></h4>
 </p>
@@ -318,6 +332,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="is_v1-1">is_v1/1</a></h3>
 <div class="spec">
 <p><tt>is_v1(Value::any()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Is_the_binary_a_v1_UUID?">Is the binary a v1 UUID?</a></h4>
 </p>
@@ -325,6 +340,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="is_v3-1">is_v3/1</a></h3>
 <div class="spec">
 <p><tt>is_v3(Value::any()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Is_the_binary_a_v3_UUID?">Is the binary a v3 UUID?</a></h4>
 </p>
@@ -332,6 +348,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="is_v4-1">is_v4/1</a></h3>
 <div class="spec">
 <p><tt>is_v4(Value::any()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Is_the_binary_a_v4_UUID?">Is the binary a v4 UUID?</a></h4>
 </p>
@@ -339,6 +356,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="is_v5-1">is_v5/1</a></h3>
 <div class="spec">
 <p><tt>is_v5(Value::any()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Is_the_binary_a_v5_UUID?">Is the binary a v5 UUID?</a></h4>
 </p>
@@ -346,6 +364,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="mac_address-0">mac_address/0</a></h3>
 <div class="spec">
 <p><tt>mac_address() -&gt; [non_neg_integer(), ...]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Provide_a_usable_network_interface_MAC_address.">Provide a usable network interface MAC address.</a></h4>
 </p>
@@ -353,6 +372,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
 <p><tt>new(Pid::pid()) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation.">Create new UUID state for v1 UUID generation.</a></h4>
 </p>
@@ -360,6 +380,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="new-2">new/2</a></h3>
 <div class="spec">
 <p><tt>new(Pid::pid(), Options::<a href="#type-timestamp_type">timestamp_type()</a> | [{timestamp_type, <a href="#type-timestamp_type">timestamp_type()</a>} | {mac_address, [non_neg_integer()]} | {variant, <a href="#type-v1_variant">v1_variant()</a>}]) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation_using_a_specific_type_of_timestamp.">Create new UUID state for v1 UUID generation using a specific type of timestamp.</a></h4>
   The timestamp can either be based on erlang's adjustment of time
@@ -372,6 +393,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="string_to_uuid-1">string_to_uuid/1</a></h3>
 <div class="spec">
 <p><tt>string_to_uuid(X1::<a href="#type-uuid_string">uuid_string()</a>) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Convert_a_string_representation_to_a_UUID.">Convert a string representation to a UUID.</a></h4>
 </p>
@@ -379,6 +401,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="test-0">test/0</a></h3>
 <div class="spec">
 <p><tt>test() -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Regression_test.">Regression test.</a></h4>
 </p>
@@ -386,6 +409,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="uuid_to_list-1">uuid_to_list/1</a></h3>
 <div class="spec">
 <p><tt>uuid_to_list(X1::<a href="#type-uuid">uuid()</a>) -&gt; [non_neg_integer(), ...]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Convert_a_UUID_to_a_list.">Convert a UUID to a list.</a></h4>
 </p>
@@ -393,6 +417,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="uuid_to_string-1">uuid_to_string/1</a></h3>
 <div class="spec">
 <p><tt>uuid_to_string(Value::<a href="#type-uuid">uuid()</a>) -&gt; <a href="#type-uuid_string_list">uuid_string_list()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Convert_a_UUID_to_a_string_representation.">Convert a UUID to a string representation.</a></h4>
 </p>
@@ -400,6 +425,7 @@ methods are provided as specified within the RFC.</p>
 <h3 class="function"><a name="uuid_to_string-2">uuid_to_string/2</a></h3>
 <div class="spec">
 <p><tt>uuid_to_string(Value::<a href="#type-uuid">uuid()</a>, Option::standard | nodash | list_standard | list_nodash | binary_standard | binary_nodash) -&gt; <a href="#type-uuid_string">uuid_string()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Convert_a_UUID_to_a_string_representation_based_on_an_option.">Convert a UUID to a string representation based on an option.</a></h4>
 </p>

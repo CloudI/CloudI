@@ -1,0 +1,256 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_statistics</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_statistics</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Statistics">CloudI Statistics</a></h3><p>   
+Calculate statistics using the online algorithm.</p>.
+<p>Copyright © 2022 Michael Truog</p>
+
+<p><b>Version:</b> 2.0.5 Oct 11 2022 20:13:40
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Statistics">CloudI Statistics</a></h3><p>   
+Calculate statistics using the online algorithm.</p>
+  
+   <p>Philippe Pébay, Timothy B. Terriberry, Hemanth Kolla, Janine Bennett.   
+Formulas for the Computation of Higher-Order Central Moments.   
+Technical Report SAND2014-17343J, Sandia National Laboratories, 2014.</p>
+  
+   <p>Pébay, Philippe.  Formulas for Robust, One-Pass Parallel Computation of   
+Covariances and Arbitrary-Order Statistical Moments.   
+Technical Report SAND2008-6212, Sandia National Laboratories, 2008.</p>
+  
+   Welford, B. P.. Note on a method for calculating corrected sums of
+   squares and products. Technometrics vol. 4, no. 3, pp. 419–420, 1962.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-describe_distribution">describe_distribution()</a></h3>
+<p><tt>describe_distribution() = normal | uniform | logistic | exponential | gamma_family | log_normal_family | undefined</tt></p>
+
+
+<h3 class="typedecl"><a name="type-describe_kurtosis">describe_kurtosis()</a></h3>
+<p><tt>describe_kurtosis() = leptokurtic | platykurtic | mesokurtic | undefined</tt></p>
+
+
+<h3 class="typedecl"><a name="type-describe_skewness">describe_skewness()</a></h3>
+<p><tt>describe_skewness() = highly_skewed | moderately_skewed | approximately_symmetric | undefined</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #statistics{n = non_neg_integer(), mean = float(), m2 = float(), m3 = float(), m4 = float(), minimum = float(), maximum = float(), cached_kurtosis = float() | undefined, cached_skewness = float() | undefined, cached_stddev = float() | undefined, cached_variance = float() | undefined}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add-2">add/2</a></td><td>
+  <h4><a name="Add_a_sample_for_computing_statistics.">Add a sample for computing statistics.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#add_from_list-2">add_from_list/2</a></td><td>
+  <h4><a name="Add_samples_from_a_list_for_computing_statistics.">Add samples from a list for computing statistics.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#add_from_list-3">add_from_list/3</a></td><td>
+  <h4><a name="Add_samples_from_a_function_mapped_on_a_list_for_computing_statistics.">Add samples from a function mapped on a list for computing statistics.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#count-1">count/1</a></td><td>
+  <h4><a name="Count_of_samples_previously_added.">Count of samples previously added.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#describe_distribution-1">describe_distribution/1</a></td><td>
+  <h4><a name="Describe_the_distribution_with_a_guess_about_its_shape.">Describe the distribution with a guess about its shape.</a></h4>
+  Only use if the sample count is large enough to cover the distribution.</td></tr>
+<tr><td valign="top"><a href="#describe_kurtosis-1">describe_kurtosis/1</a></td><td>
+  <h4><a name="Describe_the_excess_kurtosis_value.">Describe the excess kurtosis value.</a></h4>
+  Only use if the sample count is large enough to cover the distribution.</td></tr>
+<tr><td valign="top"><a href="#describe_skewness-1">describe_skewness/1</a></td><td>
+  <h4><a name="Describe_the_skewness_value.">Describe the skewness value.</a></h4><p>  
+Only use if the sample count is large enough to cover the distribution.</p>
+ 
+  (based on)
+  Bulmer, M.</td></tr>
+<tr><td valign="top"><a href="#kurtosis-1">kurtosis/1</a></td><td>
+  <h4><a name="Excess_kurtosis_of_samples_previously_added.">Excess kurtosis of samples previously added.</a></h4>
+  The minimum value returned is -2.0 (Fisher’s definition).</td></tr>
+<tr><td valign="top"><a href="#maximum-1">maximum/1</a></td><td>
+  <h4><a name="Maximum_of_samples_previously_added.">Maximum of samples previously added.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#mean-1">mean/1</a></td><td>
+  <h4><a name="Mean_of_samples_previously_added.">Mean of samples previously added.</a></h4>
+  The value returned is the arithmetic mean.</td></tr>
+<tr><td valign="top"><a href="#merge-2">merge/2</a></td><td>
+  <h4><a name="Merge_statistics_state.">Merge statistics state.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#minimum-1">minimum/1</a></td><td>
+  <h4><a name="Minimum_of_samples_previously_added.">Minimum of samples previously added.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_statistics_state.">Create statistics state.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#normal_from_log_normal-1">normal_from_log_normal/1</a></td><td>
+  <h4><a name="Convert_the_Log-normal_distribution_mean_and_standard_deviation_to_Normal_distribution_mean_and_standard_deviation.">Convert the Log-normal distribution mean and standard deviation to Normal distribution mean and standard deviation.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#normal_to_log_normal-1">normal_to_log_normal/1</a></td><td>
+  <h4><a name="Convert_the_Normal_distribution_mean_and_standard_deviation_to_Log-normal_distribution_mean_and_standard_deviation.">Convert the Normal distribution mean and standard deviation to Log-normal distribution mean and standard deviation.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#skewness-1">skewness/1</a></td><td>
+  <h4><a name="Sample_skewness_of_samples_previously_added.">Sample skewness of samples previously added.</a></h4>
+  The value returned is the Fisher-Pearson coefficient of skewness.</td></tr>
+<tr><td valign="top"><a href="#standard_deviation-1">standard_deviation/1</a></td><td>
+  <h4><a name="Sample_standard_deviation_of_samples_previously_added.">Sample standard deviation of samples previously added.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#variance-1">variance/1</a></td><td>
+  <h4><a name="Sample_variance_of_samples_previously_added.">Sample variance of samples previously added.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add-2">add/2</a></h3>
+<div class="spec">
+<p><tt>add(X::number(), State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Add_a_sample_for_computing_statistics.">Add a sample for computing statistics.</a></h4>
+</p>
+
+<h3 class="function"><a name="add_from_list-2">add_from_list/2</a></h3>
+<div class="spec">
+<p><tt>add_from_list(L::[number()], State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Add_samples_from_a_list_for_computing_statistics.">Add samples from a list for computing statistics.</a></h4>
+</p>
+
+<h3 class="function"><a name="add_from_list-3">add_from_list/3</a></h3>
+<div class="spec">
+<p><tt>add_from_list(F::function(), L::[number()], State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Add_samples_from_a_function_mapped_on_a_list_for_computing_statistics.">Add samples from a function mapped on a list for computing statistics.</a></h4>
+</p>
+
+<h3 class="function"><a name="count-1">count/1</a></h3>
+<div class="spec">
+<p><tt>count(State::<a href="#type-state">state()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Count_of_samples_previously_added.">Count of samples previously added.</a></h4>
+</p>
+
+<h3 class="function"><a name="describe_distribution-1">describe_distribution/1</a></h3>
+<div class="spec">
+<p><tt>describe_distribution(State::<a href="#type-state">state()</a>) -&gt; {<a href="#type-describe_distribution">describe_distribution()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Describe_the_distribution_with_a_guess_about_its_shape.">Describe the distribution with a guess about its shape.</a></h4>
+  Only use if the sample count is large enough to cover the distribution.</p>
+
+<h3 class="function"><a name="describe_kurtosis-1">describe_kurtosis/1</a></h3>
+<div class="spec">
+<p><tt>describe_kurtosis(State::<a href="#type-state">state()</a>) -&gt; {<a href="#type-describe_kurtosis">describe_kurtosis()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Describe_the_excess_kurtosis_value.">Describe the excess kurtosis value.</a></h4>
+  Only use if the sample count is large enough to cover the distribution.</p>
+
+<h3 class="function"><a name="describe_skewness-1">describe_skewness/1</a></h3>
+<div class="spec">
+<p><tt>describe_skewness(State::<a href="#type-state">state()</a>) -&gt; {<a href="#type-describe_skewness">describe_skewness()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Describe_the_skewness_value.">Describe the skewness value.</a></h4><p>  
+Only use if the sample count is large enough to cover the distribution.</p>
+ 
+  (based on)
+  Bulmer, M. G..
+  Principles of Statistics. Dover Publications, 1979.</p>
+
+<h3 class="function"><a name="kurtosis-1">kurtosis/1</a></h3>
+<div class="spec">
+<p><tt>kurtosis(State::<a href="#type-state">state()</a>) -&gt; {float() | undefined, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Excess_kurtosis_of_samples_previously_added.">Excess kurtosis of samples previously added.</a></h4>
+  The minimum value returned is -2.0 (Fisher’s definition).</p>
+
+<h3 class="function"><a name="maximum-1">maximum/1</a></h3>
+<div class="spec">
+<p><tt>maximum(State::<a href="#type-state">state()</a>) -&gt; float()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Maximum_of_samples_previously_added.">Maximum of samples previously added.</a></h4>
+</p>
+
+<h3 class="function"><a name="mean-1">mean/1</a></h3>
+<div class="spec">
+<p><tt>mean(State::<a href="#type-state">state()</a>) -&gt; float()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Mean_of_samples_previously_added.">Mean of samples previously added.</a></h4>
+  The value returned is the arithmetic mean.</p>
+
+<h3 class="function"><a name="merge-2">merge/2</a></h3>
+<div class="spec">
+<p><tt>merge(StateA::<a href="#type-state">state()</a>, StateB::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Merge_statistics_state.">Merge statistics state.</a></h4>
+</p>
+
+<h3 class="function"><a name="minimum-1">minimum/1</a></h3>
+<div class="spec">
+<p><tt>minimum(State::<a href="#type-state">state()</a>) -&gt; float()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Minimum_of_samples_previously_added.">Minimum of samples previously added.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Create_statistics_state.">Create statistics state.</a></h4>
+</p>
+
+<h3 class="function"><a name="normal_from_log_normal-1">normal_from_log_normal/1</a></h3>
+<div class="spec">
+<p><tt>normal_from_log_normal(State::<a href="#type-state">state()</a>) -&gt; {{NormalMean::float(), NormalStdDev::float()} | undefined, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Convert_the_Log-normal_distribution_mean_and_standard_deviation_to_Normal_distribution_mean_and_standard_deviation.">Convert the Log-normal distribution mean and standard deviation to Normal distribution mean and standard deviation.</a></h4>
+</p>
+
+<h3 class="function"><a name="normal_to_log_normal-1">normal_to_log_normal/1</a></h3>
+<div class="spec">
+<p><tt>normal_to_log_normal(State::<a href="#type-state">state()</a>) -&gt; {{LogNormalMean::float(), LogNormalStdDev::float()} | undefined, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Convert_the_Normal_distribution_mean_and_standard_deviation_to_Log-normal_distribution_mean_and_standard_deviation.">Convert the Normal distribution mean and standard deviation to Log-normal distribution mean and standard deviation.</a></h4>
+</p>
+
+<h3 class="function"><a name="skewness-1">skewness/1</a></h3>
+<div class="spec">
+<p><tt>skewness(State::<a href="#type-state">state()</a>) -&gt; {float() | undefined, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Sample_skewness_of_samples_previously_added.">Sample skewness of samples previously added.</a></h4>
+  The value returned is the Fisher-Pearson coefficient of skewness.</p>
+
+<h3 class="function"><a name="standard_deviation-1">standard_deviation/1</a></h3>
+<div class="spec">
+<p><tt>standard_deviation(State::<a href="#type-state">state()</a>) -&gt; {float() | undefined, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Sample_standard_deviation_of_samples_previously_added.">Sample standard deviation of samples previously added.</a></h4>
+</p>
+
+<h3 class="function"><a name="variance-1">variance/1</a></h3>
+<div class="spec">
+<p><tt>variance(State::<a href="#type-state">state()</a>) -&gt; {float() | undefined, <a href="#type-state">state()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Sample_variance_of_samples_previously_added.">Sample variance of samples previously added.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

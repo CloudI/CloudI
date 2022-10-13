@@ -12,9 +12,9 @@
 <h1>Module quickrand</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Quick_Random_Number_Generation">Quick Random Number Generation</a></h3>.
-<p>Copyright © 2012-2020 Michael Truog</p>
+<p>Copyright © 2012-2022 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.2 May 26 2021 18:14:15
+<p><b>Version:</b> 2.0.5 Mar 25 2022 12:01:57
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -121,7 +121,7 @@
 
 <h3 class="function"><a name="uniform-1">uniform/1</a></h3>
 <div class="spec">
-<p><tt>uniform(N) -&gt; any()</tt></p>
+<p><tt>uniform(N::pos_integer()) -&gt; pos_integer()</tt><br></p>
 <p> </p>
 </div>
 
@@ -135,13 +135,13 @@
 
 <h3 class="function"><a name="uniform_cache-1">uniform_cache/1</a></h3>
 <div class="spec">
-<p><tt>uniform_cache(N) -&gt; any()</tt></p>
+<p><tt>uniform_cache(N::pos_integer()) -&gt; pos_integer()</tt><br></p>
 <p> </p>
 </div>
 
 <h3 class="function"><a name="uniform_cache-2">uniform_cache/2</a></h3>
 <div class="spec">
-<p><tt>uniform_cache(N::pos_integer(), State::<a href="quickrand_cache.html#type-state">quickrand_cache:state()</a>) -&gt; {pos_integer(), <a href="quickrand_cache.html#type-state">quickrand_cache:state()</a>}</tt><br></p>
+<p><tt>uniform_cache(N::pos_integer(), State::<a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>) -&gt; {pos_integer(), <a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>}</tt><br></p>
 <p> </p>
 </div><p>
   <h4><a name="Quick_uniform_random_number_generation_with_cached_data.">Quick uniform random number generation with cached data.</a></h4>
@@ -149,7 +149,7 @@
 
 <h3 class="function"><a name="uniform_cache-2">uniform_cache/2</a></h3>
 <div class="spec">
-<p><tt>uniform_cache(N, State) -&gt; any()</tt></p>
+<p><tt>uniform_cache(N::pos_integer(), State::<a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>) -&gt; {pos_integer(), <a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>}</tt><br></p>
 <p> </p>
 </div>
 <hr>

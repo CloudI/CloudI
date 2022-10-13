@@ -1,0 +1,111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_percentiles</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_percentiles</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Percentiles">CloudI Percentiles</a></h3><p>   
+Calculate percentiles with all samples stored using definition 8   
+(proposed as a standard sample quantile definition by Hyndman and Fan).</p>.
+<p>Copyright © 2022 Michael Truog</p>
+
+<p><b>Version:</b> 2.0.5 Oct 11 2022 20:13:44
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Percentiles">CloudI Percentiles</a></h3><p>   
+Calculate percentiles with all samples stored using definition 8   
+(proposed as a standard sample quantile definition by Hyndman and Fan).</p>
+  
+   <p>The 50% percentile is the median.</p>
+  
+   Rob J. Hyndman, Yanan Fan.  Sample Quantiles in Statistical Packages.
+   American Statistician, vol. 50, no. 4, pp. 361–365,
+   American Statistical Association, 1996-11.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #percentiles{n = non_neg_integer(), samples = [number()]}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add-2">add/2</a></td><td>
+  <h4><a name="Add_a_sample_for_computing_percentiles.">Add a sample for computing percentiles.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#add_from_list-2">add_from_list/2</a></td><td>
+  <h4><a name="Add_samples_from_a_list_for_computing_percentiles.">Add samples from a list for computing percentiles.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#calculate-2">calculate/2</a></td><td>
+  <h4><a name="Calculate_percentiles_from_the_samples_previously_added.">Calculate percentiles from the samples previously added.</a></h4>
+  Percentiles must be provided in ascending order and be in the
+  range (0.0 ..</td></tr>
+<tr><td valign="top"><a href="#count-1">count/1</a></td><td>
+  <h4><a name="Count_of_samples_previously_added.">Count of samples previously added.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#merge-2">merge/2</a></td><td>
+  <h4><a name="Merge_percentiles_state.">Merge percentiles state.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_percentiles_state.">Create percentiles state.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add-2">add/2</a></h3>
+<div class="spec">
+<p><tt>add(X::number(), State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Add_a_sample_for_computing_percentiles.">Add a sample for computing percentiles.</a></h4>
+</p>
+
+<h3 class="function"><a name="add_from_list-2">add_from_list/2</a></h3>
+<div class="spec">
+<p><tt>add_from_list(L::[number()], State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Add_samples_from_a_list_for_computing_percentiles.">Add samples from a list for computing percentiles.</a></h4>
+</p>
+
+<h3 class="function"><a name="calculate-2">calculate/2</a></h3>
+<div class="spec">
+<p><tt>calculate(Percentiles::[float(), ...], State::<a href="#type-state">state()</a>) -&gt; [float(), ...] | undefined</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Calculate_percentiles_from_the_samples_previously_added.">Calculate percentiles from the samples previously added.</a></h4>
+  Percentiles must be provided in ascending order and be in the
+  range (0.0 .. 1.0).</p>
+
+<h3 class="function"><a name="count-1">count/1</a></h3>
+<div class="spec">
+<p><tt>count(State::<a href="#type-state">state()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Count_of_samples_previously_added.">Count of samples previously added.</a></h4>
+</p>
+
+<h3 class="function"><a name="merge-2">merge/2</a></h3>
+<div class="spec">
+<p><tt>merge(StateA::<a href="#type-state">state()</a>, StateB::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Merge_percentiles_state.">Merge percentiles state.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; <a href="#type-state">state()</a></tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Create_percentiles_state.">Create percentiles state.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

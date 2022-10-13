@@ -14,9 +14,9 @@
    <h3><a name="Random_Number_Generation_With_Hash_Functions">Random Number Generation With Hash Functions</a></h3><p>   
 The random numbers created by the functions in this module are   
 not meant for cryptographic purposes.</p>.
-<p>Copyright © 2017-2021 Michael Truog</p>
+<p>Copyright © 2017-2022 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.2 May 26 2021 18:14:15
+<p><b>Version:</b> 2.0.5 Oct 11 2022 19:03:19
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -37,9 +37,12 @@ crypto:hash(sha512,_) slightly slower.</p>
 4.5 times slower than crypto:hash(md5,_) which provides the same number   
 of bits, because the jenkins64 functions are implemented in Erlang.</p>
   
-   All the jenkins prefix functions have been checked with the C++
-   implementations to ensure the same hash value is obtained, though
-   this implementation forces numbers to be interpreted as big-endian.
+   <p>The jenkins prefix functions are faster than the jenkins64 prefix functions   
+due to avoiding Erlang bignums and both provide the same quality.</p>
+  
+   All the functions have been checked with the C++ implementations to ensure
+   the same hash value is obtained, though this implementation forces numbers
+   to be interpreted as big-endian.
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#jenkins64_128-1">jenkins64_128/1</a></td><td>
   <h4><a name="Bob_Jenkins_SpookyHashV2_Hash128.">Bob Jenkins SpookyHashV2 Hash128.</a></h4>.</td></tr>

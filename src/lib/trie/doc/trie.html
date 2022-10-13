@@ -21,9 +21,9 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
    This Erlang trie implementation uses string (list of integers) keys and
    is able to get performance close to the process dictionary when doing key
    lookups (find or fetch, see <a href="http://okeuday.livejournal.com/16941.html" target="_top"><tt>http://okeuday.livejournal.com/16941.html</tt></a>).
-<p>Copyright © 2010-2021 Michael Truog</p>
+<p>Copyright © 2010-2022 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.3 Dec 4 2021 12:38:19
+<p><b>Version:</b> 2.0.5 Oct 11 2022 18:58:21
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -123,6 +123,8 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   <h4><a name="Create_a_trie_from_a_list.">Create a trie from a list.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_bytestring-1">is_bytestring/1</a></td><td>
   <h4><a name="Test_if_the_parameter_is_a_byte_string.">Test if the parameter is a byte string.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_bytestring_nonempty-1">is_bytestring_nonempty/1</a></td><td>
+  <h4><a name="Test_if_the_parameter_is_a_nonempty_byte_string.">Test if the parameter is a nonempty byte string.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_key-2">is_key/2</a></td><td>
   <h4><a name="Determine_if_a_key_exists_in_a_trie.">Determine if a key exists in a trie.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_pattern-1">is_pattern/1</a></td><td>
@@ -448,6 +450,14 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <p> </p>
 </div><p>
   <h4><a name="Test_if_the_parameter_is_a_byte_string.">Test if the parameter is a byte string.</a></h4>
+</p>
+
+<h3 class="function"><a name="is_bytestring_nonempty-1">is_bytestring_nonempty/1</a></h3>
+<div class="spec">
+<p><tt>is_bytestring_nonempty(L::[byte(), ...]) -&gt; true | false</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Test_if_the_parameter_is_a_nonempty_byte_string.">Test if the parameter is a nonempty byte string.</a></h4>
 </p>
 
 <h3 class="function"><a name="is_key-2">is_key/2</a></h3>

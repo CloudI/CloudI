@@ -5,7 +5,7 @@
  [
   {lib_dirs,
    [
-    "/usr/local/lib/cloudi-2.0.4/lib"
+    "/usr/local/lib/cloudi-2.0.5/lib"
     ]},
   {rel, "cloudi_hello_world_embedded", "1",
    [

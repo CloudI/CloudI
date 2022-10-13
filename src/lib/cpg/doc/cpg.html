@@ -14,9 +14,9 @@
    <h3><a name="CloudI_Process_Groups_(CPG)">CloudI Process Groups (CPG)</a></h3>
    cpg relies on distributed Erlang for node communication, which means
    a fully connected network topology is created.
-<p>Copyright © 2011-2020 Michael Truog</p>
+<p>Copyright © 2011-2022 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.1 Nov 26 2020 15:22:42
+<p><b>Version:</b> 2.0.5 Oct 11 2022 19:49:26
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
@@ -388,6 +388,7 @@
 <h3 class="function"><a name="add_join_callback-2">add_join_callback/2</a></h3>
 <div class="spec">
 <p><tt>add_join_callback(GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_join">callback_join()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Add_a_join_callback.">Add a join callback.</a></h4>
 </p>
@@ -395,6 +396,7 @@
 <h3 class="function"><a name="add_join_callback-3">add_join_callback/3</a></h3>
 <div class="spec">
 <p><tt>add_join_callback(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_join">callback_join()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Add_a_join_callback.">Add a join callback.</a></h4>
 </p>
@@ -402,6 +404,7 @@
 <h3 class="function"><a name="add_leave_callback-2">add_leave_callback/2</a></h3>
 <div class="spec">
 <p><tt>add_leave_callback(GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_leave">callback_leave()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Add_a_leave_callback.">Add a leave callback.</a></h4>
 </p>
@@ -409,6 +412,7 @@
 <h3 class="function"><a name="add_leave_callback-3">add_leave_callback/3</a></h3>
 <div class="spec">
 <p><tt>add_leave_callback(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_leave">callback_leave()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Add_a_leave_callback.">Add a leave callback.</a></h4>
 </p>
@@ -416,6 +420,7 @@
 <h3 class="function"><a name="create-1">create/1</a></h3>
 <div class="spec">
 <p><tt>create(X1::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_a_group_explicitly_no-op.">Create a group explicitly no-op.</a></h4>
 </p>
@@ -423,6 +428,7 @@
 <h3 class="function"><a name="create-2">create/2</a></h3>
 <div class="spec">
 <p><tt>create(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_a_group_explicitly_in_a_specific_scope_no-op.">Create a group explicitly in a specific scope no-op.</a></h4>
 </p>
@@ -430,6 +436,7 @@
 <h3 class="function"><a name="create-3">create/3</a></h3>
 <div class="spec">
 <p><tt>create(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>, X3::pos_integer() | infinity) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_a_group_explicitly_in_a_specific_scope_no-op.">Create a group explicitly in a specific scope no-op.</a></h4>
 </p>
@@ -437,6 +444,7 @@
 <h3 class="function"><a name="delete-1">delete/1</a></h3>
 <div class="spec">
 <p><tt>delete(X1::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Delete_a_group_explicitly_no-op.">Delete a group explicitly no-op.</a></h4>
 </p>
@@ -444,6 +452,7 @@
 <h3 class="function"><a name="delete-2">delete/2</a></h3>
 <div class="spec">
 <p><tt>delete(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Delete_a_group_explicitly_in_a_specific_scope_no-op.">Delete a group explicitly in a specific scope no-op.</a></h4>
 </p>
@@ -451,69 +460,79 @@
 <h3 class="function"><a name="delete-3">delete/3</a></h3>
 <div class="spec">
 <p><tt>delete(X1::<a href="#type-scope">scope()</a>, X2::<a href="#type-name">name()</a>, X3::pos_integer() | infinity) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Delete_a_group_explicitly_in_a_specific_scope_no-op.">Delete a group explicitly in a specific scope no-op.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_closest_pid-1">get_closest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_closest_pid-2">get_closest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with local pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_closest_pid-3">get_closest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_closest_pid-4">get_closest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_closest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with local pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_furthest_pid-1">get_furthest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority.">Get a group member, with remote pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_furthest_pid-2">get_furthest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member, with remote pids given priority while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_furthest_pid-3">get_furthest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_furthest_pid-4">get_furthest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_furthest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member within a specific scope, with remote pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_members-1">get_local_members/1</a></h3>
 <div class="spec">
-<p><tt>get_local_members(GroupName::<a href="#type-name">name()</a>) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_local_members(GroupName::<a href="#type-name">name()</a>) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>
   All members are ordered from newest to oldest, based on the
@@ -521,7 +540,8 @@
 
 <h3 class="function"><a name="get_local_members-2">get_local_members/2</a></h3>
 <div class="spec">
-<p><tt>get_local_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_local_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the local members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
   All members are ordered from newest to oldest, based on the
@@ -530,7 +550,8 @@
 
 <h3 class="function"><a name="get_local_members-3">get_local_members/3</a></h3>
 <div class="spec">
-<p><tt>get_local_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_local_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the local members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   All members are ordered from newest to oldest, based on the
@@ -539,7 +560,8 @@
 
 <h3 class="function"><a name="get_local_members-4">get_local_members/4</a></h3>
 <div class="spec">
-<p><tt>get_local_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_local_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the local members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   All members are ordered from newest to oldest, based on the
@@ -548,91 +570,104 @@
 
 <h3 class="function"><a name="get_local_newest_pid-1">get_local_newest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_local_group_member.">Get the newest local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_newest_pid-2">get_local_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_newest_pid-3">get_local_newest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_newest_pid-4">get_local_newest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_local_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_oldest_pid-1">get_local_oldest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_local_group_member.">Get the oldest local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_oldest_pid-2">get_local_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_oldest_pid-3">get_local_oldest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_oldest_pid-4">get_local_oldest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_local_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_pid-1">get_local_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_pid-2">get_local_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a local group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_pid-3">get_local_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_pid-4">get_local_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_local_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_local_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a local group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_members-1">get_members/1</a></h3>
 <div class="spec">
-<p><tt>get_members(GroupName::<a href="#type-name">name()</a>) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_members(GroupName::<a href="#type-name">name()</a>) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -640,7 +675,8 @@
 
 <h3 class="function"><a name="get_members-2">get_members/2</a></h3>
 <div class="spec">
-<p><tt>get_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -649,7 +685,8 @@
 
 <h3 class="function"><a name="get_members-3">get_members/3</a></h3>
 <div class="spec">
-<p><tt>get_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get the members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -658,7 +695,8 @@
 
 <h3 class="function"><a name="get_members-4">get_members/4</a></h3>
 <div class="spec">
-<p><tt>get_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get the members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -667,91 +705,104 @@
 
 <h3 class="function"><a name="get_newest_pid-1">get_newest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_group_member.">Get the newest group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_newest_pid-2">get_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_newest_pid-3">get_newest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_newest_pid-4">get_newest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_oldest_pid-1">get_oldest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_group_member.">Get the oldest group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_oldest_pid-2">get_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_oldest_pid-3">get_oldest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_oldest_pid-4">get_oldest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_random_pid-1">get_random_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member.">Get a group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_random_pid-2">get_random_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_random_pid-3">get_random_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_random_pid-4">get_random_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_random_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_group_member_within_a_specific_scope_while_excluding_a_specific_pid.">Get a group member within a specific scope while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_members-1">get_remote_members/1</a></h3>
 <div class="spec">
-<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a>) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a>) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -759,7 +810,8 @@
 
 <h3 class="function"><a name="get_remote_members-2">get_remote_members/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_remote_members(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get only the remote members of a specific group while excluding a specific pid or within a specific scope.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -768,7 +820,8 @@
 
 <h3 class="function"><a name="get_remote_members-3">get_remote_members/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_remote_members(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the remote members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -777,7 +830,8 @@
 
 <h3 class="function"><a name="get_remote_members-4">get_remote_members/4</a></h3>
 <div class="spec">
-<p><tt>get_remote_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p><tt>get_remote_members(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; <a href="doc/cpg_data.html#type-get_members_return">cpg_data:get_members_return()</a></tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group_within_a_specific_scope_while_excluding_a_specific_pid.">Get only the remote members of a specific group within a specific scope while excluding a specific pid.</a></h4>
   All members are ordered from newest to oldest, based on the group
@@ -786,84 +840,96 @@
 
 <h3 class="function"><a name="get_remote_newest_pid-1">get_remote_newest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_remote_group_member.">Get the newest remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_newest_pid-2">get_remote_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_newest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the newest remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_newest_pid-3">get_remote_newest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_newest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_newest_pid-4">get_remote_newest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_remote_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_newest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_newest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the newest remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_oldest_pid-1">get_remote_oldest_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_remote_group_member.">Get the oldest remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_oldest_pid-2">get_remote_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_oldest_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get the oldest remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_oldest_pid-3">get_remote_oldest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_oldest_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_oldest_pid-4">get_remote_oldest_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_remote_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_oldest_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_oldest_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get the oldest remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_pid-1">get_remote_pid/1</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a>) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_pid-2">get_remote_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Exclude::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_while_excluding_a_specific_pid_or_within_a_specific_scope.">Get a remote group member while excluding a specific pid or within a specific scope.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_pid-3">get_remote_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Exclude::pid() | pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_pid-4">get_remote_pid/4</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p><tt>get_remote_pid(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Exclude::pid(), Timeout::pos_integer() | infinity) -&gt; {ok, <a href="#type-name">name()</a>, pid()} | {error, <a href="doc/cpg_data.html#type-get_pid_error_reason">cpg_data:get_pid_error_reason()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_within_a_specific_scope,_while_excluding_a_specific_pid.">Get a remote group member within a specific scope, while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
@@ -871,6 +937,7 @@
 <h3 class="function"><a name="hidden_nodes-1">hidden_nodes/1</a></h3>
 <div class="spec">
 <p><tt>hidden_nodes(NodeNameLocal::nonempty_string()) -&gt; [node()]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_hidden_nodes.">Get the hidden nodes.</a></h4>
 </p>
@@ -878,6 +945,7 @@
 <h3 class="function"><a name="ignore_node-2">ignore_node/2</a></h3>
 <div class="spec">
 <p><tt>ignore_node(Node::node(), NodeNameLocal::nonempty_string()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Check_if_a_node_is_ignored.">Check if a node is ignored.</a></h4>
   Nodes that connect periodically for running operations commands are
@@ -886,6 +954,7 @@
 <h3 class="function"><a name="join-1">join/1</a></h3>
 <div class="spec">
 <p><tt>join(GroupName::<a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_a_specific_group_with_self()_as_a_local_pid.">Join a specific group with self() as a local pid.</a></h4>
   A group is automatically created if it does not already exist.</p>
@@ -893,6 +962,7 @@
 <h3 class="function"><a name="join-2">join/2</a></h3>
 <div class="spec">
 <p><tt>join(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_a_specific_group_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Join a specific group with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
   The pid must be a local pid to justify not using a distributed transaction
@@ -903,6 +973,7 @@
 <h3 class="function"><a name="join-3">join/3</a></h3>
 <div class="spec">
 <p><tt>join(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
   The pid must be a local pid to justify not using a distributed transaction
@@ -913,6 +984,7 @@
 <h3 class="function"><a name="join-4">join/4</a></h3>
 <div class="spec">
 <p><tt>join(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_a_specific_group_within_a_specific_scope_with_a_local_pid.">Join a specific group within a specific scope with a local pid.</a></h4>
   The pid must be a local pid to justify not using a distributed transaction
@@ -923,6 +995,7 @@
 <h3 class="function"><a name="join_count-1">join_count/1</a></h3>
 <div class="spec">
 <p><tt>join_count(GroupName::<a href="#type-name">name()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Provide_a_count_of_the_previous_joins_of_a_specific_group_with_self().">Provide a count of the previous joins of a specific group with self().</a></h4>
 </p>
@@ -930,6 +1003,7 @@
 <h3 class="function"><a name="join_count-2">join_count/2</a></h3>
 <div class="spec">
 <p><tt>join_count(GroupName::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a>, Pid::pid() | <a href="#type-name">name()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Provide_a_count_of_the_previous_joins_of_a_specific_group_with_a_specific_pid.">Provide a count of the previous joins of a specific group with a specific pid.</a></h4>
 </p>
@@ -937,6 +1011,7 @@
 <h3 class="function"><a name="join_count-3">join_count/3</a></h3>
 <div class="spec">
 <p><tt>join_count(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, GroupName::<a href="#type-name">name()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Provide_a_count_of_the_previous_joins_of_a_specific_group_with_a_specific_pid.">Provide a count of the previous joins of a specific group with a specific pid.</a></h4>
 </p>
@@ -944,6 +1019,7 @@
 <h3 class="function"><a name="join_count-4">join_count/4</a></h3>
 <div class="spec">
 <p><tt>join_count(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Provide_a_count_of_the_previous_joins_of_a_specific_group_with_a_specific_pid.">Provide a count of the previous joins of a specific group with a specific pid.</a></h4>
 </p>
@@ -951,6 +1027,7 @@
 <h3 class="function"><a name="join_counts-1">join_counts/1</a></h3>
 <div class="spec">
 <p><tt>join_counts(Counts::[{<a href="#type-name">name()</a>, pos_integer()}]) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_specific_groups_a_specific_number_of_times.">Join specific groups a specific number of times.</a></h4>
 </p>
@@ -958,6 +1035,7 @@
 <h3 class="function"><a name="join_counts-2">join_counts/2</a></h3>
 <div class="spec">
 <p><tt>join_counts(Counts::[{<a href="#type-name">name()</a>, pos_integer()}] | <a href="#type-scope">scope()</a>, Pid::pid() | [{<a href="#type-name">name()</a>, pos_integer()}]) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_specific_groups_a_specific_number_of_times.">Join specific groups a specific number of times.</a></h4>
 </p>
@@ -965,6 +1043,7 @@
 <h3 class="function"><a name="join_counts-3">join_counts/3</a></h3>
 <div class="spec">
 <p><tt>join_counts(Scope::<a href="#type-scope">scope()</a> | [{<a href="#type-name">name()</a>, pos_integer()}], Counts::[{<a href="#type-name">name()</a>, pos_integer()}] | pid(), Pid::pid() | pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_specific_groups_a_specific_number_of_times.">Join specific groups a specific number of times.</a></h4>
 </p>
@@ -972,6 +1051,7 @@
 <h3 class="function"><a name="join_counts-4">join_counts/4</a></h3>
 <div class="spec">
 <p><tt>join_counts(Scope::<a href="#type-scope">scope()</a>, Counts::[{<a href="#type-name">name()</a>, pos_integer()}], Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Join_specific_groups_a_specific_number_of_times.">Join specific groups a specific number of times.</a></h4>
 </p>
@@ -979,6 +1059,7 @@
 <h3 class="function"><a name="leave-0">leave/0</a></h3>
 <div class="spec">
 <p><tt>leave() -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_all_groups.">Leave all groups.</a></h4>
 </p>
@@ -986,6 +1067,7 @@
 <h3 class="function"><a name="leave-1">leave/1</a></h3>
 <div class="spec">
 <p><tt>leave(Pid::pid() | <a href="#type-name">name()</a>) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_a_specific_group_or_all_groups_with_a_local_pid.">Leave a specific group or all groups with a local pid.</a></h4>
   The group is automatically removed if it becomes empty.</p>
@@ -993,6 +1075,7 @@
 <h3 class="function"><a name="leave-2">leave/2</a></h3>
 <div class="spec">
 <p><tt>leave(Scope::<a href="#type-name">name()</a> | <a href="#type-scope">scope()</a> | pid(), Pid::pid() | <a href="#type-name">name()</a> | pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_a_specific_group_or_all_groups_with_the_specified_local_pid_or_a_specific_group_within_a_specific_scope_with_self()_as_a_local_pid.">Leave a specific group or all groups with the specified local pid or a specific group within a specific scope with self() as a local pid.</a></h4>
   The pid must be a local pid to justify not using a distributed transaction
@@ -1003,6 +1086,7 @@
 <h3 class="function"><a name="leave-3">leave/3</a></h3>
 <div class="spec">
 <p><tt>leave(Scope::<a href="#type-scope">scope()</a> | <a href="#type-name">name()</a>, Pid::<a href="#type-name">name()</a> | pid(), Timeout::pid() | pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_a_specific_group_or_all_groups_within_a_specific_scope_with_a_local_pid.">Leave a specific group or all groups within a specific scope with a local pid.</a></h4>
   The pid must be a local pid to justify not using a distributed transaction
@@ -1013,6 +1097,7 @@
 <h3 class="function"><a name="leave-4">leave/4</a></h3>
 <div class="spec">
 <p><tt>leave(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_a_specific_group_or_all_groups_within_a_specific_scope_with_a_local_pid.">Leave a specific group or all groups within a specific scope with a local pid.</a></h4>
   The pid must be a local pid to justify not using a distributed transaction
@@ -1023,6 +1108,7 @@
 <h3 class="function"><a name="leave_counts-1">leave_counts/1</a></h3>
 <div class="spec">
 <p><tt>leave_counts(Counts::[{<a href="#type-name">name()</a>, pos_integer()}]) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_specific_groups_a_specific_number_of_times.">Leave specific groups a specific number of times.</a></h4>
 </p>
@@ -1030,6 +1116,7 @@
 <h3 class="function"><a name="leave_counts-2">leave_counts/2</a></h3>
 <div class="spec">
 <p><tt>leave_counts(Counts::[{<a href="#type-name">name()</a>, pos_integer()}] | <a href="#type-scope">scope()</a>, Pid::pid() | [{<a href="#type-name">name()</a>, pos_integer()}]) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_specific_groups_a_specific_number_of_times.">Leave specific groups a specific number of times.</a></h4>
 </p>
@@ -1037,6 +1124,7 @@
 <h3 class="function"><a name="leave_counts-3">leave_counts/3</a></h3>
 <div class="spec">
 <p><tt>leave_counts(Scope::<a href="#type-scope">scope()</a> | [{<a href="#type-name">name()</a>, pos_integer()}], Counts::[{<a href="#type-name">name()</a>, pos_integer()}] | pid(), Pid::pid() | pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_specific_groups_a_specific_number_of_times.">Leave specific groups a specific number of times.</a></h4>
 </p>
@@ -1044,6 +1132,7 @@
 <h3 class="function"><a name="leave_counts-4">leave_counts/4</a></h3>
 <div class="spec">
 <p><tt>leave_counts(Scope::<a href="#type-scope">scope()</a>, Counts::[{<a href="#type-name">name()</a>, pos_integer()}], Pid::pid(), Timeout::pos_integer() | infinity) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Leave_specific_groups_a_specific_number_of_times.">Leave specific groups a specific number of times.</a></h4>
 </p>
@@ -1051,6 +1140,7 @@
 <h3 class="function"><a name="listen_nodes-2">listen_nodes/2</a></h3>
 <div class="spec">
 <p><tt>listen_nodes(Listen::<a href="#type-listen">listen()</a>, NodeNameLocal::nonempty_string()) -&gt; [node()]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_monitored_listen_nodes.">Get the monitored listen nodes.</a></h4>
 </p>
@@ -1058,6 +1148,7 @@
 <h3 class="function"><a name="register_name-2">register_name/2</a></h3>
 <div class="spec">
 <p><tt>register_name(GroupName::<a href="#type-via_name">via_name()</a>, Pid::pid()) -&gt; yes</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
@@ -1066,6 +1157,7 @@
 <h3 class="function"><a name="remove_join_callback-2">remove_join_callback/2</a></h3>
 <div class="spec">
 <p><tt>remove_join_callback(GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_join">callback_join()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Remove_a_join_callback.">Remove a join callback.</a></h4>
 </p>
@@ -1073,6 +1165,7 @@
 <h3 class="function"><a name="remove_join_callback-3">remove_join_callback/3</a></h3>
 <div class="spec">
 <p><tt>remove_join_callback(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_join">callback_join()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Remove_a_join_callback.">Remove a join callback.</a></h4>
 </p>
@@ -1080,6 +1173,7 @@
 <h3 class="function"><a name="remove_leave_callback-2">remove_leave_callback/2</a></h3>
 <div class="spec">
 <p><tt>remove_leave_callback(GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_leave">callback_leave()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Remove_a_leave_callback.">Remove a leave callback.</a></h4>
 </p>
@@ -1087,6 +1181,7 @@
 <h3 class="function"><a name="remove_leave_callback-3">remove_leave_callback/3</a></h3>
 <div class="spec">
 <p><tt>remove_leave_callback(Scope::<a href="#type-scope">scope()</a>, GroupName::<a href="#type-name">name()</a>, F::<a href="#type-callback_leave">callback_leave()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Remove_a_leave_callback.">Remove a leave callback.</a></h4>
 </p>
@@ -1094,6 +1189,7 @@
 <h3 class="function"><a name="reset-1">reset/1</a></h3>
 <div class="spec">
 <p><tt>reset(Scope::<a href="#type-scope">scope()</a>) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Reset_any_internal_scope_state.">Reset any internal scope state.</a></h4>
   Updates cpg application node_type monitoring</p>
@@ -1101,6 +1197,7 @@
 <h3 class="function"><a name="reset_all-1">reset_all/1</a></h3>
 <div class="spec">
 <p><tt>reset_all(Scopes::[<a href="#type-scope">scope()</a>]) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Reset_internal_scopes_state.">Reset internal scopes state.</a></h4>
   Updates cpg application node_type monitoring</p>
@@ -1108,6 +1205,7 @@
 <h3 class="function"><a name="scope_exists-1">scope_exists/1</a></h3>
 <div class="spec">
 <p><tt>scope_exists(Scope::atom()) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Confirm_a_scope_exists.">Confirm a scope exists.</a></h4>
 </p>
@@ -1115,6 +1213,7 @@
 <h3 class="function"><a name="send-2">send/2</a></h3>
 <div class="spec">
 <p><tt>send(ViaName::<a href="#type-via_name">via_name()</a>, Msg::any()) -&gt; pid()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
@@ -1123,6 +1222,7 @@
 <h3 class="function"><a name="start_link-0">start_link/0</a></h3>
 <div class="spec">
 <p><tt>start_link() -&gt; {ok, pid()} | {error, term()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_process_groups_storage_for_the_default_scope.">Start process groups storage for the default scope.</a></h4>
 </p>
@@ -1130,6 +1230,7 @@
 <h3 class="function"><a name="start_link-1">start_link/1</a></h3>
 <div class="spec">
 <p><tt>start_link(Scope::atom()) -&gt; {ok, pid()} | {error, term()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Start_process_groups_storage_for_a_specific_scope.">Start process groups storage for a specific scope.</a></h4>
 </p>
@@ -1137,6 +1238,7 @@
 <h3 class="function"><a name="unregister_name-1">unregister_name/1</a></h3>
 <div class="spec">
 <p><tt>unregister_name(GroupName::<a href="#type-via_name">via_name()</a>) -&gt; ok | error</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
@@ -1145,6 +1247,7 @@
 <h3 class="function"><a name="valid_node-1">valid_node/1</a></h3>
 <div class="spec">
 <p><tt>valid_node(Node::node()) -&gt; boolean()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Check_if_a_node_is_valid.">Check if a node is valid.</a></h4>
   If the node name is not ignored.</p>
@@ -1152,6 +1255,7 @@
 <h3 class="function"><a name="visible_nodes-1">visible_nodes/1</a></h3>
 <div class="spec">
 <p><tt>visible_nodes(NodeNameLocal::nonempty_string()) -&gt; [node()]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_visible_nodes.">Get the visible nodes.</a></h4>
 </p>
@@ -1159,6 +1263,7 @@
 <h3 class="function"><a name="whereis_name-1">whereis_name/1</a></h3>
 <div class="spec">
 <p><tt>whereis_name(GroupName::<a href="#type-via_name">via_name()</a>) -&gt; pid() | undefined</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Function_to_provide_via_process_registration_functionality.">Function to provide via process registration functionality.</a></h4>
   Use within an OTP behavior by specifying {via, cpg, via_name()} for the
@@ -1167,6 +1272,7 @@
 <h3 class="function"><a name="which_groups-0">which_groups/0</a></h3>
 <div class="spec">
 <p><tt>which_groups() -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_all_the_groups_currently_defined.">Get all the groups currently defined.</a></h4>
 </p>
@@ -1174,6 +1280,7 @@
 <h3 class="function"><a name="which_groups-1">which_groups/1</a></h3>
 <div class="spec">
 <p><tt>which_groups(Scope::<a href="#type-scope">scope()</a> | pid() | pos_integer() | infinity) -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_all_the_groups_currently_defined_within_a_specific_scope.">Get all the groups currently defined within a specific scope.</a></h4>
 </p>
@@ -1181,6 +1288,7 @@
 <h3 class="function"><a name="which_groups-2">which_groups/2</a></h3>
 <div class="spec">
 <p><tt>which_groups(Scope::<a href="#type-scope">scope()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_all_the_groups_currently_defined_within_a_specific_scope.">Get all the groups currently defined within a specific scope.</a></h4>
 </p>
@@ -1188,6 +1296,7 @@
 <h3 class="function"><a name="which_groups-3">which_groups/3</a></h3>
 <div class="spec">
 <p><tt>which_groups(Scope::<a href="#type-scope">scope()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; [<a href="#type-name">name()</a>]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_all_the_groups_currently_defined_within_a_specific_scope.">Get all the groups currently defined within a specific scope.</a></h4>
 </p>
@@ -1195,6 +1304,7 @@
 <h3 class="function"><a name="which_groups_counts-1">which_groups_counts/1</a></h3>
 <div class="spec">
 <p><tt>which_groups_counts(Pid::pid()) -&gt; [{<a href="#type-name">name()</a>, pos_integer()}]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_join_count_of_each_group_a_process_has_joined.">Get the join_count of each group a process has joined.</a></h4>
 </p>
@@ -1202,6 +1312,7 @@
 <h3 class="function"><a name="which_groups_counts-2">which_groups_counts/2</a></h3>
 <div class="spec">
 <p><tt>which_groups_counts(Scope::<a href="#type-scope">scope()</a> | pid(), Pid::pid() | pos_integer() | infinity) -&gt; [{<a href="#type-name">name()</a>, pos_integer()}]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_join_count_of_each_group_a_process_has_joined.">Get the join_count of each group a process has joined.</a></h4>
 </p>
@@ -1209,6 +1320,7 @@
 <h3 class="function"><a name="which_groups_counts-3">which_groups_counts/3</a></h3>
 <div class="spec">
 <p><tt>which_groups_counts(Scope::<a href="#type-scope">scope()</a>, Pid::pid(), Timeout::pos_integer() | infinity) -&gt; [{<a href="#type-name">name()</a>, pos_integer()}]</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Get_the_join_count_of_each_group_a_process_has_joined.">Get the join_count of each group a process has joined.</a></h4>
 </p>

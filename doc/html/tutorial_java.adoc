@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 2.0.2
-:revdate: 2021-05-27
+:revnumber: 2.0.5
+:revdate: 2022-10-12
 :lang: en
 :encoding: UTF-8
 :toc:
@@ -82,7 +82,7 @@ To send a service request to all destinations that match a service name requires
 All services are structured for a 3 part sequence: initialization, handling-requests, and termination.
 During CloudI service initialization, data structures are initialized to confirm that the service is ready for a runtime that may last indefinitely (making the  initialization stage the most critical stage for a service's reliability).
 Inside the service initialization the `subscribe` CloudI API function is typically called so that incoming service requests are handled after initialization is done.
-The book recommendation service initialization is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]):
+The book recommendation service initialization is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]):
 
 [source,java]
 ----
@@ -163,7 +163,7 @@ All CloudI service requests are able to receive a response.
 The CloudI service that handles the request can make the request asynchronous by providing a "null response" (a response that has the response data and response_info data set to a binary of size 0) due to the control of the service request passing to the receiver when the service request is handled.
 That means that the `send_async` CloudI API function call is an asynchronous send due to not waiting for a response to occur, though a response may be sent in the future if the receiving service decides to send a response.
 
-An example of a service request handling function is below (using the "itemRefresh" function from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L166-L212[Service.java:166-212^]):
+An example of a service request handling function is below (using the "itemRefresh" function from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L166-L212[Service.java:166-212^]):
 
 [source,java]
 ----
@@ -171,7 +171,7 @@ An example of a service request handling function is below (using the "itemRefre
                               String pattern, byte[] request_info,
                               byte[] request, Integer timeout,
                               Byte priority, byte[] trans_id,
-                              OtpErlangPid pid)
+                              OtpErlangPid source)
     {
         // refresh all item data asynchronously
         final JSONItemRefreshRequest request_json =
@@ -225,7 +225,7 @@ An important fault-tolerance constraint is the timeout on a service request (i.e
 Every CloudI service request contains a specific timeout value in milliseconds which is decremented when the service request encounters any delay (e.g., due to queuing, handling execution, or forwarding).
 The `priority` parameter controls the priority when a service request is queued and a service request is only queued while the service thread is busy with a separate service request.
 The `request_type`, `name`, and `pattern` parameters show how the service request got here by containing whether the send is asynchronous or synchronous, the service name, and the service name pattern, respectively.
-The `pid` contains the source of the service request as it is represented within the CloudI source code (it is the response destination).
+The `source` contains the source of the service request as it is represented within the CloudI source code (it is the response destination).
 
 While many of the parameters in a service request are just book-keeping for tracking the transaction, the service request can be forwarded through any number of service request handlers before a response is provided.
 We can see in the source code example above that a JSON response is always returned as a byte array since the response data is always passed as binary data.
@@ -246,9 +246,9 @@ Make sure CloudI is installed and running, using the installation and start sequ
 
 [source,shell]
 ----
-wget https://osdn.net/dl/cloudi/cloudi-2.0.2.tar.gz
-tar zxvf cloudi-2.0.2.tar.gz
-cd cloudi-2.0.2/src
+wget https://osdn.net/dl/cloudi/cloudi-2.0.5.tar.gz
+tar zxvf cloudi-2.0.5.tar.gz
+cd cloudi-2.0.5/src
 ./configure
 make
 sudo make install
@@ -300,7 +300,7 @@ cat << EOF > tutorial.conf
          "-server "
          "-ea:org.cloudi... "
          "-Xms3g -Xmx3g "
-         "-jar $PWD/target/cloudi_tutorial_java-2.0.2-jar-with-dependencies.jar "
+         "-jar $PWD/target/cloudi_tutorial_java-2.0.5-jar-with-dependencies.jar "
          "-pgsql_hostname localhost "
          "-pgsql_port 5432 "
          "-pgsql_database cloudi_tutorial_java "
@@ -397,13 +397,13 @@ To understand how book recommendations are occurring in the interface, lets star
 | client/get                  | client                  |                        | thread > 0
 |===
 
-The table above shows the service subscriptions that occur during service initialization (in link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]).
+The table above shows the service subscriptions that occur during service initialization (in link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L88-L138[Service.java:88-138^]).
 The service configuration used for running `Service.java` was stored in the `tutorial.conf` file and it specified a total of 4 threads with `count_thread` being set to `4`.
 The service configuration did not provide a `count_process` setting so the number of OS processes defaulted to `1` (the thread count is applied to each OS process separately, i.e., `count_process` == `2` would have 2 OS processes, each with `4` threads).
 The service configuration always specifies a service name pattern prefix and that was set to "/tutorial/java/service/" in the `tutorial.conf` file.
 
 When a HTTP request (on port 8080) is made to the REST API through cloudi_service_http_cowboy, a CloudI service request is sent based on the HTTP request URL path using the default timeout that was configured for cloudi_service_http_cowboy service requests (10 minutes).
-The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/html/tutorial/java/index.html#L542-L550[index.html:542-550^]):
+The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/html/tutorial/java/index.html#L542-L550[index.html:542-550^]):
 
 [source,javascript]
 ----
@@ -431,14 +431,14 @@ curl -X POST -d '{"message_name": "item_list", "user_id": 1, "language": "en", "
 
 A WebSocket request is sent as a CloudI service request that is randomly load-balanced among the 3 threads that have subscribed with the function named "client" (in `Service.java` the subscription occurred when `thread_index` > 0 with 4 threads so 3 threads handle the "client" function).
 If `Service.java` had `count_process` set to `2` in its service configuration, the service request would instead be randomly load-balanced among 6 total threads with each group of 3 in a separate OS process.
-The service request handler function "client" is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L385-L508[Service.java:385-508^]):
+The service request handler function "client" is shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L385-L508[Service.java:385-508^]):
 
 [source,java]
 ----
     public Object client(Integer request_type, String name, String pattern,
                          byte[] request_info, byte[] request,
                          Integer timeout, Byte priority, byte[] trans_id,
-                         OtpErlangPid pid)
+                         OtpErlangPid source)
         throws API.ForwardAsyncException,
                API.ForwardSyncException,
                API.InvalidInputException,
@@ -463,23 +463,23 @@ The service request handler function "client" is shown below (from link:https://
                 this.api.forward_(request_type, name_item_refresh,
                                   request_info, request,
                                   timeout, priority,
-                                  trans_id, pid);
+                                  trans_id, source);
                 return null;
             case JSONItemListRequest.message_name_valid:
                 return this.itemList(request_type, name, pattern,
                                      request_info, request,
                                      timeout, priority,
-                                     trans_id, pid);
+                                     trans_id, source);
             case JSONLanguageListRequest.message_name_valid:
                 return this.languageList(request_type, name, pattern,
                                          request_info, request,
                                          timeout, priority,
-                                         trans_id, pid);
+                                         trans_id, source);
             case JSONSubjectListRequest.message_name_valid:
                 return this.subjectList(request_type, name, pattern,
                                         request_info, request,
                                         timeout, priority,
-                                        trans_id, pid);
+                                        trans_id, source);
             case JSONRecommendationRefreshRequest.message_name_valid:
                 // all OS processes need to refresh their recommendation data
                 final String name_recommendation_refresh =
@@ -547,12 +547,12 @@ The service request handler function "client" is shown below (from link:https://
                 return this.recommendationList(request_type, name, pattern,
                                                request_info, request,
                                                timeout, priority,
-                                               trans_id, pid);
+                                               trans_id, source);
             case JSONRecommendationUpdateRequest.message_name_valid:
                 return this.recommendationUpdate(request_type, name, pattern,
                                                  request_info, request,
                                                  timeout, priority,
-                                                 trans_id, pid);
+                                                 trans_id, source);
             default:
                 return JSONResponse
                     .failure("message_name")
@@ -588,7 +588,7 @@ The refresh of the items takes a few minutes when getting all the current data f
 However, after the thread is done refreshing the items, the interface would want to know that new items may exist, so it can request a new list of items (similar to how a new list of recommendations is requested by the interface after a notification).
 
 To utilize the result of the "itemRefresh" function processing thread requires that the `poll` CloudI API function is interrupted to call a function that is not a service request handler (to allow usage of the `mcast_async` CloudI API function for sending a notification to all connected WebSockets, similar to what occurs with a successful "recommendation_refresh" `message_name` in the "client" function).
-For scheduling an interrupt of the `poll` function the timeout parameter is used as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/Service.java#L139-L144[Service.java:139-144^]):
+For scheduling an interrupt of the `poll` function the timeout parameter is used as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L139-L144[Service.java:139-144^]):
 
 [source,java]
 ----
@@ -600,7 +600,7 @@ For scheduling an interrupt of the `poll` function the timeout parameter is used
             }
 ----
 
-Each interrupt of the `poll` function allows execution to check if it can run a chunk of function objects in the `ServiceIdle` class as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L10-L74[ServiceIdle.java:10-74^]):
+Each interrupt of the `poll` function allows execution to check if it can run a chunk of function objects in the `ServiceIdle` class as shown below (from link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L10-L74[ServiceIdle.java:10-74^]):
 
 [source,java]
 ----
@@ -671,7 +671,7 @@ public class ServiceIdle
 }
 ----
 
-The result of the "itemRefresh" function processing thread is stored in the `ServiceIdle` class instance within the `GutenbergRefresh` class which handles the item refresh process (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L101-L104[GutenbergRefresh.java:101-104^]):
+The result of the "itemRefresh" function processing thread is stored in the `ServiceIdle` class instance within the `GutenbergRefresh` class which handles the item refresh process (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L101-L104[GutenbergRefresh.java:101-104^]):
 
 [source,java]
 ----
@@ -681,7 +681,7 @@ The result of the "itemRefresh" function processing thread is stored in the `Ser
             this.idle.execute(GutenbergRefreshDone.failure(error));
 ----
 
-After the `poll` function is interrupted and the `ServiceIdle` class has function objects to call, the `GutenbergRefreshDone` function object is executed to send the "itemRefresh" result notification to all connected WebSockets (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.2/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L32-L52[GutenbergRefreshDone.java:32-52^]):
+After the `poll` function is interrupted and the `ServiceIdle` class has function objects to call, the `GutenbergRefreshDone` function object is executed to send the "itemRefresh" result notification to all connected WebSockets (link:https://github.com/CloudI/cloudi_tutorial_java/blob/v2.0.5/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L32-L52[GutenbergRefreshDone.java:32-52^]):
 
 [source,java]
 ----

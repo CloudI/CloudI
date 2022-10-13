@@ -1,5 +1,40 @@
 ------------------------------------------------------------------------        
 
+October 12, 2022
+  Version 2.0.5 released.
+  * backwards incompatible changes:
+    * external services previously had the service configuration option
+      fatal_exceptions functionality set to false
+  * Added the fatal_exceptions service configuration option for whether
+    an uncaught exception should cause a service restart or a null
+    response (defaults to true)
+  * Added the fatal_timeout service configuration option for whether
+    a service request timeout causes a service restart to ensure the
+    service request is terminating (defaults to false)
+    * Added the fatal_timeout_delay service configuration option
+      for providing an additional offset on the service request timeout
+  * All service configuration time values now accept the "period"
+    format to represent a time period as a 2-tuple like:
+    {1, minute} or {5, hours}
+    (service configuration is simplified in the log output using this
+     format and it is defined in the cloudi_service_api module types)
+  * Added the cloudi_service_health_check service for monitoring the
+    availability of any hosts based on a TCP port or ping response
+  * Added a visual ASCII representation of outages to the
+    CloudI Service API services_status and nodes_status response data
+    (cloudi_service_health_check also has a hosts.{erl,json} response)
+  * Added the CloudI Service API logging_set file_sync configuration
+    option to delay calling fdatasync after a logging file line is
+    written (defaults to 0 milliseconds)
+  * Switched CloudI logger output from usage of ?MODULE to ?FILE for
+    log output from header files
+  * cloudi_service_http_cowboy now automatically load-balances among
+    Erlang processes when count_process > 1 (on Linux and FreeBSD)
+  * Updated load test results with commands used at
+    https://github.com/CloudI/CloudI/tree/develop/src/lib/cloudi_service_request_rate/results/results_v2_0_4#readme
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 December 5, 2021
   Version 2.0.4 released.
   * backwards incompatible changes:
