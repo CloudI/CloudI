@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-01-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_monitoring assertion after fatal_timeout change
+      for external service support
+
 2022-10-12 Michael Truog   <mjtruog at protonmail dot com>
 
     * CloudI version 2.0.5 released

@@ -740,7 +740,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         QueuedEmptySize, MetricPrefix) ->
     case service_state(Pid) of
         {ok, {_, State}} -> % gen_statem
-            41 = erlang:tuple_size(State),
+            42 = erlang:tuple_size(State),
             state = erlang:element(1, State),
             Outgoing = maps:size(erlang:element(3, State)),  % send_timeouts
             QueuedRequests = erlang:element(10, State),      % queued

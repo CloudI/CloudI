@@ -1235,7 +1235,8 @@
     [{prefix, "/health_check/"},
      {module, cloudi_service_health_check},
      {args,
-      [{hosts,
+      [{error_level, info},
+       {hosts,
         [{"cloudi.org",
           [{interval, 5}, % seconds
            {port, 80}]}]}]}]
