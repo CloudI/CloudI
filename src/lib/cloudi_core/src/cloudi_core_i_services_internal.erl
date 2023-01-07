@@ -1857,8 +1857,8 @@ terminate_pids(normal,
                       info_pid = InfoPid,
                       options = #config_service_options{
                           monkey_chaos = MonkeyChaos}}) ->
-    ok = pid_send(RequestPid, 'cloudi_service_request_loop_exit'),
-    ok = pid_send(InfoPid, 'cloudi_service_info_loop_exit'),
+    ok = pid_send(RequestPid, {'cloudi_service_request_loop_exit', false}),
+    ok = pid_send(InfoPid, {'cloudi_service_info_loop_exit', false}),
     ok = cloudi_core_i_runtime_testing:monkey_chaos_destroy(MonkeyChaos);
 terminate_pids(_, _) ->
     ok.
@@ -3198,8 +3198,13 @@ handle_module_request_loop_pid(RequestPidOld, ModuleRequest,
 
 handle_module_request_loop_normal(Uses, ResultPid) ->
     receive
-        'cloudi_service_request_loop_exit' ->
-            erlang:exit('cloudi_service_request_loop_exit');
+        {'cloudi_service_request_loop_exit', Update} ->
+            if
+                Update =:= true ->
+                    erlang:exit('cloudi_service_request_loop_exit');
+                Update =:= false ->
+                    ok
+            end;
         {'cloudi_hibernate', false} ->
             handle_module_request_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3218,8 +3223,13 @@ handle_module_request_loop_normal(Uses, ResultPid) ->
 
 handle_module_request_loop_hibernate(Uses, ResultPid) ->
     receive
-        'cloudi_service_request_loop_exit' ->
-            erlang:exit('cloudi_service_request_loop_exit');
+        {'cloudi_service_request_loop_exit', Update} ->
+            if
+                Update =:= true ->
+                    erlang:exit('cloudi_service_request_loop_exit');
+                Update =:= false ->
+                    ok
+            end;
         {'cloudi_hibernate', false} ->
             handle_module_request_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3318,8 +3328,13 @@ handle_module_info_loop_pid(InfoPidOld, ModuleInfo,
 
 handle_module_info_loop_normal(Uses, ResultPid) ->
     receive
-        'cloudi_service_info_loop_exit' ->
-            erlang:exit('cloudi_service_info_loop_exit');
+        {'cloudi_service_info_loop_exit', Update} ->
+            if
+                Update =:= true ->
+                    erlang:exit('cloudi_service_info_loop_exit');
+                Update =:= false ->
+                    ok
+            end;
         {'cloudi_hibernate', false} ->
             handle_module_info_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3335,8 +3350,13 @@ handle_module_info_loop_normal(Uses, ResultPid) ->
 
 handle_module_info_loop_hibernate(Uses, ResultPid) ->
     receive
-        'cloudi_service_info_loop_exit' ->
-            erlang:exit('cloudi_service_info_loop_exit');
+        {'cloudi_service_info_loop_exit', Update} ->
+            if
+                Update =:= true ->
+                    erlang:exit('cloudi_service_info_loop_exit');
+                Update =:= false ->
+                    ok
+            end;
         {'cloudi_hibernate', false} ->
             handle_module_info_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3565,7 +3585,7 @@ duo_terminate_pids(normal,
                                   monkey_chaos = MonkeyChaos}}) ->
     Dispatcher ! {'cloudi_service_info_failure',
                   stop, normal, undefined, undefined},
-    ok = pid_send(RequestPid, 'cloudi_service_request_loop_exit'),
+    ok = pid_send(RequestPid, {'cloudi_service_request_loop_exit', false}),
     ok = cloudi_core_i_runtime_testing:monkey_chaos_destroy(MonkeyChaos);
 duo_terminate_pids(_, _) ->
     ok.
@@ -4430,7 +4450,7 @@ update_state(#state{dispatcher = Dispatcher,
                                   request_pid_options],
                                  OptionsKeys) of
         true when is_pid(RequestPid) ->
-            RequestPid ! 'cloudi_service_request_loop_exit',
+            RequestPid ! {'cloudi_service_request_loop_exit', true},
             ok;
         _ ->
             ok
@@ -4439,7 +4459,7 @@ update_state(#state{dispatcher = Dispatcher,
                                   info_pid_options],
                                  OptionsKeys) of
         true when is_pid(InfoPid) ->
-            InfoPid ! 'cloudi_service_info_loop_exit',
+            InfoPid ! {'cloudi_service_info_loop_exit', true},
             ok;
         _ ->
             ok
@@ -4528,7 +4548,7 @@ update_state(#state_duo{dispatcher = Dispatcher,
                                   request_pid_options],
                                  OptionsKeys) of
         true when is_pid(RequestPid) ->
-            RequestPid ! 'cloudi_service_request_loop_exit',
+            RequestPid ! {'cloudi_service_request_loop_exit', true},
             ok;
         _ ->
             ok
