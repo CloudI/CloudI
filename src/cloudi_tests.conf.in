@@ -1270,7 +1270,9 @@
     %{redirect, undefined}
     {log_time_offset, info},
     % For slower logging disk writes
-    {file_sync, {5, seconds}}
+    {file_sync, {5, seconds}},
+    % Stop integration tests if fatal or error log output occurs
+    {aspects_log_after, [{cloudi_logger, aspect_stop_on_error}]}
 ]}.
 {code, [
     % internal service source code configuration

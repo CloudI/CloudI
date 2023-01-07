@@ -40,6 +40,7 @@
         cloudi_ip_address,
         cloudi_key_value,
         cloudi_lists,
+        cloudi_logger,
         cloudi_logger_hut,
         cloudi_logger_lager,
         cloudi_math,

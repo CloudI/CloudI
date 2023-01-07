@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-01-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_api_requests json representations of
+      aspect function lists to simplify the data as a single string and
+      avoid the interpretation of Erlang anonymous functions
+      (in the response of logging.json and services.json)
+    * Add the cloudi_logger cloudi_core module for CloudI logger
+      aspects_log_after configuration with functions that can stop
+      CloudI execution based on log output (for test execution)
+    * Add integration tests configuration to ensure CloudI execution
+      stops with exit code 1 when any tests fail
+
 2023-01-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_monitoring assertion after fatal_timeout change

@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -702,11 +702,14 @@ convert_term_to_json({ok, Statuses}, nodes_status = Method, Space) ->
                   [[{<<"node">>, erlang:atom_to_binary(Node, utf8)} |
                     convert_term_to_json_options(Status)]
                    || {Node, Status} <- Statuses]}], Space);
+convert_term_to_json({ok, Options}, logging = Method, Space) ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  convert_term_to_json_logging_options(Options)}], Space);
 convert_term_to_json({ok, Options}, Method, Space)
     when Method =:= acl;
          Method =:= nodes_get;
          Method =:= logging_status;
-         Method =:= logging;
          Method =:= code_status ->
     json_encode([{<<"success">>, true},
                  {erlang:atom_to_binary(Method, utf8),
@@ -728,7 +731,7 @@ convert_term_to_json_service(#internal{prefix = Prefix,
     Service0 = [{<<"count_process">>, CountProcess},
                 {<<"max_r">>, MaxR},
                 {<<"max_t">>, convert_term_to_json_period_seconds(MaxT)},
-                {<<"options">>, convert_term_to_json_options(Options)}],
+                {<<"options">>, convert_term_to_json_service_options(Options)}],
     Service1 = if
         DestListAllow =:= undefined ->
             Service0;
@@ -791,7 +794,7 @@ convert_term_to_json_service(#external{prefix = Prefix,
                 {<<"count_thread">>, CountThread},
                 {<<"max_r">>, MaxR},
                 {<<"max_t">>, convert_term_to_json_period_seconds(MaxT)},
-                {<<"options">>, convert_term_to_json_options(Options)}],
+                {<<"options">>, convert_term_to_json_service_options(Options)}],
     Service1 = if
         DestListAllow =:= undefined ->
             Service0;
@@ -833,6 +836,25 @@ convert_term_to_json_service(#external{prefix = Prefix,
       [unicode:characters_to_binary(Key ++ "=" ++ Value)
        || {Key, Value} <- Env]} | ServiceN].
 
+convert_term_to_json_service_options([]) ->
+    [];
+convert_term_to_json_service_options([{Key, Value} | Options])
+    when Key =:= aspects_init_after orelse
+         Key =:= aspects_request_before orelse
+         Key =:= aspects_request_after orelse
+         Key =:= aspects_info_before orelse
+         Key =:= aspects_info_after orelse
+         Key =:= aspects_terminate_before orelse
+         Key =:= aspects_suspend orelse
+         Key =:= aspects_resume ->
+    [{erlang:atom_to_binary(Key, utf8),
+      cloudi_string:term_to_binary_compact(Value)} |
+     convert_term_to_json_service_options(Options)];
+convert_term_to_json_service_options([{Key, Value} | Options]) ->
+    [{erlang:atom_to_binary(Key, utf8),
+      convert_term_to_json_option(Value)} |
+     convert_term_to_json_service_options(Options)].
+
 convert_term_to_json_service_status([]) ->
     [];
 convert_term_to_json_service_status([{pids_os, Value} | Options]) ->
@@ -846,6 +868,19 @@ convert_term_to_json_service_status([{Key, Value} | Options]) ->
     [{erlang:atom_to_binary(Key, utf8),
       convert_term_to_json_option(Value)} |
      convert_term_to_json_service_status(Options)].
+
+convert_term_to_json_logging_options([]) ->
+    [];
+convert_term_to_json_logging_options([{Key, Value} | Options])
+    when Key =:= aspects_log_before orelse
+         Key =:= aspects_log_after ->
+    [{erlang:atom_to_binary(Key, utf8),
+      cloudi_string:term_to_binary_compact(Value)} |
+     convert_term_to_json_logging_options(Options)];
+convert_term_to_json_logging_options([{Key, Value} | Options]) ->
+    [{erlang:atom_to_binary(Key, utf8),
+      convert_term_to_json_option(Value)} |
+     convert_term_to_json_logging_options(Options)].
 
 convert_term_to_json_option([] = Value) ->
     Value;
