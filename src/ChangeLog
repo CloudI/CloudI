@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-01-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix CloudI Service API services_update options usage of
+      request_pid_uses, request_pid_options, info_pid_uses,
+      info_pid_options for internal services
+    * Fix CloudI Service API services_update options validation of
+      info_pid_uses and info_pid_options for internal services that
+      have the duo_mode option set to true
+
 2023-01-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_api_requests json representations of

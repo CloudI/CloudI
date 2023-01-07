@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2009-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -4483,7 +4483,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans,
                                                                           ACL)
                                  end},
                                 {Options,
-                                 fun services_update_plan_options_internal/2}],
+                                 fun services_update_plan_options_internal/2},
+                                {Services,
+                                 fun services_update_plan_internal_valid/2}],
                                UpdatePlan#config_service_update{
                                    type = internal,
                                    module = UpdateModule,
@@ -4624,6 +4626,47 @@ services_update_plan_internal(Module, ModuleState, UpdateID, Services) ->
             end;
         UpdateValid =:= false ->
             {error, {update_invalid, UpdateID}}
+    end.
+
+services_update_plan_internal_valid(Services,
+                                    #config_service_update{
+                                        type = internal,
+                                        options_keys = OptionsKeys,
+                                        uuids = IDs} = UpdatePlan) ->
+    InfoPidUses = lists:member(info_pid_uses, OptionsKeys),
+    InfoPidOptions = lists:member(info_pid_options, OptionsKeys),
+    if
+        InfoPidUses =:= true orelse
+        InfoPidOptions =:= true ->
+            case services_update_plan_internal_valid_duo_mode(IDs, Services) of
+                true ->
+                    {ok, UpdatePlan};
+                false ->
+                    Reason = if
+                        InfoPidUses =:= true ->
+                            {service_options_info_pid_uses_invalid,
+                             duo_mode};
+                        InfoPidOptions =:= true ->
+                            {service_options_info_pid_options_invalid,
+                             duo_mode}
+                    end,
+                    {error, Reason}
+            end;
+        true ->
+            {ok, UpdatePlan}
+    end.
+
+services_update_plan_internal_valid_duo_mode([], _) ->
+    true;
+services_update_plan_internal_valid_duo_mode([ID | IDs], Services) ->
+    #config_service_internal{options = #config_service_options{
+                                 duo_mode = DuoMode}} =
+        lists:keyfind(ID, #config_service_internal.uuid, Services),
+    if
+        DuoMode =:= true ->
+            false;
+        DuoMode =:= false ->
+            services_update_plan_internal_valid_duo_mode(IDs, Services)
     end.
 
 services_update_plan_external(FilePath, Args, Env, UpdateID, Services) ->

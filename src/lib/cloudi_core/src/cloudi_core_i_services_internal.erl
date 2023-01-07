@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -1631,6 +1631,10 @@ handle_info({'EXIT', RequestPid,
             #state{request_pid = RequestPid} = State) ->
     handle_info(Result, State#state{request_pid = undefined});
 
+handle_info({'EXIT', RequestPid, 'cloudi_service_request_loop_exit'},
+            #state{request_pid = RequestPid} = State) ->
+    {noreply, State#state{request_pid = undefined}};
+
 handle_info({'EXIT', RequestPid, Reason},
             #state{request_pid = RequestPid} = State) ->
     ?LOG_ERROR("~p request exited: ~tp", [RequestPid, Reason]),
@@ -1647,6 +1651,10 @@ handle_info({'EXIT', InfoPid,
               _Type, _Error, _Stack, _ServiceStateNew} = Result},
             #state{info_pid = InfoPid} = State) ->
     handle_info(Result, State#state{info_pid = undefined});
+
+handle_info({'EXIT', InfoPid, 'cloudi_service_info_loop_exit'},
+            #state{info_pid = InfoPid} = State) ->
+    {noreply, State#state{info_pid = undefined}};
 
 handle_info({'EXIT', InfoPid, Reason},
             #state{info_pid = InfoPid} = State) ->
@@ -3191,7 +3199,7 @@ handle_module_request_loop_pid(RequestPidOld, ModuleRequest,
 handle_module_request_loop_normal(Uses, ResultPid) ->
     receive
         'cloudi_service_request_loop_exit' ->
-            ok;
+            erlang:exit('cloudi_service_request_loop_exit');
         {'cloudi_hibernate', false} ->
             handle_module_request_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3211,7 +3219,7 @@ handle_module_request_loop_normal(Uses, ResultPid) ->
 handle_module_request_loop_hibernate(Uses, ResultPid) ->
     receive
         'cloudi_service_request_loop_exit' ->
-            ok;
+            erlang:exit('cloudi_service_request_loop_exit');
         {'cloudi_hibernate', false} ->
             handle_module_request_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3311,7 +3319,7 @@ handle_module_info_loop_pid(InfoPidOld, ModuleInfo,
 handle_module_info_loop_normal(Uses, ResultPid) ->
     receive
         'cloudi_service_info_loop_exit' ->
-            ok;
+            erlang:exit('cloudi_service_info_loop_exit');
         {'cloudi_hibernate', false} ->
             handle_module_info_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3328,7 +3336,7 @@ handle_module_info_loop_normal(Uses, ResultPid) ->
 handle_module_info_loop_hibernate(Uses, ResultPid) ->
     receive
         'cloudi_service_info_loop_exit' ->
-            ok;
+            erlang:exit('cloudi_service_info_loop_exit');
         {'cloudi_hibernate', false} ->
             handle_module_info_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -4368,8 +4376,8 @@ update(ServiceState, State,
 update_state(#state{dispatcher = Dispatcher,
                     timeout_async = TimeoutAsyncOld,
                     timeout_sync = TimeoutSyncOld,
-                    request_pid = RequestPidOld,
-                    info_pid = InfoPidOld,
+                    request_pid = RequestPid,
+                    info_pid = InfoPid,
                     dest_refresh = DestRefreshOld,
                     cpg_data = GroupsOld,
                     dest_deny = DestDenyOld,
@@ -4418,23 +4426,23 @@ update_state(#state{dispatcher = Dispatcher,
         is_list(DestListAllowNew) ->
             cloudi_x_trie:new(DestListAllowNew)
     end,
-    RequestPidNew = case cloudi_lists:member_any([request_pid_uses,
-                                                  request_pid_options],
-                                                 OptionsKeys) of
-        true when is_pid(RequestPidOld) ->
-            RequestPidOld ! 'cloudi_service_request_loop_exit',
-            undefined;
+    case cloudi_lists:member_any([request_pid_uses,
+                                  request_pid_options],
+                                 OptionsKeys) of
+        true when is_pid(RequestPid) ->
+            RequestPid ! 'cloudi_service_request_loop_exit',
+            ok;
         _ ->
-            RequestPidOld
+            ok
     end,
-    InfoPidNew = case cloudi_lists:member_any([info_pid_uses,
-                                               info_pid_options],
-                                              OptionsKeys) of
-        true when is_pid(InfoPidOld) ->
-            InfoPidOld ! 'cloudi_service_info_loop_exit',
-            undefined;
+    case cloudi_lists:member_any([info_pid_uses,
+                                  info_pid_options],
+                                 OptionsKeys) of
+        true when is_pid(InfoPid) ->
+            InfoPid ! 'cloudi_service_info_loop_exit',
+            ok;
         _ ->
-            InfoPidOld
+            ok
     end,
     case lists:member(monkey_chaos, OptionsKeys) of
         true ->
@@ -4505,28 +4513,28 @@ update_state(#state{dispatcher = Dispatcher,
     end,
     State#state{timeout_async = TimeoutAsync,
                 timeout_sync = TimeoutSync,
-                request_pid = RequestPidNew,
-                info_pid = InfoPidNew,
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
                 dest_allow = DestAllow,
                 options = ConfigOptionsN};
 update_state(#state_duo{dispatcher = Dispatcher,
-                        request_pid = RequestPidOld,
+                        request_pid = RequestPid,
                         options = ConfigOptionsOld} = State,
              #config_service_update{
                  options_keys = OptionsKeys,
                  options = ConfigOptionsNew} = UpdatePlan) ->
-    RequestPidNew = case cloudi_lists:member_any([request_pid_uses,
-                                                  request_pid_options],
-                                                 OptionsKeys) of
-        true when is_pid(RequestPidOld) ->
-            RequestPidOld ! 'cloudi_service_request_loop_exit',
-            undefined;
+    case cloudi_lists:member_any([request_pid_uses,
+                                  request_pid_options],
+                                 OptionsKeys) of
+        true when is_pid(RequestPid) ->
+            RequestPid ! 'cloudi_service_request_loop_exit',
+            ok;
         _ ->
-            RequestPidOld
+            ok
     end,
+    % duo_mode == true requires that info_pid_uses and info_pid_options
+    % are not changed (checked during UpdatePlan validation)
     case lists:member(monkey_chaos, OptionsKeys) of
         true ->
             #config_service_options{
@@ -4536,13 +4544,8 @@ update_state(#state_duo{dispatcher = Dispatcher,
         false ->
             ok
     end,
-    % info_pid_options won't change, due to info_pid_uses == infinity
-    % info_pid_uses won't change, due to duo_mode == true
-    % (so these changes would require a service restart after the update)
     ConfigOptions0 = cloudi_core_i_configuration:
-                     service_options_copy(OptionsKeys --
-                                          [info_pid_uses,
-                                           info_pid_options],
+                     service_options_copy(OptionsKeys,
                                           ConfigOptionsOld,
                                           ConfigOptionsNew),
     ConfigOptions1 = case lists:member(rate_request_max, OptionsKeys) of
@@ -4581,6 +4584,5 @@ update_state(#state_duo{dispatcher = Dispatcher,
                   UpdatePlan#config_service_update{
                       options_keys = [],
                       options = duo_mode_dispatcher_options(ConfigOptionsN)}},
-    State#state_duo{request_pid = RequestPidNew,
-                    options = ConfigOptionsN}.
+    State#state_duo{options = ConfigOptionsN}.
 
