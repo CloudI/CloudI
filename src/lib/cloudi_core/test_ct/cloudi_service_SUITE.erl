@@ -662,8 +662,8 @@ t_service_internal_sync_1(_Config) ->
                                    ServiceName,
                                    ?REQUEST2),
     true = cloudi_x_uuid:is_v1(TransId2),
-    true = (cloudi_x_uuid:get_v1_time(TransId2) >=
-            cloudi_x_uuid:get_v1_time(TransId1)),
+    true = (cloudi_x_uuid:get_v1_time_ns(TransId2) >
+            cloudi_x_uuid:get_v1_time_ns(TransId1)),
     {error,
      {service_internal_start_failed,
       {error, invalid_state}}} = cloudi_service_api:services_add([
@@ -748,8 +748,8 @@ t_service_internal_async_1(_Config) ->
                                    ?REQUEST2),
     true = (Timeout2 > (TimeoutMax - 1000)) andalso (Timeout2 =< TimeoutMax),
     true = cloudi_x_uuid:is_v1(TransId2),
-    true = (cloudi_x_uuid:get_v1_time(TransId2) >=
-            cloudi_x_uuid:get_v1_time(TransId1)),
+    true = (cloudi_x_uuid:get_v1_time_ns(TransId2) >
+            cloudi_x_uuid:get_v1_time_ns(TransId1)),
     {error,
      {service_internal_start_failed,
       {error, invalid_state}}} = cloudi_service_api:services_add([
@@ -783,12 +783,12 @@ t_service_internal_async_2(_Config) ->
      Context4} = cloudi:recv_async(Context3, <<0:128>>),
     {{ok, ?RESPONSE_INFO1, ?RESPONSE1, TransId4},
      Context5} = cloudi:recv_async(Context4, <<0:128>>),
-    true = (cloudi_x_uuid:get_v1_time(TransId1) =<
-            cloudi_x_uuid:get_v1_time(TransId2)) andalso
-           (cloudi_x_uuid:get_v1_time(TransId2) =<
-            cloudi_x_uuid:get_v1_time(TransId3)) andalso
-           (cloudi_x_uuid:get_v1_time(TransId3) =<
-            cloudi_x_uuid:get_v1_time(TransId4)),
+    true = (cloudi_x_uuid:get_v1_time_ns(TransId1) <
+            cloudi_x_uuid:get_v1_time_ns(TransId2)) andalso
+           (cloudi_x_uuid:get_v1_time_ns(TransId2) <
+            cloudi_x_uuid:get_v1_time_ns(TransId3)) andalso
+           (cloudi_x_uuid:get_v1_time_ns(TransId3) <
+            cloudi_x_uuid:get_v1_time_ns(TransId4)),
     {{ok,
       [{'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
         Timeout1, 0, TransId1, Self},
@@ -821,12 +821,12 @@ t_service_internal_async_2(_Config) ->
        {?RESPONSE_INFO1, ?RESPONSE1, TransId7},
        {?RESPONSE_INFO1, ?RESPONSE1, TransId8}]},
      Context8} = cloudi:recv_asyncs(Context7, TransIds),
-    true = (cloudi_x_uuid:get_v1_time(TransId5) =<
-            cloudi_x_uuid:get_v1_time(TransId6)) andalso
-           (cloudi_x_uuid:get_v1_time(TransId6) =<
-            cloudi_x_uuid:get_v1_time(TransId7)) andalso
-           (cloudi_x_uuid:get_v1_time(TransId7) =<
-            cloudi_x_uuid:get_v1_time(TransId8)),
+    true = (cloudi_x_uuid:get_v1_time_ns(TransId5) <
+            cloudi_x_uuid:get_v1_time_ns(TransId6)) andalso
+           (cloudi_x_uuid:get_v1_time_ns(TransId6) <
+            cloudi_x_uuid:get_v1_time_ns(TransId7)) andalso
+           (cloudi_x_uuid:get_v1_time_ns(TransId7) <
+            cloudi_x_uuid:get_v1_time_ns(TransId8)),
     {{ok,
       [{'send_async', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
         Timeout5, 0, TransId5, Self},
@@ -864,12 +864,12 @@ t_service_internal_async_3(_Config) ->
        {?RESPONSE_INFO1, ?RESPONSE1, TransId3},
        {?RESPONSE_INFO1, ?RESPONSE1, TransId4}]},
      _Context1} = cloudi:send_sync(Context0, ServiceName, ?REQUEST3),
-    true = (cloudi_x_uuid:get_v1_time(TransId1) =<
-            cloudi_x_uuid:get_v1_time(TransId2)) andalso
-           (cloudi_x_uuid:get_v1_time(TransId2) =<
-            cloudi_x_uuid:get_v1_time(TransId3)) andalso
-           (cloudi_x_uuid:get_v1_time(TransId3) =<
-            cloudi_x_uuid:get_v1_time(TransId4)),
+    true = (cloudi_x_uuid:get_v1_time_ns(TransId1) <
+            cloudi_x_uuid:get_v1_time_ns(TransId2)) andalso
+           (cloudi_x_uuid:get_v1_time_ns(TransId2) <
+            cloudi_x_uuid:get_v1_time_ns(TransId3)) andalso
+           (cloudi_x_uuid:get_v1_time_ns(TransId3) <
+            cloudi_x_uuid:get_v1_time_ns(TransId4)),
     true = cloudi_x_uuid:is_v1(TransId1),
     true = cloudi_x_uuid:is_v1(TransId2),
     true = cloudi_x_uuid:is_v1(TransId3),
