@@ -72,7 +72,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -93,8 +93,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2014-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -132,6 +132,10 @@
         % data on disk isn't corrupt (once it is recovered after a crash).
         % All disk writes are done as atomic actions with rename use,
         % so corruption would be due to an OS failure or hardware failure.
+        % If checksum validation fails
+        % (during service initialization reading pending requests from
+        %  an existing service file after a reboot or crash occurred)
+        % service initialization will fail.
         % Valid values are:
         % crc32, md5, ripemd160, sha, sha224, sha256, sha384, sha512
 -define(DEFAULT_RETRY,                          0).

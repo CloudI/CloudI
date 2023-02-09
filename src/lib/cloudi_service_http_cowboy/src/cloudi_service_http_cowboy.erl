@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2012-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -576,6 +576,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 }
             )
     end,
+    % based on testing it is best to force garbage collection here
+    true = erlang:garbage_collect(),
     {ok, #state{listener = ListenerPid,
                 service = Service,
                 handler_state = HandlerState}}.

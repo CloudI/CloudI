@@ -26,7 +26,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -47,8 +47,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -123,7 +123,7 @@
         node_id :: <<_:48>>,
         clock_seq :: 0..16383,
         timestamp_type :: timestamp_type_internal(),
-        timestamp_last :: integer() % microseconds
+        timestamp_last :: integer() % nanoseconds div 100
     }).
 
 -type uuid() :: <<_:128>>.
@@ -154,7 +154,7 @@
 
 -include("uuid.hrl").
 
-% Erlang Binary Term Format constants
+% Erlang External Term Format constants
 % info from http://erlang.org/doc/apps/erts/erl_ext_dist.html
 -define(TAG_VERSION, 131).
 -define(TAG_PID_EXT, 103).
@@ -307,8 +307,8 @@ get_v1(#uuid_state{variant = rfc4122,
                    clock_seq = ClockSeq,
                    timestamp_type = TimestampTypeInternal,
                    timestamp_last = TimestampLast} = State) ->
-    MicroSeconds = timestamp(TimestampTypeInternal, TimestampLast),
-    Time = MicroSeconds * 10 + ?GREGORIAN_EPOCH_OFFSET,
+    Timestamp = timestamp(TimestampTypeInternal, TimestampLast),
+    Time = Timestamp + ?GREGORIAN_EPOCH_OFFSET,
     % will be larger than 60 bits after 5236-03-31 21:21:00
     <<TimeHigh:12, TimeMid:16, TimeLow:32>> = <<Time:60>>,
     {<<TimeLow:32, TimeMid:16,
@@ -317,14 +317,14 @@ get_v1(#uuid_state{variant = rfc4122,
        1:1, 0:1,            % RFC 4122 variant bits
        ClockSeq:14,
        NodeId/binary>>,
-     State#uuid_state{timestamp_last = MicroSeconds}};
+     State#uuid_state{timestamp_last = Timestamp}};
 get_v1(#uuid_state{variant = ordered,
                    node_id = NodeId,
                    clock_seq = ClockSeq,
                    timestamp_type = TimestampTypeInternal,
                    timestamp_last = TimestampLast} = State) ->
-    MicroSeconds = timestamp(TimestampTypeInternal, TimestampLast),
-    Time = MicroSeconds * 10 + ?GREGORIAN_EPOCH_OFFSET,
+    Timestamp = timestamp(TimestampTypeInternal, TimestampLast),
+    Time = Timestamp + ?GREGORIAN_EPOCH_OFFSET,
     % will be larger than 60 bits after 5236-03-31 21:21:00
     <<TimeHigh:48, TimeLow:12>> = <<Time:60>>,
     {<<TimeHigh:48,
@@ -333,7 +333,7 @@ get_v1(#uuid_state{variant = ordered,
        1:1, 1:1, 1:1,       % ordered (future definition) variant bits
        ClockSeq:13,
        NodeId/binary>>,
-     State#uuid_state{timestamp_last = MicroSeconds}}.
+     State#uuid_state{timestamp_last = Timestamp}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -362,16 +362,16 @@ get_v1_time() ->
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 get_v1_time(erlang) ->
-    timestamp(erlang_timestamp);
+    timestamp_microseconds(erlang_timestamp);
 
 get_v1_time(os) ->
-    timestamp(os);
+    timestamp_microseconds(os);
 
 get_v1_time(warp) ->
-    timestamp(warp);
+    timestamp_microseconds(warp);
 
 get_v1_time(#uuid_state{timestamp_type = TimestampTypeInternal}) ->
-    timestamp(TimestampTypeInternal);
+    timestamp_microseconds(TimestampTypeInternal);
 
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
@@ -394,16 +394,16 @@ get_v1_time(Value)
     (Time - ?GREGORIAN_EPOCH_OFFSET) div 10.
 -else.
 get_v1_time(erlang) ->
-    timestamp(erlang_now);
+    timestamp_microseconds(erlang_now);
 
 get_v1_time(os) ->
-    timestamp(os);
+    timestamp_microseconds(os);
 
 get_v1_time(warp) ->
     erlang:exit(badarg);
 
 get_v1_time(#uuid_state{timestamp_type = TimestampTypeInternal}) ->
-    timestamp(TimestampTypeInternal);
+    timestamp_microseconds(TimestampTypeInternal);
 
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
@@ -1128,11 +1128,11 @@ test() ->
     true = uuid:is_v1(V1uuid1),
     "2012-12-08T03:13:58.564048Z" = uuid:get_v1_datetime(V1uuid1),
     <<V1Time1:60>> = <<V1TimeHigh1:12, V1TimeMid1:16, V1TimeLow1:32>>,
-    V1Time1total = erlang:trunc((V1Time1 - 16#01b21dd213814000) / 10),
-    V1Time1mega = erlang:trunc(V1Time1total / 1000000000000),
-    V1Time1sec = erlang:trunc(V1Time1total / 1000000 - V1Time1mega * 1000000),
-    V1Time1micro = erlang:trunc(V1Time1total -
-        (V1Time1mega * 1000000 + V1Time1sec) * 1000000),
+    V1Time1total = (V1Time1 - 16#01b21dd213814000) div 10,
+    V1Time1mega = V1Time1total div 1000000000000,
+    V1Time1sec = V1Time1total div 1000000 - V1Time1mega * 1000000,
+    V1Time1micro = V1Time1total -
+                   (V1Time1mega * 1000000 + V1Time1sec) * 1000000,
     {{2012, 12, 8}, {3, 13, 58}} =
         calendar:now_to_datetime({V1Time1mega, V1Time1sec, V1Time1micro}),
     % max version 1 timestamp:
@@ -1160,11 +1160,11 @@ test() ->
       V1NodeId2/binary>> = V1uuid2,
     true = uuid:is_v1(V1uuid2),
     <<V1Time2:60>> = <<V1TimeHigh2:12, V1TimeMid2:16, V1TimeLow2:32>>,
-    V1Time2total = erlang:trunc((V1Time2 - 16#01b21dd213814000) / 10),
-    V1Time2Amega = erlang:trunc(V1Time2total / 1000000000000),
-    V1Time2Asec = erlang:trunc(V1Time2total / 1000000 - V1Time2Amega * 1000000),
-    V1Time2Amicro = erlang:trunc(V1Time2total -
-        (V1Time2Amega * 1000000 + V1Time2Asec) * 1000000),
+    V1Time2total = (V1Time2 - 16#01b21dd213814000) div 10,
+    V1Time2Amega = V1Time2total div 1000000000000,
+    V1Time2Asec = V1Time2total div 1000000 - V1Time2Amega * 1000000,
+    V1Time2Amicro = V1Time2total -
+                    (V1Time2Amega * 1000000 + V1Time2Asec) * 1000000,
     V1Time2B = 1354938160.1998589,
     V1Time2Bmega = erlang:trunc(V1Time2B / 1000000),
     V1Time2Bsec = erlang:trunc(V1Time2B - V1Time2Bmega * 1000000),
@@ -1366,9 +1366,14 @@ test() ->
 -compile({inline,
           [{timestamp,1},
            {timestamp,2},
+           {timestamp_microseconds,1},
+           {timestamp_nanoseconds,1},
            {int_to_dec,1},
            {int_to_hex,1},
            {hex_to_int,1}]}).
+
+timestamp(TimestampTypeInternal) ->
+    timestamp_nanoseconds(TimestampTypeInternal) div 100.
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 timestamp_type_erlang() ->
@@ -1376,20 +1381,23 @@ timestamp_type_erlang() ->
     true = erlang:function_exported(erlang, system_time, 0),
     erlang_timestamp.
 
+timestamp_microseconds(TimestampTypeInternal) ->
+    timestamp_nanoseconds(TimestampTypeInternal) div 1000.
+
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-timestamp(erlang_timestamp) ->
-    erlang:system_time(microsecond);
-timestamp(os) ->
-    os:system_time(microsecond);
-timestamp(warp) ->
-    erlang:system_time(microsecond).
+timestamp_nanoseconds(erlang_timestamp) ->
+    erlang:system_time(nanosecond);
+timestamp_nanoseconds(os) ->
+    os:system_time(nanosecond);
+timestamp_nanoseconds(warp) ->
+    erlang:system_time(nanosecond).
 -else.
-timestamp(erlang_timestamp) ->
-    erlang:system_time(micro_seconds);
-timestamp(os) ->
-    os:system_time(micro_seconds);
-timestamp(warp) ->
-    erlang:system_time(micro_seconds).
+timestamp_nanoseconds(erlang_timestamp) ->
+    erlang:system_time(nano_seconds);
+timestamp_nanoseconds(os) ->
+    os:system_time(nano_seconds);
+timestamp_nanoseconds(warp) ->
+    erlang:system_time(nano_seconds).
 -endif.
 
 timestamp(erlang_timestamp, TimestampLast) ->
@@ -1410,12 +1418,15 @@ timestamp_type_erlang() ->
     false = erlang:function_exported(erlang, system_time, 0),
     erlang_now.
 
-timestamp(erlang_now) ->
+timestamp_microseconds(erlang_now) ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
     (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
-timestamp(os) ->
+timestamp_microseconds(os) ->
     {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
     (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds.
+
+timestamp_nanoseconds(TimestampTypeInternal) ->
+    timestamp_microseconds(TimestampTypeInternal) * 1000.
 
 timestamp(erlang_now, _) ->
     timestamp(erlang_now);

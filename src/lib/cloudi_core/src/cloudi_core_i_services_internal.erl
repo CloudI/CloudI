@@ -4396,6 +4396,7 @@ update(ServiceState, State,
 update_state(#state{dispatcher = Dispatcher,
                     timeout_async = TimeoutAsyncOld,
                     timeout_sync = TimeoutSyncOld,
+                    duo_mode_pid = DuoModePid,
                     request_pid = RequestPid,
                     info_pid = InfoPid,
                     dest_refresh = DestRefreshOld,
@@ -4458,7 +4459,7 @@ update_state(#state{dispatcher = Dispatcher,
     case cloudi_lists:member_any([info_pid_uses,
                                   info_pid_options],
                                  OptionsKeys) of
-        true when is_pid(InfoPid) ->
+        true when DuoModePid =:= undefined, is_pid(InfoPid) ->
             InfoPid ! {'cloudi_service_info_loop_exit', true},
             ok;
         _ ->
@@ -4553,8 +4554,8 @@ update_state(#state_duo{dispatcher = Dispatcher,
         _ ->
             ok
     end,
-    % duo_mode == true requires that info_pid_uses and info_pid_options
-    % are not changed (checked during UpdatePlan validation)
+    % duo_mode == true requires that info_pid_uses
+    % is not changed (checked during UpdatePlan validation)
     case lists:member(monkey_chaos, OptionsKeys) of
         true ->
             #config_service_options{

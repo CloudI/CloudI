@@ -656,6 +656,7 @@
          {automatic_loading, boolean()} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -673,6 +674,7 @@
          {application_name, undefined | atom()} |
          {init_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -682,6 +684,7 @@
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -691,6 +694,7 @@
          {info_pid_uses, infinity | pos_integer()} |
          {info_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -734,6 +738,7 @@
          {automatic_loading, boolean()} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -1029,6 +1034,7 @@
           service_options_monkey_chaos_options() | system | false} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -1045,6 +1051,7 @@
          {aspects_resume, list(aspect_resume())} |
          {init_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -1054,6 +1061,7 @@
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -1063,6 +1071,7 @@
          {info_pid_uses, infinity | pos_integer()} |
          {info_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
@@ -1097,6 +1106,7 @@
           service_options_monkey_chaos_options() | system | false} |
          {dispatcher_pid_options,
           list({priority, low | normal | high} |
+               {async_dist, boolean()} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |

@@ -2628,15 +2628,15 @@ timeout_terminate(TimeoutTerminate, MaxR, MaxT)
             end
     end.
 
-pid_options_format(OptionsList0) ->
-    OptionsList1 = lists:delete(link, OptionsList0),
-    OptionsListN = case lists:keyfind(message_queue_data, 1, OptionsList1) of
-        {message_queue_data, on_heap} ->
-            lists:keydelete(message_queue_data, 1, OptionsList1);
-        {message_queue_data, _} ->
-            OptionsList1
-    end,
-    OptionsListN.
+% format excludes CloudI default pid options
+pid_options_format([]) ->
+    [];
+pid_options_format([link | OptionsList]) ->
+    pid_options_format(OptionsList);
+pid_options_format([{message_queue_data, on_heap} | OptionsList]) ->
+    pid_options_format(OptionsList);
+pid_options_format([Option | OptionsList]) ->
+    [Option | pid_options_format(OptionsList)].
 
 -spec services_validate_options_internal(OptionsList ::
                                              cloudi_service_api:
@@ -3869,6 +3869,10 @@ services_validate_option_pid_options([{message_queue_data, V} = PidOption |
                                       OptionsList], Output)
     when (V =:= off_heap) orelse (V =:= on_heap) ->
     services_validate_option_pid_options(OptionsList, [PidOption | Output]);
+services_validate_option_pid_options([{async_dist, V} = PidOption |
+                                      OptionsList], Output)
+    when is_boolean(V) ->
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
 services_validate_option_pid_options([{priority, V} = PidOption |
                                       OptionsList], Output)
     when (V =:= high) orelse (V =:= low) orelse (V =:= normal) ->
@@ -4633,26 +4637,15 @@ services_update_plan_internal_valid(Services,
                                         type = internal,
                                         options_keys = OptionsKeys,
                                         uuids = IDs} = UpdatePlan) ->
-    InfoPidUses = lists:member(info_pid_uses, OptionsKeys),
-    InfoPidOptions = lists:member(info_pid_options, OptionsKeys),
-    if
-        InfoPidUses =:= true orelse
-        InfoPidOptions =:= true ->
+    case lists:member(info_pid_uses, OptionsKeys) of
+        true ->
             case services_update_plan_internal_valid_duo_mode(IDs, Services) of
                 true ->
                     {ok, UpdatePlan};
                 false ->
-                    Reason = if
-                        InfoPidUses =:= true ->
-                            {service_options_info_pid_uses_invalid,
-                             duo_mode};
-                        InfoPidOptions =:= true ->
-                            {service_options_info_pid_options_invalid,
-                             duo_mode}
-                    end,
-                    {error, Reason}
+                    {error, {service_options_info_pid_uses_invalid, duo_mode}}
             end;
-        true ->
+        false ->
             {ok, UpdatePlan}
     end.
 

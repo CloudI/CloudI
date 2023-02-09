@@ -95,7 +95,7 @@ to_erl(Method, Result) ->
     binary().
 
 to_erl(Method, Result, Space) ->
-    convert_term_to_erlang(convert_api_data(Method, Result), Space).
+    convert_term_to_erlang(convert_api_data(Method, Result), Method, Space).
 
 -spec to_json(Method :: atom(),
               Result :: any()) ->
@@ -179,7 +179,7 @@ format_erlang_call(_, _, Request, _)
 format_erlang_call(Method, 1, _, Timeout) ->
     try cloudi_service_api_call(Method, Timeout) of
         Result ->
-            convert_term_to_erlang(Result)
+            convert_term_to_erlang(Result, Method)
     catch
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
@@ -189,10 +189,10 @@ format_erlang_call(Method, 2, Request, Timeout) ->
     Arg1 = convert_erlang_to_term(Request),
     try cloudi_service_api_call(Method, Arg1, Timeout) of
         Result ->
-            convert_term_to_erlang(Result)
+            convert_term_to_erlang(Result, Method)
     catch
         exit:invalid_input ->
-            convert_term_to_erlang({error, timeout});
+            convert_term_to_erlang({error, timeout}, Method);
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
             <<>>
@@ -326,13 +326,67 @@ convert_erlang_to_term(Request) ->
             invalid
     end.
 
-convert_term_to_erlang(Result) ->
-    convert_term_to_erlang(Result, true).
+convert_term_to_erlang(Result, Method) ->
+    convert_term_to_erlang(Result, Method, true).
 
-convert_term_to_erlang({ok, Result}, Space) ->
-    convert_term_to_erlang_string(Result, Space);
-convert_term_to_erlang(Result, Space) ->
+convert_term_to_erlang({ok, Result}, Method, Space) ->
+    ResultNew = if
+        Method =:= services;
+        Method =:= services_search ->
+            [convert_term_to_erlang_service(Service, Id)
+             || {Id, Service} <- Result];
+        Method =:= logging ->
+            convert_term_to_erlang_logging_options(Result);
+        true ->
+            Result
+    end,
+    convert_term_to_erlang_string(ResultNew, Space);
+convert_term_to_erlang(Result, _, Space) ->
     convert_term_to_erlang_string(Result, Space).
+
+convert_term_to_erlang_service(#internal{options = Options} = Service0, Id) ->
+    ServiceN = Service0#internal{
+                   options = convert_term_to_erlang_service_options(Options)},
+    {Id, ServiceN};
+convert_term_to_erlang_service(#external{options = Options} = Service0, Id) ->
+    ServiceN = Service0#external{
+                   options = convert_term_to_erlang_service_options(Options)},
+    {Id, ServiceN}.
+
+convert_term_to_erlang_service_options([]) ->
+    [];
+convert_term_to_erlang_service_options([{Key, Value} | Options])
+    when Key =:= aspects_init_after orelse
+         Key =:= aspects_request_before orelse
+         Key =:= aspects_request_after orelse
+         Key =:= aspects_info_before orelse
+         Key =:= aspects_info_after orelse
+         Key =:= aspects_terminate_before orelse
+         Key =:= aspects_suspend orelse
+         Key =:= aspects_resume ->
+    [{Key, convert_term_to_erlang_option_aspects(Value)} |
+     convert_term_to_erlang_service_options(Options)];
+convert_term_to_erlang_service_options([Option | Options]) ->
+    [Option | convert_term_to_erlang_service_options(Options)].
+
+convert_term_to_erlang_logging_options([]) ->
+    [];
+convert_term_to_erlang_logging_options([{Key, Value} | Options])
+    when Key =:= aspects_log_before orelse
+         Key =:= aspects_log_after ->
+    [{Key, convert_term_to_erlang_option_aspects(Value)} |
+     convert_term_to_erlang_logging_options(Options)];
+convert_term_to_erlang_logging_options([Option | Options]) ->
+    [Option | convert_term_to_erlang_logging_options(Options)].
+
+convert_term_to_erlang_option_aspects([]) ->
+    [];
+convert_term_to_erlang_option_aspects([Aspect | Aspects])
+    when is_function(Aspect) ->
+    [cloudi_string:term_to_list_compact(Aspect) |
+     convert_term_to_erlang_option_aspects(Aspects)];
+convert_term_to_erlang_option_aspects([Aspect | Aspects]) ->
+    [Aspect | convert_term_to_erlang_option_aspects(Aspects)].
 
 convert_term_to_erlang_string(Result, true) ->
     cloudi_string:format_to_binary("~p", [Result]);
@@ -848,7 +902,7 @@ convert_term_to_json_service_options([{Key, Value} | Options])
          Key =:= aspects_suspend orelse
          Key =:= aspects_resume ->
     [{erlang:atom_to_binary(Key, utf8),
-      cloudi_string:term_to_binary_compact(Value)} |
+      convert_term_to_json_option_aspects(Value)} |
      convert_term_to_json_service_options(Options)];
 convert_term_to_json_service_options([{Key, Value} | Options]) ->
     [{erlang:atom_to_binary(Key, utf8),
@@ -875,12 +929,31 @@ convert_term_to_json_logging_options([{Key, Value} | Options])
     when Key =:= aspects_log_before orelse
          Key =:= aspects_log_after ->
     [{erlang:atom_to_binary(Key, utf8),
-      cloudi_string:term_to_binary_compact(Value)} |
+      convert_term_to_json_option_aspects(Value)} |
      convert_term_to_json_logging_options(Options)];
 convert_term_to_json_logging_options([{Key, Value} | Options]) ->
     [{erlang:atom_to_binary(Key, utf8),
       convert_term_to_json_option(Value)} |
      convert_term_to_json_logging_options(Options)].
+
+convert_term_to_json_option_aspects([]) ->
+    [];
+convert_term_to_json_option_aspects([{{Module, Function}} | Aspects])
+    when is_atom(Module), is_atom(Function) ->
+    [[{<<"module">>, erlang:atom_to_binary(Module, utf8)},
+      {<<"function">>, erlang:atom_to_binary(Function, utf8)},
+      {<<"closure">>, true}] |
+     convert_term_to_json_option_aspects(Aspects)];
+convert_term_to_json_option_aspects([{Module, Function} | Aspects])
+    when is_atom(Module), is_atom(Function) ->
+    [[{<<"module">>, erlang:atom_to_binary(Module, utf8)},
+      {<<"function">>, erlang:atom_to_binary(Function, utf8)},
+      {<<"closure">>, false}] |
+     convert_term_to_json_option_aspects(Aspects)];
+convert_term_to_json_option_aspects([Aspect | Aspects])
+    when is_function(Aspect) ->
+    [[{<<"literal">>, cloudi_string:term_to_binary_compact(Aspect)}] |
+     convert_term_to_json_option_aspects(Aspects)].
 
 convert_term_to_json_option([] = Value) ->
     Value;

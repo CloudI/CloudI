@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-02-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_service_api_requests representations of
+      aspect function lists to ensure only literal functions are
+      encoded as string data
+      (in the erl/json response of logging and services)
+    * Allow CloudI Service API services_update to change
+      info_pid_options when duo_mode == true to be like dispatcher_pid_options
+      (the change is only able to occur after a restart)
+    * Add support for the new async_dist erlang:spawn_opt/2 option
+    * Update uuid
+
 2023-01-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix CloudI Service API services_update options usage of

@@ -8,6 +8,14 @@
 # Execute the script (after installation) with:
 # sudo sh linux_setcap.sh
 
+# Setting a file system capability causes the AT_SECURE == 1 (getauxval)
+# secure-execution mode which makes the kernel restrict what the
+# OS process may do.  Any usage of ptrace (e.g., gdb or strace) and
+# any usage of /proc is blocked.  Many LD_ environment variables
+# (e.g., LD_LIBRARY_PATH) are ignored in secure-execution mode.
+# These restrictions only impact the executables listed below
+# (external CloudI service OS processes remain unaffected).
+
 ROOTDIR="@cloudi_prefix@"
 if [ ! -d $ROOTDIR ]; then
     echo "$ROOTDIR does not exist!"
