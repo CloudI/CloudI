@@ -1736,11 +1736,10 @@ handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
             hibernate_check({noreply, process_update(StateNew)})
     end;
 
-handle_info({'cloudi_service_update_state',
-             #config_service_update{options = ConfigOptions} = UpdatePlan},
+handle_info({'cloudi_service_update_state', UpdatePlan},
             #state{duo_mode_pid = DuoModePid} = State) ->
     true = is_pid(DuoModePid),
-    StateNew = update_state(State#state{options = ConfigOptions}, UpdatePlan),
+    StateNew = update_state(State, UpdatePlan),
     hibernate_check({noreply, StateNew});
 
 handle_info({'cloudi_service_init_execute', Args, Timeout,
@@ -3646,6 +3645,10 @@ duo_handle_info({'EXIT', RequestPid,
                 #state_duo{request_pid = RequestPid} = State) ->
     duo_handle_info(Result, State#state_duo{request_pid = undefined});
 
+duo_handle_info({'EXIT', RequestPid, 'cloudi_service_request_loop_exit'},
+                #state_duo{request_pid = RequestPid} = State) ->
+    {noreply, State#state_duo{request_pid = undefined}};
+
 duo_handle_info({'EXIT', RequestPid, Reason},
                 #state_duo{request_pid = RequestPid} = State) ->
     ?LOG_ERROR("~p duo_mode request exited: ~tp", [RequestPid, Reason]),
@@ -4509,9 +4512,12 @@ update_state(#state_duo{dispatcher = Dispatcher,
                                           ConfigOptionsNew,
                                           OptionsKeys,
                                           RequestPid, undefined),
+    OptionsKeysDispatcher = lists:filter(fun(OptionKey) ->
+        OptionKey =:= dispatcher_pid_options
+    end, OptionsKeys),
     Dispatcher ! {'cloudi_service_update_state',
                   UpdatePlan#config_service_update{
-                      options_keys = [],
+                      options_keys = OptionsKeysDispatcher,
                       options = duo_mode_dispatcher_options(ConfigOptions)}},
     State#state_duo{options = ConfigOptions}.
 

@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2014-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
@@ -67,6 +67,8 @@
          t_service_internal_terminate_3/1,
          t_service_internal_terminate_4/1,
          t_service_internal_update_1/1,
+         t_service_internal_update_pid_options_1/1,
+         t_service_internal_update_pid_options_2/1,
          t_service_internal_log_1/1,
          t_service_internal_idle_1/1,
          t_service_internal_stop_error_1/1,
@@ -247,6 +249,13 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _Dispatcher) ->
     {stop, Reason, State};
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              <<>>, service_pids,
+                              _Timeout, _Priority, _TransId, _Pid,
+                              #state{mode = pid} = State,
+                              Dispatcher) ->
+    Service = cloudi_service:self(Dispatcher),
+    {reply, {Dispatcher, Service}, State};
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO7, ?REQUEST7,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{} = State,
@@ -326,6 +335,8 @@ groups() ->
        t_service_internal_terminate_3,
        t_service_internal_terminate_4,
        t_service_internal_update_1,
+       t_service_internal_update_pid_options_1,
+       t_service_internal_update_pid_options_2,
        t_service_internal_log_1,
        t_service_internal_idle_1,
        t_service_internal_stop_error_1,
@@ -557,7 +568,9 @@ init_per_testcase(TestCase, Config)
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
-    when (TestCase =:= t_service_internal_stop_error_1) orelse
+    when (TestCase =:= t_service_internal_update_pid_options_1) orelse
+         (TestCase =:= t_service_internal_update_pid_options_2) orelse
+         (TestCase =:= t_service_internal_stop_error_1) orelse
          (TestCase =:= t_service_internal_stop_error_2) orelse
          (TestCase =:= t_service_internal_stop_shutdown_1) orelse
          (TestCase =:= t_service_internal_stop_shutdown_2) orelse
@@ -565,6 +578,7 @@ init_per_testcase(TestCase, Config)
          (TestCase =:= t_service_internal_stop_shutdown_6) orelse
          (TestCase =:= t_service_internal_stop_normal_1) orelse
          (TestCase =:= t_service_internal_stop_normal_2) ->
+    DuoMode = (TestCase =:= t_service_internal_update_pid_options_2),
     ok = init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using the record configuration format (from cloudi_service_api.hrl)
@@ -573,7 +587,8 @@ init_per_testcase(TestCase, Config)
                   args = [{mode, pid}],
                   options = [{automatic_loading, false},
                              {request_pid_uses, infinity},
-                             {info_pid_uses, infinity}]}
+                             {info_pid_uses, infinity},
+                             {duo_mode, DuoMode}]}
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -1028,6 +1043,221 @@ t_service_internal_update_1(Config) ->
                                    ServiceName,
                                    ?REQUEST_INFO6, ?REQUEST6,
                                    undefined, undefined),
+    ok.
+
+t_service_internal_update_pid_options_1(Config) ->
+    t_service_internal_update_pid_options(Config, false).
+
+t_service_internal_update_pid_options_2(Config) ->
+    t_service_internal_update_pid_options(Config, true).
+
+t_service_internal_update_pid_options(Config, DuoMode) ->
+    Context0 = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {{ok, {Dispatcher, Service}},
+     Context1} = cloudi:send_sync(Context0,
+                                  ServiceName,
+                                  <<>>, service_pids,
+                                  undefined, undefined),
+    {{ok, RequestPid0},
+     Context2} = cloudi:send_sync(Context1,
+                                  ServiceName,
+                                  <<>>),
+    Service ! {pid, self()},
+    InfoPid0 = receive
+        {pid, InfoPidValue0} ->
+            InfoPidValue0
+    end,
+    if
+        DuoMode =:= true ->
+            true = (Dispatcher /= Service),
+            true = (InfoPid0 =:= Service);
+        DuoMode =:= false ->
+            true = (Dispatcher =:= Service)
+    end,
+    true = (InfoPid0 /= RequestPid0),
+    [{fullsweep_after,
+      FullsweepAfterDefault},
+     {min_heap_size,
+      MinHeapSizeDefault},
+     {min_bin_vheap_size,
+      MinBinVheapSizeDefault},
+     {max_heap_size,
+      MaxHeapSizeDefault},
+     {message_queue_data,
+      MessageQueueDataDefault},
+     {priority,
+      PriorityDefault}] = erlang:process_info(Dispatcher,
+                                              [fullsweep_after,
+                                               min_heap_size,
+                                               min_bin_vheap_size,
+                                               max_heap_size,
+                                               message_queue_data,
+                                               priority]),
+    on_heap = MessageQueueDataDefault,
+    normal = PriorityDefault,
+    [{fullsweep_after,
+      FullsweepAfterDefault},
+     {min_heap_size,
+      MinHeapSizeDefault},
+     {min_bin_vheap_size,
+      MinBinVheapSizeDefault},
+     {max_heap_size,
+      MaxHeapSizeDefault},
+     {message_queue_data,
+      MessageQueueDataDefault},
+     {priority,
+      PriorityDefault}] = erlang:process_info(InfoPid0,
+                                              [fullsweep_after,
+                                               min_heap_size,
+                                               min_bin_vheap_size,
+                                               max_heap_size,
+                                               message_queue_data,
+                                               priority]),
+    [{fullsweep_after,
+      FullsweepAfterDefault},
+     {max_heap_size,
+      MaxHeapSizeDefault},
+     {message_queue_data,
+      MessageQueueDataDefault},
+     {priority,
+      PriorityDefault}] = erlang:process_info(RequestPid0,
+                                              [fullsweep_after,
+                                               max_heap_size,
+                                               message_queue_data,
+                                               priority]),
+    DispatcherPidOptions1 = [{fullsweep_after, 0},
+                             {max_heap_size,
+                              #{error_logger => true,
+                                kill => true,
+                                size => 1048577}},
+                             {priority, high}],
+    InfoPidOptions1 = [{fullsweep_after, 1},
+                       {max_heap_size,
+                        #{error_logger => true,
+                          kill => true,
+                          size => 1048578}},
+                       {message_queue_data, off_heap},
+                       {priority, low}],
+    RequestPidOptions1 = [{fullsweep_after, 2},
+                          {max_heap_size,
+                           #{error_logger => true,
+                             kill => true,
+                             size => 1048579}},
+                          {priority, normal}],
+    Options0 = [{dispatcher_pid_options,
+                 [{sensitive, true} | DispatcherPidOptions1]},
+                {info_pid_options, InfoPidOptions1},
+                {request_pid_options,
+                 [{sensitive, false} | RequestPidOptions1]}],
+    [ServiceId] = ?config(service_ids, Config),
+    {ok, [[ServiceId]]} = cloudi_service_api:
+                          services_update([{ServiceId,
+                                            [{module, ?MODULE},
+                                             {options, Options0}]}],
+                                          infinity),
+    {{ok, RequestPid1},
+     Context3} = cloudi:send_sync(Context2,
+                                  ServiceName,
+                                  <<>>),
+    Service ! {pid, self()},
+    InfoPid1 = receive
+        {pid, InfoPidValue1} ->
+            InfoPidValue1
+    end,
+    false = erlang:is_process_alive(RequestPid0),
+    true = erlang:is_process_alive(RequestPid1),
+    if
+        DuoMode =:= true ->
+            true = erlang:is_process_alive(InfoPid0),
+            true = (InfoPid0 == InfoPid1);
+        DuoMode =:= false ->
+            false = erlang:is_process_alive(InfoPid0),
+            true = (InfoPid0 /= InfoPid1),
+            true = erlang:is_process_alive(InfoPid1)
+    end,
+    DispatcherPidOptions1 = erlang:process_info(Dispatcher,
+                                                [fullsweep_after,
+                                                 max_heap_size,
+                                                 priority]),
+    InfoPidOptions1 = erlang:process_info(InfoPid1,
+                                          [fullsweep_after,
+                                           max_heap_size,
+                                           message_queue_data,
+                                           priority]),
+    RequestPidOptions1 = erlang:process_info(RequestPid1,
+                                             [fullsweep_after,
+                                              max_heap_size,
+                                              priority]),
+    DispatcherPidOptions2 = [{fullsweep_after, FullsweepAfterDefault},
+                             {priority, normal}],
+    InfoPidOptions2 = [{message_queue_data, off_heap}],
+    RequestPidOptions2 = [{fullsweep_after, 2},
+                          {max_heap_size,
+                           #{error_logger => true,
+                             kill => true,
+                             size => 1048579}}],
+    Options1 = [{dispatcher_pid_options, DispatcherPidOptions2},
+                {info_pid_options, InfoPidOptions2},
+                {request_pid_options, RequestPidOptions2}],
+    {ok, [[ServiceId]]} = cloudi_service_api:
+                          services_update([{ServiceId,
+                                            [{module, ?MODULE},
+                                             {options, Options1}]}],
+                                          infinity),
+    {{ok, RequestPid2},
+     _} = cloudi:send_sync(Context3,
+                           ServiceName,
+                           <<>>),
+    Service ! {pid, self()},
+    InfoPid2 = receive
+        {pid, InfoPidValue2} ->
+            InfoPidValue2
+    end,
+    false = erlang:is_process_alive(RequestPid1),
+    true = erlang:is_process_alive(RequestPid2),
+    if
+        DuoMode =:= true ->
+            true = erlang:is_process_alive(InfoPid1),
+            true = (InfoPid1 == InfoPid2);
+        DuoMode =:= false ->
+            false = erlang:is_process_alive(InfoPid1),
+            true = (InfoPid1 /= InfoPid2),
+            true = erlang:is_process_alive(InfoPid2)
+    end,
+    [{fullsweep_after,
+      FullsweepAfterDefault},
+     {max_heap_size,
+      MaxHeapSizeDefault},
+     {message_queue_data,
+      MessageQueueDataDefault},
+     {priority,
+      PriorityDefault}] = erlang:process_info(Dispatcher,
+                                              [fullsweep_after,
+                                               max_heap_size,
+                                               message_queue_data,
+                                               priority]),
+    [{fullsweep_after,
+      FullsweepAfterDefault},
+     {max_heap_size,
+      MaxHeapSizeDefault},
+     {message_queue_data,
+      off_heap},
+     {priority,
+      PriorityDefault}] = erlang:process_info(InfoPid2,
+                                              [fullsweep_after,
+                                               max_heap_size,
+                                               message_queue_data,
+                                               priority]),
+    [{message_queue_data,
+      MessageQueueDataDefault},
+     {priority,
+      PriorityDefault} |
+     RequestPidOptions2] = erlang:process_info(RequestPid2,
+                                               [message_queue_data,
+                                                priority,
+                                                fullsweep_after,
+                                                max_heap_size]),
     ok.
 
 t_service_internal_log_1(_Config) ->
