@@ -1192,6 +1192,9 @@ t_service_internal_update_pid_options(Config, DuoMode) ->
     true = erlang:is_process_alive(RequestPid2),
     if
         DuoMode =:= true ->
+            % ensure dispatcher_pid_options have been applied
+            _ = sys:get_state(Dispatcher, infinity),
+
             true = erlang:is_process_alive(InfoPid1),
             true = (InfoPid1 == InfoPid2);
         DuoMode =:= false ->
