@@ -4396,7 +4396,6 @@ update(ServiceState, State,
 update_state(#state{dispatcher = Dispatcher,
                     timeout_async = TimeoutAsyncOld,
                     timeout_sync = TimeoutSyncOld,
-                    duo_mode_pid = DuoModePid,
                     request_pid = RequestPid,
                     info_pid = InfoPid,
                     dest_refresh = DestRefreshOld,
@@ -4447,69 +4446,20 @@ update_state(#state{dispatcher = Dispatcher,
         is_list(DestListAllowNew) ->
             cloudi_x_trie:new(DestListAllowNew)
     end,
-    case cloudi_lists:member_any([request_pid_uses,
-                                  request_pid_options],
-                                 OptionsKeys) of
-        true when is_pid(RequestPid) ->
-            RequestPid ! {'cloudi_service_request_loop_exit', true},
-            ok;
-        _ ->
-            ok
-    end,
-    case cloudi_lists:member_any([info_pid_uses,
-                                  info_pid_options],
-                                 OptionsKeys) of
-        true when DuoModePid =:= undefined, is_pid(InfoPid) ->
-            InfoPid ! {'cloudi_service_info_loop_exit', true},
-            ok;
-        _ ->
-            ok
-    end,
-    case lists:member(monkey_chaos, OptionsKeys) of
+    case lists:member(dispatcher_pid_options, OptionsKeys) of
         true ->
             #config_service_options{
-                monkey_chaos = MonkeyChaosOld} = ConfigOptionsOld,
-            cloudi_core_i_runtime_testing:
-            monkey_chaos_destroy(MonkeyChaosOld);
+                dispatcher_pid_options = PidOptionsOld} = ConfigOptionsOld,
+            #config_service_options{
+                dispatcher_pid_options = PidOptionsNew} = ConfigOptionsNew,
+            update_pid_options(PidOptionsOld, PidOptionsNew);
         false ->
             ok
     end,
-    ConfigOptions0 = cloudi_core_i_configuration:
-                     service_options_copy(OptionsKeys,
-                                          ConfigOptionsOld,
-                                          ConfigOptionsNew),
-    ConfigOptions1 = case lists:member(rate_request_max, OptionsKeys) of
-        true ->
-            #config_service_options{
-                rate_request_max = RateRequest} = ConfigOptions0,
-            RateRequestNew = if
-                RateRequest =/= undefined ->
-                    cloudi_core_i_rate_based_configuration:
-                    rate_request_max_init(RateRequest);
-                true ->
-                    RateRequest
-            end,
-            ConfigOptions0#config_service_options{
-                rate_request_max = RateRequestNew};
-        false ->
-            ConfigOptions0
-    end,
-    ConfigOptionsN = case lists:member(hibernate, OptionsKeys) of
-        true ->
-            #config_service_options{
-                hibernate = Hibernate} = ConfigOptions1,
-            HibernateNew = if
-                not is_boolean(Hibernate) ->
-                    cloudi_core_i_rate_based_configuration:
-                    hibernate_init(Hibernate);
-                true ->
-                    Hibernate
-            end,
-            ConfigOptions1#config_service_options{
-                hibernate = HibernateNew};
-        false ->
-            ConfigOptions1
-    end,
+    ConfigOptions = update_state_receiver(ConfigOptionsOld,
+                                          ConfigOptionsNew,
+                                          OptionsKeys,
+                                          RequestPid, InfoPid),
     if
         (DestRefreshOld =:= immediate_closest orelse
          DestRefreshOld =:= immediate_furthest orelse
@@ -4527,7 +4477,7 @@ update_state(#state{dispatcher = Dispatcher,
          DestRefreshNew =:= lazy_oldest) ->
             #config_service_options{
                 dest_refresh_delay = Delay,
-                scope = Scope} = ConfigOptionsN,
+                scope = Scope} = ConfigOptions,
             ok = destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
         true ->
             ok
@@ -4538,24 +4488,63 @@ update_state(#state{dispatcher = Dispatcher,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
                 dest_allow = DestAllow,
-                options = ConfigOptionsN};
+                options = ConfigOptions};
 update_state(#state_duo{dispatcher = Dispatcher,
                         request_pid = RequestPid,
                         options = ConfigOptionsOld} = State,
              #config_service_update{
                  options_keys = OptionsKeys,
                  options = ConfigOptionsNew} = UpdatePlan) ->
-    case cloudi_lists:member_any([request_pid_uses,
-                                  request_pid_options],
-                                 OptionsKeys) of
-        true when is_pid(RequestPid) ->
-            RequestPid ! {'cloudi_service_request_loop_exit', true},
-            ok;
-        _ ->
+    case lists:member(info_pid_options, OptionsKeys) of
+        true ->
+            #config_service_options{
+                info_pid_options = PidOptionsOld} = ConfigOptionsOld,
+            #config_service_options{
+                info_pid_options = PidOptionsNew} = ConfigOptionsNew,
+            update_pid_options(PidOptionsOld, PidOptionsNew);
+        false ->
             ok
     end,
-    % duo_mode == true requires that info_pid_uses
-    % is not changed (checked during UpdatePlan validation)
+    ConfigOptions = update_state_receiver(ConfigOptionsOld,
+                                          ConfigOptionsNew,
+                                          OptionsKeys,
+                                          RequestPid, undefined),
+    Dispatcher ! {'cloudi_service_update_state',
+                  UpdatePlan#config_service_update{
+                      options_keys = [],
+                      options = duo_mode_dispatcher_options(ConfigOptions)}},
+    State#state_duo{options = ConfigOptions}.
+
+update_state_receiver(ConfigOptionsOld, ConfigOptionsNew, OptionsKeys,
+                      RequestPid, InfoPid) ->
+    if
+        is_pid(RequestPid) ->
+            case cloudi_lists:member_any([request_pid_uses,
+                                          request_pid_options],
+                                         OptionsKeys) of
+                true ->
+                    RequestPid ! {'cloudi_service_request_loop_exit', true},
+                    ok;
+                false ->
+                    ok
+            end;
+        RequestPid =:= undefined ->
+            ok
+    end,
+    if
+        is_pid(InfoPid) ->
+            case cloudi_lists:member_any([info_pid_uses,
+                                          info_pid_options],
+                                         OptionsKeys) of
+                true ->
+                    InfoPid ! {'cloudi_service_info_loop_exit', true},
+                    ok;
+                false ->
+                    ok
+            end;
+        InfoPid =:= undefined ->
+            ok
+    end,
     case lists:member(monkey_chaos, OptionsKeys) of
         true ->
             #config_service_options{
@@ -4601,9 +4590,4 @@ update_state(#state_duo{dispatcher = Dispatcher,
         false ->
             ConfigOptions1
     end,
-    Dispatcher ! {'cloudi_service_update_state',
-                  UpdatePlan#config_service_update{
-                      options_keys = [],
-                      options = duo_mode_dispatcher_options(ConfigOptionsN)}},
-    State#state_duo{options = ConfigOptionsN}.
-
+    ConfigOptionsN.

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-02-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add CloudI Service API services_update pid options
+      modifications for pids that are not restarted
+      (info_pid_options when duo_mode == true and dispatcher_pid_options)
+
 2023-02-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi_service_api_requests representations of

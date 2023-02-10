@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -2775,6 +2775,16 @@ update_state(#state{dispatcher = Dispatcher,
             undefined;
         is_list(DestListAllowNew) ->
             cloudi_x_trie:new(DestListAllowNew)
+    end,
+    case lists:member(dispatcher_pid_options, OptionsKeys) of
+        true ->
+            #config_service_options{
+                dispatcher_pid_options = PidOptionsOld} = ConfigOptionsOld,
+            #config_service_options{
+                dispatcher_pid_options = PidOptionsNew} = ConfigOptionsNew,
+            update_pid_options(PidOptionsOld, PidOptionsNew);
+        false ->
+            ok
     end,
     case lists:member(monkey_chaos, OptionsKeys) of
         true ->

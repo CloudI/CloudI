@@ -11,7 +11,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -57,7 +57,7 @@
          resume/2,
          update/2,
          search/2,
-         status/2,
+         status/3,
          node_status/1,
          pids/2]).
 
@@ -328,9 +328,9 @@ search([_ | _] = PidList, Timeout) ->
                                 {search, PidList},
                                 Timeout)).
 
-status([_ | _] = ServiceIdList, Timeout) ->
+status([_ | _] = ServiceIdList, Required, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {status, ServiceIdList},
+                                {status, ServiceIdList, Required},
                                 Timeout)).
 
 node_status(Timeout) ->
@@ -494,14 +494,14 @@ handle_call({search, PidList}, _,
     end, [], PidList),
     {reply, {ok, ServiceIdList}, State};
 
-handle_call({status, ServiceIdList}, _,
+handle_call({status, ServiceIdList, Required}, _,
             #state{services = Services,
                    durations_update = DurationsUpdate,
                    durations_suspend = DurationsSuspend,
                    suspended = Suspended,
                    durations_restart = DurationsRestart} = State) ->
     TimeNow = cloudi_timestamp:native_monotonic(),
-    Reply = status_service_ids(ServiceIdList, TimeNow,
+    Reply = status_service_ids(ServiceIdList, Required, TimeNow,
                                DurationsUpdate, DurationsSuspend, Suspended,
                                DurationsRestart, Services),
     {reply, Reply, State};
@@ -1688,7 +1688,7 @@ service_id_pids_ordered_put([Pid | Pids], ProcessLookup, Services) ->
                                 {ProcessPids, OSPid}, ProcessLookup),
     service_id_pids_ordered_put(Pids, ProcessLookupNew, Services).
 
-status_service_ids(ServiceIdList, TimeNow,
+status_service_ids(ServiceIdList, Required, TimeNow,
                    DurationsUpdate, DurationsSuspend, Suspended,
                    DurationsRestart, Services) ->
     TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
@@ -1696,15 +1696,15 @@ status_service_ids(ServiceIdList, TimeNow,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
     TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
     TimeOffset = erlang:time_offset(),
-    status_service_ids(ServiceIdList, [], TimeNow,
+    status_service_ids(ServiceIdList, [], Required, TimeNow,
                        TimeDayStart, TimeWeekStart,
                        TimeMonthStart, TimeYearStart, TimeOffset,
                        DurationsUpdate, DurationsSuspend, Suspended,
                        DurationsRestart, Services).
 
-status_service_ids([], StatusList, _, _, _, _, _, _, _, _, _, _, _) ->
+status_service_ids([], StatusList, _, _, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
-status_service_ids([ServiceId | ServiceIdList], StatusList, TimeNow,
+status_service_ids([ServiceId | ServiceIdList], StatusList, Required, TimeNow,
                    TimeDayStart, TimeWeekStart,
                    TimeMonthStart, TimeYearStart, TimeOffset,
                    DurationsUpdate, DurationsSuspend, Suspended,
@@ -1716,13 +1716,25 @@ status_service_ids([ServiceId | ServiceIdList], StatusList, TimeNow,
                            DurationsRestart, Services) of
         {ok, Status} ->
             status_service_ids(ServiceIdList,
-                               [{ServiceId, Status} | StatusList], TimeNow,
+                               [{ServiceId, Status} | StatusList],
+                               Required, TimeNow,
                                TimeDayStart, TimeWeekStart,
                                TimeMonthStart, TimeYearStart, TimeOffset,
                                DurationsUpdate, DurationsSuspend, Suspended,
                                DurationsRestart, Services);
-        {error, _} = Error ->
-            Error
+        {error, {service_not_found, _}} = Error ->
+            if
+                Required =:= true ->
+                    Error;
+                Required =:= false ->
+                    status_service_ids(ServiceIdList, StatusList,
+                                       Required, TimeNow,
+                                       TimeDayStart, TimeWeekStart,
+                                       TimeMonthStart, TimeYearStart,
+                                       TimeOffset, DurationsUpdate,
+                                       DurationsSuspend, Suspended,
+                                       DurationsRestart, Services)
+            end
     end.
 
 status_service_id(ServiceId, TimeNow,

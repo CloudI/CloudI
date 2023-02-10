@@ -588,6 +588,58 @@ update_now(#config_service_update{update_pending = UpdatePending,
 update_now(undefined, _) ->
     {false, undefined}.
 
+update_pid_options([]) ->
+    ok;
+update_pid_options([link | PidOptions]) ->
+    update_pid_options(PidOptions);
+update_pid_options([{Name, ValueNew} | PidOptions])
+    when Name =:= sensitive; Name =:= fullsweep_after;
+         Name =:= min_heap_size; Name =:= min_bin_vheap_size;
+         Name =:= max_heap_size; Name =:= message_queue_data;
+         Name =:= async_dist; Name =:= priority ->
+    _ = erlang:process_flag(Name, ValueNew),
+    update_pid_options(PidOptions).
+
+update_pid_options(PidOptionsOld, PidOptionsNew) ->
+    % use this pid for default values when options are removed
+    PidDefault = erlang:whereis(cloudi_core_i_configurator),
+    true = is_pid(PidDefault),
+    update_pid_options(PidOptionsOld, PidOptionsNew, PidDefault).
+
+update_pid_options([], PidOptions, _) ->
+    update_pid_options(PidOptions);
+update_pid_options([link | PidOptionsOld], PidOptions, PidDefault) ->
+    update_pid_options(PidOptionsOld, PidOptions, PidDefault);
+update_pid_options([{Name, ValueOld} = PidOptionOld |
+                    PidOptionsOld], PidOptions, PidDefault)
+    when Name =:= sensitive; Name =:= fullsweep_after;
+         Name =:= min_heap_size; Name =:= min_bin_vheap_size;
+         Name =:= max_heap_size; Name =:= message_queue_data;
+         Name =:= async_dist; Name =:= priority ->
+    case lists:keytake(Name, 1, PidOptions) of
+        {value, PidOptionOld, PidOptionsNew} ->
+            update_pid_options(PidOptionsOld, PidOptionsNew, PidDefault);
+        {value, {Name, ValueNew}, PidOptionsNew} ->
+            _ = erlang:process_flag(Name, ValueNew),
+            update_pid_options(PidOptionsOld, PidOptionsNew, PidDefault);
+        false ->
+            {Name, ValueDefault} = if
+                Name =:= sensitive;
+                Name =:= async_dist ->
+                    {Name, false};
+                true ->
+                    erlang:process_info(PidDefault, Name)
+            end,
+            if
+                ValueOld /= ValueDefault ->
+                    _ = erlang:process_flag(Name, ValueDefault),
+                    ok;
+                true ->
+                    ok
+            end,
+            update_pid_options(PidOptionsOld, PidOptions, PidDefault)
+    end.
+
 aspects_terminate_before([], _, _, ServiceState) ->
     ServiceState;
 aspects_terminate_before([{M, F} = Aspect | L],
