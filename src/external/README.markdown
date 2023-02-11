@@ -33,8 +33,8 @@ C++ `GEPD`
 - `(src/lib/cloudi_core/cxx_src/port.cpp)`
 - `(src/lib/cloudi_core/cxx_src/port.hpp)`
 - `(src/lib/cloudi_core/cxx_src/pchar_len_t.h)`
-- `commit 0b03eed5127e2872598aa6bff3de29c5c4fa1f63`
-- `Fri Jul  3 02:15:17 UTC 2020`
+- `commit 7bbf15683196d29bf2ca26f0ee61e1666ab372cb`
+- `Sat Feb 11 04:48:47 UTC 2023`
 - `MIT`
 
 Erlang `bear`

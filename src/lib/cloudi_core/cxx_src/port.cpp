@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2020 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -810,37 +810,46 @@ int GEPD::consume_stream(int fd, short & revents,
         return GEPD::ExitStatus::poll_NVAL;
     revents = 0;
 
+    bool flush = false;
+    size_t i_flush = 0;
     ssize_t left = stream.size() - i;
-    ssize_t readBytes;
-    while ((readBytes = read(fd, &stream[i], left)) == left &&
-           stream.grow())
+    if (left == 0)
     {
-        i += left;
-        left = stream.size() - i;
-        bool ready = true;
-        data_ready(fd, ready);
-        if (ready == false)
-            break;
+        // stream is full, flush it
+        flush = true;
+        i_flush = i - 1;
     }
-    if (readBytes == 0 && i == 0)
-        return GEPD::ExitStatus::success;
-    else if (readBytes == -1)
-        return errno_read();
-    i += readBytes; // i is the next index to read at, always
-
-    // only send stderr output before the last newline character
-    bool foundNewline = false;
-    size_t iNewline = 0;
-    for (ssize_t j = i - 1; ! foundNewline && j >= 0; --j)
+    else
     {
-        if (stream[j] == '\n')
+        ssize_t read_bytes;
+        while ((read_bytes = read(fd, &stream[i], left)) == left &&
+               stream.grow())
         {
-            foundNewline = true;
-            iNewline = j;
+            i += left;
+            left = stream.size() - i;
+            bool ready = true;
+            data_ready(fd, ready);
+            if (ready == false)
+                break;
+        }
+        if (read_bytes == 0 && i == 0)
+            return GEPD::ExitStatus::success;
+        else if (read_bytes == -1)
+            return errno_read();
+        i += read_bytes; // i is the next index to read at, always
+
+        // send stdout/stderr output before the last newline character
+        for (ssize_t j = i - 1; ! flush && j >= 0; --j)
+        {
+            if (stream[j] == '\n')
+            {
+                flush = true;
+                i_flush = j;
+            }
         }
     }
 
-    if (foundNewline)
+    if (flush)
     {
         int index = sizeof(OUTPUT_PREFIX_TYPE);
         if (ei_encode_version(send_buffer.get<char>(), &index))
@@ -851,25 +860,25 @@ int GEPD::consume_stream(int fd, short & revents,
             return GEPD::ExitStatus::ei_encode_error;
         if (ei_encode_ulong(send_buffer.get<char>(), &index, pid))
             return GEPD::ExitStatus::ei_encode_error;
-        if (send_buffer.reserve(index + (iNewline + 1) + 1) == false)
+        if (send_buffer.reserve(index + (i_flush + 1) + 1) == false)
             return GEPD::ExitStatus::write_overflow;
         if (ei_encode_string_len(send_buffer.get<char>(), &index,
-                                 stream.get<char>(), iNewline + 1))
+                                 stream.get<char>(), i_flush + 1))
             return GEPD::ExitStatus::ei_encode_error;
         int status;
         if ((status = write_cmd(send_buffer, index -
                                 sizeof(OUTPUT_PREFIX_TYPE))))
             return status;
         // keep any data not yet sent (waiting for a newline)
-        if (iNewline == i - 1)
+        if (i_flush == i - 1)
         {
             i = 0;
         }
         else
         {
-            size_t const remainingBytes = i - iNewline - 1;
-            stream.move(iNewline + 1, remainingBytes, 0);
-            i = remainingBytes;
+            size_t const remaining_bytes = i - i_flush - 1;
+            stream.move(i_flush + 1, remaining_bytes, 0);
+            i = remaining_bytes;
         }
     }
     return GEPD::ExitStatus::success;
@@ -884,8 +893,9 @@ int GEPD::flush_stream(int fd, short revents,
         return GEPD::ExitStatus::success;
 
     ssize_t left = stream.size() - i;
-    ssize_t readBytes;
-    while ((readBytes = read(fd, &stream[i], left)) == left &&
+    assert(left > 0);
+    ssize_t read_bytes;
+    while ((read_bytes = read(fd, &stream[i], left)) == left &&
            stream.grow())
     {
         i += left;
@@ -895,10 +905,10 @@ int GEPD::flush_stream(int fd, short revents,
         if (ready == false)
             break;
     }
-    if (readBytes == 0 && i == 0)
+    if (read_bytes == 0 && i == 0)
         return GEPD::ExitStatus::success;
-    else if (readBytes != -1)
-        i += readBytes; // i is the next index to read at, always
+    else if (read_bytes != -1)
+        i += read_bytes; // i is the next index to read at, always
 
     size_t const total = i - 1;
     i = 0;

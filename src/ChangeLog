@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-02-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix external service stdout/stderr logging when the
+      stdout/stderr data is 16KiB without any newlines
+
 2023-02-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add CloudI Service API services_update pid options
