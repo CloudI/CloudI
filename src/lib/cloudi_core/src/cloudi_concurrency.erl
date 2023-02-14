@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,15 +29,16 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2014-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_concurrency).
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([count/1]).
+-export([count/1,
+         count/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -45,11 +46,11 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===A count to be used for the number of service processes used.===
+%% ===A count to be used for the number of service processes and threads used.===
 %% An integer is an absolute count while a floating point number is a
-%% multiplier on the number of CPU cores available.  A floating point
-%% number is rounded (or floor-ed) to be close to the CPU core count,
-%% to avoid extremes.
+%% multiplier on the number of logical processors available.
+%% A floating point number is rounded (or floor-ed) to be close to the
+%% logical processor count, to avoid extremes.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -61,12 +62,34 @@ count(I)
     I;
 count(I)
     when is_float(I) ->
+    count(I, erlang:system_info(schedulers)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A count to be used for the number of service processes and threads used.===
+%% An integer is an absolute count while a floating point number is a
+%% multiplier on the number of logical processors available.
+%% A floating point number is rounded (or floor-ed) to be close to the
+%% logical processor count, to avoid extremes.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec count(I :: pos_integer() | float(),
+            Schedulers :: pos_integer()) ->
+    pos_integer().
+
+count(I, _)
+    when is_integer(I), I > 0 ->
+    I;
+count(I, Schedulers)
+    when is_float(I) ->
+    true = Schedulers >= 1,
     if
         I > 1.0 ->
-            floor(I * erlang:system_info(schedulers));
+            floor(I * Schedulers);
         I > 0.0, I < 1.0 ->
-            erlang:max(1, erlang:round(I * erlang:system_info(schedulers)));
+            erlang:max(1, erlang:round(I * Schedulers));
         I == 1.0 ->
-            erlang:system_info(schedulers)
+            Schedulers
     end.
 

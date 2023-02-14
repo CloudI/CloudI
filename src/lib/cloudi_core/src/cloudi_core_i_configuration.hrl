@@ -332,6 +332,11 @@
                      cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
                     {message_queue_data, off_heap | on_heap}),
+        % bind service Erlang processes and external service threads to
+        % specific logical processors.  Usage of bind requires that the
+        % Erlang VM has had its scheduler threads bound upon startup with +sbt .
+        bind = false
+            :: boolean() | tuple(),
 
         % Relevant for both Internal and External Services, different values:
 
@@ -737,6 +742,8 @@
     {
         uuid_generator
             :: cloudi_x_uuid:state(),
+        concurrency
+            :: cloudi_core_i_concurrency:state(),
         code
             :: #config_code{},
         logging = #config_logging{}

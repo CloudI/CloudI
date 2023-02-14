@@ -327,7 +327,8 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
       TimeoutAsync, TimeoutSync, TimeoutTerm,
       DestRefresh, DestDeny, DestAllow,
       #config_service_options{
-          dispatcher_pid_options = PidOptions} = ConfigOptions, ID])
+          dispatcher_pid_options = PidOptions,
+          bind = Bind} = ConfigOptions, ID])
     when Protocol =:= tcp;
          Protocol =:= udp;
          Protocol =:= local ->
@@ -343,6 +344,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
         {ok, StateSocket} ->
             ok = cloudi_x_quickrand:seed([cloudi_x_quickrand]),
             WordSize = erlang:system_info(wordsize),
+            ok = cloudi_core_i_concurrency:bind_init(Bind),
             ConfigOptionsNew = check_init_send(ConfigOptions),
             Variant = application:get_env(cloudi_core, uuid_v1_variant,
                                           ?UUID_V1_VARIANT_DEFAULT),

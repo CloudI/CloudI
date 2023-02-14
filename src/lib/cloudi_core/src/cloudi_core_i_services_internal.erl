@@ -289,6 +289,7 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
       DestRefresh, DestDeny, DestAllow,
       #config_service_options{
           dispatcher_pid_options = PidOptions,
+          bind = Bind,
           info_pid_options = InfoPidOptions,
           duo_mode = DuoMode} = ConfigOptions, ID, Parent]) ->
     ok = spawn_opt_options_after(PidOptions),
@@ -305,6 +306,7 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
     end,
     ok = cloudi_x_quickrand:seed([cloudi_x_quickrand]),
     WordSize = erlang:system_info(wordsize),
+    ok = cloudi_core_i_concurrency:bind_init(Bind),
     ConfigOptionsNew = check_init_send(ConfigOptions),
     DuoModePid = if
         DuoMode =:= true ->

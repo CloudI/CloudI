@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -725,7 +725,8 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
                       CommandLine, Protocol, SocketPath, BufferSize, Timeout,
                       Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                       DestRefresh, DestDeny, DestAllow,
-                      ConfigOptions, ID) ->
+                      #config_service_options{
+                          bind = Bind} = ConfigOptions, ID) ->
     case ?PROCESS_START_EXTERNAL(Protocol, SocketPath,
                                  I + ThreadsPerProcess * ProcessIndex,
                                  ProcessIndex, ProcessCount,
@@ -736,6 +737,7 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
                                  DestRefresh, DestDeny, DestAllow,
                                  ConfigOptions, ID) of
         {ok, Pid, Port} ->
+            BindNew = cloudi_core_i_concurrency:bind_increment_thread(Bind),
             start_external_thread(I + 1, [Pid | Pids], [Port | Ports],
                                   ThreadsPerProcess,
                                   ProcessIndex, ProcessCount,
@@ -745,7 +747,8 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
                                   Prefix, TimeoutAsync, TimeoutSync,
                                   TimeoutTerm,
                                   DestRefresh, DestDeny, DestAllow,
-                                  ConfigOptions, ID);
+                                  ConfigOptions#config_service_options{
+                                      bind = BindNew}, ID);
         {error, _} = Error ->
             lists:foreach(fun(P) -> erlang:exit(P, kill) end, Pids),
             Error

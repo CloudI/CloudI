@@ -10,6 +10,7 @@
         cloudi_availability,
         cloudi_concurrency,
         cloudi_core_i_app,
+        cloudi_core_i_concurrency,
         cloudi_core_i_configuration,
         cloudi_core_i_configurator,
         cloudi_core_i_environment,

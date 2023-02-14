@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-02-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the bind service configuration option to bind
+      CloudI service Erlang pids to scheduler threads
+      if the schduler threads are bound
+      (external service OS pid threads don't have their
+       affinity set yet based on the bind option)
+
 2023-02-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix external service stdout/stderr logging when the

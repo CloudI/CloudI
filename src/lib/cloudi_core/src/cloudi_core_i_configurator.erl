@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -71,7 +71,7 @@
          code_path_remove/2,
          code_path/1,
          code_status/3,
-         service_start/2,
+         service_start/3,
          service_stop/3,
          service_restart/2,
          service_suspend/2,
@@ -278,17 +278,19 @@ code_status(TimeNative, TimeOffset, Timeout) ->
 
 -spec service_start(#config_service_internal{} |
                     #config_service_external{},
+                    Concurrency :: cloudi_core_i_concurrency:state(),
                     Timeout :: pos_integer() | infinity) ->
-    {ok, #config_service_internal{} |
-         #config_service_external{}} |
-    stopped |
+    {ok,
+     #config_service_internal{} | #config_service_external{},
+     cloudi_core_i_concurrency:state()} |
+    {stopped, cloudi_core_i_concurrency:state()} |
     {error, error_reason_service_start()}.
 
 service_start(#config_service_internal{
                   count_process = CountProcess,
                   options = #config_service_options{
                       reload = Reload}} = Service,
-              Timeout) ->
+              Concurrency, Timeout) ->
     case service_start_find_internal(Service, Timeout) of
         {ok, Application, #config_service_internal{
                               module = Module} = FoundService} ->
@@ -305,20 +307,23 @@ service_start(#config_service_internal{
                 Reload =:= false ->
                     ok
             end,
-            CountProcessNew = cloudi_concurrency:count(CountProcess),
+            CountProcessNew = cloudi_core_i_concurrency:count(CountProcess,
+                                                              Concurrency),
             service_start_internal(FoundService, GroupLeader,
-                                   CountProcessNew, Timeout);
+                                   CountProcessNew, Concurrency, Timeout);
         {error, _} = Error ->
             Error
     end;
 
 service_start(#config_service_external{count_process = CountProcess,
                                        count_thread = CountThread} = Service,
-              Timeout) ->
-    CountProcessNew = cloudi_concurrency:count(CountProcess),
-    CountThreadNew = cloudi_concurrency:count(CountThread),
+              Concurrency, Timeout) ->
+    CountProcessNew = cloudi_core_i_concurrency:count(CountProcess,
+                                                      Concurrency),
+    CountThreadNew = cloudi_core_i_concurrency:count(CountThread,
+                                                     Concurrency),
     service_start_external(Service, CountThreadNew,
-                           CountProcessNew, Timeout).
+                           CountProcessNew, Concurrency, Timeout).
 
 -spec service_stop(#config_service_internal{} |
                    #config_service_external{},
@@ -735,22 +740,26 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-configure(#config{services = Services} = Config, Timeout) ->
-    case configure_service(Services, Timeout) of
-        {ok, ServicesNew} ->
-            {ok, Config#config{services = ServicesNew}};
+configure(#config{concurrency = Concurrency,
+                  services = Services} = Config, Timeout) ->
+    case configure_service(Services, Concurrency, Timeout) of
+        {ok, ServicesNew, ConcurrencyNew} ->
+            {ok, Config#config{concurrency = ConcurrencyNew,
+                               services = ServicesNew}};
         {error, _} = Error ->
             Error
     end.
 
-configure_service([], Configured, _) ->
-    {ok, lists:reverse(Configured)};
-configure_service([Service | Services], Configured, Timeout) ->
-    case service_start(Service, Timeout) of
-        {ok, ServiceNew} ->
-            configure_service(Services, [ServiceNew | Configured], Timeout);
-        stopped ->
-            configure_service(Services, Configured, Timeout);
+configure_service([], Configured, Concurrency, _) ->
+    {ok, lists:reverse(Configured), Concurrency};
+configure_service([Service | Services], Configured, Concurrency, Timeout) ->
+    case service_start(Service, Concurrency, Timeout) of
+        {ok, ServiceNew, ConcurrencyNew} ->
+            configure_service(Services, [ServiceNew | Configured],
+                              ConcurrencyNew, Timeout);
+        {stopped, ConcurrencyNew} ->
+            configure_service(Services, Configured,
+                              ConcurrencyNew, Timeout);
         {error, Reason} = Error ->
             % wait for logging statements to be logged before crashing
             ?LOG_FATAL_SYNC("configure failed: ~tp~n~tp",
@@ -758,8 +767,8 @@ configure_service([Service | Services], Configured, Timeout) ->
             Error
     end.
 
-configure_service(Services, Timeout) ->
-    configure_service(Services, [], Timeout).
+configure_service(Services, Concurrency, Timeout) ->
+    configure_service(Services, [], Concurrency, Timeout).
 
 service_start_find_internal(#config_service_internal{
                                 module = Module,
@@ -1090,24 +1099,25 @@ service_start_wait_pid([{MonitorRef, Pid} | M], Death) ->
             service_start_wait_pid(M, service_start_wait_pid_death(Death, Info))
     end.
 
-service_start_wait_pids([], undefined, Service) ->
-    {ok, Service};
-service_start_wait_pids([], {stopped, _}, _) ->
+service_start_wait_pids([], undefined, Service, Concurrency) ->
+    {ok, Service, Concurrency};
+service_start_wait_pids([], {stopped, _}, _, Concurrency) ->
     % shutdown | {shutdown, _} is logged in cloudi_core_i_services_monitor and
     % is not helpful as a return value because it will be ignored
-    stopped;
-service_start_wait_pids([], {error, Reason}, Service) ->
+    {stopped, Concurrency};
+service_start_wait_pids([], {error, Reason}, Service, _) ->
     case Service of
         #config_service_internal{} ->
             {error, {service_internal_start_failed, Reason}};
         #config_service_external{} ->
             {error, {service_external_start_failed, Reason}}
     end;
-service_start_wait_pids([M | MonitorPids], Death, Service) ->
+service_start_wait_pids([M | MonitorPids], Death, Service, Concurrency) ->
     service_start_wait_pids(MonitorPids,
-                            service_start_wait_pid(M, Death), Service).
+                            service_start_wait_pid(M, Death),
+                            Service, Concurrency).
 
-service_start_wait(Pids, Service) ->
+service_start_wait(Pids, Service, Concurrency) ->
     % create the monitors on all the service's receiver pids
     MonitorPids = [[{erlang:monitor(process, Pid), Pid} ||
                     Pid <- P] || P <- Pids],
@@ -1117,10 +1127,11 @@ service_start_wait(Pids, Service) ->
     % or the cloudi_service_api:services_add/2 function when a service
     % starts for the first time
     ok = cloudi_core_i_services_monitor:process_init_begin(Pids),
-    service_start_wait_pids(MonitorPids, undefined, Service).
+    service_start_wait_pids(MonitorPids, undefined, Service, Concurrency).
 
-service_start_internal(CountProcess, Pids, Service, _, CountProcess, _) ->
-    service_start_wait(lists:reverse(Pids), Service);
+service_start_internal(CountProcess, Pids, Service, _,
+                       CountProcess, Concurrency, _) ->
+    service_start_wait(lists:reverse(Pids), Service, Concurrency);
 service_start_internal(IndexProcess, Pids,
                        #config_service_internal{
                            module = Module,
@@ -1136,35 +1147,42 @@ service_start_internal(IndexProcess, Pids,
                            options = #config_service_options{
                                restart_all = RestartAll,
                                restart_delay = RestartDelay,
-                               scope = Scope} = Options,
+                               scope = Scope,
+                               bind = Bind} = Options,
                            max_r = MaxR,
                            max_t = MaxT,
                            uuid = ID} = Service, GroupLeader,
-                       CountProcess, Timeout) ->
+                       CountProcess, Concurrency, Timeout) ->
+    {BindNew,
+     ConcurrencyNew} = cloudi_core_i_concurrency:
+                       bind_assign_process(Bind, Concurrency),
     case cloudi_core_i_services_monitor:
          monitor(cloudi_core_i_spawn, start_internal,
                  [GroupLeader,
                   Module, Args, TimeoutInit,
                   Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
-                  DestRefresh, DestListDeny,
-                  DestListAllow, Options, ID],
+                  DestRefresh, DestListDeny, DestListAllow,
+                  Options#config_service_options{bind = BindNew}, ID],
                  IndexProcess, CountProcess, 1, Scope,
                  TimeoutTerm, RestartAll, RestartDelay,
                  MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
-            service_start_internal(IndexProcess + 1, [P | Pids], Service,
-                                   GroupLeader, CountProcess, Timeout);
+            service_start_internal(IndexProcess + 1, [P | Pids],
+                                   Service, GroupLeader, CountProcess,
+                                   ConcurrencyNew, Timeout);
         {error, Reason} ->
             {error, {service_internal_start_failed, Reason}}
     end.
 
-service_start_internal(Service, GroupLeader, CountProcess, Timeout) ->
+service_start_internal(Service, GroupLeader,
+                       CountProcess, Concurrency, Timeout) ->
     service_start_internal(0, [], Service, GroupLeader,
-                           CountProcess, timeout_decr(Timeout)).
+                           CountProcess, Concurrency, timeout_decr(Timeout)).
 
-service_start_external(CountProcess, Pids, Service, _, CountProcess, _) ->
-    service_start_wait(lists:reverse(Pids), Service);
+service_start_external(CountProcess, Pids, Service, _,
+                       CountProcess, Concurrency, _) ->
+    service_start_wait(lists:reverse(Pids), Service, Concurrency);
 service_start_external(IndexProcess, Pids,
                        #config_service_external{
                            file_path = FilePath,
@@ -1183,33 +1201,39 @@ service_start_external(IndexProcess, Pids,
                            options = #config_service_options{
                                restart_all = RestartAll,
                                restart_delay = RestartDelay,
-                               scope = Scope} = Options,
+                               scope = Scope,
+                               bind = Bind} = Options,
                            max_r = MaxR,
                            max_t = MaxT,
                            uuid = ID} = Service,
-                       CountThread, CountProcess, Timeout) ->
+                       CountThread, CountProcess, Concurrency, Timeout) ->
+    {BindNew,
+     ConcurrencyNew} = cloudi_core_i_concurrency:
+                       bind_assign_process(Bind, CountThread, Concurrency),
     case cloudi_core_i_services_monitor:
          monitor(cloudi_core_i_spawn, start_external,
                  [CountThread,
                   FilePath, Args, Env,
                   Protocol, BufferSize, TimeoutInit,
                   Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
-                  DestRefresh, DestListDeny,
-                  DestListAllow, Options, ID],
+                  DestRefresh, DestListDeny, DestListAllow,
+                  Options#config_service_options{bind = BindNew}, ID],
                  IndexProcess, CountProcess, CountThread, Scope,
                  TimeoutTerm, RestartAll, RestartDelay,
                  MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
             service_start_external(IndexProcess + 1, [P | Pids], Service,
-                                   CountThread, CountProcess, Timeout);
+                                   CountThread, CountProcess,
+                                   ConcurrencyNew, Timeout);
         {error, Reason} ->
             {error, {service_external_start_failed, Reason}}
     end.
 
-service_start_external(Service, CountThread, CountProcess, Timeout) ->
+service_start_external(Service, CountThread,
+                       CountProcess, Concurrency, Timeout) ->
     service_start_external(0, [], Service, CountThread,
-                           CountProcess, timeout_decr(Timeout)).
+                           CountProcess, Concurrency, timeout_decr(Timeout)).
 
 service_stop_internal(#config_service_internal{
                           module = Module,
