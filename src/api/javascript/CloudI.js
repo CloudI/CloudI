@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -79,6 +79,13 @@ var packUint32big = function packUint32big (value) {
                            (value >>> 16) & 0xff,
                            (value >>> 8) & 0xff,
                            value & 0xff]);
+};
+var unpackInt32 = function unpackInt32 (i, data) {
+    var value = unpackUint32(i, data);
+    if ((0x80000000 & value) != 0) {
+        value = -2147483648 + (value & 0x7fffffff);
+    }
+    return value;
 };
 if (Erlang.nodejs_version_after('10.0.0',true)) {
     var originalEmitWarning = process.emitWarning;
@@ -856,6 +863,11 @@ CloudI.API.prototype._poll_request = function (data) {
                 i += 1;
                 API._fatal_exceptions = unpackUint8(i, data) != 0;
                 i += 1;
+                var bind = unpackInt32(i, data);
+                i += 4;
+                if (bind >= 0) {
+                    throw new InvalidInputException();
+                }
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
                 }

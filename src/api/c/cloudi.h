@@ -65,6 +65,7 @@ typedef struct cloudi_instance_t
     uint32_t response_size;
     uint32_t trans_id_count;
     uint32_t subscribe_count;
+    int32_t bind;
     int fd;
     int8_t priority_default;
     unsigned int use_header:1;

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -657,15 +657,20 @@ class API
                          $prefix_size) = unpack('L5', substr($data, $i, $j));
                     $i += $j; $j = $prefix_size;
                     $prefix = substr($data, $i, $j - 1);
-                    $i += $j; $j = 4 + 4 + 4 + 4 + 1 + 1;
-                    $tmp = unpack('L4a/cb/Cc', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 4 + 1 + 1 + 4;
+                    $tmp = unpack('L4a/cb/Cc/ld', substr($data, $i, $j));
                     $timeout_initialize = $tmp['a1'];
                     $timeout_async = $tmp['a2'];
                     $timeout_sync = $tmp['a3'];
                     $timeout_terminate = $tmp['a4'];
                     $priority_default = $tmp['b'];
                     $fatal_exceptions = $tmp['c'];
+                    $bind = $tmp['d'];
                     $i += $j;
+                    if ($bind >= 0)
+                    {
+                        throw new InvalidInputException();
+                    }
                     if ($i != $data_size)
                     {
                         assert($external == false);

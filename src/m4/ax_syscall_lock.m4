@@ -12,7 +12,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2020-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,7 @@ AC_DEFUN([AX_SYSCALL_LOCK],
             [linux*], [syscall_lock="libseccomp"],
             [*], [syscall_lock=""])
 
-    AC_LANG_PUSH([C])
+    AC_LANG_PUSH([C++])
 
     if test "x$syscall_lock" = "xpledge"; then
         AC_LINK_IFELSE(
@@ -87,7 +87,7 @@ prctl(PR_SET_NO_NEW_PRIVS, 1);
     else
         AC_MSG_RESULT([none])
     fi
-    AC_LANG_POP([C])
+    AC_LANG_POP([C++])
     AC_SUBST(SYSCALL_LOCK_TYPE)
     AC_SUBST(SYSCALL_LOCK_LDFLAGS)
     AC_SUBST(SYSCALL_LOCK_LIB)

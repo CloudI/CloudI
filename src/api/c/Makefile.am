@@ -11,14 +11,16 @@ nodist_inst_HEADERS = cloudi.h $(CXX_SUPPORT_HEADER)
 libcloudi_la_SOURCES = \
     cloudi.cpp \
     assert.cpp \
-    timer.cpp
+    timer.cpp \
+    bind.cpp
 libcloudi_la_CPPFLAGS = -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
                         $(BOOST_CPPFLAGS) \
                         $(BACKTRACE_CPPFLAGS) \
+                        $(BIND_CPPFLAGS) \
                         $(CXXFLAGS)
 libcloudi_la_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/ \
                        -no-undefined \
                        $(BOOST_LDFLAGS) \
                        $(BACKTRACE_LDFLAGS)
-libcloudi_la_LIBADD = -lei $(RT_LIB) $(BACKTRACE_LIB) $(LIBM)
+libcloudi_la_LIBADD = -lei $(BIND_LIBS) $(RT_LIB) $(BACKTRACE_LIB) $(LIBM)
 

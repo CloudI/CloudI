@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -598,12 +598,14 @@ class API(object):
                 (process_index, process_count,
                  process_count_max, process_count_min,
                  prefix_size) = struct.unpack(b'=IIIII', data[i:j])
-                i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1 + 1
+                i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1 + 1 + 4
                 (prefix, _, timeout_initialize,
                  timeout_async, timeout_sync, timeout_terminate,
-                 priority_default, fatal_exceptions) = struct.unpack(
-                     '=%dscIIIIbB' % (prefix_size - 1), data[i:j]
+                 priority_default, fatal_exceptions, bind) = struct.unpack(
+                     '=%dscIIIIbBi' % (prefix_size - 1), data[i:j]
                  )
+                if bind >= 0:
+                    raise InvalidInputException()
                 if j != data_size:
                     assert external is False
                     self.__handle_events(external, data, data_size, j)

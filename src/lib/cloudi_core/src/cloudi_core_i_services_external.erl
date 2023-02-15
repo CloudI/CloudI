@@ -226,7 +226,7 @@
     }).
 
 -dialyzer({no_improper_lists,
-           ['init_out'/11,
+           ['init_out'/12,
             'send_async_out'/8,
             'send_sync_out'/8,
             'return_async_out'/1,
@@ -1536,7 +1536,8 @@ os_init(#state{initialize = true,
                options = #config_service_options{
                    priority_default = PriorityDefault,
                    count_process_dynamic = CountProcessDynamic,
-                   fatal_exceptions = FatalExceptions}} = State) ->
+                   fatal_exceptions = FatalExceptions,
+                   bind = Bind}} = State) ->
     CountProcessDynamicFormat =
         cloudi_core_i_rate_based_configuration:
         count_process_dynamic_format(CountProcessDynamic),
@@ -1553,7 +1554,7 @@ os_init(#state{initialize = true,
     ok = send('init_out'(ProcessIndex, ProcessCount,
                          ProcessCountMax, ProcessCountMin, Prefix,
                          TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
-                         PriorityDefault, FatalExceptions),
+                         PriorityDefault, FatalExceptions, Bind),
               State),
     ok.
 
@@ -1836,7 +1837,7 @@ handle_recv_async(Timeout, TransId, Consume,
 'init_out'(ProcessIndex, ProcessCount,
            ProcessCountMax, ProcessCountMin, Prefix,
            TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
-           PriorityDefault, FatalExceptions) ->
+           PriorityDefault, FatalExceptions, Bind) ->
     true = ProcessCount < 4294967296,
     true = ProcessCountMax < 4294967296,
     true = ProcessCountMin < 4294967296,
@@ -1849,6 +1850,7 @@ handle_recv_async(Timeout, TransId, Consume,
         FatalExceptions =:= false ->
             0
     end,
+    BindValue = cloudi_core_i_concurrency:bind_logical_processor(Bind),
     [<<?MESSAGE_INIT:32/unsigned-integer-native,
        ProcessIndex:32/unsigned-integer-native,
        ProcessCount:32/unsigned-integer-native,
@@ -1862,7 +1864,8 @@ handle_recv_async(Timeout, TransId, Consume,
        TimeoutSync:32/unsigned-integer-native,
        TimeoutTermExternal:32/unsigned-integer-native,
        PriorityDefault:8/signed-integer-native,
-       FatalExceptionsValue:8/unsigned-integer-native>>].
+       FatalExceptionsValue:8/unsigned-integer-native,
+       BindValue:32/signed-integer-native>>].
 
 'reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
              PriorityDefault, FatalExceptions) ->

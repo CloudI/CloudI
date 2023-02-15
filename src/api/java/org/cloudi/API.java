@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1382,6 +1382,11 @@ public class API
                         this.timeout_terminate = buffer.getInt();
                         this.priority_default = buffer.get();
                         this.fatal_exceptions = buffer.get() != 0;
+                        int bind = buffer.getInt();
+                        if (bind >= 0)
+                        {
+                            throw new InvalidInputException();
+                        }
                         if (buffer.hasRemaining())
                         {
                             assert ! external;

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -32,6 +32,7 @@
 #include "realloc_ptr.hpp"
 #include "copy_ptr.hpp"
 #include "timer.hpp"
+#include "bind.hpp"
 #include <unistd.h>
 #include <errno.h>
 #include <poll.h>
@@ -1568,6 +1569,14 @@ static void store_incoming_uint32(buffer_t const & buffer,
     index += sizeof(uint32_t);
 }
 
+static void store_incoming_int32(buffer_t const & buffer,
+                                 uint32_t & index,
+                                 int32_t & i)
+{
+    i = *reinterpret_cast<int32_t *>(&buffer[index]);
+    index += sizeof(int32_t);
+}
+
 static void store_incoming_int8(buffer_t const & buffer,
                                 uint32_t & index,
                                 int8_t & i)
@@ -1579,6 +1588,7 @@ static void store_incoming_int8(buffer_t const & buffer,
 static uint8_t get_incoming_uint8(buffer_t const & buffer,
                                   uint32_t & index)
 {
+    // return value required for safe bit field use
     uint8_t const i = *reinterpret_cast<uint8_t *>(&buffer[index]);
     index += sizeof(uint8_t);
     return i;
@@ -1666,6 +1676,8 @@ static int poll_request(cloudi_instance_t * api,
         if (result)
             return result;
         api->initialization_complete = 1;
+        if (bind_set(api->bind))
+            return cloudi_invalid_input;
     }
 
     buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(api->buffer_recv);
@@ -1712,6 +1724,7 @@ static int poll_request(cloudi_instance_t * api,
                 store_incoming_uint32(buffer_recv, index, api->timeout_terminate);
                 store_incoming_int8(buffer_recv, index, api->priority_default);
                 api->fatal_exceptions = get_incoming_uint8(buffer_recv, index);
+                store_incoming_int32(buffer_recv, index, api->bind);
                 if (index != api->buffer_recv_index)
                 {
                     assert(! external);

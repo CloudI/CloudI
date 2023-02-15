@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -804,16 +804,21 @@ sub _poll_request
                 $process_count_max,
                 $process_count_min,
                 $prefix_size) = unpack('L5', substr($data, $i, $j));
-            $i += $j; $j = $prefix_size + 4 + 4 + 4 + 4 + 1 + 1;
+            $i += $j; $j = $prefix_size + 4 + 4 + 4 + 4 + 1 + 1 + 4;
             my ($prefix,
                 $timeout_initialize,
                 $timeout_async,
                 $timeout_sync,
                 $timeout_terminate,
                 $priority_default,
-                $fatal_exceptions) = unpack("Z$prefix_size L4 c C",
-                                            substr($data, $i, $j));
+                $fatal_exceptions,
+                $bind) = unpack("Z$prefix_size L4 c C l",
+                                substr($data, $i, $j));
             $i += $j;
+            if ($bind >= 0)
+            {
+                die CloudI::InvalidInputException->new();
+            }
             if ($i != $data_size)
             {
                 assert($external == 0);

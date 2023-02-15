@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -249,6 +249,28 @@ let unpack_uint32_native i binary : (int, string) result =
   else
     Ok (
       (byte0 lsl 24) lor (
+        (byte1 lsl 16) lor (
+          (byte2 lsl 8) lor byte3
+        )
+      )
+    )
+
+let unpack_int32_native i binary : (int, string) result =
+  let byte0 = int_of_char binary.[i + (if Sys.big_endian then 0 else 3)]
+  and byte1 = int_of_char binary.[i + (if Sys.big_endian then 1 else 2)]
+  and byte2 = int_of_char binary.[i + (if Sys.big_endian then 2 else 1)]
+  and byte3 = int_of_char binary.[i + (if Sys.big_endian then 3 else 0)] in
+  let byte0u = 0x7f land byte0 in
+  let byte0s = if (byte0 lsr 7) = 1 then
+    -128 + byte0u
+  else
+    byte0u in
+  if byte0u > max_int lsr 24 then
+    (* 32 bit system *)
+    Error ("ocaml int overflow")
+  else
+    Ok (
+      (byte0s lsl 24) lor (
         (byte1 lsl 16) lor (
           (byte2 lsl 8) lor byte3
         )
@@ -805,28 +827,36 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                         let priority_default =
                           unpack_int8 (i1 + 16) data
                         and fatal_exceptions =
-                          (unpack_uint8 (i1 + 17) data) != 0
-                        and i2 = i1 + 18 in
-                        Instance.init api
-                          process_index
-                          process_count
-                          process_count_max
-                          process_count_min
-                          prefix
-                          timeout_initialize
-                          timeout_async
-                          timeout_sync
-                          timeout_terminate
-                          priority_default
-                          fatal_exceptions ;
-                        if i2 <> data_size then
-                          match handle_events api ext data data_size i2 0 with
-                          | Error (error) ->
-                            Error (error)
-                          | Ok _ ->
-                            Ok (Some false)
-                        else
-                          Ok (Some false)
+                          (unpack_uint8 (i1 + 17) data) != 0 in
+                        match unpack_int32_native (i1 + 18) data with
+                        | Error (error) ->
+                          Error (error)
+                        | Ok (bind) ->
+                          if bind >= 0 then
+                            Error (invalid_input_error)
+                          else
+                            let i2 = i1 + 22 in
+                            Instance.init api
+                              process_index
+                              process_count
+                              process_count_max
+                              process_count_min
+                              prefix
+                              timeout_initialize
+                              timeout_async
+                              timeout_sync
+                              timeout_terminate
+                              priority_default
+                              fatal_exceptions ;
+                            if i2 <> data_size then
+                              match handle_events
+                                api ext data data_size i2 0 with
+                              | Error (error) ->
+                                Error (error)
+                              | Ok _ ->
+                                Ok (Some false)
+                            else
+                              Ok (Some false)
     else if cmd = message_send_async || cmd = message_send_sync then
       match unpack_uint32_native (i + 4) data with
       | Error (error) ->

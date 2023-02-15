@@ -335,6 +335,7 @@
         % bind service Erlang processes and external service threads to
         % specific logical processors.  Usage of bind requires that the
         % Erlang VM has had its scheduler threads bound upon startup with +sbt .
+        % External services have bind support in the C/C++ CloudI API.
         bind = false
             :: boolean() | tuple(),
 

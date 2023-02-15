@@ -5,7 +5,7 @@ package cloudi
 //
 // MIT License
 //
-// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -990,6 +990,14 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 			err = binary.Read(reader, nativeEndian, &(api.fatalExceptions))
 			if err != nil {
 				return false, err
+			}
+			var bind int32
+			err = binary.Read(reader, nativeEndian, &bind)
+			if err != nil {
+				return false, err
+			}
+			if bind >= 0 {
+		        return false, invalidInputErrorNew()
 			}
 			if reader.Len() > 0 {
 				_, err = api.handleEvents(external, reader, 0)

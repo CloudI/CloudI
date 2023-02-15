@@ -476,6 +476,7 @@ AC_CHECK_FUNC([chroot],
     [AC_DEFINE([HAVE_CHROOT], [1],
         [Define if chroot is available])])
 AX_SYSCALL_LOCK()
+AX_BIND()
 
 # C++ requirements
 AX_LIB_SOCKET_NSL

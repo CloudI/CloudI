@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -863,6 +863,7 @@ pollRequestDataGet messages api0 external = do
             timeoutTerminate' <- Get.getWord32host
             priorityDefault' <- Get.getInt8
             fatalExceptions' <- Get.getInt8
+            bind <- Get.getInt32host
             let api1 = Instance.init api0
                     processIndex'
                     processCount'
@@ -876,7 +877,9 @@ pollRequestDataGet messages api0 external = do
                     priorityDefault'
                     fatalExceptions'
             empty <- Get.isEmpty
-            if not empty then
+            if bind >= 0 then
+                fail invalidInputError
+            else if not empty then
                 handleEvents messages api1 external 0
             else
                 return (messages, api1)
