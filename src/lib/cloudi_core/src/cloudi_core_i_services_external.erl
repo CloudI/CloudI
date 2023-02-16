@@ -1538,16 +1538,14 @@ os_init(#state{initialize = true,
                    count_process_dynamic = CountProcessDynamic,
                    fatal_exceptions = FatalExceptions,
                    bind = Bind}} = State) ->
-    CountProcessDynamicFormat =
-        cloudi_core_i_rate_based_configuration:
-        count_process_dynamic_format(CountProcessDynamic),
-    {ProcessCountMax, ProcessCountMin} = if
-        CountProcessDynamicFormat =:= false ->
+    {ProcessCountMin,
+     ProcessCountMax
+     } = case cloudi_core_i_rate_based_configuration:
+              count_process_dynamic_limits(CountProcessDynamic) of
+        undefined ->
             {ProcessCount, ProcessCount};
-        true ->
-            {_, Max} = lists:keyfind(count_max, 1, CountProcessDynamicFormat),
-            {_, Min} = lists:keyfind(count_min, 1, CountProcessDynamicFormat),
-            {Max, Min}
+        {_, _} = MinMax ->
+            MinMax
     end,
     % first message within the CloudI API received during
     % the object construction or init API function

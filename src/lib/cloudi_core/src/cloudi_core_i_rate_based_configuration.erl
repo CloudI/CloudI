@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2013-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -50,6 +50,7 @@
          restart_delay_value/3,
          count_process_dynamic_format/1,
          count_process_dynamic_validate/2,
+         count_process_dynamic_limits/1,
          count_process_dynamic_init/1,
          count_process_dynamic_reinit/2,
          count_process_dynamic_request/1,
@@ -448,6 +449,18 @@ count_process_dynamic_validate(Options, CountProcess)
     count_process_dynamic_validate(Options,
                                    #count_process_dynamic{},
                                    CountProcessInteger).
+
+-spec count_process_dynamic_limits(#count_process_dynamic{} | false) ->
+    {CountProcessMin :: pos_integer(),
+     CountProcessMax :: pos_integer()} | undefined.
+
+count_process_dynamic_limits(false) ->
+    undefined;
+count_process_dynamic_limits(#count_process_dynamic{
+                                 method = rate_request,
+                                 count_process_max = CountProcessMax,
+                                 count_process_min = CountProcessMin}) ->
+    {CountProcessMin, CountProcessMax}.
 
 %% called by init/1
 

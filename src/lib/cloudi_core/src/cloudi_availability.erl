@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2018-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_availability).
@@ -78,7 +78,7 @@
 %%%------------------------------------------------------------------------
 
 -type durations(Key) ::
-    #{Key := durations_state()}.
+    #{Key := durations_state()} | #{}.
 -export_type([durations/1]).
 
 -spec durations_copy(KeyList :: list(),
@@ -96,7 +96,7 @@ durations_erase(Key, DurationsLookup) ->
     maps:remove(Key, DurationsLookup).
 
 -spec durations_new() ->
-    durations(any()).
+    #{}.
 
 durations_new() ->
     #{}.

@@ -570,6 +570,19 @@ static int poll_request(cloudi_instance_t * api,
                         int timeout,
                         int external);
 
+static int get_environment_uint32(char const * const name,
+                                  uint32_t * const result)
+{
+    char const * const value_str = ::getenv(name);
+    if (value_str == 0)
+        return cloudi_invalid_input;
+    int const value = ::atoi(value_str);
+    if (value < 0)
+        return cloudi_invalid_input;
+    *result = static_cast<uint32_t>(value);
+    return cloudi_success;
+}
+
 int cloudi_initialize(cloudi_instance_t * api,
                       unsigned int const thread_index,
                       void * state)
@@ -583,12 +596,13 @@ int cloudi_initialize(cloudi_instance_t * api,
             "CloudI service execution must occur in CloudI" << std::endl;
         return cloudi_invalid_input;
     }
-    char const * const buffer_size_p = ::getenv("CLOUDI_API_INIT_BUFFER_SIZE");
-    if (buffer_size_p == 0)
-        return cloudi_invalid_input;
+    uint32_t buffer_size;
+    int result = get_environment_uint32("CLOUDI_API_INIT_BUFFER_SIZE",
+                                        &buffer_size);
+    if (result)
+        return result;
     ::memset(api, 0, sizeof(cloudi_instance_t));
     api->state = state;
-    uint32_t const buffer_size = ::atoi(buffer_size_p);
     if (::strcmp(protocol, "tcp") == 0)
     {
         api->fd = thread_index + 3;
@@ -647,8 +661,8 @@ int cloudi_initialize(cloudi_instance_t * api,
         return cloudi_error_ei_encode;
     if (ei_encode_atom(buffer.get<char>(), &index, "init"))
         return cloudi_error_ei_encode;
-    int result = write_exact(api->fd, api->use_header,
-                             buffer.get<char>(), index);
+    result = write_exact(api->fd, api->use_header,
+                         buffer.get<char>(), index);
     if (result)
         return result;
 
@@ -678,13 +692,12 @@ void * cloudi_destroy(cloudi_instance_t * api)
 
 int cloudi_initialize_thread_count(unsigned int * const thread_count)
 {
-    char const * const value_str = ::getenv("CLOUDI_API_INIT_THREAD_COUNT");
-    if (value_str == 0)
-        return cloudi_invalid_input;
-    int const value = ::atoi(value_str);
-    if (value < 0)
-        return cloudi_invalid_input;
-    *thread_count = static_cast<unsigned int>(value);
+    uint32_t value = 0;
+    int result = get_environment_uint32("CLOUDI_API_INIT_THREAD_COUNT",
+                                        &value);
+    if (result)
+        return result;
+    *thread_count = value;
     return cloudi_success;
 }
 
@@ -2083,6 +2096,32 @@ void cloudi_free_response(cloudi_instance_t * api)
     api->free_response = 1;
 }
 
+int cloudi_initialize_timeout_initialize(uint32_t * const timeout_initialize)
+{
+    return get_environment_uint32("CLOUDI_API_INIT_TIMEOUT_INITIALIZE",
+                                  timeout_initialize);
+}
+int cloudi_initialize_timeout_terminate(uint32_t * const timeout_terminate)
+{
+    return get_environment_uint32("CLOUDI_API_INIT_TIMEOUT_TERMINATE",
+                                  timeout_terminate);
+}
+int cloudi_initialize_process_index(uint32_t * const process_index)
+{
+    return get_environment_uint32("CLOUDI_API_INIT_PROCESS_INDEX",
+                                  process_index);
+}
+int cloudi_initialize_process_count_max(uint32_t * const process_count_max)
+{
+    return get_environment_uint32("CLOUDI_API_INIT_PROCESS_COUNT_MAX",
+                                  process_count_max);
+}
+int cloudi_initialize_process_count_min(uint32_t * const process_count_min)
+{
+    return get_environment_uint32("CLOUDI_API_INIT_PROCESS_COUNT_MIN",
+                                  process_count_min);
+}
+
 } // extern C
 
 // C++ API
@@ -2536,6 +2575,16 @@ uint32_t API::process_index() const
     return m_impl.api()->process_index;
 }
 
+uint32_t API::process_index_()
+{
+    uint32_t process_index;
+    int const result =
+        cloudi_initialize_process_index(&process_index);
+    if (result != return_value::success)
+        throw invalid_input_exception(result);
+    return process_index;
+}
+
 uint32_t API::process_count() const
 {
     return m_impl.api()->process_count;
@@ -2546,9 +2595,29 @@ uint32_t API::process_count_max() const
     return m_impl.api()->process_count_max;
 }
 
+uint32_t API::process_count_max_()
+{
+    uint32_t process_count_max;
+    int const result =
+        cloudi_initialize_process_count_max(&process_count_max);
+    if (result != return_value::success)
+        throw invalid_input_exception(result);
+    return process_count_max;
+}
+
 uint32_t API::process_count_min() const
 {
     return m_impl.api()->process_count_min;
+}
+
+uint32_t API::process_count_min_()
+{
+    uint32_t process_count_min;
+    int const result =
+        cloudi_initialize_process_count_min(&process_count_min);
+    if (result != return_value::success)
+        throw invalid_input_exception(result);
+    return process_count_min;
 }
 
 char const * API::prefix() const
@@ -2559,6 +2628,16 @@ char const * API::prefix() const
 uint32_t API::timeout_initialize() const
 {
     return m_impl.api()->timeout_initialize;
+}
+
+uint32_t API::timeout_initialize_()
+{
+    uint32_t timeout_initialize;
+    int const result =
+        cloudi_initialize_timeout_initialize(&timeout_initialize);
+    if (result != return_value::success)
+        throw invalid_input_exception(result);
+    return timeout_initialize;
 }
 
 uint32_t API::timeout_async() const
@@ -2574,6 +2653,16 @@ uint32_t API::timeout_sync() const
 uint32_t API::timeout_terminate() const
 {
     return m_impl.api()->timeout_terminate;
+}
+
+uint32_t API::timeout_terminate_()
+{
+    uint32_t timeout_terminate;
+    int const result =
+        cloudi_initialize_timeout_terminate(&timeout_terminate);
+    if (result != return_value::success)
+        throw invalid_input_exception(result);
+    return timeout_terminate;
 }
 
 int8_t API::priority_default() const

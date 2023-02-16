@@ -384,13 +384,11 @@ handle_call(process_count_max, _,
             #state{process_count = ProcessCount,
                    options = #config_service_options{
                        count_process_dynamic = CountProcessDynamic}} = State) ->
-    if
-        CountProcessDynamic =:= false ->
+    case cloudi_core_i_rate_based_configuration:
+         count_process_dynamic_limits(CountProcessDynamic) of
+        undefined ->
             hibernate_check({reply, ProcessCount, State});
-        true ->
-            Format = cloudi_core_i_rate_based_configuration:
-                     count_process_dynamic_format(CountProcessDynamic),
-            {_, ProcessCountMax} = lists:keyfind(count_max, 1, Format),
+        {_, ProcessCountMax} ->
             hibernate_check({reply, ProcessCountMax, State})
     end;
 
@@ -398,15 +396,11 @@ handle_call(process_count_min, _,
             #state{process_count = ProcessCount,
                    options = #config_service_options{
                        count_process_dynamic = CountProcessDynamic}} = State) ->
-    if
-        CountProcessDynamic =:= false ->
+    case cloudi_core_i_rate_based_configuration:
+         count_process_dynamic_limits(CountProcessDynamic) of
+        undefined ->
             hibernate_check({reply, ProcessCount, State});
-        true ->
-            CountProcessDynamicFormat =
-                cloudi_core_i_rate_based_configuration:
-                count_process_dynamic_format(CountProcessDynamic),
-            {_, ProcessCountMin} = lists:keyfind(count_min, 1,
-                                                 CountProcessDynamicFormat),
+        {ProcessCountMin, _} ->
             hibernate_check({reply, ProcessCountMin, State})
     end;
 

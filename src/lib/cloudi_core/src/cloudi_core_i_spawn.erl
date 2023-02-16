@@ -55,9 +55,15 @@
         cloudi_core_i_services_external_sup:process_start).
 
 % environmental variables used by CloudI API initialization
--define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
--define(ENVIRONMENT_PROTOCOL,      "CLOUDI_API_INIT_PROTOCOL").
--define(ENVIRONMENT_BUFFER_SIZE,   "CLOUDI_API_INIT_BUFFER_SIZE").
+-define(ENVIRONMENT_THREAD_COUNT,       "CLOUDI_API_INIT_THREAD_COUNT").
+-define(ENVIRONMENT_PROTOCOL,           "CLOUDI_API_INIT_PROTOCOL").
+-define(ENVIRONMENT_BUFFER_SIZE,        "CLOUDI_API_INIT_BUFFER_SIZE").
+% environmental variable process constants provided before initialization
+-define(ENVIRONMENT_TIMEOUT_INITIALIZE, "CLOUDI_API_INIT_TIMEOUT_INITIALIZE").
+-define(ENVIRONMENT_TIMEOUT_TERMINATE,  "CLOUDI_API_INIT_TIMEOUT_TERMINATE").
+-define(ENVIRONMENT_PROCESS_INDEX,      "CLOUDI_API_INIT_PROCESS_INDEX").
+-define(ENVIRONMENT_PROCESS_COUNT_MAX,  "CLOUDI_API_INIT_PROCESS_COUNT_MAX").
+-define(ENVIRONMENT_PROCESS_COUNT_MIN,  "CLOUDI_API_INIT_PROCESS_COUNT_MIN").
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 -dialyzer({no_match,
@@ -265,7 +271,8 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
          Rlimits, Owner, Nice, CGroup, Chroot, SyscallLock, Directory,
-         CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup} ->
+         CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup,
+         ProcessCountMax, ProcessCountMin} ->
             {ok, DestDeny, DestAllow} =
                 start_external_threads_params(DestListDeny, DestListAllow),
             ConfigOptionsNew = ConfigOptions#config_service_options{
@@ -300,7 +307,9 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                          ArgumentsNew,
                                          Environment,
                                          EnvironmentLookup,
-                                         Protocol, BufferSize);
+                                         Protocol, BufferSize,
+                                         Timeout, TimeoutTerm, ProcessIndex,
+                                         ProcessCountMax, ProcessCountMin);
                 {error, _} = Error ->
                     Error
             end;
@@ -372,7 +381,8 @@ update_external(Pids, Ports,
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
          Rlimits, Owner, Nice, CGroup, Chroot, SyscallLock, Directory,
-         CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup} ->
+         CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup,
+         ProcessCountMax, ProcessCountMin} ->
             case start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       Pids, Ports,
                                       Rlimits, Owner,
@@ -380,7 +390,9 @@ update_external(Pids, Ports,
                                       Directory, ThreadsPerProcess,
                                       CommandLine, FilenameNew, ArgumentsNew,
                                       Environment, EnvironmentLookup,
-                                      Protocol, BufferSize) of
+                                      Protocol, BufferSize,
+                                      Timeout, TimeoutTerm, ProcessIndex,
+                                      ProcessCountMax, ProcessCountMin) of
                 {ok, Pids} ->
                     _ = [Pid ! {'cloudi_service_update_state', CommandLine}
                          || Pid <- Pids],
@@ -591,6 +603,17 @@ syscall_lock(#config_service_options{syscall_lock = SyscallLock}) ->
 directory(#config_service_options{directory = Directory}, EnvironmentLookup) ->
     cloudi_core_i_os_process:directory_format(Directory, EnvironmentLookup).
 
+count_process_limits(ProcessCount,
+                     #config_service_options{
+                         count_process_dynamic = CountProcessDynamic}) ->
+    case cloudi_core_i_rate_based_configuration:
+         count_process_dynamic_limits(CountProcessDynamic) of
+        undefined ->
+            {ProcessCount, ProcessCount};
+        {_, _} = MinMax ->
+            MinMax
+    end.
+
 create_socket_path(TemporaryDirectory, ID)
     when is_binary(ID) ->
     Path = filename:join([TemporaryDirectory,
@@ -656,12 +679,15 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
                     Nice = nice(ConfigOptions),
                     CGroup = cgroup(ConfigOptions, EnvironmentLookup),
                     SyscallLock = syscall_lock(ConfigOptions),
+                    {ProcessCountMin,
+                     ProcessCountMax} = count_process_limits(ProcessCount,
+                                                             ConfigOptions),
                     {ok,
                      SpawnProcess, SpawnProtocol, SocketPath,
                      Rlimits, Owner, Nice, CGroup, Chroot, SyscallLock,
                      Directory,
-                     CommandLine, FilenameNew, ArgumentsNew,
-                     EnvironmentLookup};
+                     CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup,
+                     ProcessCountMax, ProcessCountMin};
                 undefined ->
                     {error, noproc}
             end;
@@ -775,9 +801,13 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                      Nice, CGroup, Chroot, SyscallLock, Directory,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
-                     EnvironmentLookup, Protocol, BufferSize) ->
-    case environment_parse(Environment, ThreadsPerProcess,
-                           Protocol, BufferSize, EnvironmentLookup) of
+                     EnvironmentLookup, Protocol, BufferSize,
+                     Timeout, TimeoutTerm, ProcessIndex,
+                     ProcessCountMax, ProcessCountMin) ->
+    case environment_parse(Environment, ThreadsPerProcess, Protocol, BufferSize,
+                           Timeout, TimeoutTerm, ProcessIndex,
+                           ProcessCountMax, ProcessCountMin,
+                           EnvironmentLookup) of
         {ok, SpawnEnvironment} ->
             {UserI, UserStr, GroupI, GroupStr} = Owner,
             case cloudi_core_i_os_spawn:spawn(SpawnProcess,
@@ -890,19 +920,48 @@ arguments_parse(ArgumentsBinary, ArgumentsList, Argument, Delim, [H | T]) ->
 % add CloudI API environmental variables and format into a single
 % string that is easy to use in C/C++
 environment_parse(Environment0, ThreadsPerProcess0,
-                  Protocol0, BufferSize0, EnvironmentLookup0) ->
+                  Protocol0, BufferSize0, Timeout0, TimeoutTerm0, ProcessIndex0,
+                  ProcessCountMax0, ProcessCountMin0, EnvironmentLookup0) ->
     ThreadsPerProcess1 = erlang:integer_to_list(ThreadsPerProcess0),
     Protocol1 = erlang:atom_to_list(Protocol0),
     BufferSize1 = erlang:integer_to_list(BufferSize0),
-    Environment1 = lists:keystore(?ENVIRONMENT_THREAD_COUNT, 1, Environment0,
+    Timeout1 = erlang:integer_to_list(Timeout0),
+    TimeoutTerm1 = erlang:integer_to_list(TimeoutTerm0),
+    ProcessIndex1 = erlang:integer_to_list(ProcessIndex0),
+    ProcessCountMax1 = erlang:integer_to_list(ProcessCountMax0),
+    ProcessCountMin1 = erlang:integer_to_list(ProcessCountMin0),
+    Environment1 = lists:keystore(?ENVIRONMENT_THREAD_COUNT, 1,
+                                  Environment0,
                                   {?ENVIRONMENT_THREAD_COUNT,
                                    ThreadsPerProcess1}),
-    Environment2 = lists:keystore(?ENVIRONMENT_PROTOCOL, 1, Environment1,
+    Environment2 = lists:keystore(?ENVIRONMENT_PROTOCOL, 1,
+                                  Environment1,
                                   {?ENVIRONMENT_PROTOCOL,
                                    Protocol1}),
-    Environment3 = lists:keystore(?ENVIRONMENT_BUFFER_SIZE, 1, Environment2,
+    Environment3 = lists:keystore(?ENVIRONMENT_BUFFER_SIZE, 1,
+                                  Environment2,
                                   {?ENVIRONMENT_BUFFER_SIZE,
                                    BufferSize1}),
+    Environment4 = lists:keystore(?ENVIRONMENT_TIMEOUT_INITIALIZE, 1,
+                                  Environment3,
+                                  {?ENVIRONMENT_TIMEOUT_INITIALIZE,
+                                   Timeout1}),
+    Environment5 = lists:keystore(?ENVIRONMENT_TIMEOUT_TERMINATE, 1,
+                                  Environment4,
+                                  {?ENVIRONMENT_TIMEOUT_TERMINATE,
+                                   TimeoutTerm1}),
+    Environment6 = lists:keystore(?ENVIRONMENT_PROCESS_INDEX, 1,
+                                  Environment5,
+                                  {?ENVIRONMENT_PROCESS_INDEX,
+                                   ProcessIndex1}),
+    Environment7 = lists:keystore(?ENVIRONMENT_PROCESS_COUNT_MAX, 1,
+                                  Environment6,
+                                  {?ENVIRONMENT_PROCESS_COUNT_MAX,
+                                   ProcessCountMax1}),
+    Environment8 = lists:keystore(?ENVIRONMENT_PROCESS_COUNT_MIN, 1,
+                                  Environment7,
+                                  {?ENVIRONMENT_PROCESS_COUNT_MIN,
+                                   ProcessCountMin1}),
     EnvironmentLookup1 = cloudi_x_trie:store(?ENVIRONMENT_THREAD_COUNT,
                                              ThreadsPerProcess1,
                                              EnvironmentLookup0),
@@ -912,7 +971,22 @@ environment_parse(Environment0, ThreadsPerProcess0,
     EnvironmentLookup3 = cloudi_x_trie:store(?ENVIRONMENT_BUFFER_SIZE,
                                              BufferSize1,
                                              EnvironmentLookup2),
-    environment_format(Environment3, EnvironmentLookup3).
+    EnvironmentLookup4 = cloudi_x_trie:store(?ENVIRONMENT_TIMEOUT_INITIALIZE,
+                                             Timeout1,
+                                             EnvironmentLookup3),
+    EnvironmentLookup5 = cloudi_x_trie:store(?ENVIRONMENT_TIMEOUT_TERMINATE,
+                                             TimeoutTerm1,
+                                             EnvironmentLookup4),
+    EnvironmentLookup6 = cloudi_x_trie:store(?ENVIRONMENT_PROCESS_INDEX,
+                                             ProcessIndex1,
+                                             EnvironmentLookup5),
+    EnvironmentLookup7 = cloudi_x_trie:store(?ENVIRONMENT_PROCESS_COUNT_MAX,
+                                             ProcessCountMax1,
+                                             EnvironmentLookup6),
+    EnvironmentLookup8 = cloudi_x_trie:store(?ENVIRONMENT_PROCESS_COUNT_MIN,
+                                             ProcessCountMin1,
+                                             EnvironmentLookup7),
+    environment_format(Environment8, EnvironmentLookup8).
 
 environment_format_value([], _, K, _) ->
     {error, {service_external_env_invalid_expanded, K}};

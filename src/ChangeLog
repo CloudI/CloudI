@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-02-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add C/C++ CloudI API functions for service process constant value
+      access before CloudI API initialization:
+        * timeout_initialize
+        * timeout_terminate
+        * process_index
+        * process_count_max
+        * process_count_min
+    * Add Erlang/OTP 26.0-rc1 support
+
 2023-02-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add bind service configuration option support for external service

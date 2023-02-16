@@ -997,7 +997,7 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 				return false, err
 			}
 			if bind >= 0 {
-		        return false, invalidInputErrorNew()
+				return false, invalidInputErrorNew()
 			}
 			if reader.Len() > 0 {
 				_, err = api.handleEvents(external, reader, 0)

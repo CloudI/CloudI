@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -280,6 +280,12 @@ void cloudi_free_request_info(cloudi_instance_t * api);
 void cloudi_free_request(cloudi_instance_t * api);
 void cloudi_free_response_info(cloudi_instance_t * api);
 void cloudi_free_response(cloudi_instance_t * api);
+
+int cloudi_initialize_timeout_initialize(uint32_t * const timeout_initialize);
+int cloudi_initialize_timeout_terminate(uint32_t * const timeout_terminate);
+int cloudi_initialize_process_index(uint32_t * const process_index);
+int cloudi_initialize_process_count_max(uint32_t * const process_count_max);
+int cloudi_initialize_process_count_min(uint32_t * const process_count_min);
 
 enum
 {

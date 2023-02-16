@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -691,22 +691,27 @@ class API
         }
 
         uint32_t process_index() const;
+        static uint32_t process_index_();
 
         uint32_t process_count() const;
 
         uint32_t process_count_max() const;
+        static uint32_t process_count_max_();
 
         uint32_t process_count_min() const;
+        static uint32_t process_count_min_();
 
         char const * prefix() const;
 
         uint32_t timeout_initialize() const;
+        static uint32_t timeout_initialize_();
 
         uint32_t timeout_async() const;
 
         uint32_t timeout_sync() const;
 
         uint32_t timeout_terminate() const;
+        static uint32_t timeout_terminate_();
 
         int8_t priority_default() const;
 
