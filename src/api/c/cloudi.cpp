@@ -571,15 +571,15 @@ static int poll_request(cloudi_instance_t * api,
                         int external);
 
 static int get_environment_uint32(char const * const name,
-                                  uint32_t * const result)
+                                  uint32_t * const value)
 {
     char const * const value_str = ::getenv(name);
     if (value_str == 0)
         return cloudi_invalid_input;
-    int const value = ::atoi(value_str);
-    if (value < 0)
+    int const value_int = ::atoi(value_str);
+    if (value_int < 0)
         return cloudi_invalid_input;
-    *result = static_cast<uint32_t>(value);
+    *value = static_cast<uint32_t>(value_int);
     return cloudi_success;
 }
 

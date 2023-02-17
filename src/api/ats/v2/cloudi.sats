@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2021-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2021-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -57,6 +57,7 @@ typedef struct cloudi_instance_t
     uint32_t response_size;
     uint32_t trans_id_count;
     uint32_t subscribe_count;
+    int32_t bind;
     int fd;
     int8_t priority_default;
     unsigned int use_header:1;
@@ -398,6 +399,10 @@ process_index {s:vt@ype}
     uint
 
 fn
+process_index_():<!exn>
+    uint
+
+fn
 process_count {s:vt@ype}
     (api: !instance(s)):<fun0>
     uintGt(0)
@@ -408,8 +413,16 @@ process_count_max {s:vt@ype}
     uintGt(0)
 
 fn
+process_count_max_():<!exn>
+    uintGt(0)
+
+fn
 process_count_min {s:vt@ype}
     (api: !instance(s)):<fun0>
+    uintGt(0)
+
+fn
+process_count_min_():<!exn>
     uintGt(0)
 
 fn
@@ -420,6 +433,10 @@ prefix_ {s:vt@ype}
 fn
 timeout_initialize {s:vt@ype}
     (api: !instance(s)):<fun0>
+    timeout_initialize
+
+fn
+timeout_initialize_():<!exn>
     timeout_initialize
 
 fn
@@ -435,6 +452,10 @@ timeout_sync {s:vt@ype}
 fn
 timeout_terminate {s:vt@ype}
     (api: !instance(s)):<fun0>
+    timeout_terminate
+
+fn
+timeout_terminate_():<!exn>
     timeout_terminate
 
 fn

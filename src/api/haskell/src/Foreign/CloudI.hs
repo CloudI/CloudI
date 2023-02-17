@@ -60,14 +60,19 @@ module Foreign.CloudI
     , returnSync
     , recvAsync
     , processIndex
+    , processIndex_
     , processCount
     , processCountMax
+    , processCountMax_
     , processCountMin
+    , processCountMin_
     , prefix
     , timeoutInitialize
+    , timeoutInitialize_
     , timeoutAsync
     , timeoutSync
     , timeoutTerminate
+    , timeoutTerminate_
     , priorityDefault
     , poll
     , shutdown
@@ -241,13 +246,7 @@ api threadIndex state terminateReturnValueOpt = do
 
 -- | returns the thread count from the service configuration
 threadCount :: IO (Result Int)
-threadCount = do
-    threadCountValue <- POSIX.getEnv "CLOUDI_API_INIT_THREAD_COUNT"
-    case threadCountValue of
-        Nothing ->
-            return $ Left invalidInputError
-        Just threadCountStr ->
-            return $ Right (read threadCountStr :: Int)
+threadCount = getEnvInt "CLOUDI_API_INIT_THREAD_COUNT"
 
 -- | subscribes to a service name pattern with a callback
 subscribe :: Instance.T s -> ByteString -> Instance.Callback s ->
@@ -609,6 +608,10 @@ processIndex :: Instance.T s -> Int
 processIndex Instance.T{Instance.processIndex = processIndex'} =
     processIndex'
 
+-- | returns the 0-based index of this process in the service instance
+processIndex_ :: IO (Result Int)
+processIndex_ = getEnvInt "CLOUDI_API_INIT_PROCESS_INDEX"
+
 -- | returns the current process count based on the service configuration
 processCount :: Instance.T s -> Int
 processCount Instance.T{Instance.processCount = processCount'} =
@@ -620,11 +623,21 @@ processCountMax :: Instance.T s -> Int
 processCountMax Instance.T{Instance.processCountMax = processCountMax'} =
     processCountMax'
 
+-- | returns the count_process_dynamic maximum count
+-- based on the service configuration
+processCountMax_ :: IO (Result Int)
+processCountMax_ = getEnvInt "CLOUDI_API_INIT_PROCESS_COUNT_MAX"
+
 -- | returns the count_process_dynamic minimum count
 -- based on the service configuration
 processCountMin :: Instance.T s -> Int
 processCountMin Instance.T{Instance.processCountMin = processCountMin'} =
     processCountMin'
+
+-- | returns the count_process_dynamic minimum count
+-- based on the service configuration
+processCountMin_ :: IO (Result Int)
+processCountMin_ = getEnvInt "CLOUDI_API_INIT_PROCESS_COUNT_MIN"
 
 -- | returns the service name pattern prefix from the service configuration
 prefix :: Instance.T s -> ByteString
@@ -636,6 +649,11 @@ prefix Instance.T{Instance.prefix = prefix'} =
 timeoutInitialize :: Instance.T s -> Int
 timeoutInitialize Instance.T{Instance.timeoutInitialize = timeoutInitialize'} =
     timeoutInitialize'
+
+-- | returns the service initialization timeout
+-- from the service configuration
+timeoutInitialize_ :: IO (Result Int)
+timeoutInitialize_ = getEnvInt "CLOUDI_API_INIT_TIMEOUT_INITIALIZE"
 
 -- | returns the default asynchronous service request send timeout
 -- from the service configuration
@@ -654,6 +672,11 @@ timeoutSync Instance.T{Instance.timeoutSync = timeoutSync'} =
 timeoutTerminate :: Instance.T s -> Int
 timeoutTerminate Instance.T{Instance.timeoutTerminate = timeoutTerminate'} =
     timeoutTerminate'
+
+-- | returns the service termination timeout
+-- based on the service configuration
+timeoutTerminate_ :: IO (Result Int)
+timeoutTerminate_ = getEnvInt "CLOUDI_API_INIT_TIMEOUT_TERMINATE"
 
 -- | returns the default service request send priority
 -- from the service configuration
@@ -1233,6 +1256,15 @@ setTerminate :: Instance.T s -> Instance.T s
 setTerminate api0 =
     api0{ Instance.terminate = True
         , Instance.timeout = Just False}
+
+getEnvInt :: String -> IO (Result Int)
+getEnvInt name = do
+    valueResult <- POSIX.getEnv name
+    case valueResult of
+        Nothing ->
+            return $ Left invalidInputError
+        Just valueStr ->
+            return $ Right (read valueStr :: Int)
 
 threadList :: Concurrent.MVar [Concurrent.MVar ()]
 threadList = Unsafe.unsafePerformIO (Concurrent.newMVar [])

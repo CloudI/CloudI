@@ -664,6 +664,11 @@ func (api *Instance) ProcessIndex() uint32 {
 	return api.processIndex
 }
 
+// ProcessIndex_ returns the 0-based index of this process in the service instance
+func ProcessIndex_() (uint32, error) {
+	return uintGetenv("CLOUDI_API_INIT_PROCESS_INDEX")
+}
+
 // ProcessCount returns the current process count based on the service configuration
 func (api *Instance) ProcessCount() uint32 {
 	return api.processCount
@@ -674,9 +679,19 @@ func (api *Instance) ProcessCountMax() uint32 {
 	return api.processCountMax
 }
 
+// ProcessCountMax_ returns the count_process_dynamic maximum count based on the service configuration
+func ProcessCountMax_() (uint32, error) {
+	return uintGetenv("CLOUDI_API_INIT_PROCESS_COUNT_MAX")
+}
+
 // ProcessCountMin returns the count_process_dynamic minimum count based on the service configuration
 func (api *Instance) ProcessCountMin() uint32 {
 	return api.processCountMin
+}
+
+// ProcessCountMin_ returns the count_process_dynamic minimum count based on the service configuration
+func ProcessCountMin_() (uint32, error) {
+	return uintGetenv("CLOUDI_API_INIT_PROCESS_COUNT_MIN")
 }
 
 // Prefix returns the service name pattern prefix from the service configuration
@@ -687,6 +702,11 @@ func (api *Instance) Prefix() string {
 // TimeoutInitialize returns the service initialization timeout from the service configuration
 func (api *Instance) TimeoutInitialize() uint32 {
 	return api.timeoutInitialize
+}
+
+// TimeoutInitialize_ returns the service initialization timeout from the service configuration
+func TimeoutInitialize_() (uint32, error) {
+	return uintGetenv("CLOUDI_API_INIT_TIMEOUT_INITIALIZE")
 }
 
 // TimeoutAsync returns the default asynchronous service request send timeout from the service configuration
@@ -702,6 +722,11 @@ func (api *Instance) TimeoutSync() uint32 {
 // TimeoutTerminate returns the service termination timeout based on the service configuration
 func (api *Instance) TimeoutTerminate() uint32 {
 	return api.timeoutTerminate
+}
+
+// TimeoutTerminate_ returns the service termination timeout based on the service configuration
+func TimeoutTerminate_() (uint32, error) {
+	return uintGetenv("CLOUDI_API_INIT_TIMEOUT_TERMINATE")
 }
 
 // PriorityDefault returns the default service request send priority from the service configuration

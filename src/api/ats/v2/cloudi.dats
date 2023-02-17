@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2021-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2021-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -575,6 +575,31 @@ extern fn
 c_free_response:
     (ptr) -<fun,!wrt>
     void = "ext#cloudi_free_response"
+extern fn
+c_initialize_timeout_initialize: {l1:agz}
+    (!$CLOUDI.timeout_initialize @ l1 |
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_timeout_initialize"
+extern fn
+c_initialize_timeout_terminate: {l1:agz}
+    (!$CLOUDI.timeout_terminate @ l1 |
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_timeout_terminate"
+extern fn
+c_initialize_process_index: {l1:agz}
+    (!uint @ l1 |
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_process_index"
+extern fn
+c_initialize_process_count_max: {l1:agz}
+    (!uintGt(0) @ l1 |
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_process_count_max"
+extern fn
+c_initialize_process_count_min: {l1:agz}
+    (!uintGt(0) @ l1 |
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_process_count_min"
 (* Standard C functions
  *)
 extern fn
@@ -1640,6 +1665,16 @@ in
 end
 
 implement
+$CLOUDI.process_index_() = let
+    var index: uint with index_pfgc = i2u(0)
+    val status = $effmask_wrt(
+        c_initialize_process_index(index_pfgc | addr@index))
+    val () = assertloc(status = 0)
+in
+    index
+end
+
+implement
 $CLOUDI.process_count
     (api) = let
     val api_c = api_c_get(api)
@@ -1656,11 +1691,31 @@ in
 end
 
 implement
+$CLOUDI.process_count_max_() = let
+    var count_max: uintGt(0) with count_max_pfgc = i2u(1)
+    val status = $effmask_wrt(
+        c_initialize_process_count_max(count_max_pfgc | addr@count_max))
+    val () = assertloc(status = 0)
+in
+    count_max
+end
+
+implement
 $CLOUDI.process_count_min
     (api) = let
     val api_c = api_c_get(api)
 in
     c_get_process_count_min(api_c)
+end
+
+implement
+$CLOUDI.process_count_min_() = let
+    var count_min: uintGt(0) with count_min_pfgc = i2u(1)
+    val status = $effmask_wrt(
+        c_initialize_process_count_min(count_min_pfgc | addr@count_min))
+    val () = assertloc(status = 0)
+in
+    count_min
 end
 
 implement
@@ -1677,6 +1732,16 @@ $CLOUDI.timeout_initialize
     val api_c = api_c_get(api)
 in
     c_get_timeout_initialize(api_c)
+end
+
+implement
+$CLOUDI.timeout_initialize_() = let
+    var timeout: $CLOUDI.timeout_initialize with timeout_pfgc = i2u(101)
+    val status = $effmask_wrt(
+        c_initialize_timeout_initialize(timeout_pfgc | addr@timeout))
+    val () = assertloc(status = 0)
+in
+    timeout
 end
 
 implement
@@ -1701,6 +1766,16 @@ $CLOUDI.timeout_terminate
     val api_c = api_c_get(api)
 in
     c_get_timeout_terminate(api_c)
+end
+
+implement
+$CLOUDI.timeout_terminate_() = let
+    var timeout: $CLOUDI.timeout_terminate with timeout_pfgc = i2u(10)
+    val status = $effmask_wrt(
+        c_initialize_timeout_terminate(timeout_pfgc | addr@timeout))
+    val () = assertloc(status = 0)
+in
+    timeout
 end
 
 implement

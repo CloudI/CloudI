@@ -67,7 +67,7 @@
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 -dialyzer({no_match,
-           [start_external_spawn/20,
+           [start_external_spawn/25,
             update_external/3]}).
 -endif.
 
