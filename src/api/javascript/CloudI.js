@@ -109,6 +109,17 @@ if (Erlang.nodejs_version_after('10.0.0',true)) {
         originalEmitWarning(warning, type, code, ctor);
     };
 }
+var getEnvToUnsignedInt = function getEnvToUnsignedInt (name) {
+    var value_str = process.env[name];
+    if (value_str === undefined) {
+        throw new InvalidInputException();
+    }
+    var value = parseInt(value_str);
+    if (value < 0) {
+        throw new InvalidInputException();
+    }
+    return value;
+};
 
 var InvalidInputException = function InvalidInputException () {
     var error = new Error('Invalid Input');
@@ -236,10 +247,7 @@ CloudI.API = function API (thread_index, callback) {
         CloudI.stderr_write('CloudI service execution must occur in CloudI\n');
         throw new InvalidInputException();
     }
-    var buffer_size_str = process.env.CLOUDI_API_INIT_BUFFER_SIZE;
-    if (buffer_size_str === undefined) {
-        throw new InvalidInputException();
-    }
+    var buffer_size = getEnvToUnsignedInt('CLOUDI_API_INIT_BUFFER_SIZE');
     if (protocol_str == 'tcp') {
         API._use_header = true;
     }
@@ -259,7 +267,7 @@ CloudI.API = function API (thread_index, callback) {
     API._fatal_exceptions = false;
     API._terminate = false;
     API._terminate_callback = undefined;
-    API._size = parseInt(buffer_size_str);
+    API._size = buffer_size;
     API._callbacks = {};
     API._timeout_terminate = 10; // TIMEOUT_TERMINATE_MIN
     API._poll_callback = callback;
@@ -319,11 +327,7 @@ CloudI.API = function API (thread_index, callback) {
 
 // class method
 CloudI.API.thread_count = function thread_count () {
-    var count_str = process.env.CLOUDI_API_INIT_THREAD_COUNT;
-    if (count_str === undefined) {
-        throw new InvalidInputException();
-    }
-    return parseInt(count_str);
+    return getEnvToUnsignedInt('CLOUDI_API_INIT_THREAD_COUNT');
 };
 
 CloudI.API.prototype.subscribe = function (pattern, obj, obj_f, callback) {
@@ -538,6 +542,11 @@ CloudI.API.prototype.process_index = function () {
     return this._process_index;
 };
 
+// class method
+CloudI.API.process_index_ = function process_index_ () {
+    return getEnvToUnsignedInt('CLOUDI_API_INIT_PROCESS_INDEX');
+};
+
 CloudI.API.prototype.process_count = function () {
     return this._process_count;
 };
@@ -546,8 +555,18 @@ CloudI.API.prototype.process_count_max = function () {
     return this._process_count_max;
 };
 
+// class method
+CloudI.API.process_count_max_ = function process_count_max_ () {
+    return getEnvToUnsignedInt('CLOUDI_API_INIT_PROCESS_COUNT_MAX');
+};
+
 CloudI.API.prototype.process_count_min = function () {
     return this._process_count_min;
+};
+
+// class method
+CloudI.API.process_count_min_ = function process_count_min_ () {
+    return getEnvToUnsignedInt('CLOUDI_API_INIT_PROCESS_COUNT_MIN');
 };
 
 CloudI.API.prototype.prefix = function () {
@@ -556,6 +575,11 @@ CloudI.API.prototype.prefix = function () {
 
 CloudI.API.prototype.timeout_initialize = function () {
     return this._timeout_initialize;
+};
+
+// class method
+CloudI.API.timeout_initialize_ = function timeout_initialize_ () {
+    return getEnvToUnsignedInt('CLOUDI_API_INIT_TIMEOUT_INITIALIZE');
 };
 
 CloudI.API.prototype.timeout_async = function () {
@@ -568,6 +592,11 @@ CloudI.API.prototype.timeout_sync = function () {
 
 CloudI.API.prototype.timeout_terminate = function () {
     return this._timeout_terminate;
+};
+
+// class method
+CloudI.API.timeout_terminate_ = function timeout_terminate_ () {
+    return getEnvToUnsignedInt('CLOUDI_API_INIT_TIMEOUT_TERMINATE');
 };
 
 CloudI.API.prototype.priority_default = function () {

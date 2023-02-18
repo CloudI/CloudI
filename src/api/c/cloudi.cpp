@@ -570,8 +570,8 @@ static int poll_request(cloudi_instance_t * api,
                         int timeout,
                         int external);
 
-static int get_environment_uint32(char const * const name,
-                                  uint32_t * const value)
+static int getenv_to_uint32(char const * const name,
+                            uint32_t * const value)
 {
     char const * const value_str = ::getenv(name);
     if (value_str == 0)
@@ -597,8 +597,7 @@ int cloudi_initialize(cloudi_instance_t * api,
         return cloudi_invalid_input;
     }
     uint32_t buffer_size;
-    int result = get_environment_uint32("CLOUDI_API_INIT_BUFFER_SIZE",
-                                        &buffer_size);
+    int result = getenv_to_uint32("CLOUDI_API_INIT_BUFFER_SIZE", &buffer_size);
     if (result)
         return result;
     ::memset(api, 0, sizeof(cloudi_instance_t));
@@ -693,8 +692,7 @@ void * cloudi_destroy(cloudi_instance_t * api)
 int cloudi_initialize_thread_count(unsigned int * const thread_count)
 {
     uint32_t value = 0;
-    int result = get_environment_uint32("CLOUDI_API_INIT_THREAD_COUNT",
-                                        &value);
+    int result = getenv_to_uint32("CLOUDI_API_INIT_THREAD_COUNT", &value);
     if (result)
         return result;
     *thread_count = value;
@@ -1727,14 +1725,17 @@ static int poll_request(cloudi_instance_t * api,
             {
                 store_incoming_uint32(buffer_recv, index, api->process_index);
                 store_incoming_uint32(buffer_recv, index, api->process_count);
-                store_incoming_uint32(buffer_recv, index, api->process_count_max);
-                store_incoming_uint32(buffer_recv, index, api->process_count_min);
+                store_incoming_uint32(buffer_recv, index,
+                                      api->process_count_max);
+                store_incoming_uint32(buffer_recv, index,
+                                      api->process_count_min);
                 store_incoming_binary(buffer_recv, index, api->prefix);
                 store_incoming_uint32(buffer_recv, index,
                                       api->timeout_initialize);
                 store_incoming_uint32(buffer_recv, index, api->timeout_async);
                 store_incoming_uint32(buffer_recv, index, api->timeout_sync);
-                store_incoming_uint32(buffer_recv, index, api->timeout_terminate);
+                store_incoming_uint32(buffer_recv, index,
+                                      api->timeout_terminate);
                 store_incoming_int8(buffer_recv, index, api->priority_default);
                 api->fatal_exceptions = get_incoming_uint8(buffer_recv, index);
                 store_incoming_int32(buffer_recv, index, api->bind);
@@ -2096,30 +2097,30 @@ void cloudi_free_response(cloudi_instance_t * api)
     api->free_response = 1;
 }
 
-int cloudi_initialize_timeout_initialize(uint32_t * const timeout_initialize)
-{
-    return get_environment_uint32("CLOUDI_API_INIT_TIMEOUT_INITIALIZE",
-                                  timeout_initialize);
-}
-int cloudi_initialize_timeout_terminate(uint32_t * const timeout_terminate)
-{
-    return get_environment_uint32("CLOUDI_API_INIT_TIMEOUT_TERMINATE",
-                                  timeout_terminate);
-}
 int cloudi_initialize_process_index(uint32_t * const process_index)
 {
-    return get_environment_uint32("CLOUDI_API_INIT_PROCESS_INDEX",
-                                  process_index);
+    return getenv_to_uint32("CLOUDI_API_INIT_PROCESS_INDEX",
+                            process_index);
 }
 int cloudi_initialize_process_count_max(uint32_t * const process_count_max)
 {
-    return get_environment_uint32("CLOUDI_API_INIT_PROCESS_COUNT_MAX",
-                                  process_count_max);
+    return getenv_to_uint32("CLOUDI_API_INIT_PROCESS_COUNT_MAX",
+                            process_count_max);
 }
 int cloudi_initialize_process_count_min(uint32_t * const process_count_min)
 {
-    return get_environment_uint32("CLOUDI_API_INIT_PROCESS_COUNT_MIN",
-                                  process_count_min);
+    return getenv_to_uint32("CLOUDI_API_INIT_PROCESS_COUNT_MIN",
+                            process_count_min);
+}
+int cloudi_initialize_timeout_initialize(uint32_t * const timeout_initialize)
+{
+    return getenv_to_uint32("CLOUDI_API_INIT_TIMEOUT_INITIALIZE",
+                            timeout_initialize);
+}
+int cloudi_initialize_timeout_terminate(uint32_t * const timeout_terminate)
+{
+    return getenv_to_uint32("CLOUDI_API_INIT_TIMEOUT_TERMINATE",
+                            timeout_terminate);
 }
 
 } // extern C

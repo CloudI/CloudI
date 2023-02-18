@@ -60,7 +60,7 @@ namespace
 {
 
 #if BIND_USE_LINUX
-    int bind_set_linux(uint32_t logical_processor)
+    int bind_set_linux(uint32_t const logical_processor)
     {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
@@ -69,7 +69,7 @@ namespace
         return ::sched_setaffinity(0, sizeof(cpuset), &cpuset);
     }
 #elif BIND_USE_FREEBSD
-    int bind_set_freebsd(uint32_t logical_processor)
+    int bind_set_freebsd(uint32_t const logical_processor)
     {
         cpuset_t cpuset;
         CPU_ZERO(&cpuset);
@@ -78,7 +78,7 @@ namespace
                                     sizeof(cpuset), &cpuset);
     }
 #elif BIND_USE_PTHREAD
-    int bind_set_pthread(uint32_t logical_processor)
+    int bind_set_pthread(uint32_t const logical_processor)
     {
         cpuset_t cpuset;
         CPU_ZERO(&cpuset);
@@ -90,7 +90,7 @@ namespace
 
 } // anonymous namespace
 
-int bind_set(int32_t logical_processor)
+int bind_set(int32_t const logical_processor)
 {
     int result = 0;
     if (logical_processor >= 0)

@@ -145,10 +145,8 @@ public class API
             API.err.println("CloudI service execution must occur in CloudI");
             throw new InvalidInputException();
         }
-        final String buffer_size_str =
-            System.getenv("CLOUDI_API_INIT_BUFFER_SIZE");
-        if (buffer_size_str == null)
-            throw new InvalidInputException();
+        final int buffer_size =
+            API.getenvToUnsignedInt("CLOUDI_API_INIT_BUFFER_SIZE");
         if (protocol.compareTo("tcp") == 0)
         {
             this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
@@ -178,7 +176,7 @@ public class API
         this.terminate = false;
         this.callbacks = new HashMap<String, LinkedList<FunctionInterface9>>();
         this.null_response = new NullResponse();
-        this.buffer_size = Integer.parseInt(buffer_size_str);
+        this.buffer_size = buffer_size;
         this.process_index = 0;
         this.process_count = 0;
         this.process_count_max = 0;
@@ -204,11 +202,7 @@ public class API
     public static int thread_count()
         throws InvalidInputException
     {
-        final String s = System.getenv("CLOUDI_API_INIT_THREAD_COUNT");
-        if (s == null)
-            throw new InvalidInputException();
-        final int thread_count = Integer.parseInt(s);
-        return thread_count;
+        return API.getenvToUnsignedInt("CLOUDI_API_INIT_THREAD_COUNT");
     }
 
     /**
@@ -987,51 +981,140 @@ public class API
         }
     }
 
+    /**
+     * @return the 0-based index of this process in the service instance
+     */
     public int process_index()
     {
         return this.process_index;
     }
 
+    /**
+     * @return the 0-based index of this process in the service instance
+     * @throws InvalidInputException service execution failure
+     */
+    public static int process_index_()
+        throws InvalidInputException
+    {
+        return API.getenvToUnsignedInt("CLOUDI_API_INIT_PROCESS_INDEX");
+    }
+
+    /**
+     * @return the current process count based on the service configuration
+     */
     public int process_count()
     {
         return this.process_count;
     }
 
+    /**
+     * @return the count_process_dynamic maximum count based on the
+     *         service configuration
+     */
     public int process_count_max()
     {
         return this.process_count_max;
     }
 
+    /**
+     * @return the count_process_dynamic maximum count based on the
+     *         service configuration
+     * @throws InvalidInputException service execution failure
+     */
+    public static int process_count_max_()
+        throws InvalidInputException
+    {
+        return API.getenvToUnsignedInt("CLOUDI_API_INIT_PROCESS_COUNT_MAX");
+    }
+
+    /**
+     * @return the count_process_dynamic minimum count based on the
+     *         service configuration
+     */
     public int process_count_min()
     {
         return this.process_count_min;
     }
 
+    /**
+     * @return the count_process_dynamic minimum count based on the
+     *         service configuration
+     * @throws InvalidInputException service execution failure
+     */
+    public static int process_count_min_()
+        throws InvalidInputException
+    {
+        return API.getenvToUnsignedInt("CLOUDI_API_INIT_PROCESS_COUNT_MIN");
+    }
+
+    /**
+     * @return the service name pattern prefix from the service configuration
+     */
     public String prefix()
     {
         return this.prefix;
     }
 
+    /**
+     * @return the service initialization timeout from the service configuration
+     */
     public int timeout_initialize()
     {
         return this.timeout_initialize;
     }
 
+    /**
+     * @return the service initialization timeout from the service configuration
+     * @throws InvalidInputException service execution failure
+     */
+    public static int timeout_initialize_()
+        throws InvalidInputException
+    {
+        return API.getenvToUnsignedInt("CLOUDI_API_INIT_TIMEOUT_INITIALIZE");
+    }
+
+    /**
+     * @return the default asynchronous service request send timeout from
+     *         the service configuration
+     */
     public int timeout_async()
     {
         return this.timeout_async;
     }
 
+    /**
+     * @return the default synchronous service request send timeout from
+     *         the service configuration
+     */
     public int timeout_sync()
     {
         return this.timeout_sync;
     }
 
+    /**
+     * @return the service termination timeout based on the
+     *         service configuration
+     */
     public int timeout_terminate()
     {
         return this.timeout_terminate;
     }
 
+    /**
+     * @return the service termination timeout based on the
+     *         service configuration
+     * @throws InvalidInputException service execution failure
+     */
+    public static int timeout_terminate_()
+        throws InvalidInputException
+    {
+        return API.getenvToUnsignedInt("CLOUDI_API_INIT_TIMEOUT_TERMINATE");
+    }
+
+    /**
+     * @return the default service request send priority from the
+     *         service configuration
+     */
     public byte priority_default()
     {
         return this.priority_default;
@@ -1962,6 +2045,18 @@ public class API
             return null;
         }
         return object;
+    }
+
+    private static int getenvToUnsignedInt(final String name)
+        throws InvalidInputException
+    {
+        final String valueStr = System.getenv(name);
+        if (valueStr == null)
+            throw new InvalidInputException();
+        final int value = Integer.parseInt(valueStr);
+        if (value < 0)
+            throw new InvalidInputException();
+        return value;
     }
 
     public static class Response

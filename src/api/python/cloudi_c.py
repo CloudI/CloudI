@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -76,10 +76,7 @@ class API(object):
         """
         returns the thread count from the service configuration
         """
-        thread_count = os.getenv('CLOUDI_API_INIT_THREAD_COUNT')
-        if thread_count is None:
-            raise InvalidInputException()
-        return int(thread_count)
+        return API.__getenv_to_uint('CLOUDI_API_INIT_THREAD_COUNT')
 
     def subscribe(self, pattern, function):
         """
@@ -245,6 +242,13 @@ class API(object):
         """
         return self.__api.process_index()
 
+    @staticmethod
+    def process_index_():
+        """
+        returns the 0-based index of this process in the service instance
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_PROCESS_INDEX')
+
     def process_count(self):
         """
         returns the current process count based on the service configuration
@@ -257,11 +261,25 @@ class API(object):
         """
         return self.__api.process_count_max()
 
+    @staticmethod
+    def process_count_max_():
+        """
+        returns the count_process_dynamic maximum count
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MAX')
+
     def process_count_min(self):
         """
         returns the count_process_dynamic minimum count
         """
         return self.__api.process_count_min()
+
+    @staticmethod
+    def process_count_min_():
+        """
+        returns the count_process_dynamic minimum count
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MIN')
 
     def prefix(self):
         """
@@ -274,6 +292,13 @@ class API(object):
         returns the service initialization timeout
         """
         return self.__api.timeout_initialize()
+
+    @staticmethod
+    def timeout_initialize_():
+        """
+        returns the service initialization timeout
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_INITIALIZE')
 
     def timeout_async(self):
         """
@@ -292,6 +317,13 @@ class API(object):
         returns the service termination timeout
         """
         return self.__api.timeout_terminate()
+
+    @staticmethod
+    def timeout_terminate_():
+        """
+        returns the service termination timeout
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_TERMINATE')
 
     def priority_default(self):
         """
@@ -365,6 +397,16 @@ class API(object):
         encode service response info key/value data
         """
         return API.__text_pairs_new(pairs, response)
+
+    @staticmethod
+    def __getenv_to_uint(name):
+        value_str = os.getenv(name)
+        if value_str is None:
+            raise InvalidInputException()
+        value = int(value_str)
+        if value < 0:
+            raise InvalidInputException()
+        return value
 
 class InvalidInputException(Exception):
     """

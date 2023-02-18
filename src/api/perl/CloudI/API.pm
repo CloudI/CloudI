@@ -82,11 +82,7 @@ sub new
         print STDERR "CloudI service execution must occur in CloudI";
         die CloudI::InvalidInputException->new();
     }
-    my $buffer_size = getenv('CLOUDI_API_INIT_BUFFER_SIZE');
-    if (! defined($buffer_size) or $buffer_size !~ /^\d+$/)
-    {
-        die CloudI::InvalidInputException->new();
-    }
+    my $buffer_size = _getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE');
     my $s = IO::Handle->new_from_fd($thread_index + 3, 'r+');
     $s->autoflush(1);
     my $use_header;
@@ -153,12 +149,7 @@ sub DESTROY
 # callable without an object
 sub thread_count
 {
-    my $count = getenv('CLOUDI_API_INIT_THREAD_COUNT');
-    if (! defined($count) or $count !~ /^\d+$/)
-    {
-        die CloudI::InvalidInputException->new();
-    }
-    return $count;
+    return _getenv_to_uint('CLOUDI_API_INIT_THREAD_COUNT');
 }
 
 sub subscribe
@@ -418,6 +409,12 @@ sub process_index
     return $self->{_process_index};
 }
 
+# callable without an object
+sub process_index_
+{
+    return _getenv_to_uint('CLOUDI_API_INIT_PROCESS_INDEX');
+}
+
 sub process_count
 {
     my $self = shift;
@@ -430,10 +427,22 @@ sub process_count_max
     return $self->{_process_count_max};
 }
 
+# callable without an object
+sub process_count_max_
+{
+    return _getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MAX');
+}
+
 sub process_count_min
 {
     my $self = shift;
     return $self->{_process_count_min};
+}
+
+# callable without an object
+sub process_count_min_
+{
+    return _getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MIN');
 }
 
 sub prefix
@@ -446,6 +455,12 @@ sub timeout_initialize
 {
     my $self = shift;
     return $self->{_timeout_initialize};
+}
+
+# callable without an object
+sub timeout_initialize_
+{
+    return _getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_INITIALIZE');
 }
 
 sub timeout_async
@@ -464,6 +479,12 @@ sub timeout_terminate
 {
     my $self = shift;
     return $self->{_timeout_terminate};
+}
+
+# callable without an object
+sub timeout_terminate_
+{
+    return _getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_TERMINATE');
 }
 
 sub priority_default
@@ -1212,6 +1233,17 @@ sub _recv
         }
     }
     return $data;
+}
+
+sub _getenv_to_uint
+{
+    my ($name) = @_;
+    my $value = getenv($name);
+    if (! defined($value) or $value !~ /^\d+$/)
+    {
+        die CloudI::InvalidInputException->new();
+    }
+    return $value;
 }
 
 sub assert

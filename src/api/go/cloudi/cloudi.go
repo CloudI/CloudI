@@ -111,7 +111,7 @@ func API(threadIndex uint32, state interface{}) (*Instance, error) {
 		os.Stderr.WriteString("CloudI service execution must occur in CloudI\n")
 		return nil, invalidInputErrorNew()
 	}
-	bufferSize, err := uintGetenv("CLOUDI_API_INIT_BUFFER_SIZE")
+	bufferSize, err := getenvToUint32("CLOUDI_API_INIT_BUFFER_SIZE")
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func API(threadIndex uint32, state interface{}) (*Instance, error) {
 
 // ThreadCount returns the thread count from the service configuration
 func ThreadCount() (uint32, error) {
-	return uintGetenv("CLOUDI_API_INIT_THREAD_COUNT")
+	return getenvToUint32("CLOUDI_API_INIT_THREAD_COUNT")
 }
 
 // Subscribe subscribes to a service name pattern with a callback
@@ -666,7 +666,7 @@ func (api *Instance) ProcessIndex() uint32 {
 
 // ProcessIndex_ returns the 0-based index of this process in the service instance
 func ProcessIndex_() (uint32, error) {
-	return uintGetenv("CLOUDI_API_INIT_PROCESS_INDEX")
+	return getenvToUint32("CLOUDI_API_INIT_PROCESS_INDEX")
 }
 
 // ProcessCount returns the current process count based on the service configuration
@@ -681,7 +681,7 @@ func (api *Instance) ProcessCountMax() uint32 {
 
 // ProcessCountMax_ returns the count_process_dynamic maximum count based on the service configuration
 func ProcessCountMax_() (uint32, error) {
-	return uintGetenv("CLOUDI_API_INIT_PROCESS_COUNT_MAX")
+	return getenvToUint32("CLOUDI_API_INIT_PROCESS_COUNT_MAX")
 }
 
 // ProcessCountMin returns the count_process_dynamic minimum count based on the service configuration
@@ -691,7 +691,7 @@ func (api *Instance) ProcessCountMin() uint32 {
 
 // ProcessCountMin_ returns the count_process_dynamic minimum count based on the service configuration
 func ProcessCountMin_() (uint32, error) {
-	return uintGetenv("CLOUDI_API_INIT_PROCESS_COUNT_MIN")
+	return getenvToUint32("CLOUDI_API_INIT_PROCESS_COUNT_MIN")
 }
 
 // Prefix returns the service name pattern prefix from the service configuration
@@ -706,7 +706,7 @@ func (api *Instance) TimeoutInitialize() uint32 {
 
 // TimeoutInitialize_ returns the service initialization timeout from the service configuration
 func TimeoutInitialize_() (uint32, error) {
-	return uintGetenv("CLOUDI_API_INIT_TIMEOUT_INITIALIZE")
+	return getenvToUint32("CLOUDI_API_INIT_TIMEOUT_INITIALIZE")
 }
 
 // TimeoutAsync returns the default asynchronous service request send timeout from the service configuration
@@ -726,7 +726,7 @@ func (api *Instance) TimeoutTerminate() uint32 {
 
 // TimeoutTerminate_ returns the service termination timeout based on the service configuration
 func TimeoutTerminate_() (uint32, error) {
-	return uintGetenv("CLOUDI_API_INIT_TIMEOUT_TERMINATE")
+	return getenvToUint32("CLOUDI_API_INIT_TIMEOUT_TERMINATE")
 }
 
 // PriorityDefault returns the default service request send priority from the service configuration
@@ -1494,7 +1494,7 @@ func (api *Instance) recvFragment(size int) (int, error) {
 	return i, nil
 }
 
-func uintGetenv(key string) (uint32, error) {
+func getenvToUint32(key string) (uint32, error) {
 	s := os.Getenv(key)
 	if s == "" {
 		return 0, invalidInputErrorNew()

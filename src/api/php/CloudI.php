@@ -86,9 +86,7 @@ class API
             fwrite(STDERR, "CloudI service execution must occur in CloudI\n");
             throw new InvalidInputException();
         }
-        $buffer_size_str = getenv('CLOUDI_API_INIT_BUFFER_SIZE');
-        if ($buffer_size_str == false)
-            throw new InvalidInputException();
+        $buffer_size = self::getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE');
         $this->s = fopen('php://fd/' . strval($thread_index + 3), 'rwb');
         if ($protocol_str == 'tcp')
             $this->use_header = true;
@@ -101,7 +99,7 @@ class API
         $this->initialization_complete = false;
         $this->fatal_exceptions = false;
         $this->terminate = false;
-        $this->size = intval($buffer_size_str);
+        $this->size = $buffer_size;
         $this->callbacks = array();
         $this->timeout_terminate = 10; // TIMEOUT_TERMINATE_MIN
         $this->send(\Erlang\term_to_binary(new \Erlang\OtpErlangAtom('init')));
@@ -121,10 +119,7 @@ class API
 
     public static function thread_count()
     {
-        $count_str = getenv('CLOUDI_API_INIT_THREAD_COUNT');
-        if ($count_str == false)
-            throw new InvalidInputException();
-        return intval($count_str);
+        return self::getenv_to_uint('CLOUDI_API_INIT_THREAD_COUNT');
     }
 
     public function subscribe($pattern, $object, $method)
@@ -305,6 +300,11 @@ class API
         return $this->process_index;
     }
 
+    public static function process_index_()
+    {
+        return self::getenv_to_uint('CLOUDI_API_INIT_PROCESS_INDEX');
+    }
+
     public function process_count()
     {
         return $this->process_count;
@@ -315,9 +315,19 @@ class API
         return $this->process_count_max;
     }
 
+    public static function process_count_max_()
+    {
+        return self::getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MAX');
+    }
+
     public function process_count_min()
     {
         return $this->process_count_min;
+    }
+
+    public static function process_count_min_()
+    {
+        return self::getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MIN');
     }
 
     public function prefix()
@@ -328,6 +338,11 @@ class API
     public function timeout_initialize()
     {
         return $this->timeout_initialize;
+    }
+
+    public static function timeout_initialize_()
+    {
+        return self::getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_INITIALIZE');
     }
 
     public function timeout_async()
@@ -343,6 +358,11 @@ class API
     public function timeout_terminate()
     {
         return $this->timeout_terminate;
+    }
+
+    public static function timeout_terminate_()
+    {
+        return self::getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_TERMINATE');
     }
 
     public function priority_default()
@@ -999,6 +1019,17 @@ class API
             }
         }
         return $data;
+    }
+
+    private static function getenv_to_uint($name)
+    {
+        $value_str = getenv($name);
+        if ($value_str == false)
+            throw new InvalidInputException();
+        $value = intval($value_str);
+        if ($value < 0)
+            throw new InvalidInputException();
+        return $value;
     }
 }
 

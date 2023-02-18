@@ -576,16 +576,6 @@ c_free_response:
     (ptr) -<fun,!wrt>
     void = "ext#cloudi_free_response"
 extern fn
-c_initialize_timeout_initialize: {l1:agz}
-    (!$CLOUDI.timeout_initialize @ l1 |
-     ptr(l1)) -<fun,!wrt>
-    intGte(0) = "ext#cloudi_initialize_timeout_initialize"
-extern fn
-c_initialize_timeout_terminate: {l1:agz}
-    (!$CLOUDI.timeout_terminate @ l1 |
-     ptr(l1)) -<fun,!wrt>
-    intGte(0) = "ext#cloudi_initialize_timeout_terminate"
-extern fn
 c_initialize_process_index: {l1:agz}
     (!uint @ l1 |
      ptr(l1)) -<fun,!wrt>
@@ -600,6 +590,16 @@ c_initialize_process_count_min: {l1:agz}
     (!uintGt(0) @ l1 |
      ptr(l1)) -<fun,!wrt>
     intGte(0) = "ext#cloudi_initialize_process_count_min"
+extern fn
+c_initialize_timeout_initialize: {l1:agz}
+    (!$CLOUDI.timeout_initialize @ l1 |
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_timeout_initialize"
+extern fn
+c_initialize_timeout_terminate: {l1:agz}
+    (!$CLOUDI.timeout_terminate @ l1 |
+     ptr(l1)) -<fun,!wrt>
+    intGte(0) = "ext#cloudi_initialize_timeout_terminate"
 (* Standard C functions
  *)
 extern fn

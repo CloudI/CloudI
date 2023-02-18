@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -156,6 +156,9 @@ val recv_async :
 (** returns the 0-based index of this process in the service instance *)
 val process_index : 's Instance.t -> int
 
+(** returns the 0-based index of this process in the service instance *)
+val process_index_ : unit -> (int, string) result
+
 (** returns the current process count based on the service configuration *)
 val process_count : 's Instance.t -> int
 
@@ -163,9 +166,17 @@ val process_count : 's Instance.t -> int
     based on the service configuration *)
 val process_count_max : 's Instance.t -> int
 
+(** returns the count_process_dynamic maximum count
+    based on the service configuration *)
+val process_count_max_ : unit -> (int, string) result
+
 (** returns the count_process_dynamic minimum count
     based on the service configuration *)
 val process_count_min : 's Instance.t -> int
+
+(** returns the count_process_dynamic minimum count
+    based on the service configuration *)
+val process_count_min_ : unit -> (int, string) result
 
 (** returns the service name pattern prefix from the service configuration *)
 val prefix : 's Instance.t -> string
@@ -173,6 +184,10 @@ val prefix : 's Instance.t -> string
 (** returns the service initialization timeout
      from the service configuration *)
 val timeout_initialize : 's Instance.t -> int
+
+(** returns the service initialization timeout
+     from the service configuration *)
+val timeout_initialize_ : unit -> (int, string) result
 
 (** returns the default asynchronous service request send timeout
     from the service configuration *)
@@ -185,6 +200,10 @@ val timeout_sync : 's Instance.t -> int
 (** returns the service termination timeout
     based on the service configuration *)
 val timeout_terminate : 's Instance.t -> int
+
+(** returns the service termination timeout
+    based on the service configuration *)
+val timeout_terminate_ : unit -> (int, string) result
 
 (** returns the default service request send priority
     from the service configuration *)

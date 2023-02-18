@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 
-int bind_set(int32_t logical_processor);
+int bind_set(int32_t const logical_processor);
 
 #endif // BIND_HPP
 

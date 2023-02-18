@@ -90,9 +90,7 @@ class API(object):
         if protocol_str is None:
             sys.stderr.write('CloudI service execution must occur in CloudI\n')
             raise InvalidInputException()
-        buffer_size_str = os.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
-        if buffer_size_str is None:
-            raise InvalidInputException()
+        buffer_size = API.__getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE')
         if protocol_str == 'tcp':
             self.__s = socket.fromfd(
                 thread_index + 3, socket.AF_INET, socket.SOCK_STREAM
@@ -112,7 +110,7 @@ class API(object):
             raise InvalidInputException()
         self.__initialization_complete = False
         self.__terminate = False
-        self.__size = int(buffer_size_str)
+        self.__size = buffer_size
         self.__callbacks = {}
         self.__timeout_terminate = 10 # TIMEOUT_TERMINATE_MIN
         self.__send(term_to_binary(OtpErlangAtom(b'init')))
@@ -132,10 +130,7 @@ class API(object):
         """
         returns the thread count from the service configuration
         """
-        thread_count = os.getenv('CLOUDI_API_INIT_THREAD_COUNT')
-        if thread_count is None:
-            raise InvalidInputException()
-        return int(thread_count)
+        return API.__getenv_to_uint('CLOUDI_API_INIT_THREAD_COUNT')
 
     def subscribe(self, pattern, function):
         """
@@ -336,6 +331,13 @@ class API(object):
         """
         return self.__process_index
 
+    @staticmethod
+    def process_index_():
+        """
+        returns the 0-based index of this process in the service instance
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_PROCESS_INDEX')
+
     def process_count(self):
         """
         returns the current process count based on the service configuration
@@ -348,11 +350,25 @@ class API(object):
         """
         return self.__process_count_max
 
+    @staticmethod
+    def process_count_max_():
+        """
+        returns the count_process_dynamic maximum count
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MAX')
+
     def process_count_min(self):
         """
         returns the count_process_dynamic minimum count
         """
         return self.__process_count_min
+
+    @staticmethod
+    def process_count_min_():
+        """
+        returns the count_process_dynamic minimum count
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MIN')
 
     def prefix(self):
         """
@@ -365,6 +381,13 @@ class API(object):
         returns the service initialization timeout
         """
         return self.__timeout_initialize
+
+    @staticmethod
+    def timeout_initialize_():
+        """
+        returns the service initialization timeout
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_INITIALIZE')
 
     def timeout_async(self):
         """
@@ -383,6 +406,13 @@ class API(object):
         returns the service termination timeout
         """
         return self.__timeout_terminate
+
+    @staticmethod
+    def timeout_terminate_():
+        """
+        returns the service termination timeout
+        """
+        return API.__getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_TERMINATE')
 
     def priority_default(self):
         """
@@ -844,6 +874,16 @@ class API(object):
                     fd_in, _, _ = select.select([self.__s], [], [], 0)
                     ready = (fd_in != [])
         return data
+
+    @staticmethod
+    def __getenv_to_uint(name):
+        value_str = os.getenv(name)
+        if value_str is None:
+            raise InvalidInputException()
+        value = int(value_str)
+        if value < 0:
+            raise InvalidInputException()
+        return value
 
 class InvalidInputException(Exception):
     """

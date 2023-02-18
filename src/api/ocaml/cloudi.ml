@@ -228,13 +228,18 @@ let backtrace (e : exn) : string =
 let null_response _ _ _ _ _ _ _ _ _ _ _ =
   Null
 
-let getenv (key : string) : string =
-  try Sys.getenv key
+let getenv (name : string) : string =
+  try Sys.getenv name
   with Not_found -> ""
 
-let getenv_to_uint (key : string) : (int, string) result =
-  try Ok (int_of_string (Sys.getenv key))
-  with _ -> Error (invalid_input_error)
+let getenv_to_uint (name : string) : (int, string) result =
+  let value = try int_of_string (Sys.getenv name)
+    with _ -> -1
+  in
+  if value < 0 then
+    Error (invalid_input_error)
+  else
+    Ok (value)
 
 let fd_of_int (fd: int) : Unix.file_descr = Obj.magic fd
 
@@ -1372,20 +1377,32 @@ let recv_async
 let process_index (api : 's Instance.t) : int =
   api.Instance.process_index
 
+let process_index_ () : (int, string) result =
+  getenv_to_uint "CLOUDI_API_INIT_PROCESS_INDEX"
+
 let process_count (api : 's Instance.t) : int =
   api.Instance.process_count
 
 let process_count_max (api : 's Instance.t) : int =
   api.Instance.process_count_max
 
+let process_count_max_ () : (int, string) result =
+  getenv_to_uint "CLOUDI_API_INIT_PROCESS_COUNT_MAX"
+
 let process_count_min (api : 's Instance.t) : int =
   api.Instance.process_count_min
+
+let process_count_min_ () : (int, string) result =
+  getenv_to_uint "CLOUDI_API_INIT_PROCESS_COUNT_MIN"
 
 let prefix (api : 's Instance.t) : string =
   api.Instance.prefix
 
 let timeout_initialize (api : 's Instance.t) : int =
   api.Instance.timeout_initialize
+
+let timeout_initialize_ () : (int, string) result =
+  getenv_to_uint "CLOUDI_API_INIT_TIMEOUT_INITIALIZE"
 
 let timeout_async (api : 's Instance.t) : int =
   api.Instance.timeout_async
@@ -1395,6 +1412,9 @@ let timeout_sync (api : 's Instance.t) : int =
 
 let timeout_terminate (api : 's Instance.t) : int =
   api.Instance.timeout_terminate
+
+let timeout_terminate_ () : (int, string) result =
+  getenv_to_uint "CLOUDI_API_INIT_TIMEOUT_TERMINATE"
 
 let priority_default (api : 's Instance.t) : int =
   api.Instance.priority_default

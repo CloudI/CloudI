@@ -43,7 +43,7 @@ module CloudI
 
         def initialize(thread_index)
             protocol = API.getenv('CLOUDI_API_INIT_PROTOCOL')
-            buffer_size_str = API.getenv('CLOUDI_API_INIT_BUFFER_SIZE')
+            buffer_size = API.getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE')
             if protocol == 'tcp'
                 @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
                 @s.sync = true
@@ -62,7 +62,7 @@ module CloudI
             end
             @initialization_complete = false
             @terminate = false
-            @size = buffer_size_str.to_i
+            @size = buffer_size
             @callbacks = Hash.new
             @timeout_terminate = 10 # TIMEOUT_TERMINATE_MIN
             send(Erlang.term_to_binary(:init))
@@ -80,8 +80,7 @@ module CloudI
         attr_reader :priority_default
 
         def self.thread_count
-            s = getenv('CLOUDI_API_INIT_THREAD_COUNT')
-            s.to_i
+            return API.getenv_to_uint('CLOUDI_API_INIT_THREAD_COUNT')
         end
 
         def subscribe(pattern, function)
@@ -244,6 +243,26 @@ module CloudI
                                         OtpErlangBinary.new(trans_id),
                                         consume]))
             return poll_request(nil, false)
+        end
+
+        def self.process_index_
+            return API.getenv_to_uint('CLOUDI_API_INIT_PROCESS_INDEX')
+        end
+
+        def self.process_count_max_
+            return API.getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MAX')
+        end
+
+        def self.process_count_min_
+            return API.getenv_to_uint('CLOUDI_API_INIT_PROCESS_COUNT_MIN')
+        end
+
+        def self.timeout_initialize_
+            return API.getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_INITIALIZE')
+        end
+
+        def self.timeout_terminate_
+            return API.getenv_to_uint('CLOUDI_API_INIT_TIMEOUT_TERMINATE')
         end
 
         def null_response(request_type, name, pattern, request_info, request,
@@ -783,6 +802,14 @@ module CloudI
 
         def self.getenv(key)
             ENV[key] or raise InvalidInputException
+        end
+
+        def self.getenv_to_uint(name)
+            value = API.getenv(name).to_i
+            if value < 0 then
+                raise InvalidInputException
+            end
+            return value
         end
     end
 
