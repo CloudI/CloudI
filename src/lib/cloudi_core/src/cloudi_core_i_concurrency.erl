@@ -94,7 +94,7 @@
 %%-------------------------------------------------------------------------
 
 -spec bind_format(#bind{} | false) ->
-    boolean().
+    boolean() | nonempty_string().
 
 bind_format(false) ->
     false;

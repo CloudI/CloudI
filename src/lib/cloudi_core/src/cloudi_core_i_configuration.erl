@@ -2326,8 +2326,8 @@ services_validate([#internal{
     end).
 -ifdef(CLOUDI_CORE_STANDALONE).
 -compile({nowarn_unused_function,
-          [{services_validate_options_external, 5},
-           {services_validate_options_external_checks, 16},
+          [{services_validate_options_external, 6},
+           {services_validate_options_external_checks, 17},
            {services_validate_option_aspects_init_after_external, 2},
            {services_validate_option_aspects_request_before_external, 2},
            {services_validate_option_aspects_request_after_external, 2},

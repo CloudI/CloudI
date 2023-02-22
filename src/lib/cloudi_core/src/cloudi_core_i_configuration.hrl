@@ -337,7 +337,7 @@
         % Erlang VM has had its scheduler threads bound upon startup with +sbt .
         % External services have bind support in the C/C++ CloudI API.
         bind = false
-            :: boolean() | tuple(),
+            :: false | tuple(),
 
         % Relevant for both Internal and External Services, different values:
 
