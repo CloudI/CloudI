@@ -38,28 +38,46 @@
 
 %% external interface
 -export([bind_format/1,
-         bind_validate/2,
-         bind_assign_process/2,
+         bind_validate/4,
          bind_assign_process/3,
+         bind_assign_process/4,
          bind_increment_thread/1,
          bind_init/1,
          bind_logical_processor/1,
          count/2,
          new/0]).
 
+-type logical_processor() :: non_neg_integer().
+-type scheduler_id() :: pos_integer().
+
 -record(concurrency,
     {
-        schedulers :: pos_integer(),
-        scheduler_bindings :: tuple() | undefined,
-        scheduler_id_bind = 1 :: pos_integer()
+        schedulers
+            :: pos_integer(),
+        scheduler_bindings
+            :: tuple() | undefined,
+        scheduler_id_lookup
+            :: #{logical_processor() := scheduler_id()} | undefined,
+        scheduler_id_bind = 1
+            :: scheduler_id()
     }).
 
 -record(bind,
     {
-        thread_count = undefined :: pos_integer() | undefined,
-        thread_index = 0 :: non_neg_integer(),
-        scheduler_ids = undefined :: tuple() | undefined,
-        logical_processors = undefined :: tuple() | undefined
+        string_exact = undefined
+            :: nonempty_string() | undefined,
+        thread_count = undefined
+            :: pos_integer() | undefined,
+        thread_index = 0
+            :: non_neg_integer(),
+        scheduler_ids_exact = undefined
+            :: tuple() | undefined,
+        logical_processors_exact = undefined
+            :: tuple() | undefined,
+        scheduler_ids = undefined
+            :: tuple() | undefined,
+        logical_processors = undefined
+            :: tuple() | undefined
     }).
 
 -type state() :: #concurrency{}.
@@ -78,10 +96,12 @@
 -spec bind_format(#bind{} | false) ->
     boolean().
 
-bind_format(#bind{}) ->
-    true;
 bind_format(false) ->
-    false.
+    false;
+bind_format(#bind{string_exact = undefined}) ->
+    true;
+bind_format(#bind{string_exact = Input}) ->
+    Input.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -90,20 +110,25 @@ bind_format(false) ->
 %%-------------------------------------------------------------------------
 
 -spec bind_validate(Bind :: boolean(),
+                    CountProcess :: pos_integer() | float(),
+                    CountThread :: pos_integer() | float(),
                     Concurrency :: #concurrency{} | undefined) ->
     {ok, #bind{} | false} |
     {error, {service_options_bind_invalid, any()}}.
 
-bind_validate(true,
-              #concurrency{scheduler_bindings = SchedulerBindings}) ->
-    if
-        is_tuple(SchedulerBindings) ->
-            {ok, #bind{}};
-        SchedulerBindings =:= undefined ->
-            {error, {service_options_bind_invalid, unbound}}
-    end;
-bind_validate(false, _) ->
-    {ok, false}.
+bind_validate(false, _, _, _) ->
+    {ok, false};
+bind_validate(_, _, _, #concurrency{scheduler_bindings = undefined}) ->
+    {error, {service_options_bind_invalid, unbound}};
+bind_validate(true, _, _, _) ->
+    {ok, #bind{}};
+bind_validate(String, CountProcess, CountThread,
+              #concurrency{
+                  scheduler_id_lookup = SchedulerIdLookup} = Concurrency)
+    when is_list(String) ->
+    ProcessCount = count(CountProcess, Concurrency),
+    ThreadCount = count(CountThread, Concurrency),
+    bind_string(String, ProcessCount, ThreadCount, SchedulerIdLookup).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -112,11 +137,12 @@ bind_validate(false, _) ->
 %%-------------------------------------------------------------------------
 
 -spec bind_assign_process(Bind :: #bind{} | false,
+                          ProcessIndex :: non_neg_integer(),
                           Concurrency :: #concurrency{}) ->
     {#bind{} | false, #concurrency{}}.
 
-bind_assign_process(Bind, Concurrency) ->
-    bind_assign_process(Bind, 1, Concurrency).
+bind_assign_process(Bind, ProcessIndex, Concurrency) ->
+    bind_assign_process(Bind, ProcessIndex, 1, Concurrency).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -125,18 +151,32 @@ bind_assign_process(Bind, Concurrency) ->
 %%-------------------------------------------------------------------------
 
 -spec bind_assign_process(Bind :: #bind{} | false,
+                          ProcessIndex :: non_neg_integer(),
                           ThreadCount :: pos_integer(),
                           Concurrency :: #concurrency{}) ->
     {#bind{} | false, #concurrency{}}.
 
+bind_assign_process(false, _, _, Concurrency) ->
+    {false, Concurrency};
 bind_assign_process(#bind{thread_count = undefined,
+                          scheduler_ids_exact = undefined,
+                          logical_processors_exact = undefined,
                           scheduler_ids = undefined,
                           logical_processors = undefined} = Bind,
-                    ThreadCount, Concurrency) ->
+                    _, ThreadCount, Concurrency) ->
     bind_assign_process(0, [], [],
                         Bind#bind{thread_count = ThreadCount}, Concurrency);
-bind_assign_process(false, _, Concurrency) ->
-    {false, Concurrency}.
+bind_assign_process(#bind{thread_count = undefined,
+                          scheduler_ids_exact = SchedulerIdsExact,
+                          logical_processors_exact = LogicalProcessorsExact,
+                          scheduler_ids = undefined,
+                          logical_processors = undefined} = Bind,
+                    ProcessIndex, ThreadCount, Concurrency) ->
+    I = ProcessIndex + 1,
+    {Bind#bind{thread_count = ThreadCount,
+               scheduler_ids = element(I, SchedulerIdsExact),
+               logical_processors = element(I, LogicalProcessorsExact)},
+     Concurrency}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -222,8 +262,15 @@ new() ->
         _ ->
             erlang:system_info(scheduler_bindings)
     end,
+    SchedulerIdLookup = if
+        SchedulerBindings =:= undefined ->
+            undefined;
+        is_tuple(SchedulerBindings) ->
+            scheduler_id_lookup(SchedulerBindings, Schedulers)
+    end,
     #concurrency{schedulers = Schedulers,
-                 scheduler_bindings = SchedulerBindings}.
+                 scheduler_bindings = SchedulerBindings,
+                 scheduler_id_lookup = SchedulerIdLookup}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -253,6 +300,134 @@ bind_assign_process(ThreadIndex, SchedulerIdsL, LogicalProcessorsL, Bind,
                         [SchedulerIdBind | SchedulerIdsL],
                         [LogicalProcessor | LogicalProcessorsL],
                         Bind, ConcurrencyNew).
+
+bind_string(Input, ProcessCount, ThreadCount, SchedulerIdLookup) ->
+    true = is_integer(ProcessCount),
+    true = is_integer(ThreadCount),
+    case bind_string_parse(cloudi_string:split(",", Input), [], [], 0, [], [],
+                           ThreadCount, SchedulerIdLookup) of
+        {ok, Count, LogicalProcessorsExact, SchedulerIdsExact} ->
+            CountRequired = ProcessCount * ThreadCount,
+            if
+                Count > CountRequired ->
+                    {error,
+                     {service_options_bind_invalid,
+                      {processors_decrease, Count - CountRequired}}};
+                Count < CountRequired ->
+                    {error,
+                     {service_options_bind_invalid,
+                      {processors_increase, CountRequired - Count}}};
+                Count == CountRequired ->
+                    {ok,
+                     #bind{string_exact = Input,
+                           scheduler_ids_exact = SchedulerIdsExact,
+                           logical_processors_exact = LogicalProcessorsExact}}
+            end;
+        {error, Reason} ->
+            {error, {service_options_bind_invalid, Reason}}
+    end.
+
+bind_string_parse([], LogicalProcessorsExact, SchedulerIdsExact, Count,
+                  _, _, _, _) ->
+    {ok, Count,
+     erlang:list_to_tuple(lists:reverse(LogicalProcessorsExact)),
+     erlang:list_to_tuple(lists:reverse(SchedulerIdsExact))};
+bind_string_parse([Segment | SegmentL],
+                  LogicalProcessorsExact, SchedulerIdsExact, Count,
+                  LogicalProcessorsElement, SchedulerIdsElement,
+                  ThreadCount, SchedulerIdLookup) ->
+    case cloudi_string:splitl($-, Segment, input) of
+        {[_ | _] = Segment, ""} ->
+            try erlang:list_to_integer(Segment) of
+                Value when Value >= 0 ->
+                    bind_string_parse_check([Value],
+                                            LogicalProcessorsElement,
+                                            SchedulerIdsElement,
+                                            LogicalProcessorsExact,
+                                            SchedulerIdsExact, Count, SegmentL,
+                                            ThreadCount, SchedulerIdLookup);
+                _ ->
+                    {error, invalid_format}
+            catch
+                _:_ ->
+                    {error, invalid_format}
+            end;
+        {[_ | _] = RangeMinStr, [_ | _] = RangeMaxStr} ->
+            try {erlang:list_to_integer(RangeMinStr),
+                 erlang:list_to_integer(RangeMaxStr)} of
+                {RangeMin, RangeMax}
+                    when RangeMin >= 0, RangeMin < RangeMax ->
+                    Values = lists:seq(RangeMin, RangeMax, 1),
+                    bind_string_parse_check(Values,
+                                            LogicalProcessorsElement,
+                                            SchedulerIdsElement,
+                                            LogicalProcessorsExact,
+                                            SchedulerIdsExact, Count, SegmentL,
+                                            ThreadCount, SchedulerIdLookup);
+                {_, _} ->
+                    {error, invalid_format}
+            catch
+                _:_ ->
+                    {error, invalid_format}
+            end;
+        {_, _} ->
+            {error, invalid_format}
+    end.
+
+bind_string_parse_check([], LogicalProcessorsElement, SchedulerIdsElement,
+                        LogicalProcessorsExact, SchedulerIdsExact, Count,
+                        SegmentL, ThreadCount, SchedulerIdLookup) ->
+    bind_string_parse(SegmentL,
+                      LogicalProcessorsExact, SchedulerIdsExact, Count,
+                      LogicalProcessorsElement, SchedulerIdsElement,
+                      ThreadCount, SchedulerIdLookup);
+bind_string_parse_check([Value | Values],
+                        LogicalProcessorsElement, SchedulerIdsElement,
+                        LogicalProcessorsExact, SchedulerIdsExact, Count,
+                        SegmentL, ThreadCount, SchedulerIdLookup) ->
+    case maps:find(Value, SchedulerIdLookup) of
+        {ok, SchedulerId} ->
+            CountNew = Count + 1,
+            LogicalProcessorsElementNext = [Value | LogicalProcessorsElement],
+            SchedulerIdsElementNext = [SchedulerId | SchedulerIdsElement],
+            if
+                CountNew rem ThreadCount == 0 ->
+                    LogicalProcessorsElementNew =
+                        erlang:list_to_tuple(lists:reverse(
+                            LogicalProcessorsElementNext)),
+                    SchedulerIdsElementNew =
+                        erlang:list_to_tuple(lists:reverse(
+                            SchedulerIdsElementNext)),
+                    bind_string_parse_check(Values, [], [],
+                                            [LogicalProcessorsElementNew |
+                                             LogicalProcessorsExact],
+                                            [SchedulerIdsElementNew |
+                                             SchedulerIdsExact],
+                                            CountNew, SegmentL,
+                                            ThreadCount, SchedulerIdLookup);
+                true ->
+                    bind_string_parse_check(Values,
+                                            LogicalProcessorsElementNext,
+                                            SchedulerIdsElementNext,
+                                            LogicalProcessorsExact,
+                                            SchedulerIdsExact,
+                                            CountNew, SegmentL,
+                                            ThreadCount, SchedulerIdLookup)
+            end;
+        error ->
+            {error, {invalid_processor, Value}}
+    end.
+
+scheduler_id_lookup(SchedulerBindings, Schedulers) ->
+    scheduler_id_lookup(#{}, 0, SchedulerBindings, Schedulers).
+
+scheduler_id_lookup(Output, Schedulers, _, Schedulers) ->
+    Output;
+scheduler_id_lookup(Output, SchedulerId, SchedulerBindings, Schedulers) ->
+    SchedulerIdNew = SchedulerId + 1,
+    scheduler_id_lookup(maps:put(element(SchedulerIdNew, SchedulerBindings),
+                                 SchedulerIdNew, Output), SchedulerIdNew,
+                        SchedulerBindings, Schedulers).
 
 -dialyzer({no_fail_call,
            bind_erlang_process/1}).

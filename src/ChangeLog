@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-02-21 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add bind service configuration option string value for providing
+      the exact logical processors of the bind
+
 2023-02-17 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Java, JavaScript, OCaml, Perl, PHP, Python, Python/C, Ruby

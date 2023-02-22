@@ -107,7 +107,7 @@
                   #config_service_options{} | % ConfigOptions
                   cloudi_service_api:service_id()). % ID
 -type arguments_execution_external() ::
-    nonempty_list(pos_integer() | % ThreadsPerProcess
+    nonempty_list(pos_integer() | % ThreadCount
                   cloudi_service_api:file_path() | % Filename
                   cloudi_service_api:args_external() | % Arguments
                   cloudi_service_api:env_external() | % Environment
@@ -230,7 +230,7 @@ start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                      TimeRestart :: undefined |
                                     cloudi_timestamp:native_monotonic(),
                      Restarts :: non_neg_integer(),
-                     ThreadsPerProcess :: pos_integer(),
+                     ThreadCount :: pos_integer(),
                      Filename :: cloudi_service_api:file_path(),
                      Arguments :: cloudi_service_api:args_external(),
                      Environment :: cloudi_service_api:env_external(),
@@ -258,12 +258,12 @@ start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
     {error, error_reason_start_external() | any()}.
 
 start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
-               ThreadsPerProcess, Filename, Arguments, Environment,
+               ThreadCount, Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
                DestListDeny, DestListAllow, ConfigOptions, ID) ->
     case start_external_spawn_params(ProcessIndex, ProcessCount,
-                                     ThreadsPerProcess,
+                                     ThreadCount,
                                      Filename, Arguments, Environment,
                                      Protocol, BufferSize, Timeout, Prefix,
                                      TimeoutAsync, TimeoutSync, TimeoutTerm,
@@ -277,7 +277,7 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                 start_external_threads_params(DestListDeny, DestListAllow),
             ConfigOptionsNew = ConfigOptions#config_service_options{
                                    cgroup = CGroup},
-            case start_external_threads(ThreadsPerProcess,
+            case start_external_threads(ThreadCount,
                                         ProcessIndex,
                                         ProcessCount,
                                         TimeStart,
@@ -301,7 +301,7 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                          Rlimits, Owner,
                                          Nice, CGroup, Chroot, SyscallLock,
                                          Directory,
-                                         ThreadsPerProcess,
+                                         ThreadCount,
                                          CommandLine,
                                          FilenameNew,
                                          ArgumentsNew,
@@ -317,13 +317,13 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
             Error
     end.
 
--spec status_internal(CountProcess :: pos_integer(),
+-spec status_internal(ProcessCount :: pos_integer(),
                       PidsOrdered :: list(pid()),
                       arguments_execution_internal(),
                       Status :: nonempty_list()) ->
     cloudi_service_api:service_status_internal().
 
-status_internal(CountProcess, PidsOrdered,
+status_internal(ProcessCount, PidsOrdered,
                 [_GroupLeader,
                  Module, _Args, _TimeoutInit, Prefix,
                  _TimeoutAsync, _TimeoutSync, _TimeoutTerm,
@@ -333,19 +333,19 @@ status_internal(CountProcess, PidsOrdered,
     [{type, internal},
      {prefix, Prefix},
      {module, Module},
-     {count_process, CountProcess},
+     {count_process, ProcessCount},
      {pids_erlang, PidsOrdered} | Status].
 
--spec status_external(CountProcess :: pos_integer(),
-                      CountThread :: pos_integer(),
+-spec status_external(ProcessCount :: pos_integer(),
+                      ThreadCount :: pos_integer(),
                       OSPidsOrdered :: list(pos_integer()),
                       PidsOrdered :: list(pid()),
                       arguments_execution_external(),
                       Status :: nonempty_list()) ->
     cloudi_service_api:service_status_external().
 
-status_external(CountProcess, CountThread, OSPidsOrdered, PidsOrdered,
-                [_ThreadsPerProcess,
+status_external(ProcessCount, ThreadCount, OSPidsOrdered, PidsOrdered,
+                [_ThreadCount,
                  Filename, _Arguments, _Environment,
                  _Protocol, _BufferSize, _TimeoutInit, Prefix,
                  _TimeoutAsync, _TimeoutSync, _TimeoutTerm,
@@ -355,8 +355,8 @@ status_external(CountProcess, CountThread, OSPidsOrdered, PidsOrdered,
     [{type, external},
      {prefix, Prefix},
      {file_path, Filename},
-     {count_process, CountProcess},
-     {count_thread, CountThread},
+     {count_process, ProcessCount},
+     {count_thread, ThreadCount},
      {pids_os, OSPidsOrdered},
      {pids_erlang, PidsOrdered} | Status].
 
@@ -367,13 +367,13 @@ status_external(CountProcess, CountThread, OSPidsOrdered, PidsOrdered,
     {error, error_reason_start_external() | any()}.
 
 update_external(Pids, Ports,
-                [ProcessIndex, ProcessCount, ThreadsPerProcess,
+                [ProcessIndex, ProcessCount, ThreadCount,
                  Filename, Arguments, Environment,
                  Protocol, BufferSize, Timeout, Prefix,
                  TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
                  _DestListDeny, _DestListAllow, ConfigOptions, ID]) ->
     case start_external_spawn_params(ProcessIndex, ProcessCount,
-                                     ThreadsPerProcess,
+                                     ThreadCount,
                                      Filename, Arguments, Environment,
                                      Protocol, BufferSize, Timeout, Prefix,
                                      TimeoutAsync, TimeoutSync, TimeoutTerm,
@@ -387,7 +387,7 @@ update_external(Pids, Ports,
                                       Pids, Ports,
                                       Rlimits, Owner,
                                       Nice, CGroup, Chroot, SyscallLock,
-                                      Directory, ThreadsPerProcess,
+                                      Directory, ThreadCount,
                                       CommandLine, FilenameNew, ArgumentsNew,
                                       Environment, EnvironmentLookup,
                                       Protocol, BufferSize,
@@ -509,13 +509,13 @@ update_external_f(FilenameNew, ArgumentsNew, EnvironmentNew,
                   TimeoutInitNew, TimeoutAsyncNew, TimeoutSyncNew,
                   DestListDenyNew, DestListAllowNew,
                   OptionsKeys, ConfigOptionsNew,
-                  [ThreadsPerProcess,
+                  [ThreadCount,
                    FilenameOld, ArgumentsOld, EnvironmentOld,
                    Protocol, BufferSize, TimeoutInitOld, Prefix,
                    TimeoutAsyncOld, TimeoutSyncOld, TimeoutTerm,
                    DestRefreshOld, DestListDenyOld, DestListAllowOld,
                    ConfigOptionsOld, ID]) ->
-    [ThreadsPerProcess,
+    [ThreadCount,
      if
         is_list(FilenameNew) ->
             FilenameNew;
@@ -622,13 +622,13 @@ create_socket_path(TemporaryDirectory, ID)
     false = filelib:is_file(Path),
     Path.
 
-start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
+start_external_spawn_params(ProcessIndex, ProcessCount, ThreadCount,
                             Filename, Arguments, Environment,
                             Protocol, BufferSize, Timeout, Prefix,
                             TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
                             ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
-         is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
+         is_integer(ThreadCount), ThreadCount > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
@@ -740,12 +740,12 @@ start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
             Error
     end.
 
-start_external_thread(ThreadsPerProcess, Pids, Ports, ThreadsPerProcess,
+start_external_thread(ThreadCount, Pids, Ports, ThreadCount,
                       _, _, _, _, _, _, _, _, _, _,
                       _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(Pids), lists:reverse(Ports)};
 
-start_external_thread(I, Pids, Ports, ThreadsPerProcess,
+start_external_thread(I, Pids, Ports, ThreadCount,
                       ProcessIndex, ProcessCount,
                       TimeStart, TimeRestart, Restarts,
                       CommandLine, Protocol, SocketPath, BufferSize, Timeout,
@@ -754,7 +754,7 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
                       #config_service_options{
                           bind = Bind} = ConfigOptions, ID) ->
     case ?PROCESS_START_EXTERNAL(Protocol, SocketPath,
-                                 I + ThreadsPerProcess * ProcessIndex,
+                                 I + ThreadCount * ProcessIndex,
                                  ProcessIndex, ProcessCount,
                                  TimeStart, TimeRestart, Restarts,
                                  CommandLine, BufferSize,
@@ -765,7 +765,7 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
         {ok, Pid, Port} ->
             BindNew = cloudi_core_i_concurrency:bind_increment_thread(Bind),
             start_external_thread(I + 1, [Pid | Pids], [Port | Ports],
-                                  ThreadsPerProcess,
+                                  ThreadCount,
                                   ProcessIndex, ProcessCount,
                                   TimeStart, TimeRestart, Restarts,
                                   CommandLine, Protocol, SocketPath,
@@ -780,14 +780,14 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
             Error
     end.
 
-start_external_threads(ThreadsPerProcess,
+start_external_threads(ThreadCount,
                        ProcessIndex, ProcessCount,
                        TimeStart, TimeRestart, Restarts,
                        CommandLine, Protocol, SocketPath, BufferSize, Timeout,
                        Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                        DestRefresh, DestDeny, DestAllow,
                        ConfigOptions, ID) ->
-    start_external_thread(0, [], [], ThreadsPerProcess,
+    start_external_thread(0, [], [], ThreadCount,
                           ProcessIndex, ProcessCount,
                           TimeStart, TimeRestart, Restarts,
                           CommandLine, Protocol, SocketPath,
@@ -799,12 +799,12 @@ start_external_threads(ThreadsPerProcess,
 start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                      Pids, Ports, Rlimits, Owner,
                      Nice, CGroup, Chroot, SyscallLock, Directory,
-                     ThreadsPerProcess, CommandLine,
+                     ThreadCount, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize,
                      Timeout, TimeoutTerm, ProcessIndex,
                      ProcessCountMax, ProcessCountMin) ->
-    case environment_parse(Environment, ThreadsPerProcess, Protocol, BufferSize,
+    case environment_parse(Environment, ThreadCount, Protocol, BufferSize,
                            Timeout, TimeoutTerm, ProcessIndex,
                            ProcessCountMax, ProcessCountMin,
                            EnvironmentLookup) of
@@ -919,10 +919,10 @@ arguments_parse(ArgumentsBinary, ArgumentsList, Argument, Delim, [H | T]) ->
 
 % add CloudI API environmental variables and format into a single
 % string that is easy to use in C/C++
-environment_parse(Environment0, ThreadsPerProcess0,
+environment_parse(Environment0, ThreadCount0,
                   Protocol0, BufferSize0, Timeout0, TimeoutTerm0, ProcessIndex0,
                   ProcessCountMax0, ProcessCountMin0, EnvironmentLookup0) ->
-    ThreadsPerProcess1 = erlang:integer_to_list(ThreadsPerProcess0),
+    ThreadCount1 = erlang:integer_to_list(ThreadCount0),
     Protocol1 = erlang:atom_to_list(Protocol0),
     BufferSize1 = erlang:integer_to_list(BufferSize0),
     Timeout1 = erlang:integer_to_list(Timeout0),
@@ -933,7 +933,7 @@ environment_parse(Environment0, ThreadsPerProcess0,
     Environment1 = lists:keystore(?ENVIRONMENT_THREAD_COUNT, 1,
                                   Environment0,
                                   {?ENVIRONMENT_THREAD_COUNT,
-                                   ThreadsPerProcess1}),
+                                   ThreadCount1}),
     Environment2 = lists:keystore(?ENVIRONMENT_PROTOCOL, 1,
                                   Environment1,
                                   {?ENVIRONMENT_PROTOCOL,
@@ -963,7 +963,7 @@ environment_parse(Environment0, ThreadsPerProcess0,
                                   {?ENVIRONMENT_PROCESS_COUNT_MIN,
                                    ProcessCountMin1}),
     EnvironmentLookup1 = cloudi_x_trie:store(?ENVIRONMENT_THREAD_COUNT,
-                                             ThreadsPerProcess1,
+                                             ThreadCount1,
                                              EnvironmentLookup0),
     EnvironmentLookup2 = cloudi_x_trie:store(?ENVIRONMENT_PROTOCOL,
                                              Protocol1,

@@ -2461,7 +2461,8 @@ services_validate([#external{
     MaxTValue = ?MAX_T_ASSIGN(MaxT),
     case services_validate_common(external, Prefix, MaxR, MaxTValue) of
         ok ->
-            case services_validate_options_external(Options, CountProcess,
+            case services_validate_options_external(Options,
+                                                    CountProcess, CountThread,
                                                     MaxR, MaxTValue,
                                                     Concurrency) of
                 {ok, TimeoutTermValue, OptionsNew, ConcurrencyNew} ->
@@ -2979,7 +2980,7 @@ services_validate_options_internal(OptionsList,
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, Bind, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
-        when not is_boolean(Bind) ->
+        when not (is_boolean(Bind) orelse is_list(Bind)) ->
             {error, {service_options_bind_invalid,
                      Bind}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
@@ -3236,6 +3237,7 @@ services_validate_options_internal_checks(RateRequestMax,
                                           MaxT,
                                           AutomaticLoading,
                                           Concurrency) ->
+    CountThread = 1,
     case services_validate_options_common_checks(RateRequestMax,
                                                  CountProcessDynamic,
                                                  TimeoutTerminate,
@@ -3244,6 +3246,7 @@ services_validate_options_internal_checks(RateRequestMax,
                                                  MonkeyChaos,
                                                  Bind,
                                                  CountProcess,
+                                                 CountThread,
                                                  MaxR,
                                                  MaxT,
                                                  Concurrency) of
@@ -3323,7 +3326,9 @@ services_validate_options_internal_checks(RateRequestMax,
                                              cloudi_service_api:
                                              service_options_external(),
                                          CountProcess :: pos_integer() |
-                                                         undefined,
+                                                         float() | undefined,
+                                         CountThread :: pos_integer() |
+                                                        float() | undefined,
                                          MaxR :: non_neg_integer() | undefined,
                                          MaxT :: cloudi_service_api:seconds() |
                                                  undefined,
@@ -3377,7 +3382,8 @@ services_validate_options_internal_checks(RateRequestMax,
       service_options_invalid, any()}}.
 
 services_validate_options_external(OptionsList,
-                                   CountProcess, MaxR, MaxT, Concurrency) ->
+                                   CountProcess, CountThread,
+                                   MaxR, MaxT, Concurrency) ->
     Options = #config_service_options{},
     Defaults = [
         {priority_default,
@@ -3613,7 +3619,7 @@ services_validate_options_external(OptionsList,
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, Bind, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
-        when not is_boolean(Bind) ->
+        when not (is_boolean(Bind) orelse is_list(Bind)) ->
             {error, {service_options_bind_invalid,
                      Bind}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
@@ -3674,6 +3680,7 @@ services_validate_options_external(OptionsList,
                                                            Bind,
                                                            DispatcherPidOptions,
                                                            CountProcess,
+                                                           CountThread,
                                                            MaxR,
                                                            MaxT,
                                                            Limit,
@@ -3813,6 +3820,7 @@ services_validate_options_external_checks(RateRequestMax,
                                           Bind,
                                           DispatcherPidOptions,
                                           CountProcess,
+                                          CountThread,
                                           MaxR,
                                           MaxT,
                                           Limit,
@@ -3828,6 +3836,7 @@ services_validate_options_external_checks(RateRequestMax,
                                                  MonkeyChaos,
                                                  Bind,
                                                  CountProcess,
+                                                 CountThread,
                                                  MaxR,
                                                  MaxT,
                                                  Concurrency) of
@@ -3887,6 +3896,7 @@ services_validate_options_common_checks(RateRequestMax,
                                         MonkeyChaos,
                                         Bind,
                                         CountProcess,
+                                        CountThread,
                                         MaxR,
                                         MaxT,
                                         Concurrency) ->
@@ -3914,7 +3924,7 @@ services_validate_options_common_checks(RateRequestMax,
           {Bind,
            fun(Value) ->
                cloudi_core_i_concurrency:
-               bind_validate(Value, Concurrency)
+               bind_validate(Value, CountProcess, CountThread, Concurrency)
            end}]).
 
 services_validate_option_pid_options(OptionsList0,
@@ -4916,7 +4926,7 @@ services_update_plan_options_external(OptionsList, UpdatePlan) ->
                  aspects_suspend, aspects_resume],
     case cloudi_proplists:delete_all(ValidKeys, OptionsList) of
         [] ->
-            case services_validate_options_external(OptionsList,
+            case services_validate_options_external(OptionsList, undefined,
                                                     undefined, undefined,
                                                     undefined, undefined) of
                 {ok, _, Options, undefined} ->

@@ -307,10 +307,10 @@ service_start(#config_service_internal{
                 Reload =:= false ->
                     ok
             end,
-            CountProcessNew = cloudi_core_i_concurrency:count(CountProcess,
-                                                              Concurrency),
+            ProcessCount = cloudi_core_i_concurrency:count(CountProcess,
+                                                           Concurrency),
             service_start_internal(FoundService, GroupLeader,
-                                   CountProcessNew, Concurrency, Timeout);
+                                   ProcessCount, Concurrency, Timeout);
         {error, _} = Error ->
             Error
     end;
@@ -318,12 +318,12 @@ service_start(#config_service_internal{
 service_start(#config_service_external{count_process = CountProcess,
                                        count_thread = CountThread} = Service,
               Concurrency, Timeout) ->
-    CountProcessNew = cloudi_core_i_concurrency:count(CountProcess,
-                                                      Concurrency),
-    CountThreadNew = cloudi_core_i_concurrency:count(CountThread,
-                                                     Concurrency),
-    service_start_external(Service, CountThreadNew,
-                           CountProcessNew, Concurrency, Timeout).
+    ProcessCount = cloudi_core_i_concurrency:count(CountProcess,
+                                                   Concurrency),
+    ThreadCount = cloudi_core_i_concurrency:count(CountThread,
+                                                  Concurrency),
+    service_start_external(Service, ThreadCount, ProcessCount,
+                           Concurrency, Timeout).
 
 -spec service_stop(#config_service_internal{} |
                    #config_service_external{},
@@ -400,9 +400,9 @@ service_update(#config_service_update{
     end.
 
 service_update_external(Pids, Ports, Arguments,
-                        CountThread, CountProcess) ->
+                        ThreadCount, ProcessCount) ->
     service_update_external(0, Pids, Ports, Arguments,
-                            CountThread, CountProcess).
+                            ThreadCount, ProcessCount).
 
 service_process_init_end(Pid)
     when is_pid(Pid) ->
@@ -1129,10 +1129,10 @@ service_start_wait(Pids, Service, Concurrency) ->
     ok = cloudi_core_i_services_monitor:process_init_begin(Pids),
     service_start_wait_pids(MonitorPids, undefined, Service, Concurrency).
 
-service_start_internal(CountProcess, Pids, Service, _,
-                       CountProcess, Concurrency, _) ->
+service_start_internal(ProcessCount, Pids, Service, _,
+                       ProcessCount, Concurrency, _) ->
     service_start_wait(lists:reverse(Pids), Service, Concurrency);
-service_start_internal(IndexProcess, Pids,
+service_start_internal(ProcessIndex, Pids,
                        #config_service_internal{
                            module = Module,
                            args = Args,
@@ -1152,10 +1152,10 @@ service_start_internal(IndexProcess, Pids,
                            max_r = MaxR,
                            max_t = MaxT,
                            uuid = ID} = Service, GroupLeader,
-                       CountProcess, Concurrency, Timeout) ->
+                       ProcessCount, Concurrency, Timeout) ->
     {BindNew,
      ConcurrencyNew} = cloudi_core_i_concurrency:
-                       bind_assign_process(Bind, Concurrency),
+                       bind_assign_process(Bind, ProcessIndex, Concurrency),
     case cloudi_core_i_services_monitor:
          monitor(cloudi_core_i_spawn, start_internal,
                  [GroupLeader,
@@ -1163,27 +1163,27 @@ service_start_internal(IndexProcess, Pids,
                   Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                   DestRefresh, DestListDeny, DestListAllow,
                   Options#config_service_options{bind = BindNew}, ID],
-                 IndexProcess, CountProcess, 1, Scope,
+                 ProcessIndex, ProcessCount, 1, Scope,
                  TimeoutTerm, RestartAll, RestartDelay,
                  MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
-            service_start_internal(IndexProcess + 1, [P | Pids],
-                                   Service, GroupLeader, CountProcess,
+            service_start_internal(ProcessIndex + 1, [P | Pids],
+                                   Service, GroupLeader, ProcessCount,
                                    ConcurrencyNew, Timeout);
         {error, Reason} ->
             {error, {service_internal_start_failed, Reason}}
     end.
 
 service_start_internal(Service, GroupLeader,
-                       CountProcess, Concurrency, Timeout) ->
+                       ProcessCount, Concurrency, Timeout) ->
     service_start_internal(0, [], Service, GroupLeader,
-                           CountProcess, Concurrency, timeout_decr(Timeout)).
+                           ProcessCount, Concurrency, timeout_decr(Timeout)).
 
-service_start_external(CountProcess, Pids, Service, _,
-                       CountProcess, Concurrency, _) ->
+service_start_external(ProcessCount, Pids, Service, _,
+                       ProcessCount, Concurrency, _) ->
     service_start_wait(lists:reverse(Pids), Service, Concurrency);
-service_start_external(IndexProcess, Pids,
+service_start_external(ProcessIndex, Pids,
                        #config_service_external{
                            file_path = FilePath,
                            args = Args,
@@ -1206,34 +1206,35 @@ service_start_external(IndexProcess, Pids,
                            max_r = MaxR,
                            max_t = MaxT,
                            uuid = ID} = Service,
-                       CountThread, CountProcess, Concurrency, Timeout) ->
+                       ThreadCount, ProcessCount, Concurrency, Timeout) ->
     {BindNew,
      ConcurrencyNew} = cloudi_core_i_concurrency:
-                       bind_assign_process(Bind, CountThread, Concurrency),
+                       bind_assign_process(Bind, ProcessIndex, ThreadCount,
+                                           Concurrency),
     case cloudi_core_i_services_monitor:
          monitor(cloudi_core_i_spawn, start_external,
-                 [CountThread,
+                 [ThreadCount,
                   FilePath, Args, Env,
                   Protocol, BufferSize, TimeoutInit,
                   Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                   DestRefresh, DestListDeny, DestListAllow,
                   Options#config_service_options{bind = BindNew}, ID],
-                 IndexProcess, CountProcess, CountThread, Scope,
+                 ProcessIndex, ProcessCount, ThreadCount, Scope,
                  TimeoutTerm, RestartAll, RestartDelay,
                  MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
-            service_start_external(IndexProcess + 1, [P | Pids], Service,
-                                   CountThread, CountProcess,
+            service_start_external(ProcessIndex + 1, [P | Pids], Service,
+                                   ThreadCount, ProcessCount,
                                    ConcurrencyNew, Timeout);
         {error, Reason} ->
             {error, {service_external_start_failed, Reason}}
     end.
 
-service_start_external(Service, CountThread,
-                       CountProcess, Concurrency, Timeout) ->
-    service_start_external(0, [], Service, CountThread,
-                           CountProcess, Concurrency, timeout_decr(Timeout)).
+service_start_external(Service, ThreadCount, ProcessCount,
+                       Concurrency, Timeout) ->
+    service_start_external(0, [], Service, ThreadCount, ProcessCount,
+                           Concurrency, timeout_decr(Timeout)).
 
 service_stop_internal(#config_service_internal{
                           module = Module,
@@ -1342,19 +1343,19 @@ service_resume_external(#config_service_external{
             {error, {service_external_resume_failed, Reason}}
     end.
 
-service_update_external(CountProcess, [], [], _, _, CountProcess) ->
+service_update_external(ProcessCount, [], [], _, _, ProcessCount) ->
     ok;
-service_update_external(IndexProcess, Pids, Ports, Arguments,
-                        CountThread, CountProcess) ->
-    {ProcessPids, RemainingPids} = lists:split(CountThread, Pids),
-    {ProcessPorts, RemainingPorts} = lists:split(CountThread, Ports),
+service_update_external(ProcessIndex, Pids, Ports, Arguments,
+                        ThreadCount, ProcessCount) ->
+    {ProcessPids, RemainingPids} = lists:split(ThreadCount, Pids),
+    {ProcessPorts, RemainingPorts} = lists:split(ThreadCount, Ports),
     case cloudi_core_i_spawn:
          update_external(ProcessPids, ProcessPorts,
-                         [IndexProcess, CountProcess | Arguments]) of
+                         [ProcessIndex, ProcessCount | Arguments]) of
         ok ->
-            service_update_external(IndexProcess + 1,
+            service_update_external(ProcessIndex + 1,
                                     RemainingPids, RemainingPorts, Arguments,
-                                    CountThread, CountProcess);
+                                    ThreadCount, ProcessCount);
         {error, Reason} ->
             {error, {service_external_update_failed, Reason}}
     end.
