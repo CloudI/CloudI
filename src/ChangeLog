@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-03-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the C++ CloudI API backtrace dependency order selection
+      to binutils, libdw, libdwarf
+      (libdwarf functionality needs verification for libdwarf
+       versions >= 20210528 that includes checking whether it
+       provides more information)
+    * Add to ATS CloudI API function effect tags comment
+
 2023-02-21 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add bind service configuration option string value for providing

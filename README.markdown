@@ -75,9 +75,9 @@ Optional (default="yes"):
   * `CloudI::API::backtrace() function`
     * `backtrace with backward-cpp (Linux)`
       * `backtrace symbols options:`
-        * (`libdwarf-dev libelf-dev /Ubuntu`, `libdwarf libdwarf-dev elfutils-dev /Alpine`)
         * (`binutils-dev /Ubuntu`, `binutils-dev /Alpine`)
         * (`libdw-dev /Ubuntu`, `elfutils-dev /Alpine`)
+        * `libdwarf version < 20210528` (`libdwarf-dev libelf-dev /Ubuntu`, `libdwarf libdwarf-dev elfutils-dev /Alpine`)
       * `backtrace data options:`
         * (`libunwind-dev /Ubuntu`, `libunwind-dev /Alpine`)
         * `compiler unwind.h`

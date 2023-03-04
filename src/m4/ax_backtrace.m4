@@ -164,6 +164,7 @@ unw_getcontext(0);
         want_dwarf="no"
         want_bfd="no"
         if test "x$has_dladdr" = "xyes"; then
+            dnl libdwarf version < 20210528
             AX_CHECK_PRIVATE_LIB(dwarf, dwarf_elf_init,
                 [AC_LANG_PROGRAM([[
 #include <libdwarf/libdwarf.h>
@@ -234,13 +235,7 @@ dwfl_begin(0);
             UNWIND_LIB="$EXECINFO_LIB"
             unwind_status="execinfo"
         fi
-        if test "x$want_dwarf" = "xyes"; then
-            BACKTRACE_LDFLAGS="$DWARF_LDFLAGS $ELF_LDFLAGS $DL_LDFLAGS $UNWIND_LDFLAGS"
-            BACKTRACE_LIB="$DWARF_LIB $ELF_LIB $DL_LIB $UNWIND_LIB"
-            AC_DEFINE([BACKWARD_HAS_DWARF], [1],
-                      [Define if libdwarf is usable.])
-            AC_MSG_RESULT([backward-cpp dwarf $unwind_status])
-        elif test "x$want_bfd" = "xyes"; then
+        if test "x$want_bfd" = "xyes"; then
             BACKTRACE_LDFLAGS="$BFD_LDFLAGS $DL_LDFLAGS $UNWIND_LDFLAGS"
             BACKTRACE_LIB="$BFD_LIB $DL_LIB $UNWIND_LIB"
             AC_DEFINE([BACKWARD_HAS_BFD], [1],
@@ -252,6 +247,12 @@ dwfl_begin(0);
             AC_DEFINE([BACKWARD_HAS_DW], [1],
                       [Define if libdw is usable.])
             AC_MSG_RESULT([backward-cpp dw $unwind_status])
+        elif test "x$want_dwarf" = "xyes"; then
+            BACKTRACE_LDFLAGS="$DWARF_LDFLAGS $ELF_LDFLAGS $DL_LDFLAGS $UNWIND_LDFLAGS"
+            BACKTRACE_LIB="$DWARF_LIB $ELF_LIB $DL_LIB $UNWIND_LIB"
+            AC_DEFINE([BACKWARD_HAS_DWARF], [1],
+                      [Define if libdwarf is usable.])
+            AC_MSG_RESULT([backward-cpp dwarf $unwind_status])
         else
             BACKTRACE_LDFLAGS="$UNWIND_LDFLAGS"
             BACKTRACE_LIB="$UNWIND_LIB"

@@ -111,7 +111,20 @@ typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
    operational purity (Haskell's purity) is similar to <!ntm,!exn>
    (catching exceptions breaks referential transparency and
     most Haskell source code uses throwIO for raising exceptions,
-    so <!ntm> should be closer in practice)
+    so <!ntm> should be closer in practice).
+   operational purity allows hardware architecture variation and
+   operating system variation to be considered pure
+   (e.g., a function returning the file path character '/' on UNIX and
+    '\' on Windows is able to be pure).
+
+   fun0 mathematical purity is assumed to relate to only a single execution
+   without considering the result from separate hardware architectures or
+   separate operating systems
+   (because that variation is not represented as a separate tag).
+   sin/cos/tan/etc. functions and floating-point operations do not have
+   mathematical purity due to the ability to change the
+   IEEE rounding mode during runtime
+   (i.e., they are !ref effects due to fesetround).
 
  *)
 
