@@ -627,7 +627,7 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, err
 		}
 		i += 4
-		var pairs map[interface{}]interface{}
+		pairs := make(map[interface{}]interface{})
 		for lengthIndex := 0; lengthIndex < int(length); lengthIndex++ {
 			var key interface{}
 			i, key, err = binaryToTerms(i, reader)

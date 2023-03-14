@@ -284,6 +284,17 @@ func TestDecodeBinaryToTermLargeBigInteger(t *testing.T) {
 	bignum2, _ := big.NewInt(0).SetString("-6618611909121", 10)
 	assertEqual(t, bignum2, decode(t, "\x83o\x00\x00\x00\x06\x01\x01\x02\x03\x04\x05\x06"), "")
 }
+func TestDecodeBinaryToTermMap(t *testing.T) {
+	assertDecodeError(t, "EOF", "\x83t", "")
+	assertDecodeError(t, "unexpected EOF", "\x83t\x00", "")
+	assertDecodeError(t, "unexpected EOF", "\x83t\x00\x00", "")
+	assertDecodeError(t, "unexpected EOF", "\x83t\x00\x00\x00", "")
+	assertDecodeError(t, "EOF", "\x83t\x00\x00\x00\x01", "")
+	assertEqual(t, make(OtpErlangMap), decode(t, "\x83t\x00\x00\x00\x00"), "")
+	map1 := make(OtpErlangMap)
+	map1[OtpErlangAtom("a")] = uint8(1)
+	assertEqual(t, map1, decode(t, "\x83t\x00\x00\x00\x01d\x00\x01aa\x01"), "")
+}
 func TestDecodeBinaryToTermCompressedTerm(t *testing.T) {
 	assertDecodeError(t, "EOF", "\x83P", "")
 	assertDecodeError(t, "unexpected EOF", "\x83P\x00", "")
