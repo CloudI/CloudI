@@ -37,14 +37,14 @@ services:
   - postgresql
 before_install:
   # travis default image has: make autoconf automake libtool g++ git perl python python-dev
-  - sudo apt-get install default-jdk ocaml php libboost-system-dev libboost-thread-dev libboost-dev libseccomp-dev libgmp-dev libdwarf-dev libelf-dev
+  - sudo apt-get install default-jdk php libboost-system-dev libboost-thread-dev libboost-dev libseccomp-dev libgmp-dev libdwarf-dev libelf-dev
 before_script:
   - kerl list installations
   - mkdir build
   - cd build
   - ../src/autogen.sh
   - export ${CONFIGURE_ENV}
-  - ../src/configure --with-test-timeout=vm --with-long-test-timeout=yes --prefix=`pwd`/../install_local --enable-ocaml-support
+  - ../src/configure --with-test-timeout=vm --with-long-test-timeout=yes --prefix=`pwd`/../install_local
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests IDENTIFIED BY 'cloudi_tests';"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
