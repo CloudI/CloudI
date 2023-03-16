@@ -5,6 +5,8 @@
 
     * Change the OCaml use of num-1.1 to zarith-1.12 for big-integer support
       in the Erlang External Term Format
+    * Update erlang_ml
+    * Update erlang_py
 
 2023-03-14 Michael Truog   <mjtruog at protonmail dot com>
 

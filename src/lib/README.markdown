@@ -5,8 +5,8 @@ Various Erlang/OTP applications grew out of CloudI development.
 They exist as separate repositories for easier reuse in isolation and
 as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 
-`cgroups`
----------
+Erlang `cgroups`
+----------------
 `Erlang native cgroups interface`
 
 - `https://github.com/okeuday/cgroups`
@@ -14,8 +14,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`cpg`
------
+Erlang `cpg`
+------------
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
@@ -23,8 +23,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`erlang_term`
--------------
+Erlang `erlang_term`
+--------------------
 `Erlang Term Info`
 
 - `https://github.com/okeuday/erlang_term`
@@ -32,8 +32,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`key2value`
------------
+Erlang `key2value`
+------------------
 `Erlang 2-way map`
 
 - `https://github.com/okeuday/key2value`
@@ -41,8 +41,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`keys1value`
-------------
+Erlang `keys1value`
+-------------------
 `Erlang set associative map for key lists`
 
 - `https://github.com/okeuday/keys1value`
@@ -50,8 +50,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`pqueue`
---------
+Erlang `pqueue`
+---------------
 `Erlang Priority Queues`
 
 - `https://github.com/okeuday/pqueue`
@@ -59,8 +59,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`quickrand`
------------
+Erlang `quickrand`
+------------------
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
@@ -68,8 +68,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`reltool_util`
---------------
+Erlang `reltool_util`
+---------------------
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
@@ -77,8 +77,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`supool`
---------
+Erlang `supool`
+---------------
 `Erlang Process Pool as a Supervisor`
 
 - `https://github.com/okeuday/supool`
@@ -86,8 +86,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`syslog_socket`
----------------
+Erlang `syslog_socket`
+----------------------
 `Erlang syslog Client Interface`
 
 - `https://github.com/okeuday/syslog_socket`
@@ -95,8 +95,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`trie`
-------
+Erlang `trie`
+-------------
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
@@ -104,8 +104,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Oct 13 03:15:18 UTC 2022`
 - `MIT`
 
-`uuid`
-------
+Erlang `uuid`
+-------------
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
@@ -113,12 +113,92 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 - `Thu Feb  9 05:35:01 UTC 2023`
 - `MIT`
 
-`varpool`
----------
+Erlang `varpool`
+----------------
 `Erlang Process Pools as a Local Variable`
 
 - `https://github.com/okeuday/varpool`
 - `commit c57982b1ed50d76b2974c011ddb1325380e5c04d (v2.0.5)`
 - `Thu Oct 13 03:15:18 UTC 2022`
+- `MIT`
+
+Go `erlang_go`
+--------------
+`Erlang External Term Format for Go`
+
+- `https://github.com/okeuday/erlang_go`
+- `repository location: src/api/go/`
+- `commit 6a2a3fe37e251668c19369c73f14988176a27f40`
+- `Thu Mar 16 20:31:25 UTC 2023`
+- `MIT`
+
+Haskell `erlang_hs`
+-------------------
+`Erlang External Term Format for Haskell`
+
+- `https://github.com/okeuday/erlang_hs`
+- `repository location: src/api/haskell/src/Foreign/`
+- `commit a5e737d2dc68b5e22948e7559c450133b9687a2e (v2.0.5)`
+- `Thu Mar 16 20:31:25 UTC 2023`
+- `MIT`
+
+JavaScript `erlang_js`
+----------------------
+`Erlang External Term Format for JavaScript`
+
+- `https://github.com/okeuday/erlang_js`
+- `repository location: src/api/javascript/`
+- `commit 1b6cc8c2f1295beabf11f8c7f2c82bd1d4211781`
+- `Thu Mar 16 20:31:25 UTC 2023`
+- `MIT`
+
+OCaml `erlang_ml`
+-----------------
+`Erlang External Term Format for OCaml`
+
+- `https://github.com/okeuday/erlang_ml`
+- `repository location: src/api/ocaml/`
+- `commit dc3d9765659042d4cc4da7adc2901052f8dad773`
+- `Thu Mar 16 20:31:25 UTC 2023`
+- `MIT`
+
+Perl `erlang_pl`
+----------------
+`Erlang External Term Format for Perl`
+
+- `https://github.com/okeuday/erlang_pl`
+- `repository location: src/api/perl/`
+- `commit bd5b43969542d5c4c9b633aa517a0500fb287f43 (v2.0.5)`
+- `Thu Mar 16 20:31:25 UTC 2023`
+- `MIT`
+
+PHP `erlang_php`
+----------------
+`Erlang External Term Format for PHP`
+
+- `https://github.com/okeuday/erlang_php`
+- `repository location: src/api/php/`
+- `commit 728a44aea0acad6de453353d9db2b7f366cf5460 (v2.0.5)`
+- `Thu Mar 16 20:31:25 UTC 2023`
+- `MIT`
+
+Python `erlang_py`
+------------------
+`Erlang External Term Format for Python`
+
+- `https://github.com/okeuday/erlang_py`
+- `repository location: src/api/python/`
+- `commit 16343d2dd601f905c73e185d63f7b9382f84c07b`
+- `Thu Mar 16 20:31:25 UTC 2023`
+- `MIT`
+
+Ruby `erlang_rb`
+----------------
+`Erlang External Term Format for Ruby`
+
+- `https://github.com/okeuday/erlang_rb`
+- `repository location: src/api/ruby/`
+- `commit 7bb6fbaf9b33d71ead9fec4a3f4ba8391b74347e`
+- `Thu Mar 16 20:31:25 UTC 2023`
 - `MIT`
 

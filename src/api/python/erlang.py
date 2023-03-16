@@ -604,15 +604,19 @@ def _binary_to_term(i, data):
         length = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
         pairs = {}
+        def to_immutable(value):
+            if isinstance(value, dict):
+                return frozendict(key)
+            elif isinstance(value, list):
+                return OtpErlangList(value)
+            elif isinstance(value, tuple):
+                return tuple(to_immutable(v) for v in value)
+            return value
+
         for _ in range(length):
             i, key = _binary_to_term(i, data)
             i, value = _binary_to_term(i, data)
-            if isinstance(key, dict):
-                pairs[frozendict(key)] = value
-            elif isinstance(key, list):
-                pairs[OtpErlangList(key)] = value
-            else:
-                pairs[key] = value
+            pairs[to_immutable(key)] = value
         return (i, pairs)
     if tag == _TAG_FUN_EXT:
         old_i = i
