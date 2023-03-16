@@ -3,6 +3,7 @@
 
 2023-03-16 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add cloudi_service_map_reduce:map_size/0 function
     * Change the OCaml use of num-1.1 to zarith-1.12 for big-integer support
       in the Erlang External Term Format
     * Update erlang_ml

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2012-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_hexpi).
@@ -187,7 +187,8 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
     <<Iterations:32/unsigned-integer-native,
       _Step:32/unsigned-integer-native,
       IndexBin/binary>> = Request,
-    ?LOG_INFO("index ~s result received", [IndexBin]),
+    ?LOG_INFO("index ~s result received (~w map-reduce seconds elapsed)",
+              [IndexBin, cloudi_service_map_reduce:elapsed_seconds()]),
     <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
     TaskSizeNew = cloudi_task_size:put(Pid, Iterations, ElapsedTime, TaskSize),
     StateNew = reduce_send(IndexBin, PiResult, ElapsedTime, Pid,
@@ -327,9 +328,10 @@ reduce_done_check(#state{map_done = false} = State, _) ->
 reduce_done_check(#state{map_done = true,
                          queue = Queue} = State,
                   Dispatcher) ->
+    MapSize = cloudi_service_map_reduce:map_size(),
     ReduceSize = cloudi_queue:size(Dispatcher, Queue),
     if
-        ReduceSize == 0 ->
+        MapSize == 0, ReduceSize == 0 ->
             {done, State};
         true ->
             {ok, State}

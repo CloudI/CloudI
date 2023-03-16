@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2012-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -43,7 +43,8 @@
 %% external interface
 -export([aspect_suspend/1,
          aspect_resume/1,
-         elapsed_seconds/0]).
+         elapsed_seconds/0,
+         map_size/0]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -150,7 +151,17 @@
             :: any()
     }).
 
--define(ELAPSED_SECONDS_PDICT_KEY, cloudi_service_map_reduce_elapsed_seconds).
+-record(cloudi_service_map_reduce_info,
+    {
+        map_requests_size
+            :: non_neg_integer(),
+        time_running
+            :: cloudi_timestamp:seconds_monotonic(),
+        elapsed_seconds = 0
+            :: non_neg_integer()
+    }).
+
+-define(CALLBACK_INFO_PDICT_KEY, cloudi_service_map_reduce_info).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from behavior
@@ -252,9 +263,28 @@ aspect_resume(#state{map_reduce_module = MapReduceModule,
     cloudi_service_api:seconds().
 
 elapsed_seconds() ->
-    {TimeRunningStart,
-     ElapsedSeconds} = erlang:get(?ELAPSED_SECONDS_PDICT_KEY),
+    #cloudi_service_map_reduce_info{
+        time_running = TimeRunningStart,
+        elapsed_seconds = ElapsedSeconds
+    } = erlang:get(?CALLBACK_INFO_PDICT_KEY),
     ElapsedSeconds + (cloudi_timestamp:seconds_monotonic() - TimeRunningStart).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current number of map service requests pending in a Map-Reduce callback function.===
+%% The maximum integer value returned is the integer equivalent of the
+%% concurrency argument.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec map_size() ->
+    non_neg_integer().
+
+map_size() ->
+    #cloudi_service_map_reduce_info{
+        map_requests_size = MapRequestsSize
+    } = erlang:get(?CALLBACK_INFO_PDICT_KEY),
+    MapRequestsSize.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -368,7 +398,8 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
     case maps:take(TransId, MapRequests) of
         {#map_send{send_args = [_ | SendArgs]},
          MapRequestsNew} ->
-            ok = elapsed_seconds_set(TimeRunningStart, ElapsedSeconds),
+            ok = callback_info_set(maps:size(MapRequestsNew),
+                                   TimeRunningStart, ElapsedSeconds),
             case MapReduceModule:
                  cloudi_service_map_reduce_recv([Dispatcher | SendArgs],
                                                 ResponseInfo, Response,
@@ -427,7 +458,7 @@ init(#init_begin{service = Service,
                  time_start = TimeStart},
      Dispatcher) ->
     MapCount = cloudi_concurrency:count(Concurrency),
-    ok = elapsed_seconds_set(TimeStart),
+    ok = callback_info_set(TimeStart),
     case MapReduceModule:
          cloudi_service_map_reduce_new(MapReduceArgs, MapCount,
                                        Prefix, Timeout, Dispatcher) of
@@ -486,7 +517,8 @@ map_resend(#map_send{send_args = [_ | SendArgsTail],
                   time_running = TimeRunningStart,
                   elapsed_seconds = ElapsedSeconds} = State, Dispatcher) ->
     SendArgs = [Dispatcher | SendArgsTail],
-    ok = elapsed_seconds_set(TimeRunningStart, ElapsedSeconds),
+    ok = callback_info_set(maps:size(MapRequests),
+                           TimeRunningStart, ElapsedSeconds),
     case MapReduceModule:
          cloudi_service_map_reduce_resend(SendArgs, MapReduceState) of
         {ok, SendArgsNew, MapReduceStateNew} ->
@@ -505,9 +537,11 @@ map_resend(#map_send{send_args = [_ | SendArgsTail],
 map_info(Request, State, Dispatcher) ->
     #state{map_reduce_module = MapReduceModule,
            map_reduce_state = MapReduceState,
+           map_requests = MapRequests,
            time_running = TimeRunningStart,
            elapsed_seconds = ElapsedSeconds} = State,
-    ok = elapsed_seconds_set(TimeRunningStart, ElapsedSeconds),
+    ok = callback_info_set(maps:size(MapRequests),
+                           TimeRunningStart, ElapsedSeconds),
     case MapReduceModule:
          cloudi_service_map_reduce_info(Request, MapReduceState, Dispatcher) of
         {ok, MapReduceStateNew} ->
@@ -633,12 +667,15 @@ retry_delay(RetryDelay, Service,
                           {cloudi_service_map_reduce_retry, MapRequestNew}),
     true.
 
-elapsed_seconds_set(TimeRunningStart) ->
-    elapsed_seconds_set(TimeRunningStart, 0).
+callback_info_set(TimeRunningStart) ->
+    callback_info_set(0, TimeRunningStart, 0).
 
-elapsed_seconds_set(TimeRunningStart, ElapsedSeconds) ->
-    _ = erlang:put(?ELAPSED_SECONDS_PDICT_KEY,
-                   {TimeRunningStart, ElapsedSeconds}),
+callback_info_set(MapRequestsSize, TimeRunningStart, ElapsedSeconds) ->
+    _ = erlang:put(?CALLBACK_INFO_PDICT_KEY,
+                   #cloudi_service_map_reduce_info{
+                       map_requests_size = MapRequestsSize,
+                       time_running = TimeRunningStart,
+                       elapsed_seconds = ElapsedSeconds}),
     ok.
 
 hours_elapsed(ElapsedSeconds) ->
