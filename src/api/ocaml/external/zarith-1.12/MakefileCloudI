@@ -43,6 +43,12 @@ zarith_version.ml: META
 
 caml_z.$(O): caml_z.c
 
+zarith_top.cmo: zarith_top.ml
+	$(OCAMLC) $(CAMLCFLAGS) -opaque -c zarith_top.ml
+
+zarith_top.cmx: zarith_top.ml
+	$(OCAMLOPT) $(CAMLOPTFLAGS) -opaque -c zarith_top.ml
+
 %.cmi: %.mli
 	$(OCAMLC) $(CAMLCFLAGS) -c $*.mli
 %.cmo: %.ml
