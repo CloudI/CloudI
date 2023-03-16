@@ -575,7 +575,7 @@ count_process_dynamic_terminated(#count_process_dynamic{
 rate_request_max_format(undefined) ->
     undefined;
 rate_request_max_format(#rate_request{period = Period,
-                                  rate_max = RateMax}) ->
+                                      rate_max = RateMax}) ->
     [{period, ?RATE_REQUEST_MAX_PERIOD_FORMAT(Period)},
      {value, RateMax}].
 
@@ -612,8 +612,8 @@ rate_request_max_init(#rate_request{period = Period} = State) ->
 rate_request_max_reinit(undefined) ->
     undefined;
 rate_request_max_reinit(#rate_request{period = Period,
-                                  count = Count,
-                                  blocking = Blocking} = State) ->
+                                      count = Count,
+                                      blocking = Blocking} = State) ->
     erlang:send_after(Period * 1000, self(),
                       'cloudi_rate_request_max_rate'),
     if
@@ -635,8 +635,8 @@ rate_request_max_reinit(#rate_request{period = Period,
 rate_request_max_request(#rate_request{blocking = true} = State) ->
     {false, State};
 rate_request_max_request(#rate_request{period = Period,
-                                   count = Count,
-                                   rate_max = RateMax} = State) ->
+                                       count = Count,
+                                       rate_max = RateMax} = State) ->
     CountNew = Count + 1,
     BlockingNew = (CountNew / Period) > RateMax,
     StateNew = if

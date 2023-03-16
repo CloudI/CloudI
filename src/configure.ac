@@ -831,6 +831,13 @@ AC_SUBST(REBAR_ARGS, ["--verbose 3"])
 if test "x$want_integration_tests" = "xyes" -a \
         "x$cxx_support" = "xtrue"; then
 AX_BOOST_THREAD
+libgmp_required="true"
+elif test "x$ocaml_support" = "xtrue"; then
+libgmp_required="true"
+else
+libgmp_required="false"
+fi
+if test "x$libgmp_required" = "xtrue"; then
 AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 fi
 

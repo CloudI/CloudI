@@ -1,0 +1,57 @@
+# num-1.1 makefile adapted for zarith-1.12
+OCAMLC ?= ocamlc
+OCAMLOPT ?= ocamlopt
+OCAMLDEP ?= ocamldep
+OCAMLMKLIB ?= ocamlmklib
+GMP_H_CFLAGS ?=
+GMP_LIB ?= -lgmp
+STDLIBDIR=$(shell $(OCAMLC) -where)
+
+include $(STDLIBDIR)/Makefile.config
+
+CFLAGS=-I$(STDLIBDIR) $(GMP_H_CFLAGS) -DHAS_GMP -O3 -Wall -Wextra
+LIBS=$(GMP_LIB)
+
+CAMLCFLAGS=-w +a-4-6-70 -warn-error A -I +compiler-libs -bin-annot -g
+CAMLOPTFLAGS=$(CAMLCFLAGS)
+
+CMIS=z.cmi q.cmi big_int_Z.cmi
+CMOS=zarith_version.cmo z.cmo q.cmo zarith_top.cmo big_int_Z.cmo
+CMXS=$(CMOS:.cmo=.cmx)
+COBJS=caml_z.$(O)
+
+all:: libzarith.$(A) zarith_top.cma zarith.cma
+
+ifneq "$(ARCH)" "none"
+all:: zarith.cmxa
+endif
+
+libzarith.$(A): $(COBJS)
+	$(OCAMLMKLIB) -failsafe -o zarith $(COBJS) $(LIBS)
+
+zarith.cma: $(CMIS) $(CMOS)
+	$(OCAMLMKLIB) -failsafe -o zarith $(CMOS) $(LIBS)
+
+zarith.cmxa: $(CMIS) $(CMXS)
+	$(OCAMLMKLIB) -failsafe -o zarith $(CMXS) $(LIBS)
+
+zarith_top.cma: zarith_top.cmo
+	$(OCAMLC) -o zarith_top.cma -a zarith_top.cmo
+
+zarith_version.ml: META
+	(echo "let"; grep "version" META | head -1) > zarith_version.ml
+
+caml_z.$(O): caml_z.c
+
+%.cmi: %.mli
+	$(OCAMLC) $(CAMLCFLAGS) -c $*.mli
+%.cmo: %.ml
+	$(OCAMLC) $(CAMLCFLAGS) -c $*.ml
+%.cmx: %.ml
+	$(OCAMLOPT) $(CAMLOPTFLAGS) -c $*.ml
+%.$(O): %.c
+	$(OCAMLC) -ccopt "$(CFLAGS)" -c $*.c
+
+clean:
+	rm -f *.cm[ioxta] *.cmx[as] *.cmti *.$(O) *.$(A) *.so zarith_version.ml
+

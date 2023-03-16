@@ -1,39 +1,41 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
-OCAMLDEPS_NUM = \
-    arith_flags.cmi \
-    arith_flags.cmx \
-    arith_status.cmi \
-    arith_status.cmx \
-    big_int.cmi \
-    big_int.cmx \
-    int_misc.cmi \
-    int_misc.cmx \
-    nat.cmi \
-    nat.cmx \
-    num.cmi \
-    num.cmx \
-    ratio.cmi \
-    ratio.cmx \
-    libnums.a \
-    nums.a \
-    nums.cmxa \
-    nums.cma
+OCAMLDEPS_ZARITH = \
+    big_int_Z.cmi \
+    big_int_Z.cmx \
+    libzarith.a \
+    q.cmi \
+    q.cmx \
+    zarith.a \
+    zarith.cma \
+    zarith.cmxa \
+    zarith_top.cma \
+    zarith_top.cmi \
+    zarith_version.cmi \
+    zarith_version.cmx \
+    z.cmi \
+    z.cmx
 
-CLEANFILES = $(OCAMLDEPS_NUM)
+CLEANFILES = $(OCAMLDEPS_ZARITH)
 
-nums.cmxa:
-	cd $(srcdir)/num-1.1/src && \
-    $(MAKE) OCAMLC="$(OCAMLC)" \
+OCAML_ZARITH_MAKEFILE = MakefileCloudI
+
+zarith.cmxa:
+	cd $(srcdir)/zarith-1.12 && \
+    $(MAKE) -f ./$(OCAML_ZARITH_MAKEFILE) \
+            OCAMLC="$(OCAMLC)" \
             OCAMLOPT="$(OCAMLOPT)" \
             OCAMLDEP="$(OCAMLDEP)" \
             OCAMLMKLIB="$(OCAMLMKLIB)" \
-            nums.cmxa nums.cma libnums.a && \
-    cp $(OCAMLDEPS_NUM) $(abs_builddir)
+            GMP_H_CFLAGS="$(GMP_H_CFLAGS)" \
+            GMP_LIB="$(GMP_LIB)" \
+            zarith.cmxa zarith.cma zarith_top.cma libzarith.a && \
+    cp $(OCAMLDEPS_ZARITH) $(abs_builddir)
 
-all-local: nums.cmxa
+all-local: zarith.cmxa
 
-clean-local: 
-	cd $(srcdir)/num-1.1/src && $(MAKE) clean
+clean-local:
+	cd $(srcdir)/zarith-1.12 && \
+    $(MAKE) -f ./$(OCAML_ZARITH_MAKEFILE) clean
 

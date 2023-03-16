@@ -103,7 +103,7 @@ module Function = struct
 end
 type t =
     OtpErlangInteger of int
-  | OtpErlangIntegerBig of Big_int.big_int
+  | OtpErlangIntegerBig of Big_int_Z.big_int
   | OtpErlangFloat of float
   | OtpErlangAtom of string
   | OtpErlangAtomUTF8 of string
@@ -184,7 +184,7 @@ let unpack_integer i binary : t =
     )
   in
   if byte0 > min_int lsr 24 then
-    OtpErlangIntegerBig (Big_int.big_int_of_int32 value)
+    OtpErlangIntegerBig (Big_int_Z.big_int_of_int32 value)
   else
     OtpErlangInteger (Int32.to_int value)
 
@@ -400,13 +400,13 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
         else
           loop
             (bignum_index + 1)
-            (Big_int.add_int_big_int
+            (Big_int_Z.add_int_big_int
               (int_of_char binary.[i1 + j - bignum_index])
-              (Big_int.mult_int_big_int 256 bignum_value))
+              (Big_int_Z.mult_int_big_int 256 bignum_value))
       in
-      let bignum = loop 0 Big_int.zero_big_int in
+      let bignum = loop 0 Big_int_Z.zero_big_int in
       let bignum_result = if sign = 1 then
-        Big_int.minus_big_int bignum
+        Big_int_Z.minus_big_int bignum
       else
         bignum
       and i2 = i1 + 1 in
@@ -765,24 +765,24 @@ and integer_to_binary value buffer =
     pack_uint32 value buffer ;
     Ok (buffer))
   else
-    bignum_to_binary (Big_int.big_int_of_int value) buffer
+    bignum_to_binary (Big_int_Z.big_int_of_int value) buffer
 
 and bignum_to_binary value buffer =
-  let bits8 = Big_int.big_int_of_int 0xff
-  and sign = if (Big_int.sign_big_int value) = -1 then
+  let bits8 = Big_int_Z.big_int_of_int 0xff
+  and sign = if (Big_int_Z.sign_big_int value) = -1 then
     char_of_int 1
   else
     char_of_int 0
   in
   let rec loop bignum l =
-    if Big_int.gt_big_int bignum Big_int.zero_big_int then (
+    if Big_int_Z.gt_big_int bignum Big_int_Z.zero_big_int then (
       Buffer.add_char l (char_of_int
-        (Big_int.int_of_big_int (Big_int.and_big_int bignum bits8))) ;
-      loop (Big_int.shift_right_towards_zero_big_int bignum 8) l)
+        (Big_int_Z.int_of_big_int (Big_int_Z.and_big_int bignum bits8))) ;
+      loop (Big_int_Z.shift_right_towards_zero_big_int bignum 8) l)
     else
       l
   in
-  let l_result = loop (Big_int.abs_big_int value) (Buffer.create 255) in
+  let l_result = loop (Big_int_Z.abs_big_int value) (Buffer.create 255) in
   let l_length = Buffer.length l_result in
   if l_length <= 255 then (
     Buffer.add_char buffer (char_of_int tag_small_big_ext) ;
@@ -950,7 +950,7 @@ let rec t_to_string (term : t) : string =
   | OtpErlangInteger (value) ->
     "OtpErlangInteger(" ^ (string_of_int value) ^ ")"
   | OtpErlangIntegerBig (value) ->
-    "OtpErlangIntegerBig(" ^ (Big_int.string_of_big_int value) ^ ")"
+    "OtpErlangIntegerBig(" ^ (Big_int_Z.string_of_big_int value) ^ ")"
   | OtpErlangFloat (value) ->
     "OtpErlangFloat(" ^ (string_of_float value) ^ ")"
   | OtpErlangAtom (value) ->
@@ -1370,7 +1370,7 @@ let test_decode_integer () =
     (term_ok (binary_to_term "\x83b\xff\xff\xff\xff")) =
     OtpErlangInteger (-1)) ;
   let max_int_plus_1 = OtpErlangIntegerBig (
-    Big_int.big_int_of_string "4611686018427387904")
+    Big_int_Z.big_int_of_string "4611686018427387904")
   and max_int_plus_1_check = term_ok
     (binary_to_term "\x83n\x08\x00\x00\x00\x00\x00\x00\x00\x00@") in
   assert (
@@ -1445,21 +1445,21 @@ let test_decode_small_big_integer () =
   assert (
     (term_error (binary_to_term "\x83n\x01\x00")) =
     "parse_error: missing data") ;
-  let zero = OtpErlangIntegerBig (Big_int.zero_big_int)
+  let zero = OtpErlangIntegerBig (Big_int_Z.zero_big_int)
   and zero_check = term_ok
     (binary_to_term "\x83n\x00\x00") in
   assert (
     (t_to_string zero) =
     (t_to_string zero_check)) ;
   let bigint1 = OtpErlangIntegerBig (
-    Big_int.big_int_of_string "6618611909121")
+    Big_int_Z.big_int_of_string "6618611909121")
   and bigint1_check = term_ok
     (binary_to_term "\x83n\x06\x00\x01\x02\x03\x04\x05\x06") in
   assert (
     (t_to_string bigint1) =
     (t_to_string bigint1_check)) ;
   let bigint2 = OtpErlangIntegerBig (
-    Big_int.big_int_of_string "-6618611909121")
+    Big_int_Z.big_int_of_string "-6618611909121")
   and bigint2_check = term_ok
     (binary_to_term "\x83n\x06\x01\x01\x02\x03\x04\x05\x06") in
   assert (
@@ -1486,21 +1486,21 @@ let test_decode_large_big_integer () =
   assert (
     (term_error (binary_to_term "\x83o\x00\x00\x00\x01\x00")) =
     "parse_error: missing data") ;
-  let zero = OtpErlangIntegerBig (Big_int.zero_big_int)
+  let zero = OtpErlangIntegerBig (Big_int_Z.zero_big_int)
   and zero_check = term_ok
     (binary_to_term "\x83o\x00\x00\x00\x00\x00") in
   assert (
     (t_to_string zero) =
     (t_to_string zero_check)) ;
   let bigint1 = OtpErlangIntegerBig (
-    Big_int.big_int_of_string "6618611909121")
+    Big_int_Z.big_int_of_string "6618611909121")
   and bigint1_check = term_ok
     (binary_to_term "\x83o\x00\x00\x00\x06\x00\x01\x02\x03\x04\x05\x06") in
   assert (
     (t_to_string bigint1) =
     (t_to_string bigint1_check)) ;
   let bigint2 = OtpErlangIntegerBig (
-    Big_int.big_int_of_string "-6618611909121")
+    Big_int_Z.big_int_of_string "-6618611909121")
   and bigint2_check = term_ok
     (binary_to_term "\x83o\x00\x00\x00\x06\x01\x01\x02\x03\x04\x05\x06") in
   assert (
@@ -1582,7 +1582,7 @@ let test_encode_list_basic () =
     (binary_ok (term_to_binary (OtpErlangList ([integer1])))) =
     "\x83\x6C\x00\x00\x00\x01\x62\x7F\xFF\xFF\xFF\x6A") ;
   let bigint1 = OtpErlangIntegerBig (
-    Big_int.add_int_big_int 1 (Big_int.big_int_of_int32 Int32.max_int)) in
+    Big_int_Z.add_int_big_int 1 (Big_int_Z.big_int_of_int32 Int32.max_int)) in
   assert (
     (binary_ok (term_to_binary (OtpErlangList ([bigint1])))) =
     "\x83\x6C\x00\x00\x00\x01\x6E\x04\x00\x00\x00\x00\x80\x6A") ;
@@ -1603,7 +1603,7 @@ let test_encode_list_basic () =
     (binary_ok (term_to_binary (OtpErlangList ([integer2])))) =
     "\x83\x6C\x00\x00\x00\x01\x62\x80\x00\x00\x00\x6A") ;
   let bigint2 = OtpErlangIntegerBig (
-    Big_int.add_int_big_int (-1) (Big_int.big_int_of_int32 Int32.min_int)) in
+    Big_int_Z.add_int_big_int (-1) (Big_int_Z.big_int_of_int32 Int32.min_int)) in
   assert (
     (binary_ok (term_to_binary (OtpErlangList ([bigint2])))) =
     "\x83\x6C\x00\x00\x00\x01\x6E\x04\x01\x01\x00\x00\x80\x6A") ;
@@ -1783,12 +1783,12 @@ let test_encode_integer () =
 
 let test_encode_small_big_integer () =
   let bigint1 = OtpErlangIntegerBig (
-    Big_int.add_int_big_int 1 (Big_int.big_int_of_int32 Int32.max_int)) in
+    Big_int_Z.add_int_big_int 1 (Big_int_Z.big_int_of_int32 Int32.max_int)) in
   assert (
     (binary_ok (term_to_binary bigint1)) =
     "\x83n\x04\x00\x00\x00\x00\x80") ;
   let bigint2 = OtpErlangIntegerBig (
-    Big_int.add_int_big_int (-1) (Big_int.big_int_of_int32 Int32.min_int)) in
+    Big_int_Z.add_int_big_int (-1) (Big_int_Z.big_int_of_int32 Int32.min_int)) in
   assert (
     (binary_ok (term_to_binary bigint2)) =
     "\x83n\x04\x01\x01\x00\x00\x80") ;
@@ -1796,12 +1796,12 @@ let test_encode_small_big_integer () =
 
 let test_encode_large_big_integer () =
   let bigint1 = OtpErlangIntegerBig (
-    Big_int.power_int_positive_int 2 2040) in
+    Big_int_Z.power_int_positive_int 2 2040) in
   assert (
     (binary_ok (term_to_binary bigint1)) =
     "\x83o\x00\x00\x01\x00\x00" ^ (String.make 255 '\x00') ^ "\x01") ;
   let bigint2 = OtpErlangIntegerBig (
-    Big_int.minus_big_int (Big_int.power_int_positive_int 2 2040)) in
+    Big_int_Z.minus_big_int (Big_int_Z.power_int_positive_int 2 2040)) in
   assert (
     (binary_ok (term_to_binary bigint2)) =
     "\x83o\x00\x00\x01\x00\x01" ^ (String.make 255 '\x00') ^ "\x01") ;

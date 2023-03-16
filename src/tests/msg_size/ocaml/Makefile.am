@@ -4,7 +4,7 @@
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/msg_size"
 CLEANFILES = msg_size_ocaml main.cmx main.cmi main.o
 OCAMLDEPS = str.cmxa unix.cmxa threads/threads.cmxa \
-            $(top_builddir)/api/ocaml/external/nums.cmxa \
+            $(top_builddir)/api/ocaml/external/zarith.cmxa \
             -ccopt -L$(top_builddir)/api/ocaml/external/ \
             $(top_builddir)/api/ocaml/cloudi.cmxa
 

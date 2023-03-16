@@ -67,7 +67,7 @@ module Function :
 
 type t =
     OtpErlangInteger of int
-  | OtpErlangIntegerBig of Big_int.big_int
+  | OtpErlangIntegerBig of Big_int_Z.big_int
   | OtpErlangFloat of float
   | OtpErlangAtom of string
   | OtpErlangAtomUTF8 of string

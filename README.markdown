@@ -131,7 +131,7 @@ Optional (default="no"):
   * (`ghc zlib1g-dev /Ubuntu`, `ghc zlib-dev /Alpine`)
   * Use the "--enable-haskell-support" configure flag to enable
   * Haskell CloudI API is available as a [Hackage package](https://github.com/CloudI/cloudi_api_haskell#readme) for GHC >= 7.10.3
-* `OCaml >= 4.03.0`
+* `OCaml >= 4.08.0`
   * (`ocaml /Ubuntu`, `ocaml /Alpine`)
   * Use the "--enable-ocaml-support" configure flag to enable
   * OCaml CloudI API is available as an [opam package](https://github.com/CloudI/cloudi_api_ocaml#readme)

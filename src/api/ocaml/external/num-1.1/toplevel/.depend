@@ -1,6 +1,0 @@
-num_top.cmi :
-num_top_printers.cmi :
-num_top.cmo : num_top.cmi
-num_top.cmx : num_top.cmi
-num_top_printers.cmo : num_top_printers.cmi
-num_top_printers.cmx : num_top_printers.cmi

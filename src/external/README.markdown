@@ -449,14 +449,14 @@ M4 `m4/ax_recursive_eval.m4`
 - `Thu Dec 13 05:07:21 UTC 2018`
 - `GPL` (build-time dependency only)
 
-OCaml `num`
------------
-`core distribution legacy Num library (separate with OCaml >= 4.06)`
+OCaml `zarith`
+--------------
+`OCaml big-integer support library`
 
-- `https://github.com/ocaml/num/`
+- `https://github.com/ocaml/Zarith/`
 - `repository location: src/api/ocaml/external/`
-- `Fri Dec 29 00:58:57 UTC 2017`
-- `LGPL 2.1 w/link-exception`
+- `Thu Mar 16 19:46:58 UTC 2023`
+- `LGPL 2 w/link-exception`
 
 Python `jsonrpclib`
 -------------------
