@@ -3,7 +3,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -142,7 +142,8 @@
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
 % time-related constants
--define(DAYS_IN_YEAR, 365.25).
+% average length of a Gregorian year is 365 + 1/4 - 1/100 + 1/400
+-define(DAYS_IN_YEAR, 365.2425).
 -define(DAYS_IN_MONTH, (?DAYS_IN_YEAR / 12)).
 -define(DAYS_IN_WEEK, 7).
 -define(HOURS_IN_DAY, 24).

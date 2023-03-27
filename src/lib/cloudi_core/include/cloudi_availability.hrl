@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2022-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -35,9 +35,9 @@
         convert(86400000000000 * 7, nanosecond, native)).
 -define(NATIVE_TIME_IN_MONTH,
         cloudi_timestamp:
-        convert(ceil(86400000000000 * 30.4375), nanosecond, native)).
+        convert(ceil(86400000000000 * 30.436875), nanosecond, native)).
 -define(NATIVE_TIME_IN_YEAR,
         cloudi_timestamp:
-        convert(ceil(86400000000000 * 365.25), nanosecond, native)).
+        convert(ceil(86400000000000 * 365.2425), nanosecond, native)).
 -define(AVAILABILITY_ZERO, "0 %").
 

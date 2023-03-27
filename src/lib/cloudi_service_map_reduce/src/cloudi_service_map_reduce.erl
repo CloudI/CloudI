@@ -157,7 +157,7 @@
             :: non_neg_integer(),
         time_running
             :: cloudi_timestamp:seconds_monotonic(),
-        elapsed_seconds = 0
+        elapsed_seconds
             :: non_neg_integer()
     }).
 

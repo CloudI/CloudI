@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-03-27 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix average length of a Gregorian year constant
+    * Improve ATS CloudI API function effect tags comment
+
 2023-03-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_map_reduce:map_size/0 function

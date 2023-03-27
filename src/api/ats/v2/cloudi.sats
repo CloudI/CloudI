@@ -96,7 +96,7 @@ result (a:vt@ype+) =
 typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
 
 (*
-   function effect tags (an effect system):
+   Function Effect Tags (an effect system):
    !ntm - possibly non-terminating (divergent)
    !exn - may raise an exception (partial functions)
           or terminate with a function tracked like an exception
@@ -108,11 +108,11 @@ typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
    fun0 - mathematical purity (no side-effects) during runtime
    fun1 - may have all possible side-effects (default)
 
-   operational purity (Haskell's purity) is similar to <!ntm,!exn>
+   Operational purity (Haskell's purity) is similar to <!ntm,!exn>
    (catching exceptions breaks referential transparency and
     most Haskell source code uses throwIO for raising exceptions,
     so <!ntm> should be closer in practice).
-   operational purity allows hardware architecture variation and
+   Operational purity allows hardware architecture variation and
    operating system variation to be considered pure
    (e.g., a function returning the file path character '/' on UNIX and
     '\' on Windows is able to be pure).
@@ -125,6 +125,11 @@ typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
    mathematical purity due to the ability to change the
    IEEE rounding mode during runtime
    (i.e., they are !ref effects due to fesetround).
+   Integer divide or modulo by zero is an !exn effect due to raising SIGFPE
+   (if the hardware used traps floating point exceptions).
+   A floating-point operation may also have an !exn effect due to an exception
+   defined in fenv.h for feclearexcept
+   (glibc indicates if SIGFPE is raised with fegetexcept, i.e., not POSIX).
 
  *)
 

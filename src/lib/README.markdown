@@ -128,8 +128,8 @@ Go `erlang_go`
 
 - `https://github.com/okeuday/erlang_go`
 - `repository location: src/api/go/`
-- `commit 6a2a3fe37e251668c19369c73f14988176a27f40`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit 6398d18d0be6f9130e15ecf10a8a1922b10608cf`
+- `Sat Mar 18 10:53:52 UTC 2023`
 - `MIT`
 
 Haskell `erlang_hs`
