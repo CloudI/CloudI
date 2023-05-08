@@ -20,7 +20,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,15 +41,16 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2017-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_cache).
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([float/0,
+-export([destroy/0,
+         float/0,
          float/1,
          floatL/0,
          floatL/1,
@@ -83,6 +84,19 @@
 
 -include("quickrand_constants.hrl").
 -include("quickrand_internal.hrl").
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Destroy cached process dictionary data if it exists.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec destroy() ->
+    ok.
+
+destroy() ->
+    _ = erlang:put(?TUPLE_PDICT_KEY, undefined),
+    ok.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -345,15 +359,18 @@ uniform(N, State) when is_integer(N), N > 1 ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec uniform_range(Min :: non_neg_integer(),
+-spec uniform_range(Min :: integer(),
                     Max :: non_neg_integer()) ->
-    non_neg_integer().
+    integer().
 
-uniform_range(Min, Min) ->
-    Min;
 uniform_range(Min, Max)
-    when is_integer(Min), is_integer(Max), Min < Max ->
-    uniform(1 + Max - Min) - 1 + Min.
+    when is_integer(Min), is_integer(Max), Max >= 0 ->
+    if
+        Min == Max ->
+            Min;
+        Min < Max ->
+            uniform(1 + Max - Min) - 1 + Min
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -361,17 +378,20 @@ uniform_range(Min, Max)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec uniform_range(Min :: non_neg_integer(),
+-spec uniform_range(Min :: integer(),
                     Max :: non_neg_integer(),
                     State :: state()) ->
-    {non_neg_integer(), state()}.
+    {integer(), state()}.
 
-uniform_range(Min, Min, State) ->
-    {Min, State};
 uniform_range(Min, Max, State)
-    when is_integer(Min), is_integer(Max), Min < Max ->
-    {Value, NewState} = uniform(1 + Max - Min, State),
-    {Value - 1 + Min, NewState}.
+    when is_integer(Min), is_integer(Max), Max >= 0 ->
+    if
+        Min == Max ->
+            {Min, State};
+        Min < Max ->
+            {Value, NewState} = uniform(1 + Max - Min, State),
+            {Value - 1 + Min, NewState}
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

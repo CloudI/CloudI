@@ -64,8 +64,8 @@ Erlang `quickrand`
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit e74fd9d7a755be951cc8d07db370e7df7dc0652d (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit 16c004ac4ddfb1bef223f071608fc048446f77be`
+- `Mon May  8 22:26:33 UTC 2023`
 - `MIT`
 
 Erlang `reltool_util`

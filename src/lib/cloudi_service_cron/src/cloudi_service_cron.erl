@@ -11,6 +11,8 @@
 %%% 6 fields with year as the last field,
 %%% 7 fields with seconds as the first field or a supported macro
 %%% (@yearly, @annually, @monthly, @weekly, @daily, @midnight, @hourly).
+%%% Random ranges are supported with the ~ character
+%%% (see cloudi_cron for more details).
 %%%
 %%% If the system clock is adjusted backwards, the same sequence of
 %%% events (described by the cron expression) occurs without redoing
@@ -27,7 +29,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -48,8 +50,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2019-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_cron).
@@ -196,11 +198,13 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     end,
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     ProcessCount = cloudi_service:process_count(Dispatcher),
+    ok = cloudi_x_quickrand_cache:init(),
     {IdNext,
      ExpressionsLoaded} = expressions_load(Expressions,
                                            ProcessIndex, ProcessCount,
                                            SendArgsInfo, SendMcast,
                                            RequestInfoDefault),
+    ok = cloudi_x_quickrand_cache:destroy(),
     ValidateResponseN = cloudi_args_type:
                         function_required(ValidateResponse0, 2),
     Service = cloudi_service:self(Dispatcher),

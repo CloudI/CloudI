@@ -12,13 +12,13 @@
 %%% ```
 %%% Field name     Required     Allowed values    Allowed special characters
 %%% ----------     --------     --------------    --------------------------
-%%% Seconds        No           0-59              * / , -
-%%% Minutes        Yes          0-59              * / , -
-%%% Hours          Yes          0-23              * / , -
-%%% Day of month   Yes          1-31              * / , - L W
-%%% Month          Yes          1-12 or JAN-DEC   * / , -
-%%% Day of week    Yes          0-6 or SUN-SAT    * / , - L #
-%%% Year           No           1970–9999         * / , -
+%%% Seconds        No           0-59              * / , - ~
+%%% Minutes        Yes          0-59              * / , - ~
+%%% Hours          Yes          0-23              * / , - ~
+%%% Day of month   Yes          1-31              * / , - ~ L W
+%%% Month          Yes          1-12 or JAN-DEC   * / , - ~
+%%% Day of week    Yes          0-6 or SUN-SAT    * / , - ~ L #
+%%% Year           No           1970–9999         * / , - ~
 %%% '''
 %%%
 %%% === Asterisk (*) ===
@@ -36,7 +36,22 @@
 %%%
 %%% === Hyphen (-) ===
 %%% Hyphens define ranges. For example, 2000–2010 indicates every year
-%%% between 2000 and 2010, inclusive.
+%%% between 2000 and 2010 inclusive.
+%%%
+%%% === Tilde (~) ===
+%%% Tildes define random ranges. For example, 0~59 will result in a random
+%%% value between 0 and 59 inclusive.
+%%%
+%%% A random range can be used with a step value. For example, 0~59/10 will
+%%% use a random offset for the first sequence value between 0 and 9 inclusive.
+%%% The field's min/max values may be used by excluding the random range
+%%% values as ~ or ~/10.
+%%%
+%%% Random values are determined when the expression is parsed with the
+%%% random value remaining constant afterwards.  The purpose of the randomness
+%%% is to avoid any thundering herd problems between separate uses of
+%%% similar cron expressions
+%%% (https://en.wikipedia.org/wiki/Thundering_herd_problem).
 %%%
 %%% === L ===
 %%% 'L' stands for "last". When used in the day-of-week field, it allows you
@@ -78,12 +93,13 @@
 %%%   with 7 as Sunday (like 0) (BSD and ATT disagreed about this in the past)
 %%% * The month names are case-insensitive
 %%% * The day-of-week names are case-insensitive
+%%% * Random range support (with ~) is based on OpenBSD cron
 %%% '''
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -104,8 +120,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2019-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_cron).
@@ -302,20 +318,39 @@ parse_value(Segment, Min, Max, Names, Allow) ->
         {"", Segment} ->
             case cloudi_string:splitl($-, Segment, input) of
                 {Segment, ""} ->
-                    parse_value_name(Allow, Segment, Min, Max, Names);
+                    case cloudi_string:splitl($~, Segment, input) of
+                        {Segment, ""} ->
+                            parse_value_name(Allow, Segment, Min, Max, Names);
+                        {RandomMinStr, RandomMaxStr} ->
+                            parse_value_random(RandomMinStr, RandomMaxStr,
+                                               undefined, Min, Max, Names)
+                    end;
                 {RangeMinStr, RangeMaxStr} ->
-                    parse_value_range(RangeMinStr, RangeMaxStr, "1",
-                                      Min, Max, Names)
+                    parse_value_range(RangeMinStr, RangeMaxStr,
+                                      "1", Min, Max, Names)
             end;
-        {"*", StepStr} ->
+        {[Match], StepStr}
+            when Match =:= $* orelse Match =:= $~ ->
             Step = erlang:list_to_integer(StepStr),
             true = (Step > Min) andalso (Step < Max),
-            lists:seq(Min, Max, Step);
+            MinNew = if
+                Match =:= $* ->
+                    Min;
+                Match =:= $~ ->
+                    random(Min, Min + Step - 1)
+            end,
+            lists:seq(MinNew, Max, Step);
         {RangeStr, StepStr} ->
-            {RangeMinStr,
-             RangeMaxStr} = cloudi_string:splitl($-, RangeStr, empty),
-            parse_value_range(RangeMinStr, RangeMaxStr, StepStr,
-                              Min, Max, Names)
+            case cloudi_string:splitl($-, RangeStr, input) of
+                {RangeStr, ""} ->
+                    {RandomMinStr,
+                     RandomMaxStr} = cloudi_string:splitl($~, RangeStr, empty),
+                    parse_value_random(RandomMinStr, RandomMaxStr,
+                                       StepStr, Min, Max, Names);
+                {RangeMinStr, RangeMaxStr} ->
+                    parse_value_range(RangeMinStr, RangeMaxStr,
+                                      StepStr, Min, Max, Names)
+            end
     end.
 
 parse_value_name_integer(Value, Min, Max, undefined) ->
@@ -384,12 +419,32 @@ parse_value_range(RangeMinStr, RangeMaxStr, StepStr, Min, Max, Names) ->
     [_ | _] = RangeMaxStr,
     RangeMin = parse_value_name_integer(RangeMinStr, Min, Max, Names),
     RangeMax = parse_value_name_integer(RangeMaxStr, Min, Max, Names),
-    Step = erlang:list_to_integer(StepStr),
     true = is_integer(RangeMin),
     true = is_integer(RangeMax),
     true = (RangeMin < RangeMax),
+    Step = erlang:list_to_integer(StepStr),
     true = (Step >= 1) andalso (Step < Max),
     lists:seq(RangeMin, RangeMax, Step).
+
+parse_value_random([], [], undefined, Min, Max, _) ->
+    random(Min, Max);
+parse_value_random(RandomMinStr, RandomMaxStr, StepStr, Min, Max, Names) ->
+    [_ | _] = RandomMinStr,
+    [_ | _] = RandomMaxStr,
+    RandomMin = parse_value_name_integer(RandomMinStr, Min, Max, Names),
+    RandomMax = parse_value_name_integer(RandomMaxStr, Min, Max, Names),
+    true = is_integer(RandomMin),
+    true = is_integer(RandomMax),
+    true = (RandomMin < RandomMax),
+    if
+        StepStr =:= undefined ->
+            random(RandomMin, RandomMax);
+        is_list(StepStr) ->
+            Step = erlang:list_to_integer(StepStr),
+            true = (Step > Min) andalso (Step < Max),
+            RandomMinNew = random(RandomMin, RandomMin + Step - 1),
+            lists:seq(RandomMinNew, RandomMax, Step)
+    end.
 
 parse_seconds([_ | _] = Input) ->
     Min = 0,
@@ -690,6 +745,9 @@ day_of_week(Date) ->
             DayOfWeek
     end.
 
+random(Min, Max) ->
+    cloudi_x_quickrand_cache:uniform_range(Min, Max).
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -702,6 +760,7 @@ module_test_() ->
     ]}.
 
 t_parse_expression() ->
+    ok = cloudi_x_quickrand_cache:init([{cache_size, 65536}]),
     ExpressionString0 = "  @midnight ",
     ExpressionStrings0 = {"0", "0", "0", "*", "*", "*", "*"},
     Expression0 = {[0], [0], [0], undefined, undefined, undefined, undefined},
@@ -743,6 +802,32 @@ t_parse_expression() ->
                    [{last_day_of_week, 5}], undefined},
     #cloudi_cron{expression_strings = ExpressionStrings6,
                  expression = Expression6} = new(ExpressionString6),
+    #cloudi_cron{expression_strings = {"0", "0~59/10", "23",
+                                       "*", "*", "sun", "*"},
+                 expression = {[0], Minutes0, [23],
+                               undefined, undefined, [0], undefined}
+                 } = new("0~59/10 23 * * sun"),
+    [Minute0 | _] = Minutes0,
+    true = is_integer(Minute0) andalso Minute0 >= 0 andalso Minute0 =< 9,
+    true = length(Minutes0) == 6,
+    #cloudi_cron{expression_strings = {"0", "~/10", "23", "*", "*", "sun", "*"},
+                 expression = {[0], Minutes1, [23],
+                               undefined, undefined, [0], undefined}
+                 } = new("~/10 23 * * sun"),
+    [Minute1 | _] = Minutes1,
+    true = is_integer(Minute1) andalso Minute1 >= 0 andalso Minute1 =< 9,
+    true = length(Minutes1) == 6,
+    #cloudi_cron{expression_strings = {"0", "0~59", "23", "*", "*", "sun", "*"},
+                 expression = {[0], [Minute2], [23],
+                               undefined, undefined, [0], undefined}
+                 } = new("0~59 23 * * sun"),
+    true = is_integer(Minute2) andalso Minute2 >= 0 andalso Minute2 =< 59,
+    #cloudi_cron{expression_strings = {"0", "~", "23", "*", "*", "sun", "*"},
+                 expression = {[0], [Minute3], [23],
+                               undefined, undefined, [0], undefined}
+                 } = new("~ 23 * * sun"),
+    true = is_integer(Minute3) andalso Minute3 >= 0 andalso Minute3 =< 59,
+    ok = cloudi_x_quickrand_cache:destroy(),
     ok.
 
 t_next_datetime() ->
