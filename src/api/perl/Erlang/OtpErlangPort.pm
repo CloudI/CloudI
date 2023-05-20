@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -30,6 +30,7 @@ use warnings;
 
 use constant TAG_NEW_PORT_EXT => 89;
 use constant TAG_PORT_EXT => 102;
+use constant TAG_V4_PORT_EXT => 120;
 
 require Erlang::OutputException;
 
@@ -51,15 +52,21 @@ sub new
 sub binary
 {
     my $self = shift;
-    my $creation_size = length($self->{creation});
-    if ($creation_size == 1)
+    my $id_size = length($self->{id});
+    if ($id_size == 8)
     {
-        return chr(TAG_PORT_EXT) .
+        return chr(TAG_V4_PORT_EXT) .
                $self->{node}->binary() . $self->{id} . $self->{creation};
     }
-    elsif ($creation_size == 4)
+    my $creation_size = length($self->{creation});
+    if ($creation_size == 4)
     {
         return chr(TAG_NEW_PORT_EXT) .
+               $self->{node}->binary() . $self->{id} . $self->{creation};
+    }
+    elsif ($creation_size == 1)
+    {
+        return chr(TAG_PORT_EXT) .
                $self->{node}->binary() . $self->{id} . $self->{creation};
     }
     else

@@ -42,6 +42,7 @@ FILES = $(srcdir)/AbstractConnection.java \
         $(srcdir)/OtpErlangUShort.java \
         $(srcdir)/OtpException.java \
         $(srcdir)/OtpExternal.java \
+        $(srcdir)/OtpGenericTransportFactory.java \
         $(srcdir)/OtpInputStream.java \
         $(srcdir)/OtpLocalNode.java \
         $(srcdir)/OtpMbox.java \

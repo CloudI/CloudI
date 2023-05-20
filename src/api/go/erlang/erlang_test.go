@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -129,13 +129,6 @@ func TestPort(t *testing.T) {
 	assertEqual(t, "\x83Yd\x00\rnonode@nohost\x00\x00\x00\x06\x00\x00\x00\x00", encode(t, portNew, -1), "")
 }
 
-func TestFunction(t *testing.T) {
-	fun1 := OtpErlangFunction{Tag: 113, Value: []uint8{0x64, 0x0, 0x5, 0x6c, 0x69, 0x73, 0x74, 0x73, 0x64, 0x0, 0x6, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x61, 0x2}}
-	binary := "\x83\x71\x64\x00\x05\x6C\x69\x73\x74\x73\x64\x00\x06\x6D\x65\x6D\x62\x65\x72\x61\x02"
-	assertEqual(t, fun1, decode(t, binary), "")
-	assertEqual(t, binary, encode(t, fun1, -1), "")
-}
-
 func TestReference(t *testing.T) {
 	ref1 := OtpErlangReference{NodeTag: 100, Node: []uint8{0x0, 0xd, 0x6e, 0x6f, 0x6e, 0x6f, 0x64, 0x65, 0x40, 0x6e, 0x6f, 0x68, 0x6f, 0x73, 0x74}, ID: []uint8{0x0, 0x0, 0x0, 0xaf, 0x0, 0x0, 0x0, 0x3, 0x0, 0x0, 0x0, 0x0}, Creation: []uint8{0x0}}
 	binary := "\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\xAF\x00\x00\x00\x03\x00\x00\x00\x00"
@@ -148,6 +141,13 @@ func TestReference(t *testing.T) {
 	refNewerBinary := "\x83\x5A\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\x00\x01\xAC\x03\xC7\x00\x00\x04\xBB\xB2\xCA\xEE"
 	refNewer := decode(t, refNewerBinary)
 	assertEqual(t, "\x83Z\x00\x03d\x00\rnonode@nohost\x00\x00\x00\x00\x00\x01\xac\x03\xc7\x00\x00\x04\xbb\xb2\xca\xee", encode(t, refNewer, -1), "")
+}
+
+func TestFunction(t *testing.T) {
+	fun1 := OtpErlangFunction{Tag: 113, Value: []uint8{0x64, 0x0, 0x5, 0x6c, 0x69, 0x73, 0x74, 0x73, 0x64, 0x0, 0x6, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x61, 0x2}}
+	binary := "\x83\x71\x64\x00\x05\x6C\x69\x73\x74\x73\x64\x00\x06\x6D\x65\x6D\x62\x65\x72\x61\x02"
+	assertEqual(t, fun1, decode(t, binary), "")
+	assertEqual(t, binary, encode(t, fun1, -1), "")
 }
 
 func TestDecodeBinaryToTerm(t *testing.T) {
@@ -294,6 +294,10 @@ func TestDecodeBinaryToTermMap(t *testing.T) {
 	map1 := make(OtpErlangMap)
 	map1[OtpErlangAtom("a")] = uint8(1)
 	assertEqual(t, map1, decode(t, "\x83t\x00\x00\x00\x01d\x00\x01aa\x01"), "")
+	// only able to compare OtpErlangMap of size 1 due to being unordered
+	map2 := make(OtpErlangMap)
+	map2[OtpErlangAtomUTF8("everything")] = OtpErlangBinary{Value: []byte("\xA8"), Bits: 6}
+	assertEqual(t, map2, decode(t, "\x83\x74\x00\x00\x00\x01\x77\x0A\x65\x76\x65\x72\x79\x74\x68\x69\x6E\x67\x4D\x00\x00\x00\x01\x06\xA8"), "")
 }
 func TestDecodeBinaryToTermCompressedTerm(t *testing.T) {
 	assertDecodeError(t, "EOF", "\x83P", "")
@@ -429,6 +433,16 @@ func TestEncodeTermToBinaryFloat(t *testing.T) {
 	assertEqual(t, "\x83F\xbf\xe0\x00\x00\x00\x00\x00\x00", encode(t, -0.5, -1), "")
 	assertEqual(t, "\x83F@\t!\xfbM\x12\xd8J", encode(t, 3.1415926, -1), "")
 	assertEqual(t, "\x83F\xc0\t!\xfbM\x12\xd8J", encode(t, -3.1415926, -1), "")
+}
+func TestEncodeTermToBinaryMap(t *testing.T) {
+	assertEqual(t, "\x83t\x00\x00\x00\x00", encode(t, make(OtpErlangMap), -1), "")
+	map1 := make(OtpErlangMap)
+	map1[OtpErlangAtom("a")] = uint8(1)
+	assertEqual(t, "\x83t\x00\x00\x00\x01s\x01aa\x01", encode(t, map1, -1), "")
+	// only able to compare OtpErlangMap of size 1 due to being unordered
+	map2 := make(OtpErlangMap)
+	map2[OtpErlangAtomUTF8("everything")] = OtpErlangBinary{Value: []byte("\xA8"), Bits: 6}
+	assertEqual(t, "\x83\x74\x00\x00\x00\x01\x77\x0A\x65\x76\x65\x72\x79\x74\x68\x69\x6E\x67\x4D\x00\x00\x00\x01\x06\xA8", encode(t, map2, -1), "")
 }
 func TestEncodeTermToBinaryCompressedTerm(t *testing.T) {
 	list1 := OtpErlangList{}

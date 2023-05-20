@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 # Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -40,6 +40,7 @@ sys.path.insert(0,
 )
 import unittest
 import erlang
+from collections import OrderedDict
 try:
     import coverage
 except ImportError:
@@ -169,6 +170,11 @@ class DecodeTestCase(unittest.TestCase):
         self.assertEqual(isinstance(lst, erlang.OtpErlangList), True)
         self.assertEqual([[], erlang.OtpErlangAtom(b'tail')], lst.value)
         self.assertEqual(True, lst.improper)
+    def test_binary_to_term_map(self):
+        # represents #{ {at,[hello]} => ok}
+        binary = b"\x83t\x00\x00\x00\x01h\x02d\x00\x02atl\x00\x00\x00\x01d\x00\x05hellojd\x00\x02ok"
+        map_with_list = erlang.binary_to_term(binary)
+        self.assertEqual(isinstance(map_with_list, dict), True)
     def test_binary_to_term_small_tuple(self):
         self.assertRaises(erlang.ParseException,
                           erlang.binary_to_term, b'\x83h')
@@ -273,6 +279,36 @@ class DecodeTestCase(unittest.TestCase):
                          erlang.binary_to_term(b'\x83o\0\0\0\6\0\1\2\3\4\5\6'))
         self.assertEqual(-6618611909121,
                          erlang.binary_to_term(b'\x83o\0\0\0\6\1\1\2\3\4\5\6'))
+    def test_binary_to_term_map(self):
+        self.assertRaises(erlang.ParseException,
+                          erlang.binary_to_term, b'\x83t')
+        self.assertRaises(erlang.ParseException,
+                          erlang.binary_to_term, b'\x83t\x00')
+        self.assertRaises(erlang.ParseException,
+                          erlang.binary_to_term, b'\x83t\x00\x00')
+        self.assertRaises(erlang.ParseException,
+                          erlang.binary_to_term, b'\x83t\x00\x00\x00')
+        self.assertRaises(erlang.ParseException,
+                          erlang.binary_to_term, b'\x83t\x00\x00\x00\x01')
+        self.assertEqual({}, erlang.binary_to_term(b'\x83t\x00\x00\x00\x00'))
+        map1 = {
+            erlang.OtpErlangAtom(b'a'): 1,
+        }
+        map1_binary = b'\x83t\x00\x00\x00\x01s\x01aa\x01'
+        self.assertEqual(map1, erlang.binary_to_term(map1_binary))
+        map2 = {
+            erlang.OtpErlangBinary(b'\xA8', 6):
+            erlang.OtpErlangBinary(b'everything'),
+            None:
+            erlang.OtpErlangBinary(b'nothing'),
+        }
+        map2_binary = (
+            b'\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66\x69'
+            b'\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68\x69\x6E'
+            b'\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00\x00\x0A\x65'
+            b'\x76\x65\x72\x79\x74\x68\x69\x6E\x67'
+        )
+        self.assertEqual(map2, erlang.binary_to_term(map2_binary))
     def test_binary_to_term_pid(self):
         pid_old_binary = (
             b'\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F'
@@ -310,6 +346,13 @@ class DecodeTestCase(unittest.TestCase):
         self.assertEqual(erlang.term_to_binary(port_new),
                          b'\x83Ys\rnonode@nohost\x00\x00\x00\x06'
                          b'\x00\x00\x00\x00')
+        port_v4_binary = (
+            b'\x83\x78\x77\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F'
+            b'\x73\x74\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00'
+        )
+        port_v4 = erlang.binary_to_term(port_v4_binary)
+        self.assertTrue(isinstance(port_v4, erlang.OtpErlangPort))
+        self.assertEqual(erlang.term_to_binary(port_v4), port_v4_binary)
     def test_binary_to_term_ref(self):
         ref_new_binary = (
             b'\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E'
@@ -552,6 +595,26 @@ class EncodeTestCase(unittest.TestCase):
                          erlang.term_to_binary(3.1415926))
         self.assertEqual(b'\x83F\xc0\t!\xfbM\x12\xd8J',
                          erlang.term_to_binary(-3.1415926))
+    def test_term_to_binary_map(self):
+        self.assertEqual(b'\x83t\x00\x00\x00\x00', erlang.term_to_binary({}))
+        map1 = {
+            erlang.OtpErlangAtom(b'a'): 1,
+        }
+        map1_binary = b'\x83t\x00\x00\x00\x01s\x01aa\x01'
+        self.assertEqual(map1_binary, erlang.term_to_binary(map1))
+        map2 = OrderedDict([
+            (erlang.OtpErlangAtom(u'undefined'),
+             erlang.OtpErlangBinary(b'nothing')),
+            (erlang.OtpErlangBinary(b'\xA8', 6),
+             erlang.OtpErlangBinary(b'everything')),
+        ])
+        map2_binary = (
+            b'\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66\x69'
+            b'\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68\x69\x6E'
+            b'\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00\x00\x0A\x65'
+            b'\x76\x65\x72\x79\x74\x68\x69\x6E\x67'
+        )
+        self.assertEqual(map2_binary, erlang.term_to_binary(map2))
     def test_term_to_binary_compressed_term(self):
         self.assertEqual(b'\x83P\x00\x00\x00\x15'
                          b'x\x9c\xcba``\xe0\xcfB\x03\x00B@\x07\x1c',

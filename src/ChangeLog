@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-05-20 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add Erlang/OTP 26.0 support
+    * Update jinterface
+    * Update erlang_go
+    * Update erlang_hs
+    * Update erlang_js
+    * Update erlang_ml
+    * Update erlang_pl
+    * Update erlang_php
+    * Update erlang_py
+    * Update erlang_rb
+
 2023-05-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_cron support for random ranges with the

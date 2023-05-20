@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -27,6 +27,7 @@
 """
 Erlang External Term Format Encoding/Decoding
 """
+# pylint: disable=too-many-lines
 
 import sys
 import struct
@@ -62,11 +63,11 @@ else:
 
 __all__ = ['OtpErlangAtom',
            'OtpErlangBinary',
-           'OtpErlangFunction',
            'OtpErlangList',
            'OtpErlangPid',
            'OtpErlangPort',
            'OtpErlangReference',
+           'OtpErlangFunction',
            'binary_to_term',
            'term_to_binary',
            'set_undefined',
@@ -108,6 +109,8 @@ _TAG_MAP_EXT = 116
 _TAG_FUN_EXT = 117
 _TAG_ATOM_UTF8_EXT = 118
 _TAG_SMALL_ATOM_UTF8_EXT = 119
+_TAG_V4_PORT_EXT = 120
+_TAG_LOCAL_EXT = 121
 
 # Erlang term classes listed alphabetically
 
@@ -191,30 +194,6 @@ class OtpErlangBinary(object):
     def __repr__(self):
         return '%s(%s,bits=%s)' % (
             self.__class__.__name__, repr(self.value), repr(self.bits)
-        )
-    def __hash__(self):
-        return hash(self.binary())
-    def __eq__(self, other):
-        return self.binary() == other.binary()
-
-class OtpErlangFunction(object):
-    """
-    OtpErlangFunction
-    """
-    # pylint: disable=useless-object-inheritance
-    # pylint: disable=too-few-public-methods
-    def __init__(self, tag, value):
-        self.tag = tag
-        self.value = value
-    def binary(self):
-        """
-        return encoded representation
-        """
-        return b_chr(self.tag) + self.value
-    def __repr__(self):
-        return '%s(%s,%s)' % (
-            self.__class__.__name__,
-            repr(self.tag), repr(self.value)
         )
     def __hash__(self):
         return hash(self.binary())
@@ -318,15 +297,21 @@ class OtpErlangPort(object):
         """
         return encoded representation
         """
-        creation_size = len(self.creation)
-        if creation_size == 1:
+        id_size = len(self.id)
+        if id_size == 8:
             return (
-                b_chr(_TAG_PORT_EXT) +
+                b_chr(_TAG_V4_PORT_EXT) +
                 self.node.binary() + self.id + self.creation
             )
+        creation_size = len(self.creation)
         if creation_size == 4:
             return (
                 b_chr(_TAG_NEW_PORT_EXT) +
+                self.node.binary() + self.id + self.creation
+            )
+        if creation_size == 1:
+            return (
+                b_chr(_TAG_PORT_EXT) +
                 self.node.binary() + self.id + self.creation
             )
         raise OutputException('unknown port type')
@@ -381,6 +366,30 @@ class OtpErlangReference(object):
         return '%s(%s,%s,%s)' % (
             self.__class__.__name__,
             repr(self.node), repr(self.id), repr(self.creation)
+        )
+    def __hash__(self):
+        return hash(self.binary())
+    def __eq__(self, other):
+        return self.binary() == other.binary()
+
+class OtpErlangFunction(object):
+    """
+    OtpErlangFunction
+    """
+    # pylint: disable=useless-object-inheritance
+    # pylint: disable=too-few-public-methods
+    def __init__(self, tag, value):
+        self.tag = tag
+        self.value = value
+    def binary(self):
+        """
+        return encoded representation
+        """
+        return b_chr(self.tag) + self.value
+    def __repr__(self):
+        return '%s(%s,%s)' % (
+            self.__class__.__name__,
+            repr(self.tag), repr(self.value)
         )
     def __hash__(self):
         return hash(self.binary())
@@ -505,11 +514,16 @@ def _binary_to_term(i, data):
     if tag == _TAG_FLOAT_EXT:
         value = float(data[i:i + 31].partition(b_chr(0))[0])
         return (i + 31, value)
-    if tag in (_TAG_NEW_PORT_EXT, _TAG_REFERENCE_EXT, _TAG_PORT_EXT):
+    if tag in (_TAG_V4_PORT_EXT, _TAG_NEW_PORT_EXT,
+               _TAG_REFERENCE_EXT, _TAG_PORT_EXT):
         i, node = _binary_to_atom(i, data)
-        id_value = data[i:i + 4]
-        i += 4
-        if tag == _TAG_NEW_PORT_EXT:
+        if tag == _TAG_V4_PORT_EXT:
+            id_value = data[i:i + 8]
+            i += 8
+        else:
+            id_value = data[i:i + 4]
+            i += 4
+        if tag in (_TAG_V4_PORT_EXT, _TAG_NEW_PORT_EXT):
             creation = data[i:i + 4]
             i += 4
         else:
@@ -517,7 +531,8 @@ def _binary_to_term(i, data):
             i += 1
             if tag == _TAG_REFERENCE_EXT:
                 return (i, OtpErlangReference(node, id_value, creation))
-        # tag == _TAG_NEW_PORT_EXT or tag == _TAG_PORT_EXT
+        # tag == _TAG_V4_PORT_EXT or tag == _TAG_NEW_PORT_EXT or
+        # tag == _TAG_PORT_EXT
         return (i, OtpErlangPort(node, id_value, creation))
     if tag in (_TAG_NEW_PID_EXT, _TAG_PID_EXT):
         i, node = _binary_to_atom(i, data)
@@ -607,9 +622,9 @@ def _binary_to_term(i, data):
         def to_immutable(value):
             if isinstance(value, dict):
                 return frozendict(key)
-            elif isinstance(value, list):
+            if isinstance(value, list):
                 return OtpErlangList(value)
-            elif isinstance(value, tuple):
+            if isinstance(value, tuple):
                 return tuple(to_immutable(v) for v in value)
             return value
 
@@ -674,6 +689,8 @@ def _binary_to_term(i, data):
         if i_new != size_uncompressed:
             raise ParseException('unparsed data')
         return (i + j, term)
+    if tag == _TAG_LOCAL_EXT:
+        raise ParseException('LOCAL_EXT is opaque')
     raise ParseException('invalid tag')
 
 def _binary_to_term_sequence(i, length, data):
@@ -870,8 +887,12 @@ def _bignum_to_binary(term):
 def _float_to_binary(term):
     return b_chr(_TAG_NEW_FLOAT_EXT) + struct.pack(b'>d', term)
 
-# Elixir use can set to b'nil'
 def set_undefined(value):
+    """
+    Set the 'undefined' atom that is decoded as None
+    (Elixir use may want to use 'nil' instead of 'undefined')
+    """
+    # pylint: disable=global-statement
     assert isinstance(value, bytes)
     global _UNDEFINED
     _UNDEFINED = value

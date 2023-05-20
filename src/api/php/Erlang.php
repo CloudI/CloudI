@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -60,6 +60,8 @@ define(__NAMESPACE__ . '\TAG_MAP_EXT', 116);
 define(__NAMESPACE__ . '\TAG_FUN_EXT', 117);
 define(__NAMESPACE__ . '\TAG_ATOM_UTF8_EXT', 118);
 define(__NAMESPACE__ . '\TAG_SMALL_ATOM_UTF8_EXT', 119);
+define(__NAMESPACE__ . '\TAG_V4_PORT_EXT', 120);
+define(__NAMESPACE__ . '\TAG_LOCAL_EXT', 121);
 
 // Erlang term classes listed alphabetically
 
@@ -167,26 +169,6 @@ class OtpErlangBinary
     {
         return sprintf('%s(%s,bits=%d)', get_class(),
                        $this->value, $this->bits);
-    }
-}
-
-class OtpErlangFunction
-{
-    public $tag;
-    public $value;
-    public function __construct($tag, $value)
-    {
-        $this->tag = $tag;
-        $this->value = $value;
-    }
-    public function binary()
-    {
-        return chr($this->tag) . $this->value;
-    }
-    public function __toString()
-    {
-        return sprintf('%s(%s,%s)', get_class(),
-                       $this->tag, $this->value);
     }
 }
 
@@ -323,13 +305,18 @@ class OtpErlangPort
     }
     public function binary()
     {
-        $creation_size = strlen($this->creation);
-        if ($creation_size == 1) {
-            return chr(TAG_PORT_EXT) .
+        $id_size = strlen($this->id);
+        if ($id_size == 8) {
+            return chr(TAG_V4_PORT_EXT) .
                    $this->node->binary() . $this->id . $this->creation;
         }
-        elseif ($creation_size == 4) {
+        $creation_size = strlen($this->creation);
+        if ($creation_size == 4) {
             return chr(TAG_NEW_PORT_EXT) .
+                   $this->node->binary() . $this->id . $this->creation;
+        }
+        elseif ($creation_size == 1) {
+            return chr(TAG_PORT_EXT) .
                    $this->node->binary() . $this->id . $this->creation;
         }
         else {
@@ -386,6 +373,26 @@ class OtpErlangReference
     {
         return sprintf('%s(%s,%s,%s)', get_class(),
                        $this->node, $this->id, $this->creation);
+    }
+}
+
+class OtpErlangFunction
+{
+    public $tag;
+    public $value;
+    public function __construct($tag, $value)
+    {
+        $this->tag = $tag;
+        $this->value = $value;
+    }
+    public function binary()
+    {
+        return chr($this->tag) . $this->value;
+    }
+    public function __toString()
+    {
+        return sprintf('%s(%s,%s)', get_class(),
+                       $this->tag, $this->value);
     }
 }
 
@@ -481,13 +488,20 @@ function _binary_to_term($i, $data)
             return array($i + 4, $value);
         case TAG_FLOAT_EXT:
             return array($i + 31, floatval(substr($data, $i, 31)));
+        case TAG_V4_PORT_EXT:
         case TAG_NEW_PORT_EXT:
         case TAG_REFERENCE_EXT:
         case TAG_PORT_EXT:
             list($i, $node) = _binary_to_atom($i, $data);
-            $id = substr($data, $i, 4);
-            $i += 4;
-            if ($tag == TAG_NEW_PORT_EXT) {
+            if ($tag == TAG_V4_PORT_EXT) {
+                $id = substr($data, $i, 8);
+                $i += 8;
+            }
+            else {
+                $id = substr($data, $i, 4);
+                $i += 4;
+            }
+            if ($tag == TAG_V4_PORT_EXT || $tag == TAG_NEW_PORT_EXT) {
                 $creation = substr($data, $i, 4);
                 $i += 4;
             }
@@ -498,7 +512,8 @@ function _binary_to_term($i, $data)
                     return array($i, new OtpErlangReference($node, $id,
                                                             $creation));
             }
-            # $tag == TAG_NEW_PORT_EXT or $tag == TAG_PORT_EXT)
+            // $tag == TAG_V4_PORT_EXT || $tag == TAG_NEW_PORT_EXT ||
+            // $tag == TAG_PORT_EXT)
             return array($i, new OtpErlangPort($node, $id, $creation));
         case TAG_NEW_PID_EXT:
         case TAG_PID_EXT:
@@ -698,6 +713,8 @@ function _binary_to_term($i, $data)
             if ($i_new != $size_uncompressed)
                 throw new ParseException('unparsed data');
             return array($i + $j, $term);
+        case TAG_LOCAL_EXT:
+            throw new ParseException('LOCAL_EXT is opaque');
         default:
             throw new ParseException('invalid tag');
     }

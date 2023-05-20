@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -64,6 +64,8 @@ var TAG_MAP_EXT = 116;
 var TAG_FUN_EXT = 117;
 var TAG_ATOM_UTF8_EXT = 118;
 var TAG_SMALL_ATOM_UTF8_EXT = 119;
+var TAG_V4_PORT_EXT = 120;
+var TAG_LOCAL_EXT = 121;
 
 var nodejs_version = process.versions['node'].split('.').map(function (s) {
     return parseInt(s);
@@ -342,17 +344,6 @@ Erlang.OtpErlangBinary.prototype.toString = function() {
     return 'OtpErlangBinary(' + (typeof this.value) + ',' + this.bits + ')';
 };
 
-Erlang.OtpErlangFunction = function OtpErlangFunction (tag, value) {
-    this.tag = tag;
-    this.value = value;
-};
-Erlang.OtpErlangFunction.prototype.binary = function() {
-    return Buffer.concat([new bufferFrom([this.tag]), this.value]);
-};
-Erlang.OtpErlangFunction.prototype.toString = function() {
-    return 'OtpErlangFunction(' + this.tag + ')';
-};
-
 Erlang.OtpErlangList = function OtpErlangList (value, improper) {
     this.value = value;
     this.improper = typeof improper !== 'undefined' ? improper : false;
@@ -398,8 +389,7 @@ Erlang.OtpErlangMap = function OtpErlangMap (value) {
     this.value = value;
 };
 Erlang.OtpErlangMap.prototype.binary = function() {
-    if (typeof this.value === 'object' &&
-        toNativeString.call(this.value) == '[object Object]') {
+    if (typeof this.value === 'object') {
         return Erlang._object_to_binary(this.value);
     }
     else {
@@ -442,13 +432,18 @@ Erlang.OtpErlangPort = function OtpErlangPort (node, id, creation) {
     this.creation = creation;
 };
 Erlang.OtpErlangPort.prototype.binary = function() {
-    var creation_size = this.creation.length;
-    if (creation_size == 1) {
-        return Buffer.concat([new bufferFrom([TAG_PORT_EXT]),
+    var id_size = this.id.length;
+    if (id_size == 8) {
+        return Buffer.concat([new bufferFrom([TAG_V4_PORT_EXT]),
                               this.node.binary(), this.id, this.creation]);
     }
-    else if (creation_size == 4) {
+    var creation_size = this.creation.length;
+    if (creation_size == 4) {
         return Buffer.concat([new bufferFrom([TAG_NEW_PORT_EXT]),
+                              this.node.binary(), this.id, this.creation]);
+    }
+    else if (creation_size == 1) {
+        return Buffer.concat([new bufferFrom([TAG_PORT_EXT]),
                               this.node.binary(), this.id, this.creation]);
     }
     else {
@@ -512,6 +507,17 @@ Erlang.OtpErlangReference.prototype.toString = function() {
         }
     }
     return 'OtpErlangReference(' + tag + ')';
+};
+
+Erlang.OtpErlangFunction = function OtpErlangFunction (tag, value) {
+    this.tag = tag;
+    this.value = value;
+};
+Erlang.OtpErlangFunction.prototype.binary = function() {
+    return Buffer.concat([new bufferFrom([this.tag]), this.value]);
+};
+Erlang.OtpErlangFunction.prototype.toString = function() {
+    return 'OtpErlangFunction(' + this.tag + ')';
 };
 
 // core functionality
@@ -674,16 +680,24 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             return [i + 4, value];
         case TAG_FLOAT_EXT:
             return [i + 31, parseFloat(data.toString('binary', i, i + 31))];
+        case TAG_V4_PORT_EXT:
         case TAG_NEW_PORT_EXT:
         case TAG_REFERENCE_EXT:
         case TAG_PORT_EXT:
             var result = Erlang._binary_to_atom(i, data);
             i = result[0];
             var node = result[1];
-            var id = data.slice(i, i + 4);
-            i += 4;
+            var id;
+            if (tag == TAG_V4_PORT_EXT) {
+                id = data.slice(i, i + 8);
+                i += 8;
+            }
+            else {
+                id = data.slice(i, i + 4);
+                i += 4;
+            }
             var creation;
-            if (tag == TAG_NEW_PORT_EXT) {
+            if (tag == TAG_V4_PORT_EXT || tag == TAG_NEW_PORT_EXT) {
                 creation = data.slice(i, i + 4);
                 i += 4;
             }
@@ -695,7 +709,8 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
                                                              creation)];
                 }
             }
-            // tag == TAG_NEW_PORT_EXT || tag == TAG_PORT_EXT
+            // tag == TAG_V4_PORT_EXT || tag == TAG_NEW_PORT_EXT ||
+            // tag == TAG_PORT_EXT
             return [i, new Erlang.OtpErlangPort(node, id, creation)];
         case TAG_NEW_PID_EXT:
         case TAG_PID_EXT:
@@ -821,7 +836,7 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
         case TAG_MAP_EXT:
             var length = unpackUint32(i, data);
             i += 4;
-            var pairs = {};
+            var pairs = new Map();
             for (var length_index = 0; length_index < length; length_index++) {
                 var result = Erlang._binary_to_term(i, data);
                 i = result[0];
@@ -829,7 +844,7 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
                 result = Erlang._binary_to_term(i, data);
                 i = result[0];
                 var value = result[1];
-                pairs[key] = value;
+                pairs.set(key, value);
             }
             return [i, new Erlang.OtpErlangMap(pairs)];
         case TAG_FUN_EXT:
@@ -897,6 +912,8 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             // never happens with Erlang output
             // (not handled here to avoid going to callback hell)
             throw new ParseException('nested compression unsupported');
+        case TAG_LOCAL_EXT:
+            throw new ParseException('LOCAL_EXT is opaque');
         default:
             throw new ParseException('invalid tag');
     }
@@ -1029,12 +1046,13 @@ Erlang._term_to_binary = function _term_to_binary (term) {
                 case '[object Object]':
                     if (term instanceof Erlang.OtpErlangAtom ||
                         term instanceof Erlang.OtpErlangAtomLarge ||
-                        term instanceof Erlang.OtpErlangList ||
                         term instanceof Erlang.OtpErlangBinary ||
-                        term instanceof Erlang.OtpErlangFunction ||
-                        term instanceof Erlang.OtpErlangReference ||
+                        term instanceof Erlang.OtpErlangList ||
+                        term instanceof Erlang.OtpErlangMap ||
+                        term instanceof Erlang.OtpErlangPid ||
                         term instanceof Erlang.OtpErlangPort ||
-                        term instanceof Erlang.OtpErlangPid) {
+                        term instanceof Erlang.OtpErlangReference ||
+                        term instanceof Erlang.OtpErlangFunction) {
                         return term.binary();
                     }
                     else {
@@ -1102,15 +1120,28 @@ Erlang._tuple_to_binary = function _tuple_to_binary (term) {
     return Buffer.concat(buffers);
 };
 
-Erlang._object_to_binary = function _object_to_binary (term) {
+Erlang._object_to_binary = function _object_to_binary (map) {
     var length = 0;
     var buffers = [];
-    for (var key in term) {
-        if (term.hasOwnProperty(key)) {
-            length++;
-            buffers.push(Erlang._term_to_binary(key));
-            buffers.push(Erlang._term_to_binary(term[key]));
-        }
+    switch (toNativeString.call(map)) {
+        case '[object Map]':
+            map.forEach(function (value, key) {
+                length++;
+                buffers.push(Erlang._term_to_binary(key));
+                buffers.push(Erlang._term_to_binary(value));
+            });
+            break;
+        case '[object Object]':
+            for (var key in map) {
+                if (map.hasOwnProperty(key)) {
+                    length++;
+                    buffers.push(Erlang._term_to_binary(key));
+                    buffers.push(Erlang._term_to_binary(map[key]));
+                }
+            }
+            break;
+        default:
+            throw new OutputException('unknown map type');
     }
     if (length <= 4294967295) {
         var header = new bufferAlloc(5);

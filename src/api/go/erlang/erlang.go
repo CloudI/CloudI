@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -72,6 +72,8 @@ const (
 	tagFunExt            = 117
 	tagAtomUtf8Ext       = 118
 	tagSmallAtomUtf8Ext  = 119
+	tagV4PortExt         = 120
+	tagLocalExt          = 121
 )
 
 // Erlang term structs listed alphabetically
@@ -89,12 +91,6 @@ type OtpErlangAtomUTF8 string
 type OtpErlangBinary struct {
 	Value []byte
 	Bits  uint8
-}
-
-// OtpErlangFunction represents EXPORT_EXT, FUN_EXT or NEW_FUN_EXT
-type OtpErlangFunction struct {
-	Tag   uint8
-	Value []byte
 }
 
 // OtpErlangList represents NIL_EXT or LIST_EXT
@@ -130,6 +126,12 @@ type OtpErlangReference struct {
 	Node     []byte
 	ID       []byte
 	Creation []byte
+}
+
+// OtpErlangFunction represents EXPORT_EXT, FUN_EXT or NEW_FUN_EXT
+type OtpErlangFunction struct {
+	Tag   uint8
+	Value []byte
 }
 
 // OtpErlangTuple represents SMALL_TUPLE_EXT or LARGE_TUPLE_EXT
@@ -317,6 +319,8 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, err
 		}
 		return i + 31, value, nil
+	case tagV4PortExt:
+		fallthrough
 	case tagNewPortExt:
 		fallthrough
 	case tagReferenceExt:
@@ -328,14 +332,27 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 		if err != nil {
 			return i, nil, err
 		}
-		id := make([]byte, 4)
-		_, err = reader.Read(id)
-		if err != nil {
-			return i, nil, err
+		var id []byte
+		switch tag {
+		case tagV4PortExt:
+			id = make([]byte, 8)
+			_, err = reader.Read(id)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 8
+		default:
+			id = make([]byte, 4)
+			_, err = reader.Read(id)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 4
 		}
-		i += 4
 		var creation []byte
 		switch tag {
+		case tagV4PortExt:
+			fallthrough
 		case tagNewPortExt:
 			creation = make([]byte, 4)
 			_, err = reader.Read(creation)
@@ -354,7 +371,7 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 				return i, OtpErlangReference{NodeTag: nodeTag, Node: node, ID: id, Creation: creation}, nil
 			}
 		}
-		// tag == tagNewPortExt || tag == tagPortExt
+		// tag == tagV4PortExt || tag == tagNewPortExt || tag == tagPortExt
 		return i, OtpErlangPort{NodeTag: nodeTag, Node: node, ID: id, Creation: creation}, nil
 	case tagNewPidExt:
 		fallthrough
@@ -783,6 +800,8 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, parseErrorNew("unparsed data")
 		}
 		return i + j, term, nil
+	case tagLocalExt:
+		return i, nil, parseErrorNew("LOCAL_EXT is opaque")
 	default:
 		return i, nil, parseErrorNew("invalid tag")
 	}
@@ -1320,15 +1339,6 @@ func binaryObjectToBinary(term OtpErlangBinary, buffer *bytes.Buffer) (*bytes.Bu
 	return buffer, err
 }
 
-func functionToBinary(term OtpErlangFunction, buffer *bytes.Buffer) (*bytes.Buffer, error) {
-	err := buffer.WriteByte(term.Tag)
-	if err != nil {
-		return buffer, err
-	}
-	_, err = buffer.Write(term.Value)
-	return buffer, err
-}
-
 func pidToBinary(term OtpErlangPid, buffer *bytes.Buffer) (*bytes.Buffer, error) {
 	var err error
 	switch creationSize := len(term.Creation); {
@@ -1367,16 +1377,26 @@ func pidToBinary(term OtpErlangPid, buffer *bytes.Buffer) (*bytes.Buffer, error)
 
 func portToBinary(term OtpErlangPort, buffer *bytes.Buffer) (*bytes.Buffer, error) {
 	var err error
-	switch creationSize := len(term.Creation); {
-	case creationSize == 1:
-		err = buffer.WriteByte(tagPortExt)
+	switch len(term.ID) {
+	case 8:
+		err = buffer.WriteByte(tagV4PortExt)
 		if err != nil {
 			return buffer, err
 		}
-	case creationSize == 4:
-		err = buffer.WriteByte(tagNewPortExt)
-		if err != nil {
-			return buffer, err
+	case 4:
+		switch len(term.Creation) {
+		case 4:
+			err = buffer.WriteByte(tagNewPortExt)
+			if err != nil {
+				return buffer, err
+			}
+		case 1:
+			err = buffer.WriteByte(tagPortExt)
+			if err != nil {
+				return buffer, err
+			}
+		default:
+			return buffer, outputErrorNew("unknown port type")
 		}
 	default:
 		return buffer, outputErrorNew("unknown port type")
@@ -1455,4 +1475,13 @@ func referenceToBinary(term OtpErlangReference, buffer *bytes.Buffer) (*bytes.Bu
 	default:
 		return buffer, outputErrorNew("uint16 overflow")
 	}
+}
+
+func functionToBinary(term OtpErlangFunction, buffer *bytes.Buffer) (*bytes.Buffer, error) {
+	err := buffer.WriteByte(term.Tag)
+	if err != nil {
+		return buffer, err
+	}
+	_, err = buffer.Write(term.Value)
+	return buffer, err
 }

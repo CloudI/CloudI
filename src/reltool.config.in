@@ -12,9 +12,6 @@
                       "^erts.*/bin/(dialyzer|typer)",
                       "^erts.*/(doc|info|include|lib|man|src)"]},
 
-  % keep beam files exposed for module loading of internal services
-  {excl_archive_filters, [".*"]},
-
   % not including scope script temporary directories
   {incl_app_filters, ["^(ebin|include|priv)/"]},
 

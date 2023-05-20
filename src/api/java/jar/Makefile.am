@@ -49,6 +49,7 @@ cloudi.jar: $(srcdir)/manifest.txt \
             com/ericsson/otp/erlang/OtpErlangUShort.class \
             com/ericsson/otp/erlang/OtpException.class \
             com/ericsson/otp/erlang/OtpExternal.class \
+            com/ericsson/otp/erlang/OtpGenericTransportFactory.class \
             com/ericsson/otp/erlang/OtpInputStream.class \
             com/ericsson/otp/erlang/OtpLocalNode.class \
             com/ericsson/otp/erlang/OtpMbox.class \

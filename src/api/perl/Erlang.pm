@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -68,15 +68,17 @@ use constant TAG_MAP_EXT => 116;
 use constant TAG_FUN_EXT => 117;
 use constant TAG_ATOM_UTF8_EXT => 118;
 use constant TAG_SMALL_ATOM_UTF8_EXT => 119;
+use constant TAG_V4_PORT_EXT => 120;
+use constant TAG_LOCAL_EXT => 121;
 
 require Erlang::OtpErlangAtom;
 require Erlang::OtpErlangList;
 require Erlang::OtpErlangBinary;
-require Erlang::OtpErlangFunction;
-require Erlang::OtpErlangReference;
-require Erlang::OtpErlangPort;
-require Erlang::OtpErlangPid;
 require Erlang::OtpErlangString;
+require Erlang::OtpErlangPid;
+require Erlang::OtpErlangPort;
+require Erlang::OtpErlangReference;
+require Erlang::OtpErlangFunction;
 require Erlang::ParseException;
 require Erlang::InputException;
 require Erlang::OutputException;
@@ -209,15 +211,24 @@ sub _binary_to_term
     {
         return ($i + 31, substr($data, $i, 31));
     }
-    elsif ($tag == TAG_NEW_PORT_EXT or
+    elsif ($tag == TAG_V4_PORT_EXT or $tag == TAG_NEW_PORT_EXT or
            $tag == TAG_REFERENCE_EXT or $tag == TAG_PORT_EXT)
     {
         my $node;
         ($i, $node) = _binary_to_atom($i, $data);
-        my $id = substr($data, $i, 4);
-        $i += 4;
+        my $id;
+        if ($tag == TAG_V4_PORT_EXT)
+        {
+            $id = substr($data, $i, 8);
+            $i += 8;
+        }
+        else
+        {
+            $id = substr($data, $i, 4);
+            $i += 4;
+        }
         my $creation;
-        if ($tag == TAG_NEW_PORT_EXT)
+        if ($tag == TAG_V4_PORT_EXT or $tag == TAG_NEW_PORT_EXT)
         {
             $creation = substr($data, $i, 4);
             $i += 4;
@@ -232,7 +243,8 @@ sub _binary_to_term
                                                             $creation));
             }
         }
-        # $tag == TAG_NEW_PORT_EXT or $tag == TAG_PORT_EXT
+        # $tag == TAG_V4_PORT_EXT or $tag == TAG_NEW_PORT_EXT or
+        # $tag == TAG_PORT_EXT
         return ($i, Erlang::OtpErlangPort->new($node, $id, $creation));
     }
     elsif ($tag == TAG_NEW_PID_EXT or $tag == TAG_PID_EXT)
@@ -400,7 +412,7 @@ sub _binary_to_term
                 $pairs{$key} = $value;
             }
         }
-        return ($i, %pairs);
+        return ($i, \%pairs);
     }
     elsif ($tag == TAG_FUN_EXT)
     {
@@ -473,6 +485,10 @@ sub _binary_to_term
             die Erlang::ParseException->new('unparsed data');
         }
         return ($i + $j, $term);
+    }
+    elsif ($tag == TAG_LOCAL_EXT)
+    {
+        die Erlang::ParseException->new('LOCAL_EXT is opaque');
     }
     else
     {
@@ -710,7 +726,8 @@ sub _tuple_to_binary
 
 sub _hash_to_binary
 {
-    my (%term) = @_;
+    my ($term_ref) = @_;
+    my %term = %$term_ref;
     my $term_packed = '';
     my $length = 0;
     while (my ($key, $value) = each(%term))

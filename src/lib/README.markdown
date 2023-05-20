@@ -128,8 +128,8 @@ Go `erlang_go`
 
 - `https://github.com/okeuday/erlang_go`
 - `repository location: src/api/go/`
-- `commit 6398d18d0be6f9130e15ecf10a8a1922b10608cf`
-- `Sat Mar 18 10:53:52 UTC 2023`
+- `commit 410cfc316ce98e58727636abaab555b35a5d7fe7`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
 Haskell `erlang_hs`
@@ -138,8 +138,8 @@ Haskell `erlang_hs`
 
 - `https://github.com/okeuday/erlang_hs`
 - `repository location: src/api/haskell/src/Foreign/`
-- `commit a5e737d2dc68b5e22948e7559c450133b9687a2e (v2.0.5)`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit f004aad640f8bceffe47be0bf4aca2c3a04f9784`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
 JavaScript `erlang_js`
@@ -148,8 +148,8 @@ JavaScript `erlang_js`
 
 - `https://github.com/okeuday/erlang_js`
 - `repository location: src/api/javascript/`
-- `commit 1b6cc8c2f1295beabf11f8c7f2c82bd1d4211781`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit 9de883abc9a1e677599aaf3423d438023e6bf26a`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
 OCaml `erlang_ml`
@@ -158,8 +158,8 @@ OCaml `erlang_ml`
 
 - `https://github.com/okeuday/erlang_ml`
 - `repository location: src/api/ocaml/`
-- `commit dc3d9765659042d4cc4da7adc2901052f8dad773`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit 51feeec848c26d47781e162dfccec9400cb391f7`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
 Perl `erlang_pl`
@@ -168,8 +168,8 @@ Perl `erlang_pl`
 
 - `https://github.com/okeuday/erlang_pl`
 - `repository location: src/api/perl/`
-- `commit bd5b43969542d5c4c9b633aa517a0500fb287f43 (v2.0.5)`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit 2f4adac1b2a62371044ba7a309a2a9d53033338b`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
 PHP `erlang_php`
@@ -178,8 +178,8 @@ PHP `erlang_php`
 
 - `https://github.com/okeuday/erlang_php`
 - `repository location: src/api/php/`
-- `commit 728a44aea0acad6de453353d9db2b7f366cf5460 (v2.0.5)`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit 414868b4c1bb41cbb1bc9443970f56305323b038`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
 Python `erlang_py`
@@ -188,8 +188,8 @@ Python `erlang_py`
 
 - `https://github.com/okeuday/erlang_py`
 - `repository location: src/api/python/`
-- `commit 16343d2dd601f905c73e185d63f7b9382f84c07b`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit 96f580dca53f0068c7931cda6bc91d11a1ecd3f9`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
 Ruby `erlang_rb`
@@ -198,7 +198,7 @@ Ruby `erlang_rb`
 
 - `https://github.com/okeuday/erlang_rb`
 - `repository location: src/api/ruby/`
-- `commit 7bb6fbaf9b33d71ead9fec4a3f4ba8391b74347e`
-- `Thu Mar 16 20:31:25 UTC 2023`
+- `commit b5c0b3721968542cec868c05835019d89514235f`
+- `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 

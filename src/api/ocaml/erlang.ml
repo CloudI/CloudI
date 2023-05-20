@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -59,6 +59,8 @@ let tag_map_ext = 116
 let tag_fun_ext = 117
 let tag_atom_utf8_ext = 118
 let tag_small_atom_utf8_ext = 119
+let tag_v4_port_ext = 120
+let tag_local_ext = 121
 
 let buffer_size = 65536
 
@@ -295,22 +297,26 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
     let float_data = try (String.sub data 0 (String.index data '\000'))
     with Not_found -> data in
     Ok2 (i0 + 31, OtpErlangFloat (float_of_string float_data))
-  else if tag = tag_new_port_ext ||
+  else if tag = tag_v4_port_ext || tag = tag_new_port_ext ||
           tag = tag_reference_ext || tag = tag_port_ext then
     match binary_to_atom i0 binary with
     | Error3 (error) ->
       Error2 (error)
     | Ok3(i1, node_tag, node) ->
-      let id = String.sub binary i1 4
-      and i2 = i1 + 4
-      and creation_size = if tag = tag_new_port_ext then 4 else 1 in
+      let id_size = if tag = tag_v4_port_ext then 8 else 4 in
+      let id = String.sub binary i1 id_size
+      and i2 = i1 + id_size
+      and creation_size = if tag = tag_v4_port_ext ||
+                             tag = tag_new_port_ext then 4 else 1 in
       let creation = String.sub binary i2 creation_size
       and i3 = i2 + creation_size in
       if tag = tag_reference_ext then
         Ok2 (i3, OtpErlangReference (
           Reference.make
             ~node_tag:node_tag ~node:node ~id:id ~creation:creation))
-      else (* tag = tag_new_port_ext || tag = tag_port_ext *)
+      else
+        (* tag = tag_v4_port_ext || tag = tag_new_port_ext ||
+           tag = tag_port_ext *)
         Ok2 (i3, OtpErlangPort (
           Port.make
             ~node_tag:node_tag ~node:node ~id:id ~creation:creation))
@@ -529,6 +535,8 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
       Ok2 (i2, OtpErlangAtom (atom_name))
   else if tag = tag_compressed_zlib then
     Error2 (parse_error "ocaml doesn't provide zlib")
+  else if tag = tag_local_ext then
+    Error2 (parse_error "LOCAL_EXT is opaque")
   else
     Error2 (parse_error "invalid tag")
 
@@ -704,6 +712,7 @@ and tuple_to_binary value buffer =
     Error (output_error "uint32 overflow")
 
 and hashtbl_to_binary value buffer =
+  Buffer.add_char buffer (char_of_int tag_map_ext) ;
   let length = Hashtbl.length value in
   if valid_uint32_positive length then (
     pack_uint32 length buffer ;
@@ -854,11 +863,6 @@ and binary_bits_to_binary value bits buffer =
   else
     Error (output_error "uint32 overflow")
 
-and function_to_binary tag value buffer =
-  Buffer.add_char buffer (char_of_int tag) ;
-  Buffer.add_string buffer value ;
-  Ok (buffer)
-
 and pid_to_binary node_tag node id serial creation buffer =
   let creation_size = String.length creation in
   let tag =
@@ -876,9 +880,12 @@ and pid_to_binary node_tag node id serial creation buffer =
   Ok (buffer)
 
 and port_to_binary node_tag node id creation buffer =
-  let creation_size = String.length creation in
+  let id_size = String.length id
+  and creation_size = String.length creation in
   let tag =
-    if creation_size = 4 then
+    if id_size = 8 then
+      tag_v4_port_ext
+    else if creation_size = 4 then
       tag_new_port_ext
     else
       tag_port_ext
@@ -916,6 +923,11 @@ and reference_to_binary node_tag node id creation buffer =
     Ok (buffer))
   else
     Error (output_error "uint16 overflow")
+
+and function_to_binary tag value buffer =
+  Buffer.add_char buffer (char_of_int tag) ;
+  Buffer.add_string buffer value ;
+  Ok (buffer)
 
 let binary_to_term (binary : string) : (t, string) result =
   let size = String.length binary in
@@ -1051,6 +1063,12 @@ let binary_ok (value : (string, string) result) : string =
   | Error (error) ->
     raise (BinaryOk error)
 
+let print_binary value =
+  String.iter (fun c ->
+    Printf.printf "\\x%02x" (int_of_char c)
+  ) value ;
+  Printf.printf "\n"
+
 let register_printers () =
   Printexc.register_printer (function
     | TermOk e ->
@@ -1067,7 +1085,7 @@ let register_printers () =
 
   MIT LICENSE (of tests below)
 
-  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
   Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 
   Permission is hereby granted, free of charge, to any person obtaining a
@@ -1139,19 +1157,11 @@ let test_port () =
     "\x6F\x73\x74\x00\x00\x00\x06\x00\x00\x00\x00") in
   let port_new = term_ok (binary_to_term port_new_binary) in
   assert ((binary_ok (term_to_binary port_new)) = port_new_binary) ;
-  true
-
-let test_function () =
-  let function1 = OtpErlangFunction (Function.make
-    ~tag:113
-    ~value:(
-      "\x64\x00\x05\x6c\x69\x73\x74\x73\x64" ^
-      "\x00\x06\x6d\x65\x6d\x62\x65\x72\x61\x02")
-    )
-  and binary = "\x83\x71\x64\x00\x05\x6C\x69\x73\x74\x73\x64\x00\x06\x6D" ^
-    "\x65\x6D\x62\x65\x72\x61\x02" in
-  assert ((binary_ok (term_to_binary function1)) = binary) ;
-  assert ((term_ok (binary_to_term binary)) = function1) ;
+  let port_v4_binary = (
+    "\x83\x78\x77\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F" ^
+    "\x73\x74\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00") in
+  let port_v4 = term_ok (binary_to_term port_v4_binary) in
+  assert ((binary_ok (term_to_binary port_v4)) = port_v4_binary) ;
   true
 
 let test_reference () =
@@ -1176,6 +1186,19 @@ let test_reference () =
     "\x00\x04\xBB\xB2\xCA\xEE") in
   let ref_newer = term_ok (binary_to_term ref_newer_binary) in
   assert ((binary_ok (term_to_binary ref_newer)) = ref_newer_binary) ;
+  true
+
+let test_function () =
+  let function1 = OtpErlangFunction (Function.make
+    ~tag:113
+    ~value:(
+      "\x64\x00\x05\x6c\x69\x73\x74\x73\x64" ^
+      "\x00\x06\x6d\x65\x6d\x62\x65\x72\x61\x02")
+    )
+  and binary = "\x83\x71\x64\x00\x05\x6C\x69\x73\x74\x73\x64\x00\x06\x6D" ^
+    "\x65\x6D\x62\x65\x72\x61\x02" in
+  assert ((binary_ok (term_to_binary function1)) = binary) ;
+  assert ((term_ok (binary_to_term binary)) = function1) ;
   true
 
 let test_decode_basic () =
@@ -1508,6 +1531,41 @@ let test_decode_large_big_integer () =
     (t_to_string bigint2_check)) ;
   true
 
+let test_decode_map () =
+  assert (
+    (term_error (binary_to_term "\x83t")) =
+    "parse_error: missing data") ;
+  assert (
+    (term_error (binary_to_term "\x83t\x00")) =
+    "parse_error: missing data") ;
+  assert (
+    (term_error (binary_to_term "\x83t\x00\x00")) =
+    "parse_error: missing data") ;
+  assert (
+    (term_error (binary_to_term "\x83t\x00\x00\x00")) =
+    "parse_error: missing data") ;
+  assert (
+    (term_error (binary_to_term "\x83t\x00\x00\x00\x01")) =
+    "parse_error: missing data") ;
+  assert (
+    (term_ok (binary_to_term "\x83t\x00\x00\x00\x00")) =
+    OtpErlangMap (Hashtbl.create 0)) ;
+  let map1 = Hashtbl.create 1 in
+  Hashtbl.add map1 (OtpErlangAtom ("a")) (OtpErlangInteger (1)) ;
+  assert (
+    (term_ok (binary_to_term "\x83t\x00\x00\x00\x01s\x01aa\x01")) =
+    OtpErlangMap (map1)) ;
+  (* only able to compare OtpErlangMap of size 1 due to being unordered *)
+  let map2 = Hashtbl.create 1 in
+  Hashtbl.add map2
+    (OtpErlangBinaryBits (("\xA8", 6))) (OtpErlangBinary ("everything")) ;
+  assert (
+    (term_ok (binary_to_term (
+      "\x83\x74\x00\x00\x00\x01\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00" ^
+      "\x00\x0A\x65\x76\x65\x72\x79\x74\x68\x69\x6E\x67"))) =
+    OtpErlangMap (map2)) ;
+  true
+
 let test_encode_tuple () =
   assert (
     (binary_ok (term_to_binary (OtpErlangTuple ([])))) =
@@ -1825,13 +1883,32 @@ let test_encode_float () =
     "\x83F\xc0\t!\xfbM\x12\xd8J") ;
   true
 
+let test_encode_map () =
+  assert (
+    (binary_ok (term_to_binary (OtpErlangMap (Hashtbl.create 0)))) =
+    "\x83t\x00\x00\x00\x00") ;
+  let map1 = Hashtbl.create 1 in
+  Hashtbl.add map1 (OtpErlangAtom ("a")) (OtpErlangInteger (1)) ;
+  assert (
+    (binary_ok (term_to_binary (OtpErlangMap (map1)))) =
+    "\x83t\x00\x00\x00\x01s\x01aa\x01") ;
+  (* only able to compare OtpErlangMap of size 1 due to being unordered *)
+  let map2 = Hashtbl.create 1 in
+  Hashtbl.add map2
+    (OtpErlangBinaryBits (("\xA8", 6))) (OtpErlangBinary ("everything")) ;
+  assert (
+    (binary_ok (term_to_binary (OtpErlangMap (map2)))) =
+    "\x83\x74\x00\x00\x00\x01\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00" ^
+    "\x00\x0A\x65\x76\x65\x72\x79\x74\x68\x69\x6E\x67") ;
+  true
+
 let tests =
   register_printers () ;
 [
   "binary_to_term/term_to_binary (pid)", test_pid;
   "binary_to_term/term_to_binary (port)", test_port;
-  "binary_to_term/term_to_binary (function)", test_function;
   "binary_to_term/term_to_binary (reference)", test_reference;
+  "binary_to_term/term_to_binary (function)", test_function;
   "binary_to_term (basic)", test_decode_basic;
   "binary_to_term (atom)", test_decode_atom;
   "binary_to_term (predefined atom)", test_decode_predefined_atom;
@@ -1847,6 +1924,7 @@ let tests =
   "binary_to_term (float)", test_decode_float;
   "binary_to_term (small bigint)", test_decode_small_big_integer;
   "binary_to_term (large bigint)", test_decode_large_big_integer;
+  "binary_to_term (map)", test_decode_map;
   "term_to_binary (tuple)", test_encode_tuple;
   "term_to_binary (empty list)", test_encode_empty_list;
   "term_to_binary (string list)", test_encode_string_list;
@@ -1863,5 +1941,6 @@ let tests =
   "term_to_binary (small bigint)", test_encode_small_big_integer;
   "term_to_binary (large bigint)", test_encode_large_big_integer;
   "term_to_binary (float)", test_encode_float;
+  "term_to_binary (map)", test_encode_map;
 ]
 

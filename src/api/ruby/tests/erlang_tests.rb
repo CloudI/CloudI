@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 # Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -339,6 +339,41 @@ class DecodeTestCase < Test::Unit::TestCase
         assert_equal(-6618611909121,
                      Erlang::binary_to_term("\x83o\0\0\0\6\1\1\2\3\4\5\6"))
     end
+    def test_binary_to_term_map
+        assert_raise(Erlang::ParseException){
+            Erlang::binary_to_term("\x83t")
+        }
+        assert_raise(Erlang::ParseException){
+            Erlang::binary_to_term("\x83t\x00")
+        }
+        assert_raise(Erlang::ParseException){
+            Erlang::binary_to_term("\x83t\x00\x00")
+        }
+        assert_raise(Erlang::ParseException){
+            Erlang::binary_to_term("\x83t\x00\x00\x00")
+        }
+        assert_raise(Erlang::ParseException){
+            Erlang::binary_to_term("\x83t\x00\x00\x00\x01")
+        }
+        assert_equal({}, Erlang::binary_to_term("\x83t\x00\x00\x00\x00"))
+        map1 = {
+            Erlang::OtpErlangAtom.new("a".encode(Encoding::ISO_8859_1)) => 1
+        }
+        map1_binary = "\x83t\x00\x00\x00\x01s\x01aa\x01"
+        assert_equal(map1, Erlang::binary_to_term(map1_binary))
+        map2 = {
+            Erlang::OtpErlangBinary.new("\xA8", 6) =>
+            Erlang::OtpErlangBinary.new("everything"),
+            nil => Erlang::OtpErlangBinary.new("nothing")
+        }
+        map2_binary = (
+            "\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66\x69" \
+            "\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68\x69\x6E" \
+            "\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00\x00\x0A\x65" \
+            "\x76\x65\x72\x79\x74\x68\x69\x6E\x67"
+        )
+        assert_equal(map2, Erlang::binary_to_term(map2_binary))
+    end
     def test_binary_to_term_pid
         pid_old_binary = (
             "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F" \
@@ -377,6 +412,13 @@ class DecodeTestCase < Test::Unit::TestCase
         assert_equal(Erlang::term_to_binary(port_new),
                      "\x83Ys\rnonode@nohost\x00\x00\x00\x06" \
                      "\x00\x00\x00\x00")
+        port_v4_binary = (
+            "\x83\x78\x77\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F" \
+            "\x73\x74\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00"
+        )
+        port_v4 = Erlang::binary_to_term(port_v4_binary)
+        assert(port_v4.kind_of?(Erlang::OtpErlangPort))
+        assert_equal(Erlang::term_to_binary(port_v4), port_v4_binary)
     end
     def test_binary_to_term_ref
         ref_new_binary = (
@@ -632,6 +674,27 @@ class EncodeTestCase < Test::Unit::TestCase
                      Erlang::term_to_binary(3.1415926))
         assert_equal("\x83F\xc0\t!\xfbM\x12\xd8J",
                      Erlang::term_to_binary(-3.1415926))
+    end
+    def test_term_to_binary_map
+        assert_equal("\x83t\x00\x00\x00\x00", Erlang::term_to_binary({}))
+        map1 = {
+            Erlang::OtpErlangAtom.new("a".encode(Encoding::ISO_8859_1)) => 1
+        }
+        map1_binary = "\x83t\x00\x00\x00\x01s\x01aa\x01"
+        assert_equal(map1_binary, Erlang::term_to_binary(map1))
+        map2 = {
+            Erlang::OtpErlangAtom.new("undefined".encode(Encoding::UTF_8)) =>
+            Erlang::OtpErlangBinary.new("nothing"),
+            Erlang::OtpErlangBinary.new("\xA8", 6) =>
+            Erlang::OtpErlangBinary.new("everything")
+        }
+        map2_binary = (
+            "\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66\x69" \
+            "\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68\x69\x6E" \
+            "\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00\x00\x0A\x65" \
+            "\x76\x65\x72\x79\x74\x68\x69\x6E\x67"
+        )
+        assert_equal(map2_binary, Erlang::term_to_binary(map2))
     end
     def test_term_to_binary_compressed_term
         assert_equal(

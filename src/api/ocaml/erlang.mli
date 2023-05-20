@@ -94,6 +94,9 @@ val term_to_binary : t -> (string, string) result
 (** Convert the OCaml Erlang type to a string *)
 val t_to_string : t -> string
 
+(** Print a binary string *)
+val print_binary : string -> unit
+
 (**/**)
 (* begin section ignored by ocamldoc *)
 

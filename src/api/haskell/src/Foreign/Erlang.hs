@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -132,6 +132,10 @@ tagAtomUtf8Ext :: Word8
 tagAtomUtf8Ext = 118
 tagSmallAtomUtf8Ext :: Word8
 tagSmallAtomUtf8Ext = 119
+tagV4PortExt :: Word8
+tagV4PortExt = 120
+tagLocalExt :: Word8
+tagLocalExt = 121
 
 data OtpErlangTerm =
       OtpErlangInteger Int
@@ -266,16 +270,23 @@ binaryToTerms = do
             str <- Get.getByteString 31
             let value = Char8.unpack $ Char8.takeWhile (\c -> c /= '\0') str
             return $ OtpErlangFloat (read value :: Double)
-        | tag == tagNewPortExt ||
+        | tag == tagV4PortExt || tag == tagNewPortExt ||
           tag == tagReferenceExt || tag == tagPortExt -> do
             (nodeTag, node) <- binaryToAtom
-            eid <- Get.getByteString 4
-            let creationSize = if tag == tagNewPortExt then 4 else 1
+            let idSize = if tag == tagV4PortExt then 8 else 4
+            eid <- Get.getByteString idSize
+            let creationSize =
+                    if tag == tagV4PortExt || tag == tagNewPortExt then
+                        4
+                    else
+                        1
             creation <- Get.getByteString creationSize
             if tag == tagReferenceExt then
                 return $ OtpErlangReference $ E.Reference
                     nodeTag node eid creation
-            else -- tag == tagNewPortExt || tag == tagPortExt
+            else
+                -- tag == tagV4PortExt || tag == tagNewPortExt ||
+                -- tag == tagPortExt
                 return $ OtpErlangPort $ E.Port
                     nodeTag node eid creation
         | tag == tagNewPidExt || tag == tagPidExt -> do
@@ -381,6 +392,8 @@ binaryToTerms = do
                         fail err
                     Right (_, _, term) ->
                         return term
+        | tag == tagLocalExt ->
+            fail $ "LOCAL_EXT is opaque"
         | otherwise ->
             fail $ "invalid tag"
 
@@ -394,31 +407,6 @@ binaryToMapPair = do
     key <- binaryToTerms
     value <- binaryToTerms
     return (key, value)
-
-binaryToExportSize :: Get Int
-binaryToExportSize = do
-    oldI <- Get.bytesRead
-    (_, _) <- binaryToAtom -- module
-    (_, _) <- binaryToAtom -- function
-    arityTag <- Get.getWord8
-    _ <- Get.getWord8 -- arity
-    i <- Get.bytesRead
-    if arityTag == tagSmallIntegerExt then
-        return $ fromIntegral (i - oldI)
-    else
-        fail $ "invalid small integer tag"
-
-binaryToFunSize :: Get Int
-binaryToFunSize = do
-    oldI <- Get.bytesRead
-    numfree <- Get.getWord32be
-    _ <- binaryToPid -- pid
-    (_, _) <- binaryToAtom -- module
-    _ <- binaryToInteger -- index
-    _ <- binaryToInteger -- uniq
-    _ <- binaryToTermSequence (getUnsignedInt32 numfree) -- free
-    i <- Get.bytesRead
-    return $ fromIntegral (i - oldI)
 
 binaryToInteger :: Get Int
 binaryToInteger = do
@@ -453,6 +441,31 @@ binaryToPid = do
                 nodeTag node eid serial creation
         | otherwise ->
             fail $ "invalid pid tag"
+
+binaryToExportSize :: Get Int
+binaryToExportSize = do
+    oldI <- Get.bytesRead
+    (_, _) <- binaryToAtom -- module
+    (_, _) <- binaryToAtom -- function
+    arityTag <- Get.getWord8
+    _ <- Get.getWord8 -- arity
+    i <- Get.bytesRead
+    if arityTag == tagSmallIntegerExt then
+        return $ fromIntegral (i - oldI)
+    else
+        fail $ "invalid small integer tag"
+
+binaryToFunSize :: Get Int
+binaryToFunSize = do
+    oldI <- Get.bytesRead
+    numfree <- Get.getWord32be
+    _ <- binaryToPid -- pid
+    (_, _) <- binaryToAtom -- module
+    _ <- binaryToInteger -- index
+    _ <- binaryToInteger -- uniq
+    _ <- binaryToTermSequence (getUnsignedInt32 numfree) -- free
+    i <- Get.bytesRead
+    return $ fromIntegral (i - oldI)
 
 binaryToAtom :: Get (Word8, ByteString)
 binaryToAtom = do
@@ -594,7 +607,7 @@ termsToBinary (OtpErlangBinaryBits (value, bits)) =
     let length = ByteString.length value in
     if length <= 4294967295 then
         ok $ Builder.toLazyByteString $
-            Builder.word8 tagBinaryExt <>
+            Builder.word8 tagBitBinaryExt <>
             Builder.word32BE (fromIntegral length) <>
             Builder.word8 (fromIntegral bits) <>
             Builder.byteString value
@@ -683,7 +696,9 @@ termsToBinary (OtpErlangPid (E.Pid nodeTag node eid serial creation)) =
         Builder.byteString creation
 termsToBinary (OtpErlangPort (E.Port nodeTag node eid creation)) =
     let tag =
-            if (ByteString.length creation) == 4 then
+            if (ByteString.length eid) == 8 then
+                tagV4PortExt
+            else if (ByteString.length creation) == 4 then
                 tagNewPortExt
             else
                 tagPortExt in

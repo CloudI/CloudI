@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -518,6 +518,65 @@ var hex = function hex(buffer) {
             assert.equal(term, -6618611909121);
         });
     }).call(this);
+    (function test_binary_to_term_map () {
+        Erlang.binary_to_term('\x83t', function(err, term) {
+            assert.ok(err instanceof Erlang.ParseException);
+            assert.strictEqual(term, undefined);
+        });
+        Erlang.binary_to_term('\x83t\x00', function(err, term) {
+            assert.ok(err instanceof Erlang.ParseException);
+            assert.strictEqual(term, undefined);
+        });
+        Erlang.binary_to_term('\x83t\x00\x00', function(err, term) {
+            assert.ok(err instanceof Erlang.ParseException);
+            assert.strictEqual(term, undefined);
+        });
+        Erlang.binary_to_term('\x83t\x00\x00\x00', function(err, term) {
+            assert.ok(err instanceof Erlang.ParseException);
+            assert.strictEqual(term, undefined);
+        });
+        Erlang.binary_to_term('\x83t\x00\x00\x00\x01', function(err, term) {
+            assert.ok(err instanceof Erlang.ParseException);
+            assert.strictEqual(term, undefined);
+        });
+        Erlang.binary_to_term('\x83t\x00\x00\x00\x00', function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.ok(term instanceof Erlang.OtpErlangMap);
+            assert.equal(term.value.size, 0);
+        });
+        Erlang.binary_to_term('\x83t\x00\x00\x00\x01s\x01aa\x01',
+                              function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.ok(term instanceof Erlang.OtpErlangMap);
+            assert.equal(term.value.size, 1);
+            var keys = term.value.keys();
+            var key0 = keys.next().value;
+            assert.deepEqual(key0, new Erlang.OtpErlangAtom('a', false));
+            assert.equal(term.value.get(key0), 1);
+        });
+        Erlang.binary_to_term(
+            '\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66\x69' +
+            '\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68\x69\x6E' +
+            '\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00\x00\x0A\x65' +
+            '\x76\x65\x72\x79\x74\x68\x69\x6E\x67',
+            function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.ok(term instanceof Erlang.OtpErlangMap);
+            assert.equal(term.value.size, 2);
+            var keys = term.value.keys();
+            var key0 = keys.next().value;
+            assert.equal(key0, null);
+            var key1 = keys.next().value;
+            assert.deepEqual(key1, new Erlang.OtpErlangBinary(
+                new bufferFrom('\xA8', 'binary'), 6));
+            var value0 = term.value.get(key0);
+            assert.deepEqual(value0, new Erlang.OtpErlangBinary(
+                new bufferFrom('nothing', 'binary')));
+            var value1 = term.value.get(key1);
+            assert.deepEqual(value1, new Erlang.OtpErlangBinary(
+                new bufferFrom('everything', 'binary')));
+        });
+    }).call(this);
     (function test_binary_to_term_pid () {
         var pid_old_binary = (
             '\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F' +
@@ -582,6 +641,20 @@ var hex = function hex(buffer) {
                 assert.equal(binary.toString('binary'),
                     '\x83Ys\rnonode@nohost\x00\x00\x00\x06' +
                     '\x00\x00\x00\x00');
+            });
+        });
+        var port_v4_binary = (
+            "\x83\x78\x77\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F" +
+            "\x73\x74\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00"
+        );
+        Erlang.binary_to_term(port_v4_binary,
+                              function(err, term) {
+            assert.strictEqual(err, undefined);
+            assert.ok(term instanceof Erlang.OtpErlangPort);
+            Erlang.term_to_binary(term,
+                                  function(err, binary) {
+                assert.strictEqual(err, undefined);
+                assert.equal(binary.toString('binary'), port_v4_binary);
             });
         });
     }).call(this);
@@ -1112,5 +1185,40 @@ var hex = function hex(buffer) {
                 '\x83P\0\0\0\x17\x78\xda\xcb\x66\x10\x49\xc1\2\0' +
                 '\x5d\x60\x08\x50');
         }, 9);
+    }).call(this);
+    (function test_term_to_binary_map () {
+        Erlang.term_to_binary(new Erlang.OtpErlangMap(new Map()),
+                              function(err, binary) {
+            assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'),
+                         '\x83t\x00\x00\x00\x00');
+        });
+        var map1 = new Map();
+        map1.set(new Erlang.OtpErlangAtom("a", false), 1);
+        Erlang.term_to_binary(new Erlang.OtpErlangMap(map1),
+                              function(err, binary) {
+            assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'),
+                         '\x83t\x00\x00\x00\x01s\x01aa\x01');
+        });
+        var map2 = new Map();
+        map2.set(
+            new Erlang.OtpErlangAtom('undefined'),
+            new Erlang.OtpErlangBinary(
+                new bufferFrom('nothing', 'binary')));
+        map2.set(
+            new Erlang.OtpErlangBinary(
+                new bufferFrom('\xA8', 'binary'), 6),
+            new Erlang.OtpErlangBinary(
+                new bufferFrom('everything', 'binary')));
+        Erlang.term_to_binary(new Erlang.OtpErlangMap(map2),
+                              function(err, binary) {
+            assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'),
+                '\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66' +
+                '\x69\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68' +
+                '\x69\x6E\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00' +
+                '\x00\x0A\x65\x76\x65\x72\x79\x74\x68\x69\x6E\x67');
+        });
     }).call(this);
 }).call(this);

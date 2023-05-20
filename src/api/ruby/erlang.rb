@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -118,28 +118,6 @@ module Erlang
         alias eql? ==
     end
 
-    class OtpErlangFunction
-        def initialize(tag, value)
-            @tag = tag
-            @value = value
-        end
-        attr_reader :tag
-        attr_reader :value
-        def binary
-            return "#{@tag.chr}#{@value}"
-        end
-        def to_s
-            return "#{self.class.name}('#{@tag.to_s}','#{@value.to_s}')"
-        end
-        def hash
-            return binary.hash
-        end
-        def ==(other)
-            return binary == other.binary
-        end
-        alias eql? ==
-    end
-
     class OtpErlangList
         def initialize(value, improper = false)
             @value = value
@@ -232,12 +210,17 @@ module Erlang
         attr_reader :id
         attr_reader :creation
         def binary
-            creation_size = @creation.bytesize
-            if creation_size == 1
-                return "#{TAG_PORT_EXT.chr}" \
+            id_size = @id.bytesize
+            if id_size == 8
+                return "#{TAG_V4_PORT_EXT.chr}" \
                        "#{@node.binary}#{@id}#{@creation}"
-            elsif creation_size == 4
+            end
+            creation_size = @creation.bytesize
+            if creation_size == 4
                 return "#{TAG_NEW_PORT_EXT.chr}" \
+                       "#{@node.binary}#{@id}#{@creation}"
+            elsif creation_size == 1
+                return "#{TAG_PORT_EXT.chr}" \
                        "#{@node.binary}#{@id}#{@creation}"
             else
                 raise OutputException, 'unknown port type', caller
@@ -289,6 +272,28 @@ module Erlang
         def to_s
             return "#{self.class.name}" \
                    "('#{@node.to_s}','#{@id.to_s}','#{@creation.to_s}')"
+        end
+        def hash
+            return binary.hash
+        end
+        def ==(other)
+            return binary == other.binary
+        end
+        alias eql? ==
+    end
+
+    class OtpErlangFunction
+        def initialize(tag, value)
+            @tag = tag
+            @value = value
+        end
+        attr_reader :tag
+        attr_reader :value
+        def binary
+            return "#{@tag.chr}#{@value}"
+        end
+        def to_s
+            return "#{self.class.name}('#{@tag.to_s}','#{@value.to_s}')"
         end
         def hash
             return binary.hash
@@ -380,12 +385,18 @@ module Erlang
         elsif tag == TAG_FLOAT_EXT
             value = data[i,31].partition(0.chr)[0].to_f
             return [i + 31, value]
-        elsif Set[TAG_NEW_PORT_EXT,TAG_REFERENCE_EXT,TAG_PORT_EXT].include?(tag)
+        elsif Set[TAG_V4_PORT_EXT,TAG_NEW_PORT_EXT,
+                  TAG_REFERENCE_EXT,TAG_PORT_EXT].include?(tag)
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
-            id = data[i,4]
-            i += 4
-            if tag == TAG_NEW_PORT_EXT
+            if tag == TAG_V4_PORT_EXT
+                id = data[i,8]
+                i += 8
+            else
+                id = data[i,4]
+                i += 4
+            end
+            if Set[TAG_V4_PORT_EXT,TAG_NEW_PORT_EXT].include?(tag)
                 creation = data[i,4]
                 i += 4
             else
@@ -395,7 +406,8 @@ module Erlang
                     return [i, OtpErlangReference.new(node, id, creation)]
                 end
             end
-            # tag == TAG_NEW_PORT_EXT or tag == TAG_PORT_EXT
+            # tag == TAG_V4_PORT_EXT or tag == TAG_NEW_PORT_EXT or
+            # tag == TAG_PORT_EXT
             return [i, OtpErlangPort.new(node, id, creation)]
         elsif Set[TAG_NEW_PID_EXT, TAG_PID_EXT].include?(tag)
             result = binary_to_atom(i, data)
@@ -597,6 +609,8 @@ module Erlang
                 raise ParseException, 'unparsed data', caller
             end
             return [i + j, term]
+        elsif tag == TAG_LOCAL_EXT
+            raise ParseException, 'LOCAL_EXT is opaque', caller
         else
             raise ParseException, 'invalid tag', caller
         end
@@ -875,6 +889,8 @@ module Erlang
     TAG_FUN_EXT = 117
     TAG_ATOM_UTF8_EXT = 118
     TAG_SMALL_ATOM_UTF8_EXT = 119
+    TAG_V4_PORT_EXT = 120
+    TAG_LOCAL_EXT = 121
 
 end
 

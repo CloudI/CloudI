@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -481,6 +481,53 @@ class DecodeTestCase extends PHPUnit\Framework\TestCase
                             \Erlang\binary_to_term("\x83o\0\0\0\6" .
                                                    "\1\1\2\3\4\5\6"));
     }
+    public function test_binary_to_term_map_1()
+    {
+        $this->expectException('\Erlang\ParseException');
+        \Erlang\binary_to_term("\x83t");
+    }
+    public function test_binary_to_term_map_2()
+    {
+        $this->expectException('\Erlang\ParseException');
+        \Erlang\binary_to_term("\x83t\x00");
+    }
+    public function test_binary_to_term_map_3()
+    {
+        $this->expectException('\Erlang\ParseException');
+        \Erlang\binary_to_term("\x83t\x00\x00");
+    }
+    public function test_binary_to_term_map_4()
+    {
+        $this->expectException('\Erlang\ParseException');
+        \Erlang\binary_to_term("\x83t\x00\x00\x00");
+    }
+    public function test_binary_to_term_map_5()
+    {
+        $this->expectException('\Erlang\ParseException');
+        \Erlang\binary_to_term("\x83t\x00\x00\x00\x01");
+    }
+    public function test_binary_to_term_map()
+    {
+        $this->assertEquals(new \Erlang\OtpErlangMap(array()),
+                            \Erlang\binary_to_term("\x83t\x00\x00\x00\x00"));
+        $map1 = new \Erlang\OtpErlangMap(array(
+            array(new \Erlang\OtpErlangAtom('a', false), 1)
+        ));
+        $map1_binary = "\x83t\x00\x00\x00\x01d\x00\x01aa\x01";
+        $this->assertEquals($map1, \Erlang\binary_to_term($map1_binary));
+        $map2 = new \Erlang\OtpErlangMap(array(
+            array(null, new \Erlang\OtpErlangBinary("nothing")),
+            array(new \Erlang\OtpErlangBinary("\xA8", 6),
+                  new \Erlang\OtpErlangBinary("everything"))
+        ));
+        $map2_binary = (
+            "\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66\x69" .
+            "\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68\x69\x6E" .
+            "\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00\x00\x0A\x65" .
+            "\x76\x65\x72\x79\x74\x68\x69\x6E\x67"
+        );
+        $this->assertEquals($map2, \Erlang\binary_to_term($map2_binary));
+    }
     public function test_binary_to_term_pid()
     {
         $pid_old_binary = (
@@ -524,6 +571,13 @@ class DecodeTestCase extends PHPUnit\Framework\TestCase
             "\x83Ys\rnonode@nohost\x00\x00\x00\x06" .
             "\x00\x00\x00\x00",
             \Erlang\term_to_binary($port_new));
+        $port_v4_binary = (
+            "\x83\x78\x77\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F" .
+            "\x73\x74\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00"
+        );
+        $port_v4 = \Erlang\binary_to_term($port_v4_binary);
+        $this->assertEquals(get_class($port_v4), 'Erlang\OtpErlangPort');
+        $this->assertEquals($port_v4_binary, \Erlang\term_to_binary($port_v4));
     }
     public function test_binary_to_term_ref()
     {
@@ -795,6 +849,30 @@ class EncodeTestCase extends PHPUnit\Framework\TestCase
                             \Erlang\term_to_binary(3.1415926));
         $this->assertEquals("\x83F\xc0\t!\xfbM\x12\xd8J",
                             \Erlang\term_to_binary(-3.1415926));
+    }
+    public function test_term_to_binary_map()
+    {
+        $this->assertEquals(
+            "\x83t\x00\x00\x00\x00",
+            \Erlang\term_to_binary(new \Erlang\OtpErlangMap(array())));
+        $map1 = new \Erlang\OtpErlangMap(array(
+            array(new \Erlang\OtpErlangAtom('a', false), 1)
+        ));
+        $map1_binary = "\x83t\x00\x00\x00\x01s\x01aa\x01";
+        $this->assertEquals($map1_binary, \Erlang\term_to_binary($map1));
+        $map2 = new \Erlang\OtpErlangMap(array(
+            array(new \Erlang\OtpErlangAtom('undefined'),
+                  new \Erlang\OtpErlangBinary("nothing")),
+            array(new \Erlang\OtpErlangBinary("\xA8", 6),
+                  new \Erlang\OtpErlangBinary("everything"))
+        ));
+        $map2_binary = (
+            "\x83\x74\x00\x00\x00\x02\x77\x09\x75\x6E\x64\x65\x66\x69" .
+            "\x6E\x65\x64\x6D\x00\x00\x00\x07\x6E\x6F\x74\x68\x69\x6E" .
+            "\x67\x4D\x00\x00\x00\x01\x06\xA8\x6D\x00\x00\x00\x0A\x65" .
+            "\x76\x65\x72\x79\x74\x68\x69\x6E\x67"
+        );
+        $this->assertEquals($map2_binary, \Erlang\term_to_binary($map2));
     }
     public function test_term_to_compressed_term()
     {
