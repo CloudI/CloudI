@@ -301,6 +301,21 @@ AC_ARG_ENABLE([ruby-support],
     fi
     ], [ruby_support="true"])
 AC_MSG_RESULT([$ruby_support])
+AC_MSG_CHECKING([if the Rust       CloudI API is enabled])
+AC_ARG_ENABLE([rust-support],
+    [AS_HELP_STRING([--enable-rust-support],
+                    [Enable the Rust CloudI API
+                     @<:@default=no@:>@ ])],
+    [
+    if test "x$enableval" = "xyes"; then
+        rust_support="true"
+    elif test "x$enableval" = "xno"; then
+        rust_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-rust-support])
+    fi
+    ], [rust_support="false"])
+AC_MSG_RESULT([$rust_support])
 AC_MSG_CHECKING([if the CloudI integration tests should be included])
 AC_ARG_WITH([integration-tests],
     [AS_HELP_STRING([--with-integration-tests@<:@=ARG@:>@],
@@ -770,6 +785,23 @@ AX_PROG_RUBY_VERSION([1.9.0], ,
 fi
 AM_CONDITIONAL([RUBY_SUPPORT], [test "x$ruby_support" = "xtrue"])
 
+# Rust CloudI API support
+if test "x$rust_support" = "xtrue" ; then
+AC_ARG_VAR([RUSTC],[rustc Rust compiler executable])
+AC_PATH_PROGS([RUSTC],[rustc])
+if test "x$RUSTC" = "x"; then
+    AC_MSG_ERROR([rustc not found])
+fi
+RUSTC_FLAGS="--edition=2021 -g"
+AC_SUBST(RUSTC_FLAGS)
+AC_SUBST(CONFIG_TESTS_RUST_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
+#AC_SUBST(CONFIG_TESTS_RUST_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+#AC_SUBST(CONFIG_TESTS_RUST_MESSAGING, ["[[{prefix, \"/tests/messaging/rust/\"}, {file_path, \"$cloudi_prefix/tests/messaging/messaging_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{dispatcher_pid_options, [{priority, low}]}, {nice, 15}, {scope, cloudi_service_test_messaging_rust}]}]],"])
+#AC_SUBST(CONFIG_TESTS_RUST_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$cloudi_prefix/tests/msg_size/msg_size_rust\"}, {options, [{request_timeout_adjustment, true}, {aspects_init_after, [{cloudi_service_test_msg_size, aspect_init}]}, {aspects_request_before, [{cloudi_service_test_msg_size, aspect_request}]}, {aspects_terminate_before, [{cloudi_service_test_msg_size, aspect_terminate}]}, {scope, cloudi_service_test_msg_size}, {nice, 15}]}]],"])
+#AC_SUBST(CONFIG_TESTS_RUST_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$cloudi_prefix/tests/null/null_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$cloudi_prefix/tests/null/null_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+fi
+AM_CONDITIONAL([RUST_SUPPORT], [test "x$rust_support" = "xtrue"])
+
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
@@ -963,6 +995,7 @@ AC_CONFIG_FILES([
     api/php/Makefile
     api/python/Makefile
     api/ruby/Makefile
+    api/rust/Makefile
     service_api/Makefile
     service_api/dashboard/Makefile
     service_api/dashboard/css/Makefile
@@ -987,6 +1020,7 @@ AC_CONFIG_FILES([
     tests/count/java/org/cloudi/tests/Makefile
     tests/count/java/org/cloudi/tests/count/Makefile
     tests/count/ocaml/Makefile
+    tests/count/rust/Makefile
     tests/echo/Makefile
     tests/environment/Makefile
     tests/hexpi/Makefile

@@ -202,3 +202,13 @@ Ruby `erlang_rb`
 - `Sat May 20 22:08:49 UTC 2023`
 - `MIT`
 
+Rust `erlang_rs`
+----------------
+`Erlang External Term Format for Rust`
+
+- `https://github.com/okeuday/erlang_rs`
+- `repository location: src/api/rust/`
+- `commit 29b61f42363bed409c964a1303774ae3706440d2`
+- `Sat May 27 00:51:23 UTC 2023`
+- `MIT`
+

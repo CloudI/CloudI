@@ -34,12 +34,15 @@ endif
 if RUBY_SUPPORT
     RUBY_SUBDIR = ruby
 endif
+if RUST_SUPPORT
+    RUST_SUBDIR = rust
+endif
 SUBDIRS = $(C_SUBDIR) \
           $(ATS2_SUBDIR) erlang $(GO_SUBDIR) $(HASKELL_SUBDIR) \
           $(JAVA_SUBDIR) $(JAVASCRIPT_SUBDIR) \
           $(OCAML_SUBDIR) \
           $(PERL_SUBDIR) $(PHP_SUBDIR) \
-          $(PYTHON_SUBDIR) $(RUBY_SUBDIR)
+          $(PYTHON_SUBDIR) $(RUBY_SUBDIR) $(RUST_SUBDIR)
 DIST_SUBDIRS = $(SUBDIRS)
 
 install-exec-hook:

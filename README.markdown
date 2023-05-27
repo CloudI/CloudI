@@ -37,7 +37,7 @@ of a software system (fully or partially) to the Erlang programming language.
 The CloudI API provides a simple set of functions for
 Service-Oriented Architecture (SOA) development in any supported language
 (currently ATS, C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript,
- OCaml, Perl, PHP, Python and Ruby):
+ OCaml, Perl, PHP, Python, Ruby and Rust):
 
 * `subscribe`, `unsubscribe`, `subscribe_count`
 * `send_async`, `send_sync`, `mcast_async` (`mcast_async` == publish)
@@ -48,7 +48,7 @@ External communication that needs to scale (beyond 10,000 connections)
 can use an existing internal CloudI service (implemented in Erlang or Elixir)
 which may do processing for one or more external CloudI services
 (implemented in ATS, C/C++, Go, Haskell, Java, JavaScript, OCaml, Perl, PHP,
- Python and/or Ruby)
+ Python, Ruby and/or Rust)
 
 Even if external communication doesn't need to scale, private cloud
 computing tasks (number crunching) can gain fault-tolerance and internal
@@ -135,6 +135,9 @@ Optional (default="no"):
   * (`ocaml /Ubuntu`, `ocaml /Alpine`)
   * Use the "--enable-ocaml-support" configure flag to enable
   * OCaml CloudI API is available as an [opam package](https://github.com/CloudI/cloudi_api_ocaml#readme)
+* `Rust >= 1.56.1`
+  * (`rustc /Ubuntu`, `rust /Alpine`)
+  * Use the "--enable-rust-support" configure flag to enable
 
 ### Building
 

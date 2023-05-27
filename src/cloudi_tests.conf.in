@@ -394,6 +394,7 @@
 @CONFIG_TESTS_GO_COUNT@
 @CONFIG_TESTS_HASKELL_COUNT@
 @CONFIG_TESTS_OCAML_COUNT@
+@CONFIG_TESTS_RUST_COUNT@
     {external,
         "/tests/count/",
         "@cloudi_prefix@/tests/count/count_c", "",
