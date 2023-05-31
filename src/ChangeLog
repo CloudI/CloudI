@@ -1,9 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-05-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the Rust CloudI API
+        * Add null and msg_size integration tests
+    * Fix external service exit status log output to always use
+      integer output for values <= 128 instead of the
+      C/C++ CloudI API enum names ("OS pid PID exited with INTEGER")
+
 2023-05-26 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Add the beginnings of an Rust CloudI API implementation
+    * Add the beginnings of a Rust CloudI API implementation
 
 2023-05-20 Michael Truog   <mjtruog at protonmail dot com>
 

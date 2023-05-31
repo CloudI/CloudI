@@ -623,6 +623,7 @@
 @CONFIG_TESTS_GO_NULL@
 @CONFIG_TESTS_HASKELL_NULL@
 @CONFIG_TESTS_OCAML_NULL@
+@CONFIG_TESTS_RUST_NULL@
     {external,
         "/tests/null/response/",
         "@cloudi_prefix@/tests/null/null_c", "",
@@ -942,6 +943,7 @@
 @CONFIG_TESTS_GO_MSG_SIZE@
 @CONFIG_TESTS_HASKELL_MSG_SIZE@
 @CONFIG_TESTS_OCAML_MSG_SIZE@
+@CONFIG_TESTS_RUST_MSG_SIZE@
     {internal,
         "/tests/msg_size/",
         cloudi_service_test_msg_size,

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2021 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -124,266 +124,35 @@ namespace
             last_value                     // 78
         };
 
-        char const * string(int status)
+        char const * signal_to_string(int signal)
         {
-            switch (status)
+            // only signals consistent among all platforms
+            // use a specific string
+            switch (signal)
             {
-                // internal spawn_status errors
-                case invalid_input:
-                    return "invalid_input";
-                case out_of_memory:
-                    return "out_of_memory";
-                case pipe_EFAULT:
-                    return "pipe_EFAULT";
-                case pipe_EINVAL:
-                    return "pipe_EINVAL";
-                case pipe_EMFILE:
-                    return "pipe_EMFILE";
-                case pipe_ENFILE:
-                    return "pipe_ENFILE";
-                case pipe_unknown:
-                    return "pipe_unknown";
-                case fork_EAGAIN:
-                    return "fork_EAGAIN";
-                case fork_ENOMEM:
-                    return "fork_ENOMEM";
-                case fork_unknown:
-                    return "fork_unknown";
-                case socket_EACCES:
-                    return "socket_EACCES";
-                case socket_EAFNOSUPPORT:
-                    return "socket_EAFNOSUPPORT";
-                case socket_EINVAL:
-                    return "socket_EINVAL";
-                case socket_EMFILE:
-                    return "socket_EMFILE";
-                case socket_ENFILE:
-                    return "socket_ENFILE";
-                case socket_ENOBUFS:
-                    return "socket_ENOBUFS";
-                case socket_ENOMEM:
-                    return "socket_ENOMEM";
-                case socket_EPROTONOSUPPORT:
-                    return "socket_EPROTONOSUPPORT";
-                case socket_unknown:
-                    return "socket_unknown";
-                case dup_EBADF:
-                    return "dup_EBADF";
-                case dup_EBUSY:
-                    return "dup_EBUSY";
-                case dup_EINTR:
-                    return "dup_EINTR";
-                case dup_EINVAL:
-                    return "dup_EINVAL";
-                case dup_EMFILE:
-                    return "dup_EMFILE";
-                case dup_unknown:
-                    return "dup_unknown";
-                case close_EBADF:
-                    return "close_EBADF";
-                case close_EINTR:
-                    return "close_EINTR";
-                case close_EIO:
-                    return "close_EIO";
-                case close_unknown:
-                    return "close_unknown";
-                case waitpid_ECHILD:
-                    return "waitpid_ECHILD";
-                case waitpid_EINTR:
-                    return "waitpid_EINTR";
-                case waitpid_EINVAL:
-                    return "waitpid_EINVAL";
-                case waitpid_unknown:
-                    return "waitpid_unknown";
-                case connect_EACCES:
-                    return "connect_EACCES";
-                case connect_EPERM:
-                    return "connect_EPERM";
-                case connect_EADDRINUSE:
-                    return "connect_EADDRINUSE";
-                case connect_ENOENT:
-                    return "connect_ENOENT";
-                case connect_EAGAIN:
-                    return "connect_EAGAIN";
-                case connect_EALREADY:
-                    return "connect_EALREADY";
-                case connect_EBADF:
-                    return "connect_EBADF";
-                case connect_ECONNREFUSED:
-                    return "connect_ECONNREFUSED";
-                case connect_EFAULT:
-                    return "connect_EFAULT";
-                case connect_EINPROGRESS:
-                    return "connect_EINPROGRESS";
-                case connect_EINTR:
-                    return "connect_EINTR";
-                case connect_EISCONN:
-                    return "connect_EISCONN";
-                case connect_ENETUNREACH:
-                    return "connect_ENETUNREACH";
-                case connect_ENOTSOCK:
-                    return "connect_ENOTSOCK";
-                case connect_ETIMEDOUT:
-                    return "connect_ETIMEDOUT";
-                case connect_unknown:
-                    return "connect_unknown";
-                case exec_E2BIG:
-                    return "exec_E2BIG";
-                case exec_EACCES:
-                    return "exec_EACCES";
-                case exec_EFAULT:
-                    return "exec_EFAULT";
-                case exec_EINVAL:
-                    return "exec_EINVAL";
-                case exec_EIO:
-                    return "exec_EIO";
-                case exec_EISDIR:
-                    return "exec_EISDIR";
-                case exec_ELIBBAD:
-                    return "exec_ELIBBAD";
-                case exec_ELOOP:
-                    return "exec_ELOOP";
-                case exec_EMFILE:
-                    return "exec_EMFILE";
-                case exec_ENAMETOOLONG:
-                    return "exec_ENAMETOOLONG";
-                case exec_ENFILE:
-                    return "exec_ENFILE";
-                case exec_ENOENT:
-                    return "exec_ENOENT";
-                case exec_ENOEXEC:
-                    return "exec_ENOEXEC";
-                case exec_ENOMEM:
-                    return "exec_ENOMEM";
-                case exec_ENOTDIR:
-                    return "exec_ENOTDIR";
-                case exec_EPERM:
-                    return "exec_EPERM";
-                case exec_ETXTBSY:
-                    return "exec_ETXTBSY";
-                case exec_unknown:
-                    return "exec_unknown";
-
-                // GEPD::ExitStatus values reused
-                case GEPD::ExitStatus::read_EAGAIN:
-                    return "read_EAGAIN";
-                case GEPD::ExitStatus::read_EBADF:
-                    return "read_EBADF";
-                case GEPD::ExitStatus::read_EFAULT:
-                    return "read_EFAULT";
-                case GEPD::ExitStatus::read_EINTR:
-                    return "read_EINTR";
-                case GEPD::ExitStatus::read_EINVAL:
-                    return "read_EINVAL";
-                case GEPD::ExitStatus::read_EIO:
-                    return "read_EIO";
-                case GEPD::ExitStatus::read_EISDIR:
-                    return "read_EISDIR";
-                case GEPD::ExitStatus::read_null:
-                    return "read_null";
-                case GEPD::ExitStatus::read_overflow:
-                    return "read_overflow";
-                case GEPD::ExitStatus::read_unknown:
-                    return "read_unknown";
-                case GEPD::ExitStatus::write_EAGAIN:
-                    return "write_EAGAIN";
-                case GEPD::ExitStatus::write_EBADF:
-                    return "write_EBADF";
-                case GEPD::ExitStatus::write_EFAULT:
-                    return "write_EFAULT";
-                case GEPD::ExitStatus::write_EFBIG:
-                    return "write_EFBIG";
-                case GEPD::ExitStatus::write_EINTR:
-                    return "write_EINTR";
-                case GEPD::ExitStatus::write_EINVAL:
-                    return "write_EINVAL";
-                case GEPD::ExitStatus::write_EIO:
-                    return "write_EIO";
-                case GEPD::ExitStatus::write_ENOSPC:
-                    return "write_ENOSPC";
-                case GEPD::ExitStatus::write_EPIPE:
-                    return "write_EPIPE";
-                case GEPD::ExitStatus::write_null:
-                    return "write_null";
-                case GEPD::ExitStatus::write_overflow:
-                    return "write_overflow";
-                case GEPD::ExitStatus::write_unknown:
-                    return "write_unknown";
-                case GEPD::ExitStatus::ei_encode_error:
-                    return "ei_encode_error";
-                case GEPD::ExitStatus::poll_EBADF:
-                    return "poll_EBADF";
-                case GEPD::ExitStatus::poll_EFAULT:
-                    return "poll_EFAULT";
-                case GEPD::ExitStatus::poll_EINTR:
-                    return "poll_EINTR";
-                case GEPD::ExitStatus::poll_EINVAL:
-                    return "poll_EINVAL";
-                case GEPD::ExitStatus::poll_ENOMEM:
-                    return "poll_ENOMEM";
-                case GEPD::ExitStatus::poll_ERR:
-                    return "poll_ERR";
-                case GEPD::ExitStatus::poll_HUP:
-                    return "poll_HUP";
-                case GEPD::ExitStatus::poll_NVAL:
-                    return "poll_NVAL";
-                case GEPD::ExitStatus::poll_unknown:
-                    return "poll_unknown";
-                case GEPD::ExitStatus::pipe_EFAULT:
-                    return "pipe_EFAULT";
-                case GEPD::ExitStatus::pipe_EINVAL:
-                    return "pipe_EINVAL";
-                case GEPD::ExitStatus::pipe_EMFILE:
-                    return "pipe_EMFILE";
-                case GEPD::ExitStatus::pipe_ENFILE:
-                    return "pipe_ENFILE";
-                case GEPD::ExitStatus::pipe_unknown:
-                    return "pipe_unknown";
-                case GEPD::ExitStatus::dup_EBADF:
-                    return "dup_EBADF";
-                case GEPD::ExitStatus::dup_EBUSY:
-                    return "dup_EBUSY";
-                case GEPD::ExitStatus::dup_EINTR:
-                    return "dup_EINTR";
-                case GEPD::ExitStatus::dup_EINVAL:
-                    return "dup_EINVAL";
-                case GEPD::ExitStatus::dup_EMFILE:
-                    return "dup_EMFILE";
-                case GEPD::ExitStatus::dup_unknown:
-                    return "dup_unknown";
-                case GEPD::ExitStatus::close_EBADF:
-                    return "close_EBADF";
-                case GEPD::ExitStatus::close_EINTR:
-                    return "close_EINTR";
-                case GEPD::ExitStatus::close_EIO:
-                    return "close_EIO";
-                case GEPD::ExitStatus::close_unknown:
-                    return "close_unknown";
-
-                // signals
-                case 129:
+                case 1:
                     return "SIGHUP";
-                case 130:
+                case 2:
                     return "SIGINT";
-                case 131:
+                case 3:
                     return "SIGQUIT";
-                case 132:
+                case 4:
                     return "SIGILL";
-                case 133:
+                case 5:
                     return "SIGTRAP";
-                case 134:
+                case 6:
                     return "SIGABRT";
-                case 136:
+                case 8:
                     return "SIGFPE";
-                case 137:
+                case 9:
                     return "SIGKILL";
-                case 139:
+                case 11:
                     return "SIGSEGV";
-                case 141:
+                case 13:
                     return "SIGPIPE";
-                case 142:
+                case 14:
                     return "SIGALRM";
-                case 143:
+                case 15:
                     return "SIGTERM";
                 default:
                     return 0;
@@ -670,14 +439,31 @@ namespace
                     }
                     if (status != 0)
                     {
-                        char const * const error = spawn_status::string(status);
-                        std::cerr << "OS pid " << m_pid << " exited with ";
-                        if (error)
-                            std::cerr << error << std::endl;
-                        else if (status > 128)
-                            std::cerr << "SIG#" << (status - 128) << std::endl;
+                        // spawn exit status specific to the forked filename
+                        // (the external service's source code)
+                        if (status > 128)
+                        {
+                            int const signal = status - 128;
+                            char const * const signal_name =
+                                spawn_status::signal_to_string(signal);
+                            if (signal_name)
+                            {
+                                std::cerr << "OS pid " << m_pid <<
+                                    " exited with " <<
+                                    signal_name << std::endl;
+                            }
+                            else
+                            {
+                                std::cerr << "OS pid " << m_pid <<
+                                    " exited with " <<
+                                    "SIG#" << signal << std::endl;
+                            }
+                        }
                         else
-                            std::cerr << status << std::endl;
+                        {
+                            std::cerr << "OS pid " << m_pid <<
+                                " exited with " << status << std::endl;
+                        }
                     }
                 }
             }

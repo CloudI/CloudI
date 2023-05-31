@@ -1,7 +1,7 @@
 //-*-Mode:rust;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 //ex: set ft=rust fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-//! # Count Integration Test with Rust
+//! # Message Size Integration Test with Rust
 
 // MIT License
 //
@@ -25,39 +25,49 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![crate_name = "count_rust"]
+#![crate_name = "msg_size_rust"]
 #![crate_type = "bin"]
 
 extern crate erlang;
 extern crate cloudi;
 
-type StateType = usize;
+type StateType = ();
 
 fn request(_request_type: &cloudi::RequestType,
            _name: &str,
            _pattern: &str,
            _request_info: &[u8],
-           _request: &[u8],
-           _timeout: cloudi::Timeout,
+           request: &[u8],
+           timeout: cloudi::Timeout,
            _priority: cloudi::Priority,
            _trans_id: &cloudi::TransId,
            _source: &cloudi::Source,
-           state: &mut StateType,
+           _state: &mut StateType,
            _api: &mut cloudi::API<StateType>) -> cloudi::Response {
-    *state += 1;
-    println!("count == {state} rust");
-    cloudi::Response::Response(format!("{state}").into())
+    let bytes: [u8; 4] = request[..4].try_into().unwrap();
+    let i0 = u32::from_ne_bytes(bytes);
+    let i1 = if i0 == 1073741823 {
+        0
+    }
+    else {
+        i0 + 1
+    };
+    let destination = "/tests/msg_size/erlang";
+    println!("forward #{i1} rust to {destination} (with timeout {timeout} ms)");
+    let request_new = [i1.to_ne_bytes().as_slice(), &request[4..]].concat();
+    cloudi::Response::Forward(destination.to_string(), b"".to_vec(),
+                              request_new)
 }
 
 fn task(thread_index: u32) {
-    let mut state_value: usize = 0;
+    let mut state_value = ();
     let mut api = cloudi::API::new(thread_index, &mut state_value).unwrap();
 
-    api.subscribe("rust/get", request).unwrap();
+    api.subscribe("rust", request).unwrap();
     match api.poll(-1) {
         Ok(result) => {
             assert_eq!(false, result);
-            println!("terminate count rust");
+            println!("terminate msg_size rust");
         },
         Err(error) => {
             eprintln!("{:#?}", error);

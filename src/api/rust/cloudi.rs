@@ -78,10 +78,27 @@ impl TransId {
             id: id.try_into().unwrap(),
         }
     }
-    //XXX add functions for id use
+
+    pub fn null() -> Self {
+        TransId {
+            id: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        }
+    }
+
+    pub fn is_timeout(&self) -> bool {
+        self == &TransId::null()
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        self.id.as_slice()
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.id.to_vec()
+    }
 }
 
-pub type Callback<'a, S> = fn(&RequestType,
+pub type Callback<'s, S> = fn(&RequestType,
                               &str,
                               &str,
                               &[u8],
@@ -91,13 +108,20 @@ pub type Callback<'a, S> = fn(&RequestType,
                               &TransId,
                               &Source,
                               &mut S,
-                              &mut API<'a, S>) -> Response;
+                              &mut API<'s, S>) -> Response;
+
+/// fatal! macro relies on panic!
+#[macro_export]
+macro_rules! fatal {
+    ($($arg:tt)*) => {{
+        panic!($($arg)*);
+    }};
+}
 
 /// Error description
 #[derive(Debug, Eq, PartialEq)]
 pub enum ErrorKind {
     Terminate { timeout: Timeout },
-    FatalError(&'static str),
     InvalidInputError(),
     MessageDecodingError(),
     UnexpectedError(),
@@ -184,9 +208,9 @@ impl From<std::string::FromUtf8Error> for Error {
 }
 
 /// 
-pub struct API <'a, S> {
-    state: &'a mut S,
-    callbacks: HashMap<String, LinkedList<Callback<'a, S>>>,
+pub struct API<'s, S> {
+    state: &'s mut S,
+    callbacks: HashMap<String, LinkedList<Callback<'s, S>>>,
     buffer_recv: Vec<u8>,
     buffer_size: usize,
     socket_kind: SocketKind,
@@ -214,9 +238,9 @@ pub fn thread_count() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_THREAD_COUNT")
 }
 
-impl<'a, S> API<'a, S> {
+impl<'s, S> API<'s, S> {
     pub fn new(thread_index: u32,
-               state: &'a mut S) -> Result<Self> {
+               state: &'s mut S) -> Result<Self> {
         let protocol = match std::env::var("CLOUDI_API_INIT_PROTOCOL") {
             Ok(protocol_str) => protocol_str,
             Err(_) => {
@@ -265,12 +289,12 @@ impl<'a, S> API<'a, S> {
             subscribe_count: None,
         };
         api.send(&OtpErlangTerm::OtpErlangAtomUTF8(b"init".to_vec()))?;
-        let _ = api.poll_request(None, false)?;
+        let _ = api.poll_request(&None, false)?;
         Ok(api)
     }
 
     pub fn subscribe(&mut self, pattern: &str,
-                     f: Callback<'a, S>) -> Result<()> {
+                     f: Callback<'s, S>) -> Result<()> {
         let key = self.prefix.clone() + pattern;
         match self.callbacks.get_mut(&key) {
             None => {
@@ -288,6 +312,143 @@ impl<'a, S> API<'a, S> {
         ]))
     }
 
+    pub fn subscribe_count(&mut self, pattern: &str) -> Result<u32> {
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"subscribe_count".to_vec()),
+            OtpErlangTerm::OtpErlangString(pattern.into()),
+        ]))?;
+        let _ = self.poll_request(&None, false)?;
+        Ok(self.subscribe_count.take().unwrap())
+    }
+
+    pub fn unsubscribe(&mut self, pattern: &str) -> Result<()> {
+        let key = self.prefix.clone() + pattern;
+        let callback_list = self.callbacks.get_mut(&key).unwrap();
+        let _ = callback_list.pop_front().unwrap();
+        if callback_list.is_empty() {
+            self.callbacks.remove(&key).unwrap();
+        }
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"unsubscribe".to_vec()),
+            OtpErlangTerm::OtpErlangString(pattern.into()),
+        ]))
+    }
+
+    pub fn send_async(&mut self, name: &str, request: &Vec<u8>,
+                      timeout_opt: Option<u32>,
+                      request_info_opt: Option<Vec<u8>>,
+                      priority_opt: Option<i8>) -> Result<TransId> {
+        let timeout = timeout_opt.unwrap_or(self.timeout_async);
+        let request_info = request_info_opt.unwrap_or(b"".to_vec());
+        let priority = priority_opt.unwrap_or(self.priority_default);
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"send_async".to_vec()),
+            OtpErlangTerm::OtpErlangString(name.into()),
+            OtpErlangTerm::OtpErlangBinary(request_info),
+            OtpErlangTerm::OtpErlangBinary(request.clone()),
+            OtpErlangTerm::OtpErlangInteger(timeout as i32),
+            OtpErlangTerm::OtpErlangInteger(priority as i32),
+        ]))?;
+        let _ = self.poll_request(&None, false)?;
+        Ok(self.trans_id.take().unwrap())
+    }
+
+    pub fn send_sync(&mut self, name: &str, request: &Vec<u8>,
+                     timeout_opt: Option<u32>,
+                     request_info_opt: Option<Vec<u8>>,
+                     priority_opt: Option<i8>) ->
+                     Result<(Vec<u8>, Vec<u8>, TransId)> {
+        let timeout = timeout_opt.unwrap_or(self.timeout_sync);
+        let request_info = request_info_opt.unwrap_or(b"".to_vec());
+        let priority = priority_opt.unwrap_or(self.priority_default);
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"send_sync".to_vec()),
+            OtpErlangTerm::OtpErlangString(name.into()),
+            OtpErlangTerm::OtpErlangBinary(request_info),
+            OtpErlangTerm::OtpErlangBinary(request.clone()),
+            OtpErlangTerm::OtpErlangInteger(timeout as i32),
+            OtpErlangTerm::OtpErlangInteger(priority as i32),
+        ]))?;
+        let _ = self.poll_request(&None, false)?;
+        Ok(self.response.take().unwrap())
+    }
+
+    pub fn mcast_async(&mut self, name: &str, request: &Vec<u8>,
+                       timeout_opt: Option<u32>,
+                       request_info_opt: Option<Vec<u8>>,
+                       priority_opt: Option<i8>) -> Result<Vec<TransId>> {
+        let timeout = timeout_opt.unwrap_or(self.timeout_async);
+        let request_info = request_info_opt.unwrap_or(b"".to_vec());
+        let priority = priority_opt.unwrap_or(self.priority_default);
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"mcast_async".to_vec()),
+            OtpErlangTerm::OtpErlangString(name.into()),
+            OtpErlangTerm::OtpErlangBinary(request_info),
+            OtpErlangTerm::OtpErlangBinary(request.clone()),
+            OtpErlangTerm::OtpErlangInteger(timeout as i32),
+            OtpErlangTerm::OtpErlangInteger(priority as i32),
+        ]))?;
+        let _ = self.poll_request(&None, false)?;
+        Ok(self.trans_ids.take().unwrap())
+    }
+
+    pub fn recv_async(&mut self, timeout_opt: Option<u32>,
+                      trans_id_opt: Option<TransId>,
+                      consume_opt: Option<bool>) ->
+                      Result<(Vec<u8>, Vec<u8>, TransId)> {
+        let timeout = timeout_opt.unwrap_or(self.timeout_sync);
+        let trans_id = trans_id_opt.unwrap_or(TransId::null());
+        let consume = consume_opt.unwrap_or(true);
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"recv_async".to_vec()),
+            OtpErlangTerm::OtpErlangInteger(timeout as i32),
+            OtpErlangTerm::OtpErlangBinary(trans_id.to_vec()),
+            OtpErlangTerm::OtpErlangAtomBool(consume),
+        ]))?;
+        let _ = self.poll_request(&None, false)?;
+        Ok(self.response.take().unwrap())
+    }
+
+    pub fn process_index(&self) -> u32 {
+        self.process_index
+    }
+
+    pub fn process_count(&self) -> u32 {
+        self.process_count
+    }
+
+    pub fn process_count_max(&self) -> u32 {
+        self.process_count_max
+    }
+
+    pub fn process_count_min(&self) -> u32 {
+        self.process_count_min
+    }
+
+    pub fn prefix(&self) -> &String {
+        &self.prefix
+    }
+
+    pub fn timeout_initialize(&self) -> u32 {
+        self.timeout_initialize
+    }
+
+    pub fn timeout_async(&self) -> u32 {
+        self.timeout_async
+    }
+
+    pub fn timeout_sync(&self) -> u32 {
+        self.timeout_sync
+    }
+
+    pub fn timeout_terminate(&self) -> u32 {
+        self.timeout_terminate
+    }
+
+    pub fn priority_default(&self) -> i8 {
+        self.priority_default
+    }
+
     fn callback(&mut self, request_type: &RequestType,
                 name: &str, pattern: &str,
                 request_info: &[u8], request: &[u8],
@@ -298,12 +459,11 @@ impl<'a, S> API<'a, S> {
         // Closures with a context (std::ops::{Fn, FnMut, FnOnce})
         // are not supported due to the negative impact it would have
         // (A wrapper struct would be necessary for the function while
-        //  causing slower, more complex execution.  Supporting FnMut would
-        //  require the function data be mutable, causing problems for the
-        //  self reference.)
+        //  causing slower, more complex execution.  The closure traits
+        //  with a context are not Sized so they are difficult to store.).
         let callback_f = match self.callbacks.get_mut(pattern) {
             None => {
-                null_response as Callback<'a, S>
+                null_response as Callback<'s, S>
             },
             Some(callback_list) => {
                 let f = callback_list.pop_front().unwrap();
@@ -421,7 +581,7 @@ impl<'a, S> API<'a, S> {
         }
     }
 
-    fn poll_request(&mut self, timeout: Option<Duration>,
+    fn poll_request(&mut self, timeout: &Option<Duration>,
                     external: bool) -> Result<bool> {
         if self.terminate {
             if external {
@@ -608,7 +768,7 @@ impl<'a, S> API<'a, S> {
                 },
                 None => None,
             };
-            buffer = self.recv(timeout_value)?;
+            buffer = self.recv(&timeout_value)?;
             data_size = buffer.len();
             if data_size == 0 {
                 return Ok(true);
@@ -628,7 +788,15 @@ impl<'a, S> API<'a, S> {
         else {
             Some(Duration::from_millis(timeout as u64))
         };
-        self.poll_request(timeout_opt, true)
+        self.poll_request(&timeout_opt, true)
+    }
+
+    pub fn shutdown(&mut self, reason_opt: Option<String>) -> Result<()> {
+        let reason = reason_opt.unwrap_or("".to_string());
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"shutdown".to_vec()),
+            OtpErlangTerm::OtpErlangString(reason.into_bytes()),
+        ]))
     }
 
     fn send(&mut self, command: &OtpErlangTerm) -> Result<()> {
@@ -652,12 +820,12 @@ impl<'a, S> API<'a, S> {
         }
     }
 
-    fn recv(&mut self, timeout: Option<Duration>) -> Result<Vec<u8>> {
+    fn recv(&mut self, timeout: &Option<Duration>) -> Result<Vec<u8>> {
         let mut size = self.buffer_recv.len();
         assert_eq!(0, size);
         match &mut self.socket_kind {
             SocketKind::TCP(socket) => {
-                socket.set_read_timeout(timeout)?;
+                socket.set_read_timeout(*timeout)?;
                 assert_eq!(true, self.use_header);
                 let mut header: [u8; 4] = [0; 4];
                 socket.read_exact(&mut header)?;
@@ -667,7 +835,7 @@ impl<'a, S> API<'a, S> {
                 socket.read_exact(&mut data)?;
             },
             SocketKind::UDP(socket) => {
-                socket.set_read_timeout(timeout)?;
+                socket.set_read_timeout(*timeout)?;
                 assert_eq!(false, self.use_header);
                 self.buffer_recv.resize(size + self.buffer_size, 0);
                 let mut data: &mut [u8] = &mut self.buffer_recv[size..];
@@ -730,7 +898,7 @@ enum SocketKind {
     UDP(UdpSocket),
 }
 
-fn null_response<'a, S>(_request_type: &RequestType,
+fn null_response<'s, S>(_request_type: &RequestType,
                         _name: &str,
                         _pattern: &str,
                         _request_info: &[u8],
@@ -740,7 +908,7 @@ fn null_response<'a, S>(_request_type: &RequestType,
                         _trans_id: &TransId,
                         _source: &Source,
                         _state: &mut S,
-                        _api: &mut API<'a, S>) -> Response {
+                        _api: &mut API<'s, S>) -> Response {
     Response::Null()
 }
 
@@ -756,8 +924,8 @@ fn getenv_to_u32(name: &'static str) -> Result<u32> {
     }
 }
 
-fn unpack_incoming_str<'a>(i: &mut usize, size: usize,
-                           data: &'a [u8]) -> Result<&'a str> {
+fn unpack_incoming_str<'s>(i: &mut usize, size: usize,
+                           data: &'s [u8]) -> Result<&'s str> {
     let s = unsafe {
         std::str::from_utf8_unchecked(slice_get(data, *i..*i + size - 1)?)
     };
@@ -765,15 +933,15 @@ fn unpack_incoming_str<'a>(i: &mut usize, size: usize,
     Ok(s)
 }
 
-fn unpack_incoming_bytes<'a>(i: &mut usize, size: usize,
-                             data: &'a [u8]) -> Result<&'a [u8]> {
+fn unpack_incoming_bytes<'s>(i: &mut usize, size: usize,
+                             data: &'s [u8]) -> Result<&'s [u8]> {
     let bytes = slice_get(data, *i..*i + size)?;
     *i += size;
     Ok(bytes)
 }
 
-fn unpack_incoming_bytes_1<'a>(i: &mut usize, size: usize,
-                               data: &'a [u8]) -> Result<&'a [u8]> {
+fn unpack_incoming_bytes_1<'s>(i: &mut usize, size: usize,
+                               data: &'s [u8]) -> Result<&'s [u8]> {
     let bytes = unpack_incoming_bytes(i, size, data)?;
     // skip C string null termination character
     *i += 1;

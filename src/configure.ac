@@ -797,8 +797,8 @@ AC_SUBST(RUSTC_FLAGS)
 AC_SUBST(CONFIG_TESTS_RUST_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
 #AC_SUBST(CONFIG_TESTS_RUST_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
 #AC_SUBST(CONFIG_TESTS_RUST_MESSAGING, ["[[{prefix, \"/tests/messaging/rust/\"}, {file_path, \"$cloudi_prefix/tests/messaging/messaging_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{dispatcher_pid_options, [{priority, low}]}, {nice, 15}, {scope, cloudi_service_test_messaging_rust}]}]],"])
-#AC_SUBST(CONFIG_TESTS_RUST_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$cloudi_prefix/tests/msg_size/msg_size_rust\"}, {options, [{request_timeout_adjustment, true}, {aspects_init_after, [{cloudi_service_test_msg_size, aspect_init}]}, {aspects_request_before, [{cloudi_service_test_msg_size, aspect_request}]}, {aspects_terminate_before, [{cloudi_service_test_msg_size, aspect_terminate}]}, {scope, cloudi_service_test_msg_size}, {nice, 15}]}]],"])
-#AC_SUBST(CONFIG_TESTS_RUST_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$cloudi_prefix/tests/null/null_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$cloudi_prefix/tests/null/null_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_RUST_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$cloudi_prefix/tests/msg_size/msg_size_rust\"}, {options, [{request_timeout_adjustment, true}, {aspects_init_after, [{cloudi_service_test_msg_size, aspect_init}]}, {aspects_request_before, [{cloudi_service_test_msg_size, aspect_request}]}, {aspects_terminate_before, [{cloudi_service_test_msg_size, aspect_terminate}]}, {scope, cloudi_service_test_msg_size}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_RUST_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$cloudi_prefix/tests/null/null_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$cloudi_prefix/tests/null/null_rust\"}, {env, [{\"RUST_BACKTRACE\", \"full\"}]}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([RUST_SUPPORT], [test "x$rust_support" = "xtrue"])
 
@@ -1082,6 +1082,7 @@ AC_CONFIG_FILES([
     tests/msg_size/java/org/cloudi/tests/Makefile
     tests/msg_size/java/org/cloudi/tests/msg_size/Makefile
     tests/msg_size/ocaml/Makefile
+    tests/msg_size/rust/Makefile
     tests/null/Makefile
     tests/null/ats/v2/Makefile
     tests/null/c/Makefile
@@ -1098,6 +1099,7 @@ AC_CONFIG_FILES([
     tests/null/java/org/cloudi/tests/Makefile
     tests/null/java/org/cloudi/tests/null_/Makefile
     tests/null/ocaml/Makefile
+    tests/null/rust/Makefile
     tests/service_api/Makefile
     tests/websockets/Makefile
     ])

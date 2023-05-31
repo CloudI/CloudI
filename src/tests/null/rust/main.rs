@@ -1,7 +1,7 @@
 //-*-Mode:rust;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 //ex: set ft=rust fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-//! # Count Integration Test with Rust
+//! # Null Integration Test with Rust
 
 // MIT License
 //
@@ -25,13 +25,13 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![crate_name = "count_rust"]
+#![crate_name = "null_rust"]
 #![crate_type = "bin"]
 
 extern crate erlang;
 extern crate cloudi;
 
-type StateType = usize;
+type StateType = ();
 
 fn request(_request_type: &cloudi::RequestType,
            _name: &str,
@@ -42,22 +42,21 @@ fn request(_request_type: &cloudi::RequestType,
            _priority: cloudi::Priority,
            _trans_id: &cloudi::TransId,
            _source: &cloudi::Source,
-           state: &mut StateType,
+           _state: &mut StateType,
            _api: &mut cloudi::API<StateType>) -> cloudi::Response {
-    *state += 1;
-    println!("count == {state} rust");
-    cloudi::Response::Response(format!("{state}").into())
+    println!("null rust");
+    cloudi::Response::Null()
 }
 
 fn task(thread_index: u32) {
-    let mut state_value: usize = 0;
+    let mut state_value = ();
     let mut api = cloudi::API::new(thread_index, &mut state_value).unwrap();
 
     api.subscribe("rust/get", request).unwrap();
     match api.poll(-1) {
         Ok(result) => {
             assert_eq!(false, result);
-            println!("terminate count rust");
+            println!("terminate null rust");
         },
         Err(error) => {
             eprintln!("{:#?}", error);
