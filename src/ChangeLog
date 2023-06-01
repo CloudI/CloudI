@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the Rust CloudI API
+        * Removed the subscribe_mut function for using closures with a context
+          due to the added latency, complexity and functionality problems it
+          led to (unsubscribe functionality in a callback wasn't correct)
+
 2023-05-31 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the Rust CloudI API

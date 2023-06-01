@@ -31,7 +31,6 @@
 extern crate erlang;
 
 use std::backtrace::Backtrace;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::LinkedList;
 use std::io::Read;
@@ -108,31 +107,6 @@ pub type Callback<'s, S> = fn(&RequestType,
                               &Source,
                               &mut S,
                               &mut API<'s, S>) -> Response;
-
-/// a closure with a context to handle a service request
-pub trait CallbackMut<'s, S>: FnMut(&RequestType,
-                                    &str,
-                                    &str,
-                                    &[u8],
-                                    &[u8],
-                                    Timeout,
-                                    Priority,
-                                    &TransId,
-                                    &Source,
-                                    &mut S,
-                                    &mut API<'s, S>) -> Response {}
-impl<'s, S, T> CallbackMut<'s, S> for T
-where T: FnMut(&RequestType,
-               &str,
-               &str,
-               &[u8],
-               &[u8],
-               Timeout,
-               Priority,
-               &TransId,
-               &Source,
-               &mut S,
-               &mut API<'s, S>) -> Response {}
 
 /// fatal error macro for using panic!
 #[macro_export]
@@ -234,7 +208,7 @@ impl From<std::string::FromUtf8Error> for Error {
 /// an instance of the CloudI API
 pub struct API<'s, S> {
     state: &'s mut S,
-    callbacks: HashMap<String, LinkedList<CallbackF<'s, S>>>,
+    callbacks: HashMap<String, LinkedList<Callback<'s, S>>>,
     buffer_recv: Vec<u8>,
     buffer_size: usize,
     socket_kind: SocketKind,
@@ -327,32 +301,11 @@ impl<'s, S> API<'s, S> {
         match self.callbacks.get_mut(&key) {
             None => {
                 let mut callback_list = LinkedList::new();
-                callback_list.push_back(CallbackF::from_fn(f));
+                callback_list.push_back(f);
                 let _ = self.callbacks.insert(key, callback_list);
             },
             Some(callback_list) => {
-                callback_list.push_back(CallbackF::from_fn(f));
-            },
-        };
-        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
-            OtpErlangTerm::OtpErlangAtom(b"subscribe".to_vec()),
-            OtpErlangTerm::OtpErlangString(pattern.into()),
-        ]))
-    }
-
-    /// subscribes to a service name pattern with a closure callback
-    /// that has a context
-    pub fn subscribe_mut(&mut self, pattern: &str,
-                         f: impl CallbackMut<'s, S> + 's) -> Result<()> {
-        let key = self.prefix.clone() + pattern;
-        match self.callbacks.get_mut(&key) {
-            None => {
-                let mut callback_list = LinkedList::new();
-                callback_list.push_back(CallbackF::from_fnmut(f));
-                let _ = self.callbacks.insert(key, callback_list);
-            },
-            Some(callback_list) => {
-                callback_list.push_back(CallbackF::from_fnmut(f));
+                callback_list.push_back(f);
             },
         };
         self.send(&OtpErlangTerm::OtpErlangTuple(vec![
@@ -524,28 +477,33 @@ impl<'s, S> API<'s, S> {
                 request_info: &[u8], request: &[u8],
                 timeout: u32, priority: i8, trans_id: &[u8],
                 source: OtpErlangTerm) -> Result<()> {
-        let (callback_f,
-             callback_update) = match self.callbacks.get_mut(pattern) {
+        // To avoid overhead and maintain the same CloudI service
+        // functionality as the other CloudI API implementations,
+        // it is necessary to not support closures with contexts in Rust
+        // (std::ops::{Fn, FnMut, FnOnce}).
+        // The callback function needs to exist in self.callbacks during the
+        // callback execution and self needs to be provided as a
+        // mutable reference, so the callback needs to be a
+        // function pointer (or a closure without a context).
+        let callback_f = match self.callbacks.get_mut(pattern) {
             None => {
-                (CallbackF::from_fn(null_response), false)
+                null_response as Callback<'s, S>
             },
             Some(callback_list) => {
-                let callback_f = callback_list.pop_front().unwrap();
-                if callback_list.is_empty() {
-                    self.callbacks.remove(pattern).unwrap();
-                }
-                (callback_f, true)
+                let f = callback_list.pop_front().unwrap();
+                callback_list.push_back(f);
+                f
             },
         };
         let state_p = self.state as *mut S;
-        let callback_result = match callback_f.call(request_type,
-                                                    name, pattern,
-                                                    request_info, request,
-                                                    timeout, priority,
-                                                    &TransId::new(trans_id),
-                                                    &source,
-                                                    unsafe { &mut *state_p },
-                                                    self) {
+        let callback_result = match callback_f(request_type,
+                                               name, pattern,
+                                               request_info, request,
+                                               timeout, priority,
+                                               &TransId::new(trans_id),
+                                               &source,
+                                               unsafe { &mut *state_p },
+                                               self) {
             Response::Response(response) => {
                 CallbackResult::ReturnI(b"".to_vec(), response)
             },
@@ -569,19 +527,6 @@ impl<'s, S> API<'s, S> {
                 CallbackResult::ReturnI(b"".to_vec(), b"".to_vec())
             },
         };
-        if callback_update {
-            match self.callbacks.get_mut(pattern) {
-                None => {
-                    let mut callback_list = LinkedList::new();
-                    callback_list.push_back(callback_f);
-                    let _ = self.callbacks.insert(pattern.to_string(),
-                                                  callback_list);
-                },
-                Some(callback_list) => {
-                    callback_list.push_back(callback_f);
-                },
-            }
-        }
         match callback_result {
             CallbackResult::ReturnI(response_info, response) => {
                 let message_type = match request_type {
@@ -972,54 +917,6 @@ const MESSAGE_KEEPALIVE: u32 = 8;
 const MESSAGE_REINIT: u32 = 9;
 const MESSAGE_SUBSCRIBE_COUNT: u32 = 10;
 const MESSAGE_TERM: u32 = 11;
-
-struct CallbackF<'s, S> {
-    f: Option<Callback<'s, S>>,
-    f_mut: RefCell<Box<dyn CallbackMut<'s, S> + 's>>,
-}
-
-impl<'s, S> CallbackF<'s, S> {
-    fn from_fn(f: Callback<'s, S>) -> Self {
-        Self {
-            f: Some(f),
-            f_mut: RefCell::new(Box::new(f)),
-        }
-    }
-
-    fn from_fnmut(f: impl CallbackMut<'s, S> + 's) -> Self {
-        Self {
-            f: None,
-            f_mut: RefCell::new(Box::new(f)),
-        }
-    }
-
-    fn call(&self,
-            request_type: &RequestType,
-            name: &str,
-            pattern: &str,
-            request_info: &[u8],
-            request: &[u8],
-            timeout: Timeout,
-            priority: Priority,
-            trans_id: &TransId,
-            source: &Source,
-            state: &mut S,
-            api: &mut API<'s, S>) -> Response {
-        match self.f {
-            None => {
-                let mut f_p = self.f_mut.borrow_mut();
-                (*f_p)(request_type, name, pattern,
-                       request_info, request,
-                       timeout, priority, trans_id, source, state, api)
-            },
-            Some(f) => {
-                f(request_type, name, pattern,
-                  request_info, request,
-                  timeout, priority, trans_id, source, state, api)
-            },
-        }
-    }
-}
 
 enum CallbackResult {
     ReturnI(Vec<u8>, Vec<u8>),
