@@ -37,8 +37,11 @@ endif
 if RUBY_SUPPORT
     RUBY_INSTALL_HOOK = ruby-install
 endif
+if RUST_SUPPORT
+    RUST_SUBDIR = rust
+endif
 SUBDIRS = $(ATS2_SUBDIR) $(CXX_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
-          $(JAVA_SUBDIR) $(OCAML_SUBDIR) erlang
+          $(JAVA_SUBDIR) $(OCAML_SUBDIR) $(RUST_SUBDIR) erlang
 DIST_SUBDIRS = $(SUBDIRS)
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
 

@@ -31,39 +31,27 @@
 extern crate erlang;
 extern crate cloudi;
 
-type StateType = ();
-
-fn request(_request_type: &cloudi::RequestType,
-           _name: &str,
-           _pattern: &str,
-           _request_info: &[u8],
-           request: &[u8],
-           timeout: cloudi::Timeout,
-           _priority: cloudi::Priority,
-           _trans_id: &cloudi::TransId,
-           _source: &cloudi::Source,
-           _state: &mut StateType,
-           _api: &mut cloudi::API<StateType>) -> cloudi::Response {
-    let bytes: [u8; 4] = request[..4].try_into().unwrap();
-    let i0 = u32::from_ne_bytes(bytes);
-    let i1 = if i0 == 1073741823 {
-        0
-    }
-    else {
-        i0 + 1
-    };
-    let destination = "/tests/msg_size/erlang";
-    println!("forward #{i1} rust to {destination} (with timeout {timeout} ms)");
-    let request_new = [i1.to_ne_bytes().as_slice(), &request[4..]].concat();
-    cloudi::Response::Forward(destination.to_string(), b"".to_vec(),
-                              request_new)
-}
-
 fn task(thread_index: u32) {
     let mut state_value = ();
     let mut api = cloudi::API::new(thread_index, &mut state_value).unwrap();
 
-    api.subscribe("rust", request).unwrap();
+    let destination = "/tests/msg_size/erlang";
+    api.subscribe_mut("rust", move |_, _, _, _, request, t, _, _, _, _, _| {
+        // subscribe_mut allows using a closure with a context
+        // (instead of subscribe with a function pointer)
+        let bytes: [u8; 4] = request[..4].try_into().unwrap();
+        let i0 = u32::from_ne_bytes(bytes);
+        let i1 = if i0 == 1073741823 {
+            0
+        }
+        else {
+            i0 + 1
+        };
+        println!("forward #{i1} rust to {destination} (with timeout {t} ms)");
+        let request_new = [i1.to_ne_bytes().as_slice(), &request[4..]].concat();
+        cloudi::Response::Forward(destination.to_string(), b"".to_vec(),
+                                  request_new)
+    }).unwrap();
     match api.poll(-1) {
         Ok(result) => {
             assert_eq!(false, result);

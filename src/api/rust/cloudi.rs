@@ -1,10 +1,7 @@
 //-*-Mode:rust;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 //ex: set ft=rust fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-//! # 
-//!
-//! 
-//! 
+//! # Rust CloudI API
 
 // MIT License
 //
@@ -34,21 +31,22 @@
 extern crate erlang;
 
 use std::backtrace::Backtrace;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::LinkedList;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpStream;
 use std::net::UdpSocket;
-use std::os::raw::c_int;
 use std::os::fd::FromRawFd;
+use std::os::raw::c_int;
 use std::time::Duration;
 use std::time::Instant;
 use erlang::OtpErlangTerm;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum RequestType {
     ASYNC = 1,
     SYNC = -1,
@@ -67,7 +65,7 @@ pub enum Response {
     NullError(&'static str),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct TransId {
     id: [u8; 16],
 }
@@ -98,6 +96,7 @@ impl TransId {
     }
 }
 
+/// a function pointer to handle a service request
 pub type Callback<'s, S> = fn(&RequestType,
                               &str,
                               &str,
@@ -110,7 +109,32 @@ pub type Callback<'s, S> = fn(&RequestType,
                               &mut S,
                               &mut API<'s, S>) -> Response;
 
-/// fatal! macro relies on panic!
+/// a closure with a context to handle a service request
+pub trait CallbackMut<'s, S>: FnMut(&RequestType,
+                                    &str,
+                                    &str,
+                                    &[u8],
+                                    &[u8],
+                                    Timeout,
+                                    Priority,
+                                    &TransId,
+                                    &Source,
+                                    &mut S,
+                                    &mut API<'s, S>) -> Response {}
+impl<'s, S, T> CallbackMut<'s, S> for T
+where T: FnMut(&RequestType,
+               &str,
+               &str,
+               &[u8],
+               &[u8],
+               Timeout,
+               Priority,
+               &TransId,
+               &Source,
+               &mut S,
+               &mut API<'s, S>) -> Response {}
+
+/// fatal error macro for using panic!
 #[macro_export]
 macro_rules! fatal {
     ($($arg:tt)*) => {{
@@ -207,10 +231,10 @@ impl From<std::string::FromUtf8Error> for Error {
     }
 }
 
-/// 
+/// an instance of the CloudI API
 pub struct API<'s, S> {
     state: &'s mut S,
-    callbacks: HashMap<String, LinkedList<Callback<'s, S>>>,
+    callbacks: HashMap<String, LinkedList<CallbackF<'s, S>>>,
     buffer_recv: Vec<u8>,
     buffer_size: usize,
     socket_kind: SocketKind,
@@ -234,11 +258,13 @@ pub struct API<'s, S> {
     subscribe_count: Option<u32>,
 }
 
+/// the number of threads to create per operating system process
 pub fn thread_count() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_THREAD_COUNT")
 }
 
 impl<'s, S> API<'s, S> {
+    /// creates an instance of the CloudI API
     pub fn new(thread_index: u32,
                state: &'s mut S) -> Result<Self> {
         let protocol = match std::env::var("CLOUDI_API_INIT_PROTOCOL") {
@@ -293,17 +319,19 @@ impl<'s, S> API<'s, S> {
         Ok(api)
     }
 
+    /// subscribes to a service name pattern with a function pointer callback
+    /// (or a closure callback without a context)
     pub fn subscribe(&mut self, pattern: &str,
                      f: Callback<'s, S>) -> Result<()> {
         let key = self.prefix.clone() + pattern;
         match self.callbacks.get_mut(&key) {
             None => {
                 let mut callback_list = LinkedList::new();
-                callback_list.push_back(f);
+                callback_list.push_back(CallbackF::from_fn(f));
                 let _ = self.callbacks.insert(key, callback_list);
             },
             Some(callback_list) => {
-                callback_list.push_back(f);
+                callback_list.push_back(CallbackF::from_fn(f));
             },
         };
         self.send(&OtpErlangTerm::OtpErlangTuple(vec![
@@ -312,6 +340,28 @@ impl<'s, S> API<'s, S> {
         ]))
     }
 
+    /// subscribes to a service name pattern with a closure callback
+    /// that has a context
+    pub fn subscribe_mut(&mut self, pattern: &str,
+                         f: impl CallbackMut<'s, S> + 's) -> Result<()> {
+        let key = self.prefix.clone() + pattern;
+        match self.callbacks.get_mut(&key) {
+            None => {
+                let mut callback_list = LinkedList::new();
+                callback_list.push_back(CallbackF::from_fnmut(f));
+                let _ = self.callbacks.insert(key, callback_list);
+            },
+            Some(callback_list) => {
+                callback_list.push_back(CallbackF::from_fnmut(f));
+            },
+        };
+        self.send(&OtpErlangTerm::OtpErlangTuple(vec![
+            OtpErlangTerm::OtpErlangAtom(b"subscribe".to_vec()),
+            OtpErlangTerm::OtpErlangString(pattern.into()),
+        ]))
+    }
+
+    /// determine how may service name pattern subscriptions have occurred
     pub fn subscribe_count(&mut self, pattern: &str) -> Result<u32> {
         self.send(&OtpErlangTerm::OtpErlangTuple(vec![
             OtpErlangTerm::OtpErlangAtom(b"subscribe_count".to_vec()),
@@ -321,6 +371,7 @@ impl<'s, S> API<'s, S> {
         Ok(self.subscribe_count.take().unwrap())
     }
 
+    /// unsubscribes from a service name pattern
     pub fn unsubscribe(&mut self, pattern: &str) -> Result<()> {
         let key = self.prefix.clone() + pattern;
         let callback_list = self.callbacks.get_mut(&key).unwrap();
@@ -334,6 +385,7 @@ impl<'s, S> API<'s, S> {
         ]))
     }
 
+    /// asynchronous point-to-point communication to a service
     pub fn send_async(&mut self, name: &str, request: &Vec<u8>,
                       timeout_opt: Option<u32>,
                       request_info_opt: Option<Vec<u8>>,
@@ -353,6 +405,7 @@ impl<'s, S> API<'s, S> {
         Ok(self.trans_id.take().unwrap())
     }
 
+    /// synchronous point-to-point communication to a service
     pub fn send_sync(&mut self, name: &str, request: &Vec<u8>,
                      timeout_opt: Option<u32>,
                      request_info_opt: Option<Vec<u8>>,
@@ -373,6 +426,7 @@ impl<'s, S> API<'s, S> {
         Ok(self.response.take().unwrap())
     }
 
+    /// asynchronous point-multicast communication to services
     pub fn mcast_async(&mut self, name: &str, request: &Vec<u8>,
                        timeout_opt: Option<u32>,
                        request_info_opt: Option<Vec<u8>>,
@@ -392,6 +446,7 @@ impl<'s, S> API<'s, S> {
         Ok(self.trans_ids.take().unwrap())
     }
 
+    /// asynchronously receive a response
     pub fn recv_async(&mut self, timeout_opt: Option<u32>,
                       trans_id_opt: Option<TransId>,
                       consume_opt: Option<bool>) ->
@@ -409,42 +464,57 @@ impl<'s, S> API<'s, S> {
         Ok(self.response.take().unwrap())
     }
 
+    /// the 0-based index of this process in the service instance
     pub fn process_index(&self) -> u32 {
         self.process_index
     }
 
+    /// the current process count based on the service configuration
     pub fn process_count(&self) -> u32 {
         self.process_count
     }
 
+    /// the count_process_dynamic maximum count based on the
+    /// service configuration
     pub fn process_count_max(&self) -> u32 {
         self.process_count_max
     }
 
+    /// the count_process_dynamic minimum count based on the
+    /// service configuration
     pub fn process_count_min(&self) -> u32 {
         self.process_count_min
     }
 
-    pub fn prefix(&self) -> &String {
-        &self.prefix
+    /// the service name pattern prefix from the service configuration
+    pub fn prefix(&self) -> String {
+        self.prefix.clone()
     }
 
+    /// the service initialization timeout from the service configuration
     pub fn timeout_initialize(&self) -> u32 {
         self.timeout_initialize
     }
 
+    /// the default asynchronous service request send timeout from
+    /// the service configuration
     pub fn timeout_async(&self) -> u32 {
         self.timeout_async
     }
 
+    /// the default synchronous service request send timeout from
+    /// the service configuration
     pub fn timeout_sync(&self) -> u32 {
         self.timeout_sync
     }
 
+    /// the service termination timeout based on the service configuration
     pub fn timeout_terminate(&self) -> u32 {
         self.timeout_terminate
     }
 
+    /// the default service request send priority from the
+    /// service configuration
     pub fn priority_default(&self) -> i8 {
         self.priority_default
     }
@@ -454,32 +524,28 @@ impl<'s, S> API<'s, S> {
                 request_info: &[u8], request: &[u8],
                 timeout: u32, priority: i8, trans_id: &[u8],
                 source: OtpErlangTerm) -> Result<()> {
-        // Callback functions are typically function pointers
-        // but a closure without a context could also be used.
-        // Closures with a context (std::ops::{Fn, FnMut, FnOnce})
-        // are not supported due to the negative impact it would have
-        // (A wrapper struct would be necessary for the function while
-        //  causing slower, more complex execution.  The closure traits
-        //  with a context are not Sized so they are difficult to store.).
-        let callback_f = match self.callbacks.get_mut(pattern) {
+        let (callback_f,
+             callback_update) = match self.callbacks.get_mut(pattern) {
             None => {
-                null_response as Callback<'s, S>
+                (CallbackF::from_fn(null_response), false)
             },
             Some(callback_list) => {
-                let f = callback_list.pop_front().unwrap();
-                callback_list.push_back(f);
-                f
+                let callback_f = callback_list.pop_front().unwrap();
+                if callback_list.is_empty() {
+                    self.callbacks.remove(pattern).unwrap();
+                }
+                (callback_f, true)
             },
         };
         let state_p = self.state as *mut S;
-        let callback_result = match callback_f(request_type,
-                                               name, pattern,
-                                               request_info, request,
-                                               timeout, priority,
-                                               &TransId::new(trans_id),
-                                               &source,
-                                               unsafe { &mut *state_p },
-                                               self) {
+        let callback_result = match callback_f.call(request_type,
+                                                    name, pattern,
+                                                    request_info, request,
+                                                    timeout, priority,
+                                                    &TransId::new(trans_id),
+                                                    &source,
+                                                    unsafe { &mut *state_p },
+                                                    self) {
             Response::Response(response) => {
                 CallbackResult::ReturnI(b"".to_vec(), response)
             },
@@ -503,6 +569,19 @@ impl<'s, S> API<'s, S> {
                 CallbackResult::ReturnI(b"".to_vec(), b"".to_vec())
             },
         };
+        if callback_update {
+            match self.callbacks.get_mut(pattern) {
+                None => {
+                    let mut callback_list = LinkedList::new();
+                    callback_list.push_back(callback_f);
+                    let _ = self.callbacks.insert(pattern.to_string(),
+                                                  callback_list);
+                },
+                Some(callback_list) => {
+                    callback_list.push_back(callback_f);
+                },
+            }
+        }
         match callback_result {
             CallbackResult::ReturnI(response_info, response) => {
                 let message_type = match request_type {
@@ -778,6 +857,7 @@ impl<'s, S> API<'s, S> {
         }
     }
 
+    /// blocks to process incoming CloudI service requests
     pub fn poll(&mut self, timeout: i32) -> Result<bool> {
         let timeout_opt: Option<Duration> = if timeout < 0 {
             None
@@ -791,6 +871,7 @@ impl<'s, S> API<'s, S> {
         self.poll_request(&timeout_opt, true)
     }
 
+    /// shutdown the service successfully
     pub fn shutdown(&mut self, reason_opt: Option<String>) -> Result<()> {
         let reason = reason_opt.unwrap_or("".to_string());
         self.send(&OtpErlangTerm::OtpErlangTuple(vec![
@@ -855,22 +936,27 @@ impl<'s, S> API<'s, S> {
     }
 }
 
+/// the 0-based index of this process in the service instance
 pub fn process_index() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_PROCESS_INDEX")
 }
 
+/// the count_process_dynamic maximum count based on the service configuration
 pub fn process_count_max() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_PROCESS_COUNT_MAX")
 }
 
+/// the count_process_dynamic minimum count based on the service configuration
 pub fn process_count_min() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_PROCESS_COUNT_MIN")
 }
 
+/// the service initialization timeout from the service configuration
 pub fn timeout_initialize() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_TIMEOUT_INITIALIZE")
 }
 
+/// the service termination timeout based on the service configuration
 pub fn timeout_terminate() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_TIMEOUT_TERMINATE")
 }
@@ -886,6 +972,54 @@ const MESSAGE_KEEPALIVE: u32 = 8;
 const MESSAGE_REINIT: u32 = 9;
 const MESSAGE_SUBSCRIBE_COUNT: u32 = 10;
 const MESSAGE_TERM: u32 = 11;
+
+struct CallbackF<'s, S> {
+    f: Option<Callback<'s, S>>,
+    f_mut: RefCell<Box<dyn CallbackMut<'s, S> + 's>>,
+}
+
+impl<'s, S> CallbackF<'s, S> {
+    fn from_fn(f: Callback<'s, S>) -> Self {
+        Self {
+            f: Some(f),
+            f_mut: RefCell::new(Box::new(f)),
+        }
+    }
+
+    fn from_fnmut(f: impl CallbackMut<'s, S> + 's) -> Self {
+        Self {
+            f: None,
+            f_mut: RefCell::new(Box::new(f)),
+        }
+    }
+
+    fn call(&self,
+            request_type: &RequestType,
+            name: &str,
+            pattern: &str,
+            request_info: &[u8],
+            request: &[u8],
+            timeout: Timeout,
+            priority: Priority,
+            trans_id: &TransId,
+            source: &Source,
+            state: &mut S,
+            api: &mut API<'s, S>) -> Response {
+        match self.f {
+            None => {
+                let mut f_p = self.f_mut.borrow_mut();
+                (*f_p)(request_type, name, pattern,
+                       request_info, request,
+                       timeout, priority, trans_id, source, state, api)
+            },
+            Some(f) => {
+                f(request_type, name, pattern,
+                  request_info, request,
+                  timeout, priority, trans_id, source, state, api)
+            },
+        }
+    }
+}
 
 enum CallbackResult {
     ReturnI(Vec<u8>, Vec<u8>),
