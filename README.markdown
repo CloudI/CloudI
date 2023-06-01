@@ -135,9 +135,10 @@ Optional (default="no"):
   * (`ocaml /Ubuntu`, `ocaml /Alpine`)
   * Use the "--enable-ocaml-support" configure flag to enable
   * OCaml CloudI API is available as an [opam package](https://github.com/CloudI/cloudi_api_ocaml#readme)
-* `Rust >= 1.56.1`
+* `Rust >= 1.66.1`
   * (`rustc /Ubuntu`, `rust /Alpine`)
   * Use the "--enable-rust-support" configure flag to enable
+  * Rust CloudI API is available as a [published crate](https://github.com/CloudI/cloudi_api_rust#readme)
 
 ### Building
 
