@@ -281,7 +281,7 @@ public class API
     }
 
     /**
-     * Determine how may service name pattern subscriptions have occurred.
+     * Determine how many service name pattern subscriptions have occurred.
      *
      * @param  pattern     the service name pattern
      *

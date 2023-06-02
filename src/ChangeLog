@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve external service exit status log output when an error
+      occurs during the fork-exec sequence in cloudi_os_spawn
+      (e.g. "OS spawn error exec_ENOENT")
+
 2023-06-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the Rust CloudI API

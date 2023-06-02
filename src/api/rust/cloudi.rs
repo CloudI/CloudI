@@ -314,7 +314,7 @@ impl<'s, S> API<'s, S> {
         ]))
     }
 
-    /// determine how may service name pattern subscriptions have occurred
+    /// determine how many service name pattern subscriptions have occurred
     pub fn subscribe_count(&mut self, pattern: &str) -> Result<u32> {
         self.send(&OtpErlangTerm::OtpErlangTuple(vec![
             OtpErlangTerm::OtpErlangAtom(b"subscribe_count".to_vec()),

@@ -28,6 +28,7 @@
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -121,10 +122,250 @@ namespace
             exec_EPERM,
             exec_ETXTBSY,
             exec_unknown,
-            last_value                     // 78
+            last_value                     // 78 == GEPD::ExitStatus::min
         };
 
-        char const * signal_to_string(int signal)
+        char const * status_to_string(int const status)
+        {
+            switch (status)
+            {
+                // internal spawn_status errors
+                case invalid_input:
+                    return "invalid_input";
+                case out_of_memory:
+                    return "out_of_memory";
+                case pipe_EFAULT:
+                    return "pipe_EFAULT";
+                case pipe_EINVAL:
+                    return "pipe_EINVAL";
+                case pipe_EMFILE:
+                    return "pipe_EMFILE";
+                case pipe_ENFILE:
+                    return "pipe_ENFILE";
+                case pipe_unknown:
+                    return "pipe_unknown";
+                case fork_EAGAIN:
+                    return "fork_EAGAIN";
+                case fork_ENOMEM:
+                    return "fork_ENOMEM";
+                case fork_unknown:
+                    return "fork_unknown";
+                case socket_EACCES:
+                    return "socket_EACCES";
+                case socket_EAFNOSUPPORT:
+                    return "socket_EAFNOSUPPORT";
+                case socket_EINVAL:
+                    return "socket_EINVAL";
+                case socket_EMFILE:
+                    return "socket_EMFILE";
+                case socket_ENFILE:
+                    return "socket_ENFILE";
+                case socket_ENOBUFS:
+                    return "socket_ENOBUFS";
+                case socket_ENOMEM:
+                    return "socket_ENOMEM";
+                case socket_EPROTONOSUPPORT:
+                    return "socket_EPROTONOSUPPORT";
+                case socket_unknown:
+                    return "socket_unknown";
+                case dup_EBADF:
+                    return "dup_EBADF";
+                case dup_EBUSY:
+                    return "dup_EBUSY";
+                case dup_EINTR:
+                    return "dup_EINTR";
+                case dup_EINVAL:
+                    return "dup_EINVAL";
+                case dup_EMFILE:
+                    return "dup_EMFILE";
+                case dup_unknown:
+                    return "dup_unknown";
+                case close_EBADF:
+                    return "close_EBADF";
+                case close_EINTR:
+                    return "close_EINTR";
+                case close_EIO:
+                    return "close_EIO";
+                case close_unknown:
+                    return "close_unknown";
+                case waitpid_ECHILD:
+                    return "waitpid_ECHILD";
+                case waitpid_EINTR:
+                    return "waitpid_EINTR";
+                case waitpid_EINVAL:
+                    return "waitpid_EINVAL";
+                case waitpid_unknown:
+                    return "waitpid_unknown";
+                case connect_EACCES:
+                    return "connect_EACCES";
+                case connect_EPERM:
+                    return "connect_EPERM";
+                case connect_EADDRINUSE:
+                    return "connect_EADDRINUSE";
+                case connect_ENOENT:
+                    return "connect_ENOENT";
+                case connect_EAGAIN:
+                    return "connect_EAGAIN";
+                case connect_EALREADY:
+                    return "connect_EALREADY";
+                case connect_EBADF:
+                    return "connect_EBADF";
+                case connect_ECONNREFUSED:
+                    return "connect_ECONNREFUSED";
+                case connect_EFAULT:
+                    return "connect_EFAULT";
+                case connect_EINPROGRESS:
+                    return "connect_EINPROGRESS";
+                case connect_EINTR:
+                    return "connect_EINTR";
+                case connect_EISCONN:
+                    return "connect_EISCONN";
+                case connect_ENETUNREACH:
+                    return "connect_ENETUNREACH";
+                case connect_ENOTSOCK:
+                    return "connect_ENOTSOCK";
+                case connect_ETIMEDOUT:
+                    return "connect_ETIMEDOUT";
+                case connect_unknown:
+                    return "connect_unknown";
+                case exec_E2BIG:
+                    return "exec_E2BIG";
+                case exec_EACCES:
+                    return "exec_EACCES";
+                case exec_EFAULT:
+                    return "exec_EFAULT";
+                case exec_EINVAL:
+                    return "exec_EINVAL";
+                case exec_EIO:
+                    return "exec_EIO";
+                case exec_EISDIR:
+                    return "exec_EISDIR";
+                case exec_ELIBBAD:
+                    return "exec_ELIBBAD";
+                case exec_ELOOP:
+                    return "exec_ELOOP";
+                case exec_EMFILE:
+                    return "exec_EMFILE";
+                case exec_ENAMETOOLONG:
+                    return "exec_ENAMETOOLONG";
+                case exec_ENFILE:
+                    return "exec_ENFILE";
+                case exec_ENOENT:
+                    return "exec_ENOENT";
+                case exec_ENOEXEC:
+                    return "exec_ENOEXEC";
+                case exec_ENOMEM:
+                    return "exec_ENOMEM";
+                case exec_ENOTDIR:
+                    return "exec_ENOTDIR";
+                case exec_EPERM:
+                    return "exec_EPERM";
+                case exec_ETXTBSY:
+                    return "exec_ETXTBSY";
+                case exec_unknown:
+                    return "exec_unknown";
+
+                // GEPD::ExitStatus values reused
+                case GEPD::ExitStatus::read_EAGAIN:
+                    return "read_EAGAIN";
+                case GEPD::ExitStatus::read_EBADF:
+                    return "read_EBADF";
+                case GEPD::ExitStatus::read_EFAULT:
+                    return "read_EFAULT";
+                case GEPD::ExitStatus::read_EINTR:
+                    return "read_EINTR";
+                case GEPD::ExitStatus::read_EINVAL:
+                    return "read_EINVAL";
+                case GEPD::ExitStatus::read_EIO:
+                    return "read_EIO";
+                case GEPD::ExitStatus::read_EISDIR:
+                    return "read_EISDIR";
+                case GEPD::ExitStatus::read_null:
+                    return "read_null";
+                case GEPD::ExitStatus::read_overflow:
+                    return "read_overflow";
+                case GEPD::ExitStatus::read_unknown:
+                    return "read_unknown";
+                case GEPD::ExitStatus::write_EAGAIN:
+                    return "write_EAGAIN";
+                case GEPD::ExitStatus::write_EBADF:
+                    return "write_EBADF";
+                case GEPD::ExitStatus::write_EFAULT:
+                    return "write_EFAULT";
+                case GEPD::ExitStatus::write_EFBIG:
+                    return "write_EFBIG";
+                case GEPD::ExitStatus::write_EINTR:
+                    return "write_EINTR";
+                case GEPD::ExitStatus::write_EINVAL:
+                    return "write_EINVAL";
+                case GEPD::ExitStatus::write_EIO:
+                    return "write_EIO";
+                case GEPD::ExitStatus::write_ENOSPC:
+                    return "write_ENOSPC";
+                case GEPD::ExitStatus::write_EPIPE:
+                    return "write_EPIPE";
+                case GEPD::ExitStatus::write_null:
+                    return "write_null";
+                case GEPD::ExitStatus::write_overflow:
+                    return "write_overflow";
+                case GEPD::ExitStatus::write_unknown:
+                    return "write_unknown";
+                case GEPD::ExitStatus::ei_encode_error:
+                    return "ei_encode_error";
+                case GEPD::ExitStatus::poll_EBADF:
+                    return "poll_EBADF";
+                case GEPD::ExitStatus::poll_EFAULT:
+                    return "poll_EFAULT";
+                case GEPD::ExitStatus::poll_EINTR:
+                    return "poll_EINTR";
+                case GEPD::ExitStatus::poll_EINVAL:
+                    return "poll_EINVAL";
+                case GEPD::ExitStatus::poll_ENOMEM:
+                    return "poll_ENOMEM";
+                case GEPD::ExitStatus::poll_ERR:
+                    return "poll_ERR";
+                case GEPD::ExitStatus::poll_HUP:
+                    return "poll_HUP";
+                case GEPD::ExitStatus::poll_NVAL:
+                    return "poll_NVAL";
+                case GEPD::ExitStatus::poll_unknown:
+                    return "poll_unknown";
+                case GEPD::ExitStatus::pipe_EFAULT:
+                    return "pipe_EFAULT";
+                case GEPD::ExitStatus::pipe_EINVAL:
+                    return "pipe_EINVAL";
+                case GEPD::ExitStatus::pipe_EMFILE:
+                    return "pipe_EMFILE";
+                case GEPD::ExitStatus::pipe_ENFILE:
+                    return "pipe_ENFILE";
+                case GEPD::ExitStatus::pipe_unknown:
+                    return "pipe_unknown";
+                case GEPD::ExitStatus::dup_EBADF:
+                    return "dup_EBADF";
+                case GEPD::ExitStatus::dup_EBUSY:
+                    return "dup_EBUSY";
+                case GEPD::ExitStatus::dup_EINTR:
+                    return "dup_EINTR";
+                case GEPD::ExitStatus::dup_EINVAL:
+                    return "dup_EINVAL";
+                case GEPD::ExitStatus::dup_EMFILE:
+                    return "dup_EMFILE";
+                case GEPD::ExitStatus::dup_unknown:
+                    return "dup_unknown";
+                case GEPD::ExitStatus::close_EBADF:
+                    return "close_EBADF";
+                case GEPD::ExitStatus::close_EINTR:
+                    return "close_EINTR";
+                case GEPD::ExitStatus::close_EIO:
+                    return "close_EIO";
+                case GEPD::ExitStatus::close_unknown:
+                    return "close_unknown";
+                default:
+                    return 0;
+            }
+        }
+
+        char const * signal_to_string(int const signal)
         {
             // only signals consistent among all platforms
             // use a specific string
@@ -428,42 +669,35 @@ namespace
                     if (WIFEXITED(status))
                     {
                         status = WEXITSTATUS(status);
+                        if (status)
+                        {
+                            // the exit status is specific to the
+                            // external service's source code
+                            std::cerr << "OS pid " << m_pid <<
+                                " exited with " << status << std::endl;
+                        }
                     }
                     else if (WIFSIGNALED(status))
                     {
-                        status = WTERMSIG(status) + 128;
-                    }
-                    else
-                    {
-                        assert(false);
-                    }
-                    if (status != 0)
-                    {
-                        // spawn exit status specific to the forked filename
-                        // (the external service's source code)
-                        if (status > 128)
+                        int const signal = WTERMSIG(status);
+                        char const * const signal_name =
+                            spawn_status::signal_to_string(signal);
+                        if (signal_name)
                         {
-                            int const signal = status - 128;
-                            char const * const signal_name =
-                                spawn_status::signal_to_string(signal);
-                            if (signal_name)
-                            {
-                                std::cerr << "OS pid " << m_pid <<
-                                    " exited with " <<
-                                    signal_name << std::endl;
-                            }
-                            else
-                            {
-                                std::cerr << "OS pid " << m_pid <<
-                                    " exited with " <<
-                                    "SIG#" << signal << std::endl;
-                            }
+                            std::cerr << "OS pid " << m_pid <<
+                                " exited with " <<
+                                signal_name << std::endl;
                         }
                         else
                         {
                             std::cerr << "OS pid " << m_pid <<
-                                " exited with " << status << std::endl;
+                                " exited with " <<
+                                "SIG#" << signal << std::endl;
                         }
+                    }
+                    else
+                    {
+                        assert(false);
                     }
                 }
             }
@@ -593,6 +827,13 @@ namespace
         return status;
     }
 
+    void fork_exit(int const status, int const fd)
+    {
+        unsigned char const fork_status = status;
+        ::write(fd, &fork_status, 1);
+        ::_exit(status);
+    }
+
 } // anonymous namespace
 
 bool terminate_now()
@@ -639,34 +880,50 @@ int32_t spawn(char protocol,
     }
     else
     {
-        return spawn_status::invalid_input;
+        ::exit(spawn_status::invalid_input);
     }
+    int fds_fork_exit[2] = {-1, -1};
     int fds_stdout[2] = {-1, -1};
     int fds_stderr[2] = {-1, -1};
+    if (::pipe(fds_fork_exit) == -1)
+        ::exit(spawn_status::errno_pipe());
+    if (static_cast<uint32_t>(fds_fork_exit[1]) < ports_len + 3)
+    {
+        // ensure the fork_exit fd doesn't conflict with a thread's socket fd
+        if (::dup2(fds_fork_exit[1], ports_len + 3) == -1)
+            ::exit(spawn_status::errno_dup());
+        if (::close(fds_fork_exit[1]) == -1)
+            ::exit(spawn_status::errno_close());
+        fds_fork_exit[1] = ports_len + 3;
+    }
     if (::pipe(fds_stdout) == -1)
-        return spawn_status::errno_pipe();
+        ::exit(spawn_status::errno_pipe());
     if (::pipe(fds_stderr) == -1)
-        return spawn_status::errno_pipe();
-    pid_t const pid = fork();
+        ::exit(spawn_status::errno_pipe());
+    pid_t const pid = ::fork();
     if (pid == -1)
     {
-        return spawn_status::errno_fork();
+        ::exit(spawn_status::errno_fork());
     }
     else if (pid == 0)
     {
+        if (::close(fds_fork_exit[0]) == -1)
+            ::_exit(spawn_status::errno_close());
+        if (::fcntl(fds_fork_exit[1], F_SETFD, FD_CLOEXEC) == -1)
+            ::_exit(spawn_status::errno_pipe());
         for (size_t i = 0; i < GEPD::nfds; ++i)
         {
             if (::close(GEPD::fds[i].fd) == -1)
-                ::_exit(spawn_status::errno_close());
+                fork_exit(spawn_status::errno_close(), fds_fork_exit[1]);
         }
         if (::dup2(fds_stdout[1], 1) == -1)
-            ::_exit(spawn_status::errno_dup());
+            fork_exit(spawn_status::errno_dup(), fds_fork_exit[1]);
         if (::close(fds_stdout[0]) == -1 || close(fds_stdout[1]) == -1)
-            ::_exit(spawn_status::errno_close());
+            fork_exit(spawn_status::errno_close(), fds_fork_exit[1]);
         if (::dup2(fds_stderr[1], 2) == -1)
-            ::_exit(spawn_status::errno_dup());
+            fork_exit(spawn_status::errno_dup(), fds_fork_exit[1]);
         if (::close(fds_stderr[0]) == -1 || close(fds_stderr[1]) == -1)
-            ::_exit(spawn_status::errno_close());
+            fork_exit(spawn_status::errno_close(), fds_fork_exit[1]);
 
         char pid_message[1024];
         int pid_message_index = 0;
@@ -674,13 +931,13 @@ int32_t spawn(char protocol,
             pid_message_index = 4;
         unsigned long const pid_child = ::getpid();
         if (::ei_encode_version(pid_message, &pid_message_index))
-            ::_exit(GEPD::ExitStatus::ei_encode_error);
+            fork_exit(GEPD::ExitStatus::ei_encode_error, fds_fork_exit[1]);
         if (::ei_encode_tuple_header(pid_message, &pid_message_index, 2))
-            ::_exit(GEPD::ExitStatus::ei_encode_error);
+            fork_exit(GEPD::ExitStatus::ei_encode_error, fds_fork_exit[1]);
         if (::ei_encode_atom(pid_message, &pid_message_index, "pid"))
-            ::_exit(GEPD::ExitStatus::ei_encode_error);
+            fork_exit(GEPD::ExitStatus::ei_encode_error, fds_fork_exit[1]);
         if (::ei_encode_ulong(pid_message, &pid_message_index, pid_child))
-            ::_exit(GEPD::ExitStatus::ei_encode_error);
+            fork_exit(GEPD::ExitStatus::ei_encode_error, fds_fork_exit[1]);
         if (use_header)
         {
             int pid_message_length = pid_message_index - 4;
@@ -694,22 +951,22 @@ int32_t spawn(char protocol,
         {
             int sockfd = ::socket(domain, type, 0);
             if (sockfd == -1)
-                ::_exit(spawn_status::errno_socket());
+                fork_exit(spawn_status::errno_socket(), fds_fork_exit[1]);
             if (domain == PF_INET && type == SOCK_STREAM)
             {
                 int const tcp_nodelay_flag = 1;
                 // set TCP_NODELAY to turn off Nagle's algorithm
                 if (::setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
                                  &tcp_nodelay_flag, sizeof(int)) == -1)
-                    ::_exit(spawn_status::socket_unknown);
+                    fork_exit(spawn_status::socket_unknown, fds_fork_exit[1]);
             }
 
             if (static_cast<size_t>(sockfd) != i + 3)
             {
                 if (::dup2(sockfd, i + 3) == -1)
-                    ::_exit(spawn_status::errno_dup());
+                    fork_exit(spawn_status::errno_dup(), fds_fork_exit[1]);
                 if (::close(sockfd) == -1)
-                    ::_exit(spawn_status::errno_close());
+                    fork_exit(spawn_status::errno_close(), fds_fork_exit[1]);
                 sockfd = i + 3;
             }
             
@@ -725,7 +982,7 @@ int32_t spawn(char protocol,
                 if (::connect(sockfd,
                               reinterpret_cast<struct sockaddr *>(&localhost),
                               sizeof(localhost)) == -1)
-                    ::_exit(spawn_status::errno_connect());
+                    fork_exit(spawn_status::errno_connect(), fds_fork_exit[1]);
             }
             else if (domain == PF_LOCAL)
             {
@@ -744,7 +1001,7 @@ int32_t spawn(char protocol,
                 if (::connect(sockfd,
                               reinterpret_cast<struct sockaddr *>(&local),
                               sizeof(local)) == -1)
-                    ::_exit(spawn_status::errno_connect());
+                    fork_exit(spawn_status::errno_connect(), fds_fork_exit[1]);
             }
             else
             {
@@ -756,7 +1013,7 @@ int32_t spawn(char protocol,
                 // let the first connection get a pid message for attempting
                 // to kill the OS process when the Erlang process terminates
                 if (::write(sockfd, pid_message, pid_message_index) == -1)
-                    ::_exit(spawn_status::errno_write());
+                    fork_exit(spawn_status::errno_write(), fds_fork_exit[1]);
             }
         }
 
@@ -771,37 +1028,37 @@ int32_t spawn(char protocol,
 
         if (owner_get(user_i, user_str, user_str_len,
                       group_i, group_str, group_str_len))
-            ::_exit(spawn_status::invalid_input);
+            fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
         if (chroot_directory_len > 1)
         {
 #if defined(HAVE_CHROOT)
             if (::chroot(chroot_directory))
-                ::_exit(spawn_status::invalid_input);
+                fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
             if (directory_len == 1)
             {
                 if (::chdir("/"))
-                    ::_exit(spawn_status::invalid_input);
+                    fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
             }
 #else
             assert(chroot_directory);
-            ::_exit(spawn_status::invalid_input);
+            fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
 #endif
         }
         if (rlimit(rlimits, rlimits_len))
-            ::_exit(spawn_status::invalid_input);
+            fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
         if (nice != 0)
         {
             errno = 0;
             if (::nice(nice)) {} // ignore invalid -1 result
             if (errno != 0)
-                ::_exit(spawn_status::invalid_input);
+                fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
         }
         if (owner_set(user_i, group_i))
-            ::_exit(spawn_status::invalid_input);
+            fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
         if (directory_len > 1)
         {
             if (::chdir(directory))
-                ::_exit(spawn_status::invalid_input);
+                fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
         }
         if (syscall_lock_len > 1)
         {
@@ -811,36 +1068,62 @@ int32_t spawn(char protocol,
             strings_set(syscall_names, syscall_lock_count,
                         syscall_lock, syscall_lock_len);
             if (syscall_lock_set(syscall_names))
-                ::_exit(spawn_status::invalid_input);
+                fork_exit(spawn_status::invalid_input, fds_fork_exit[1]);
             delete [] syscall_names;
         }
 
         ::execve(filename, execve_argv, execve_env);
-        ::_exit(spawn_status::errno_exec());
+        fork_exit(spawn_status::errno_exec(), fds_fork_exit[1]);
     }
     else
     {
+        if (::close(fds_fork_exit[1]) == -1)
+            ::exit(spawn_status::errno_close());
         if (::close(fds_stdout[1]) == -1)
-            return spawn_status::errno_close();
+            ::exit(spawn_status::errno_close());
         if (::close(fds_stderr[1]) == -1)
-            return spawn_status::errno_close();
+            ::exit(spawn_status::errno_close());
 
-        if (GEPD::fds.reserve(GEPD::nfds + 2) == false)
-            ::exit(spawn_status::out_of_memory);
-        size_t const index_stdout = GEPD::nfds;
-        size_t const index_stderr = GEPD::nfds + 1;
-        GEPD::fds[index_stdout].fd = fds_stdout[0];
-        GEPD::fds[index_stdout].events = POLLIN | POLLPRI;
-        GEPD::fds[index_stdout].revents = 0;
-        GEPD::fds[index_stderr].fd = fds_stderr[0];
-        GEPD::fds[index_stderr].events = POLLIN | POLLPRI;
-        GEPD::fds[index_stderr].revents = 0;
-        GEPD::nfds += 2;
+        // wait for execve to complete
+        unsigned char fork_status = 0;
+        if (::read(fds_fork_exit[0], &fork_status, 1) == 1)
+        {
+            // the forked process failed before or during execve
+            char const * const fork_error =
+                spawn_status::status_to_string(fork_status);
+            if (fork_error)
+            {
+                std::cerr << "OS spawn error " <<
+                    fork_error << std::endl;
+            }
+            else
+            {
+                std::cerr << "OS spawn error " <<
+                    static_cast<int>(fork_status) << std::endl;
+            }
+        }
+        else
+        {
+            // execve did not fail
+            if (GEPD::fds.reserve(GEPD::nfds + 2) == false)
+                ::exit(spawn_status::out_of_memory);
+            size_t const index_stdout = GEPD::nfds;
+            size_t const index_stderr = GEPD::nfds + 1;
+            GEPD::fds[index_stdout].fd = fds_stdout[0];
+            GEPD::fds[index_stdout].events = POLLIN | POLLPRI;
+            GEPD::fds[index_stdout].revents = 0;
+            GEPD::fds[index_stderr].fd = fds_stderr[0];
+            GEPD::fds[index_stderr].events = POLLIN | POLLPRI;
+            GEPD::fds[index_stderr].revents = 0;
+            GEPD::nfds += 2;
 
-        copy_ptr<process_data> P(new process_data(pid,
-                                                  index_stdout,
-                                                  index_stderr));
-        processes.push_back(P);
+            copy_ptr<process_data> P(new process_data(pid,
+                                                      index_stdout,
+                                                      index_stderr));
+            processes.push_back(P);
+        }
+        if (::close(fds_fork_exit[0]) == -1)
+            ::exit(spawn_status::errno_close());
     }
     return pid;
 }
