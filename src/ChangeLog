@@ -6,6 +6,9 @@
     * Improve external service exit status log output when an error
       occurs during the fork-exec sequence in cloudi_os_spawn
       (e.g. "OS spawn error exec_ENOENT")
+    * Fix pre-26.0 Erlang/OTP support that relies on individual
+      OTP applications release directories without archive output
+      (empty directories) that causes include_lib problems
 
 2023-06-01 Michael Truog   <mjtruog at protonmail dot com>
 
