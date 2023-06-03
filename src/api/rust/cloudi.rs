@@ -45,15 +45,20 @@ use erlang::OtpErlangTerm;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// provided when handling a service request
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum RequestType {
     ASYNC = 1,
     SYNC = -1,
 }
+/// the timeout value in milliseconds
 pub type Timeout = u32;
+/// the service request priority when queued
 pub type Priority = i8;
+/// the Erlang pid that is the source of the service request
 pub type Source = OtpErlangTerm;
 
+/// service request callback function return type
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Response {
     Response(Vec<u8>),
@@ -64,6 +69,36 @@ pub enum Response {
     NullError(&'static str),
 }
 
+impl From<Error> for Response {
+    fn from(error: Error) -> Self {
+        match error.kind {
+            ErrorKind::Terminate {..} => {
+                Response::Null()
+            },
+            _ => {
+                eprintln!("{:#?}", error);
+                std::process::abort()
+            },
+        }
+    }
+}
+
+/// unwrap macro (like ?) for handling the Terminate error in a callback
+#[macro_export]
+macro_rules! unwrap {
+    ($expr:expr $(,)?) => {
+        match $expr {
+            std::result::Result::Ok(value) => {
+                value
+            },
+            std::result::Result::Err(error) => {
+                return cloudi::Response::from(error);
+            },
+        }
+    };
+}
+
+/// service request transaction id
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct TransId {
     id: [u8; 16],

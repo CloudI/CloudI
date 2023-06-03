@@ -272,136 +272,154 @@ fn sequence1(_request_type: &cloudi::RequestType,
              api: &mut cloudi::API<StateType>) -> cloudi::Response {
     // consume all the 'end' responses from all sequences handled
     // by this service
-    while api.recv_async(Some(1000), None, None).unwrap().1 == b"end".to_vec() {
+    while cloudi::unwrap!(api.recv_async(Some(1000), None,
+                                         None)).1 == b"end".to_vec() {
     }
     let iteration = request_as_usize(request);
     println!("messaging sequence1 start rust ({iteration})");
-    let test1_id = api.send_async((api.prefix() + "a/b/c/d").as_str(),
-                                  &b"test1".to_vec(),
-                                  None, None, None).unwrap();
-    let test2_id = api.send_async((api.prefix() + "a/b/c/z").as_str(),
-                                  &b"test2".to_vec(),
-                                  None, None, None).unwrap();
-    let test3_id = api.send_async((api.prefix() + "a/b/c/dd").as_str(),
-                                  &b"test3".to_vec(),
-                                  None, None, None).unwrap();
-    let test4_id = api.send_async((api.prefix() + "a/b/z/d").as_str(),
-                                  &b"test4".to_vec(),
-                                  None, None, None).unwrap();
-    let test5_id = api.send_async((api.prefix() + "a/b/cc/d").as_str(),
-                                  &b"test5".to_vec(),
-                                  None, None, None).unwrap();
-    let test6_id = api.send_async((api.prefix() + "a/z/c/d").as_str(),
-                                  &b"test6".to_vec(),
-                                  None, None, None).unwrap();
-    let test7_id = api.send_async((api.prefix() + "a/bb/c/d").as_str(),
-                                  &b"test7".to_vec(),
-                                  None, None, None).unwrap();
-    let test8_id = api.send_async((api.prefix() + "z/b/c/d").as_str(),
-                                  &b"test8".to_vec(),
-                                  None, None, None).unwrap();
-    let test9_id = api.send_async((api.prefix() + "aa/b/c/d").as_str(),
-                                  &b"test9".to_vec(),
-                                  None, None, None).unwrap();
-    let test10_id = api.send_async((api.prefix() + "a/b/czd").as_str(),
-                                   &b"test10".to_vec(),
-                                   None, None, None).unwrap();
-    let test11_id = api.send_async((api.prefix() + "a/bzc/d").as_str(),
-                                   &b"test11".to_vec(),
-                                   None, None, None).unwrap();
-    let test12_id = api.send_async((api.prefix() + "azb/c/d").as_str(),
-                                   &b"test12".to_vec(),
-                                   None, None, None).unwrap();
-    let test13_id = api.send_async((api.prefix() + "a/bzczd").as_str(),
-                                   &b"test13".to_vec(),
-                                   None, None, None).unwrap();
-    let test14_id = api.send_async((api.prefix() + "azbzc/d").as_str(),
-                                   &b"test14".to_vec(),
-                                   None, None, None).unwrap();
-    let test15_id = api.send_async((api.prefix() + "azbzczd").as_str(),
-                                   &b"test15".to_vec(),
-                                   None, None, None).unwrap();
+    let test1_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/b/c/d").as_str(),
+                                       &b"test1".to_vec(),
+                                       None, None, None));
+    let test2_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/b/c/z").as_str(),
+                                       &b"test2".to_vec(),
+                                       None, None, None));
+    let test3_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/b/c/dd").as_str(),
+                                       &b"test3".to_vec(),
+                                       None, None, None));
+    let test4_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/b/z/d").as_str(),
+                                       &b"test4".to_vec(),
+                                       None, None, None));
+    let test5_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/b/cc/d").as_str(),
+                                       &b"test5".to_vec(),
+                                       None, None, None));
+    let test6_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/z/c/d").as_str(),
+                                       &b"test6".to_vec(),
+                                       None, None, None));
+    let test7_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/bb/c/d").as_str(),
+                                       &b"test7".to_vec(),
+                                       None, None, None));
+    let test8_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "z/b/c/d").as_str(),
+                                       &b"test8".to_vec(),
+                                       None, None, None));
+    let test9_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "aa/b/c/d").as_str(),
+                                       &b"test9".to_vec(),
+                                       None, None, None));
+    let test10_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/b/czd").as_str(),
+                                       &b"test10".to_vec(),
+                                       None, None, None));
+    let test11_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/bzc/d").as_str(),
+                                       &b"test11".to_vec(),
+                                       None, None, None));
+    let test12_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "azb/c/d").as_str(),
+                                       &b"test12".to_vec(),
+                                       None, None, None));
+    let test13_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "a/bzczd").as_str(),
+                                       &b"test13".to_vec(),
+                                       None, None, None));
+    let test14_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "azbzc/d").as_str(),
+                                       &b"test14".to_vec(),
+                                       None, None, None));
+    let test15_id =
+        cloudi::unwrap!(api.send_async((api.prefix() + "azbzczd").as_str(),
+                                       &b"test15".to_vec(),
+                                       None, None, None));
     // n.b., depends on cloudi_core_i_constants.hrl having
     // RECV_ASYNC_STRATEGY == recv_async_select_oldest
-    let _ = api.recv_async(None, Some(test1_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test1_id), Some(false)));
     let (_, test1_check,
-         test1_id_check) = api.recv_async(None, None, None).unwrap();
+         test1_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test1".to_vec(), test1_check);
     assert_eq!(test1_id, test1_id_check);
-    let _ = api.recv_async(None, Some(test2_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test2_id), Some(false)));
     let (_, test2_check,
-         test2_id_check) = api.recv_async(None, None, None).unwrap();
+         test2_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test2".to_vec(), test2_check);
     assert_eq!(test2_id, test2_id_check);
-    let _ = api.recv_async(None, Some(test3_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test3_id), Some(false)));
     let (_, test3_check,
-         test3_id_check) = api.recv_async(None, None, None).unwrap();
+         test3_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test3".to_vec(), test3_check);
     assert_eq!(test3_id, test3_id_check);
-    let _ = api.recv_async(None, Some(test4_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test4_id), Some(false)));
     let (_, test4_check,
-         test4_id_check) = api.recv_async(None, None, None).unwrap();
+         test4_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test4".to_vec(), test4_check);
     assert_eq!(test4_id, test4_id_check);
-    let _ = api.recv_async(None, Some(test5_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test5_id), Some(false)));
     let (_, test5_check,
-         test5_id_check) = api.recv_async(None, None, None).unwrap();
+         test5_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test5".to_vec(), test5_check);
     assert_eq!(test5_id, test5_id_check);
-    let _ = api.recv_async(None, Some(test6_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test6_id), Some(false)));
     let (_, test6_check,
-         test6_id_check) = api.recv_async(None, None, None).unwrap();
+         test6_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test6".to_vec(), test6_check);
     assert_eq!(test6_id, test6_id_check);
-    let _ = api.recv_async(None, Some(test7_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test7_id), Some(false)));
     let (_, test7_check,
-         test7_id_check) = api.recv_async(None, None, None).unwrap();
+         test7_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test7".to_vec(), test7_check);
     assert_eq!(test7_id, test7_id_check);
-    let _ = api.recv_async(None, Some(test8_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test8_id), Some(false)));
     let (_, test8_check,
-         test8_id_check) = api.recv_async(None, None, None).unwrap();
+         test8_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test8".to_vec(), test8_check);
     assert_eq!(test8_id, test8_id_check);
-    let _ = api.recv_async(None, Some(test9_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test9_id), Some(false)));
     let (_, test9_check,
-         test9_id_check) = api.recv_async(None, None, None).unwrap();
+         test9_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test9".to_vec(), test9_check);
     assert_eq!(test9_id, test9_id_check);
-    let _ = api.recv_async(None, Some(test10_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test10_id), Some(false)));
     let (_, test10_check,
-         test10_id_check) = api.recv_async(None, None, None).unwrap();
+         test10_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test10".to_vec(), test10_check);
     assert_eq!(test10_id, test10_id_check);
-    let _ = api.recv_async(None, Some(test11_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test11_id), Some(false)));
     let (_, test11_check,
-         test11_id_check) = api.recv_async(None, None, None).unwrap();
+         test11_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test11".to_vec(), test11_check);
     assert_eq!(test11_id, test11_id_check);
-    let _ = api.recv_async(None, Some(test12_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test12_id), Some(false)));
     let (_, test12_check,
-         test12_id_check) = api.recv_async(None, None, None).unwrap();
+         test12_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test12".to_vec(), test12_check);
     assert_eq!(test12_id, test12_id_check);
-    let _ = api.recv_async(None, Some(test13_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test13_id), Some(false)));
     let (_, test13_check,
-         test13_id_check) = api.recv_async(None, None, None).unwrap();
+         test13_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test13".to_vec(), test13_check);
     assert_eq!(test13_id, test13_id_check);
-    let _ = api.recv_async(None, Some(test14_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test14_id), Some(false)));
     let (_, test14_check,
-         test14_id_check) = api.recv_async(None, None, None).unwrap();
+         test14_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test14".to_vec(), test14_check);
     assert_eq!(test14_id, test14_id_check);
-    let _ = api.recv_async(None, Some(test15_id), Some(false)).unwrap();
+    let _ = cloudi::unwrap!(api.recv_async(None, Some(test15_id), Some(false)));
     let (_, test15_check,
-         test15_id_check) = api.recv_async(None, None, None).unwrap();
+         test15_id_check) = cloudi::unwrap!(api.recv_async(None, None, None));
     assert_eq!(b"test15".to_vec(), test15_check);
     assert_eq!(test15_id, test15_id_check);
     println!("messaging sequence1 end rust ({iteration})");
     // start sequence2
-    let _ = api.send_async((api.prefix() + "sequence2").as_str(),
-                           &request.to_vec(), None, None, None).unwrap();
+    let _ = cloudi::unwrap!(api.send_async((api.prefix() +
+                                            "sequence2").as_str(),
+                                           &request.to_vec(),
+                                           None, None, None));
     cloudi::Response::Response(b"end".to_vec())
 }
 
@@ -536,16 +554,19 @@ fn sequence2(_request_type: &cloudi::RequestType,
         // will not be called, despite the fact it has subscribed to 'e',
         // to prevent a process (in this case thread) from deadlocking
         // with itself.
-        let e_ids = api.mcast_async((api.prefix() + "e").as_str(),
-                                    &b" ".to_vec(), None, None, None).unwrap();
+        let e_ids = cloudi::unwrap!(api.mcast_async((api.prefix() +
+                                                     "e").as_str(),
+                                                    &b" ".to_vec(),
+                                                    None, None, None));
         // 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
         // since 1 thread is sending the mcast_async, so 3 * 8 == 24
         if e_ids.len() == 24 {
             let mut e_check_list = Vec::with_capacity(24);
             for e_id in e_ids.iter() {
                 let (_, e_check,
-                     e_id_check) = api.recv_async(None, Some(*e_id),
-                                                  None).unwrap();
+                     e_id_check) = cloudi::unwrap!(api.recv_async(None,
+                                                                  Some(*e_id),
+                                                                  None));
                 assert_eq!(*e_id, e_id_check);
                 e_check_list.extend_from_slice(&e_check[..1]);
             }
@@ -557,19 +578,23 @@ fn sequence2(_request_type: &cloudi::RequestType,
             println!("Waiting for {} services to initialize",
                      4.0 - (e_ids.len() as f64) / 8.0);
             for e_id in e_ids.iter() {
-                let (_, _, e_id_check) = api.recv_async(None, Some(*e_id),
-                                                        None).unwrap();
+                let (_, _,
+                     e_id_check) = cloudi::unwrap!(api.recv_async(None,
+                                                                  Some(*e_id),
+                                                                  None));
                 assert_eq!(*e_id, e_id_check);
             }
-            let (_, _, null_id) = api.recv_async(Some(1000),
-                                                 None, None).unwrap();
+            let (_, _, null_id) = cloudi::unwrap!(api.recv_async(Some(1000),
+                                                                 None, None));
             assert!(null_id.is_timeout());
         }
     }
     println!("messaging sequence2 end rust ({iteration})");
     // start sequence3
-    let _ = api.send_async((api.prefix() + "sequence3").as_str(),
-                           &request.to_vec(), None, None, None).unwrap();
+    let _ = cloudi::unwrap!(api.send_async((api.prefix() +
+                                            "sequence3").as_str(),
+                                           &request.to_vec(),
+                                           None, None, None));
     cloudi::Response::Response(b"end".to_vec())
 }
 
@@ -640,22 +665,27 @@ fn sequence3(_request_type: &cloudi::RequestType,
              api: &mut cloudi::API<StateType>) -> cloudi::Response {
     let mut iteration = request_as_usize(request);
     println!("messaging sequence3 start rust ({iteration})");
-    let test1_id = api.send_async((api.prefix() + "f1").as_str(),
-                                  &b"0".to_vec(), None, None, None).unwrap();
+    let test1_id = cloudi::unwrap!(api.send_async((api.prefix() +
+                                                   "f1").as_str(),
+                                                  &b"0".to_vec(),
+                                                  None, None, None));
     let (_, test1_check,
-         test1_id_check) = api.recv_async(None, Some(test1_id), None).unwrap();
+         test1_id_check) = cloudi::unwrap!(api.recv_async(None, Some(test1_id),
+                                                          None));
     assert_eq!(test1_id, test1_id_check);
     assert_eq!(b"done".to_vec(), test1_check);
-    let (_, test2_check, _) = api.send_sync((api.prefix() + "g1").as_str(),
+    let (_, test2_check,
+         _) = cloudi::unwrap!(api.send_sync((api.prefix() + "g1").as_str(),
                                             &b"prefix_".to_vec(),
-                                            None, None, None).unwrap();
+                                            None, None, None));
     assert_eq!(b"prefix_suffix".to_vec(), test2_check);
     println!("messaging sequence3 end rust ({iteration})");
     // loop to find any infrequent problems, restart sequence1
     iteration += 1;
-    let _ = api.send_async((api.prefix() + "sequence1").as_str(),
-                           &format!("{iteration}").into(),
-                           None, None, None).unwrap();
+    let _ = cloudi::unwrap!(api.send_async((api.prefix() +
+                                            "sequence1").as_str(),
+                                           &format!("{iteration}").into(),
+                                           None, None, None));
     cloudi::Response::Response(b"end".to_vec())
 }
 

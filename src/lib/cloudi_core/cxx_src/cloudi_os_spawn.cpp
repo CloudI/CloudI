@@ -1093,12 +1093,12 @@ int32_t spawn(char protocol,
                 spawn_status::status_to_string(fork_status);
             if (fork_error)
             {
-                std::cerr << "OS spawn error " <<
+                std::cerr << "OS pid " << pid << " spawn error " <<
                     fork_error << std::endl;
             }
             else
             {
-                std::cerr << "OS spawn error " <<
+                std::cerr << "OS pid " << pid << " spawn error " <<
                     static_cast<int>(fork_status) << std::endl;
             }
         }
