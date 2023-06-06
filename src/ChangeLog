@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the Rust CloudI API
+        * Add http_req integration test
+    * Update cpg
+
 2023-06-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Rust CloudI API unwrap macro for callback ? functionality

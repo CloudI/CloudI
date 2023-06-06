@@ -477,6 +477,7 @@
 @CONFIG_TESTS_GO_HTTP_REQ@
 @CONFIG_TESTS_HASKELL_HTTP_REQ@
 @CONFIG_TESTS_OCAML_HTTP_REQ@
+@CONFIG_TESTS_RUST_HTTP_REQ@
     {external,
         "/tests/http_req/",
         "@cloudi_prefix@/tests/http_req/http_req_c", "",

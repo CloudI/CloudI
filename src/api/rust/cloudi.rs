@@ -163,7 +163,7 @@ pub enum ErrorKind {
 /// Error data
 #[derive(Debug)]
 pub struct Error {
-    kind: ErrorKind,
+    pub kind: ErrorKind,
     source: Option<Box<dyn std::error::Error + Send + Sync>>,
     _backtrace: Backtrace,
 }
@@ -259,7 +259,6 @@ pub struct API<'s, S> {
     priority_default: i8,
     use_header: bool,
     initialization_complete: bool,
-    fatal_exceptions: bool,
     terminate: bool,
     response: Option<(Vec<u8>, Vec<u8>, TransId)>,
     trans_id: Option<TransId>,
@@ -272,7 +271,7 @@ pub fn thread_count() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_THREAD_COUNT")
 }
 
-impl<'s, S> API<'s, S> {
+impl<'s, S: 's> API<'s, S> {
     /// creates an instance of the CloudI API
     pub fn new(thread_index: u32,
                state: &'s mut S) -> Result<Self> {
@@ -316,7 +315,6 @@ impl<'s, S> API<'s, S> {
             priority_default: 0,
             use_header,
             initialization_complete: false,
-            fatal_exceptions: false,
             terminate: false,
             response: None,
             trans_id: None,
@@ -623,7 +621,10 @@ impl<'s, S> API<'s, S> {
                     self.timeout_async = unpack_incoming_u32(i, data)?;
                     self.timeout_sync = unpack_incoming_u32(i, data)?;
                     self.priority_default = unpack_incoming_i8(i, data)?;
-                    self.fatal_exceptions = unpack_incoming_bool(i, data)?;
+                    let fatal_exceptions = unpack_incoming_bool(i, data)?;
+                    if fatal_exceptions == false {
+                        return Err(ErrorKind::InvalidInputError().into());
+                    }
                 },
                 MESSAGE_KEEPALIVE => {
                     self.send(&OtpErlangTerm::OtpErlangAtomUTF8(
@@ -686,7 +687,10 @@ impl<'s, S> API<'s, S> {
                     self.timeout_sync = unpack_incoming_u32(i, data)?;
                     self.timeout_terminate = unpack_incoming_u32(i, data)?;
                     self.priority_default = unpack_incoming_i8(i, data)?;
-                    self.fatal_exceptions = unpack_incoming_bool(i, data)?;
+                    let fatal_exceptions = unpack_incoming_bool(i, data)?;
+                    if fatal_exceptions == false {
+                        return Err(ErrorKind::InvalidInputError().into());
+                    }
                     let bind = unpack_incoming_i32(i, data)?;
                     if bind >= 0 {
                         return Err(ErrorKind::InvalidInputError().into());
@@ -787,6 +791,7 @@ impl<'s, S> API<'s, S> {
                         let _ = self.handle_events(external, data, data_size,
                                                    i, 0)?;
                     }
+                    return Ok(false);
                 },
                 MESSAGE_TERM => {
                     if ! self.handle_events(external, data, data_size,
@@ -800,7 +805,10 @@ impl<'s, S> API<'s, S> {
                     self.timeout_async = unpack_incoming_u32(i, data)?;
                     self.timeout_sync = unpack_incoming_u32(i, data)?;
                     self.priority_default = unpack_incoming_i8(i, data)?;
-                    self.fatal_exceptions = unpack_incoming_bool(i, data)?;
+                    let fatal_exceptions = unpack_incoming_bool(i, data)?;
+                    if fatal_exceptions == false {
+                        return Err(ErrorKind::InvalidInputError().into());
+                    }
                     if *i != data_size {
                         continue
                     }
@@ -939,6 +947,58 @@ pub fn timeout_initialize() -> Result<u32> {
 /// the service termination timeout based on the service configuration
 pub fn timeout_terminate() -> Result<u32> {
     getenv_to_u32("CLOUDI_API_INIT_TIMEOUT_TERMINATE")
+}
+
+fn text_pairs_parse(text: &[u8]) -> HashMap<String, Vec<String>> {
+    let mut pairs: HashMap<String, Vec<String>> = HashMap::new();
+    let data: Vec<String> = text.split(|c| *c == 0).map(|element| {
+        unsafe {
+            std::str::from_utf8_unchecked(element)
+        }.to_string()
+    }).collect();
+    for i in (0..(data.len() - 1)).step_by(2) {
+        let key = &data[i];
+        let value = &data[i + 1];
+        match pairs.get_mut(key) {
+            None => {
+                let _ = pairs.insert(key.clone(), vec![value.clone()]);
+            },
+            Some(current) => {
+                current.push(value.clone());
+            },
+        };
+    }
+    pairs
+}
+
+fn text_pairs_new(pairs: &HashMap<String, Vec<String>>,
+                  response: bool) -> Vec<u8> {
+    let mut text_segments: Vec<u8> = Vec::new();
+    for (key, values) in pairs.iter() {
+        for value in values.iter() {
+            text_segments.extend_from_slice(key.as_bytes());
+            text_segments.push(0);
+            text_segments.extend_from_slice(value.as_bytes());
+            text_segments.push(0);
+        }
+    }
+    if response && text_segments.is_empty() {
+        vec![0]
+    }
+    else {
+        text_segments
+    }
+}
+
+/// decode service request info key/value data
+pub fn info_key_value_parse(info: &[u8]) -> HashMap<String, Vec<String>> {
+    text_pairs_parse(info)
+}
+
+/// encode service response info key/value data
+pub fn info_key_value_new(pairs: &HashMap<String, Vec<String>>,
+                          response_opt: Option<bool>) -> Vec<u8> {
+    text_pairs_new(pairs, response_opt.unwrap_or(true))
 }
 
 const MESSAGE_INIT: u32 = 1;

@@ -3274,8 +3274,8 @@ monitored_node(Node, visible, NodeNameLocal) ->
             All = lists:member(Node, listen_nodes(all, NodeNameLocal)),
             if
                 All =:= true ->
-                    ?LOG_ERROR("listen should be 'all' for monitoring ~p",
-                               [Node]);
+                    ?LOG_INFO("listen should be 'all' for monitoring ~p",
+                              [Node]);
                 All =:= false ->
                     ok
             end

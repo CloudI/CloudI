@@ -19,8 +19,8 @@ Erlang `cpg`
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit e527187bd620df8664dd478bf781570249cc4a17 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit fc8a7599f212784cad1d8d5830689638c35051d7`
+- `Sat Jun  3 19:06:12 UTC 2023`
 - `MIT`
 
 Erlang `erlang_term`

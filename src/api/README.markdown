@@ -13,18 +13,19 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `C`
 * `C++`
 * `Elixir`
-* `Erlang >= 21.0`
+* `Erlang >= 22.0`
 * `Go >= 1.11`
-* `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
+* `Haskell (GHC >= 8.6.0)`
 * `Java`
 * `JavaScript/node.js >= 0.12.18`
-* `OCaml >= 4.03.0`
+* `OCaml >= 4.08.0`
 * `Perl >= 5.10 (with Compress::Zlib)`
 * `PHP >= 7.0`
 * `Python >= 2.7.0`
 * `Ruby >= 1.9.0`
+* `Rust >= 1.66.1`
 
-C/C++, Go, Haskell, Java, JavaScript, OCaml, Perl, PHP, Python, and Ruby
+C/C++, Go, Haskell, Java, JavaScript, OCaml, Perl, PHP, Python, Ruby, and Rust
 all have an implementation of the CloudI API that is completely done in that
 programming language (to avoid extra complexity).
 ATS uses the C CloudI API to add more type information in the ATS CloudI API.
