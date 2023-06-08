@@ -4,11 +4,19 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Shell Service==
+%%% For ensuring each shell command-line is executed correctly,
+%%% it is best to keep the interactive argument set to false (the default)
+%%% so each service request uses its own shell.
+%%%
+%%% Use the interactive argument if you need to utilize a programming
+%%% language interpreter.  For example, SBCL could be used with
+%%% "/usr/bin/sbcl --noinform --disable-debugger" and Python could be used with
+%%% "/usr/bin/python3 -ui -c 'import sys; sys.ps1 = sys.ps2 = \"\"'".
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +37,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2019-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_shell).
@@ -46,6 +54,7 @@
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
+         cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -56,6 +65,16 @@
 -define(DEFAULT_USER,                         undefined).
 -define(DEFAULT_SU_PATH,                      "/bin/su").
 -define(DEFAULT_LOGIN,                             true).
+-define(DEFAULT_INTERACTIVE,                      false).
+        % Should a shell for interactive use be created?
+        % If set to true, a single shell is used during the
+        % service's lifetime with a service request as input
+        % to generate a response.  If set to a string,
+        % the string is used as initial input to the shell.
+        % The shell does not execute as an interactive shell
+        % due to not using keyboard input.  If set to false,
+        % each service request uses its own shell and the
+        % response provides the exit status.
 -define(DEFAULT_TIMEOUT_KILLS_PROCESS,            false).
         % A service request timeout should kill the OS shell process?
 -define(DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL,   sigkill).
@@ -72,6 +91,7 @@
 
 -record(state,
     {
+        service :: cloudi_service:source(),
         file_path :: nonempty_string(),
         directory :: nonempty_string(),
         env :: list({nonempty_string(), string()}),
@@ -79,6 +99,7 @@
         user :: nonempty_string() | undefined,
         su :: nonempty_string(),
         login :: boolean(),
+        interactive = undefined :: port() | undefined,
         kill_signal_timeout :: pos_integer() | undefined,
         kill_signal_terminate :: pos_integer() | undefined,
         debug_level :: off | trace | debug | info | warn | error | fatal
@@ -131,16 +152,18 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {user,                          ?DEFAULT_USER},
         {su_path,                       ?DEFAULT_SU_PATH},
         {login,                         ?DEFAULT_LOGIN},
+        {interactive,                   ?DEFAULT_INTERACTIVE},
         {timeout_kills_process,         ?DEFAULT_TIMEOUT_KILLS_PROCESS},
         {timeout_kills_process_signal,  ?DEFAULT_TIMEOUT_KILLS_PROCESS_SIGNAL},
         {terminate_kills_process,       ?DEFAULT_TERMINATE_KILLS_PROCESS},
         {terminate_kills_process_signal,?DEFAULT_TERMINATE_KILLS_PROCESS_SIGNAL},
         {debug,                         ?DEFAULT_DEBUG},
         {debug_level,                   ?DEFAULT_DEBUG_LEVEL}],
-    [FilePath, Directory, Env, User, SUPath, Login,
+    [FilePath, Directory, Env, User, SUPath, Login, Interactive,
      TimeoutKill, TimeoutKillSignal,
      TerminateKill, TerminateKillSignal,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
+    Service = cloudi_service:self(Dispatcher),
     [_ | _] = FilePath,
     true = filelib:is_regular(FilePath),
     [_ | _] = Directory,
@@ -158,6 +181,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         is_boolean(Login) ->
             true
     end,
+    true = is_boolean(Interactive) orelse
+           (is_list(Interactive) andalso is_integer(hd(Interactive))),
     EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
     EnvShell = if
         EnvPort =:= true ->
@@ -190,28 +215,63 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         Debug =:= true ->
             DebugLevel
     end,
+    State = interactive_init(Interactive,
+                             #state{service = Service,
+                                    file_path = FilePath,
+                                    directory = Directory,
+                                    env = EnvShell,
+                                    env_port = EnvPort,
+                                    user = User,
+                                    su = SUPath,
+                                    login = Login,
+                                    kill_signal_timeout = KillSignalTimeout,
+                                    kill_signal_terminate = KillSignalTerminate,
+                                    debug_level = DebugLogLevel}),
     cloudi_service:subscribe(Dispatcher, ""),
-    {ok, #state{file_path = FilePath,
-                directory = Directory,
-                env = EnvShell,
-                env_port = EnvPort,
-                user = User,
-                su = SUPath,
-                login = Login,
-                kill_signal_timeout = KillSignalTimeout,
-                kill_signal_terminate = KillSignalTerminate,
-                debug_level = DebugLogLevel}}.
+    {ok, State}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Source,
-                              #state{debug_level = DebugLogLevel} = State,
+                              #state{interactive = undefined,
+                                     debug_level = DebugLogLevel} = State,
                               _Dispatcher) ->
-    {Status, Output} = request(Request, Timeout, State),
-    log_output(Status, Output, RequestInfo, Request, DebugLogLevel),
-    {reply, erlang:integer_to_binary(Status), State}.
+    {Status, Output} = isolated_request(Request, Timeout, State),
+    ok = isolated_log_output(Status, Output,
+                             RequestInfo, Request, DebugLogLevel),
+    {reply, erlang:integer_to_binary(Status), State};
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              RequestInfo, Request,
+                              Timeout, _Priority, _TransId, _Source,
+                              #state{interactive = Shell,
+                                     debug_level = DebugLogLevel} = State,
+                              _Dispatcher)
+    when is_port(Shell) ->
+    Output = interactive_request(Request, Timeout, State),
+    ok = interactive_log_output(Output, RequestInfo, Request, DebugLogLevel),
+    {reply, erlang:iolist_to_binary(Output), State}.
 
-cloudi_service_terminate(_Reason, _Timeout, _State) ->
+cloudi_service_handle_info({Shell, {data, Data}},
+                           #state{interactive = Shell,
+                                  debug_level = DebugLogLevel} = State,
+                           _Dispatcher) ->
+    ok = interactive_log_output(Data, DebugLogLevel),
+    {noreply, State};
+cloudi_service_handle_info({Shell, {exit_status, Status} = Reason},
+                           #state{interactive = Shell,
+                                  debug_level = DebugLogLevel} = State,
+                           _Dispatcher) ->
+    ok = interactive_log_exit(Status, DebugLogLevel),
+    {stop, Reason, State}.
+
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{interactive = Shell}) ->
+    if
+        Shell =:= undefined ->
+            true;
+        is_port(Shell) ->
+            catch erlang:port_close(Shell)
+    end,
     ok.
 
 %%%------------------------------------------------------------------------
@@ -261,18 +321,108 @@ env_set([{[_ | _] = Key, Value} | L], Directory, ShellInput) ->
     [[Key, $=, Value, "; export ", Key, $\n] |
      env_set(L, Directory, ShellInput)].
 
-request(Exec, Timeout,
-        #state{file_path = FilePath,
-               directory = Directory,
-               env = Env,
-               env_port = EnvPort,
-               user = User,
-               su = SUPath,
-               login = Login,
-               kill_signal_timeout = KillSignalTimeout,
-               kill_signal_terminate = KillSignalTerminate}) ->
+isolated_request(Exec, Timeout,
+                 #state{file_path = FilePath,
+                        directory = Directory,
+                        env = Env,
+                        env_port = EnvPort,
+                        user = User,
+                        su = SUPath,
+                        login = Login,
+                        kill_signal_timeout = KillSignalTimeout,
+                        kill_signal_terminate = KillSignalTerminate}) ->
     ShellInput0 = [unicode:characters_to_binary(Exec, utf8), "\n"
-                   "exit $?\n"],
+                  "exit $?\n"],
+    {ShellInputN,
+     Shell} = shell(ShellInput0, FilePath, Directory, Env, EnvPort,
+                    User, SUPath, Login),
+    KillOnExit = kill_on_exit_start(KillSignalTerminate),
+    KillTimer = kill_timer_start(KillSignalTimeout, Shell, Timeout),
+    true = erlang:port_command(Shell, ShellInputN),
+    ShellOutput = isolated_request_output(Shell, [], KillSignalTerminate),
+    ok = kill_timer_stop(KillTimer, Shell),
+    ok = kill_on_exit_stop(KillOnExit),
+    ShellOutput.
+
+isolated_request_output(Shell, Output, KillSignalTerminate) ->
+    receive
+        {Shell, {data, Data}} ->
+            isolated_request_output(Shell, [Data | Output],
+                                    KillSignalTerminate);
+        {'EXIT', _Service, Reason} ->
+            ok = kill_shell(KillSignalTerminate, Shell),
+            erlang:exit(Reason),
+            isolated_request_output(Shell, Output, KillSignalTerminate);
+        {Shell, {kill, KillSignalTimeout}} ->
+            true = erlang:unlink(Shell),
+            ok = kill_shell(KillSignalTimeout, Shell),
+            isolated_request_output(Shell, Output, KillSignalTerminate);
+        {Shell, {exit_status, Status}} ->
+            {Status, lists:reverse(Output)}
+    end.
+
+interactive_init(false, State) ->
+    State;
+interactive_init(Interactive,
+                 #state{file_path = FilePath,
+                        directory = Directory,
+                        env = Env,
+                        env_port = EnvPort,
+                        user = User,
+                        su = SUPath,
+                        login = Login} = State) ->
+    ShellInput0 = if
+        Interactive =:= true ->
+            "";
+        is_list(Interactive) ->
+            [unicode:characters_to_binary(Interactive, utf8), "\n"]
+    end,
+    {ShellInputN,
+     Shell} = shell(ShellInput0, FilePath, Directory, Env, EnvPort,
+                    User, SUPath, Login),
+    true = erlang:port_command(Shell, ShellInputN),
+    State#state{interactive = Shell}.
+
+interactive_request(Eval, Timeout,
+                    #state{service = Service,
+                           interactive = Shell,
+                           kill_signal_timeout = KillSignalTimeout,
+                           kill_signal_terminate = KillSignalTerminate}) ->
+    ShellInput = [unicode:characters_to_binary(Eval, utf8), "\n"],
+    KillOnExit = kill_on_exit_start(KillSignalTerminate),
+    KillTimer = kill_timer_start(KillSignalTimeout, Shell, Timeout),
+    true = erlang:port_connect(Shell, self()),
+    true = erlang:port_command(Shell, ShellInput),
+    Output = interactive_request_output(Shell, [], Timeout,
+                                        KillSignalTerminate),
+    ok = kill_timer_stop(KillTimer, Shell),
+    ok = kill_on_exit_stop(KillOnExit),
+    true = erlang:port_connect(Shell, Service),
+    true = erlang:unlink(Shell),
+    Output.
+
+interactive_request_output(Shell, Output, Timeout, KillSignalTerminate) ->
+    receive
+        {Shell, {data, Data}} ->
+            interactive_request_output(Shell, [Data | Output], 0,
+                                       KillSignalTerminate);
+        {Shell, connected} ->
+            interactive_request_output(Shell, Output, Timeout,
+                                       KillSignalTerminate);
+        {'EXIT', _Service, Reason} ->
+            ok = kill_shell(KillSignalTerminate, Shell),
+            erlang:exit(Reason),
+            Output;
+        {Shell, {kill, KillSignalTimeout}} ->
+            ok = kill_shell(KillSignalTimeout, Shell),
+            Output
+    after
+        Timeout ->
+            Output
+    end.
+
+shell(ShellInput0, FilePath, Directory, Env, EnvPort,
+      User, SUPath, Login) ->
     PortOptions0 = [stream, binary, stderr_to_stdout, exit_status],
     {ShellInputN, PortOptionsN} = if
         EnvPort =:= true ->
@@ -300,31 +450,9 @@ request(Exec, Timeout,
                      ["-s", FilePath, User]
              end}
     end,
-    Shell = erlang:open_port({spawn_executable, ShellExecutable},
-                             [{args, ShellArgs} | PortOptionsN]),
-    KillOnExit = kill_on_exit_start(KillSignalTerminate),
-    KillTimer = kill_timer_start(KillSignalTimeout, Shell, Timeout),
-    true = erlang:port_command(Shell, ShellInputN),
-    ShellOutput = request_output(Shell, [], KillSignalTerminate),
-    ok = kill_timer_stop(KillTimer, Shell),
-    ok = kill_on_exit_stop(KillOnExit),
-    ShellOutput.
-
-request_output(Shell, Output, KillSignalTerminate) ->
-    receive
-        {Shell, {data, Data}} ->
-            request_output(Shell, [Data | Output], KillSignalTerminate);
-        {'EXIT', _Service, Reason} ->
-            ok = kill_shell(KillSignalTerminate, Shell),
-            erlang:exit(Reason),
-            request_output(Shell, Output, KillSignalTerminate);
-        {Shell, {kill, KillSignalTimeout}} ->
-            true = erlang:unlink(Shell),
-            ok = kill_shell(KillSignalTimeout, Shell),
-            request_output(Shell, Output, KillSignalTerminate);
-        {Shell, {exit_status, Status}} ->
-            {Status, lists:reverse(Output)}
-    end.
+    {ShellInputN,
+     erlang:open_port({spawn_executable, ShellExecutable},
+                      [{args, ShellArgs} | PortOptionsN])}.
 
 kill_shell(KillSignal, Shell) ->
     case erlang:port_info(Shell, os_pid) of
@@ -370,28 +498,44 @@ kill_on_exit_stop(true) ->
     true = erlang:process_flag(trap_exit, false),
     ok.
 
-log_output(Status, Output, RequestInfo, Request, DebugLogLevel) ->
-    Level = if
-        Status == 0 ->
-            DebugLogLevel;
-        true ->
-            error
-    end,
-    StatusStr = if
-        Status > 128 ->
-            cloudi_os_process:signal_to_string(Status - 128);
-        true ->
-            erlang:integer_to_list(Status)
-    end,
+isolated_log_output(Status, Output, RequestInfo, Request, DebugLogLevel) ->
+    Level = log_level(Status, DebugLogLevel),
     Info = log_output_info(RequestInfo),
+    StatusStr = status_to_string(Status),
     if
         Output == [] ->
             ?LOG(Level, "~ts~ts = ~s",
                  [Info, Request, StatusStr]);
         true ->
             ?LOG(Level, "~ts~ts = ~s (stdout/stderr below)~n~ts",
-                 [Info, Request, StatusStr, erlang:iolist_to_binary(Output)])
+                 [Info, Request, StatusStr,
+                  erlang:iolist_to_binary(Output)])
     end.
+
+interactive_log_output(Output, RequestInfo, Request, DebugLogLevel) ->
+    Info = log_output_info(RequestInfo),
+    if
+        Output == [] ->
+            ?LOG(DebugLogLevel, "~ts~ts (no output)",
+                 [Info, Request]);
+        true ->
+            ?LOG(DebugLogLevel, "~ts~ts (stdout/stderr below)~n~ts",
+                 [Info, Request,
+                  erlang:iolist_to_binary(Output)])
+    end.
+
+interactive_log_output(Data, DebugLogLevel) ->
+    ?LOG(DebugLogLevel, "~ts", [Data]).
+
+interactive_log_exit(Status, DebugLogLevel) ->
+    Level = log_level(Status, DebugLogLevel),
+    StatusStr = status_to_string(Status),
+    ?LOG(Level, "exit ~s", [StatusStr]).
+
+log_level(0, DebugLogLevel) ->
+    DebugLogLevel;
+log_level(_, _) ->
+    error.
 
 log_output_info(RequestInfo)
     when is_binary(RequestInfo), RequestInfo /= <<>> ->
@@ -404,4 +548,10 @@ log_output_info_format([]) ->
     [];
 log_output_info_format([{Key, Value} | InfoTextPairs]) ->
     ["# ", Key, ": ", Value, $\n | log_output_info_format(InfoTextPairs)].
+
+status_to_string(Status)
+    when Status > 128 ->
+    cloudi_os_process:signal_to_string(Status - 128);
+status_to_string(Status) ->
+    erlang:integer_to_list(Status).
 

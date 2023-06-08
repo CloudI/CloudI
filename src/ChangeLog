@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the interactive argument to cloudi_service_shell
+
 2023-06-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the Rust CloudI API
