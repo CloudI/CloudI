@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the service configuration option 'critical' to
+      cause the service to stop the CloudI node
+      if the service fails, to escalate the failure
+    * Improve the cloudi_service_shell interactive argument
+
 2023-06-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the interactive argument to cloudi_service_shell

@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -295,6 +295,12 @@
         % initialization of the new service instance, during a service restart
         restart_delay = false
             :: false | tuple(),
+        % is the service critical to the CloudI node functioning?
+        % if critical is set to true, a service failure
+        % (max_r restarts occurring) will cause the node to stop to
+        % escalate the failure.
+        critical = false
+            :: boolean(),
         % provide a scope for all subscribe/unsubscribe and messaging
         % (i.e., all service name usage is within the scope).  Using a
         % different scope can help avoid contention when using an immediate

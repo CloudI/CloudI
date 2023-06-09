@@ -43,7 +43,7 @@
 
 %% external interface
 -export([start_link/0,
-         monitor/14,
+         monitor/15,
          process_init_begin/1,
          process_init_end/1,
          process_init_end/2,
@@ -97,6 +97,7 @@
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
         restart_all :: boolean(),
         restart_delay :: tuple() | false,
+        critical :: boolean(),
         % from the supervisor behavior documentation:
         % If more than MaxR restarts occur within MaxT seconds,
         % the supervisor terminates all child processes...
@@ -202,6 +203,7 @@ start_link() ->
                              timeout_terminate_value_milliseconds(),
               RestartAll :: boolean(),
               RestartDelay :: tuple() | false,
+              Critical :: boolean(),
               MaxR :: non_neg_integer(),
               MaxT :: non_neg_integer(),
               ServiceId :: cloudi_x_uuid:cloudi_x_uuid(),
@@ -211,7 +213,7 @@ start_link() ->
 
 monitor(M, F, A, ProcessIndex, ProcessCount, ThreadCount, Scope,
         TimeoutTerm, RestartAll, RestartDelay,
-        MaxR, MaxT, ServiceId, Timeout)
+        Critical, MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
          is_integer(ProcessIndex), ProcessIndex >= 0,
          is_integer(ProcessCount), ProcessCount > 0,
@@ -220,13 +222,14 @@ monitor(M, F, A, ProcessIndex, ProcessCount, ThreadCount, Scope,
          TimeoutTerm >= ?TIMEOUT_TERMINATE_MIN,
          TimeoutTerm =< ?TIMEOUT_TERMINATE_MAX,
          is_boolean(RestartAll),
+         is_boolean(Critical),
          is_integer(MaxR), MaxR >= 0, is_integer(MaxT), MaxT >= 0,
          is_binary(ServiceId), byte_size(ServiceId) == 16 ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {monitor, M, F, A,
                                  ProcessIndex, ProcessCount, ThreadCount,
                                  Scope, TimeoutTerm, RestartAll, RestartDelay,
-                                 MaxR, MaxT, ServiceId},
+                                 Critical, MaxR, MaxT, ServiceId},
                                 Timeout)).
 
 -spec process_init_begin(Pids :: list(pid() | nonempty_list(pid()))) ->
@@ -352,7 +355,7 @@ init([]) ->
 
 handle_call({monitor, M, F, A, ProcessIndex, ProcessCount, ThreadCount,
              Scope, TimeoutTerm, RestartAll, RestartDelay,
-             MaxR, MaxT, ServiceId}, _,
+             Critical, MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
     TimeStart = cloudi_timestamp:native_monotonic(),
     TimeRestart = undefined,
@@ -368,7 +371,7 @@ handle_call({monitor, M, F, A, ProcessIndex, ProcessCount, ThreadCount,
                                                 TimeStart, TimeRestart,
                                                 Restarts, TimeoutTerm,
                                                 RestartAll, RestartDelay,
-                                                MaxR, MaxT,
+                                                Critical, MaxR, MaxT,
                                                 ServiceId, Services),
             {reply, {ok, Pids}, State#state{services = ServicesNew}};
         {ok, [Pid | _] = Pids} = Success when is_pid(Pid) ->
@@ -378,7 +381,7 @@ handle_call({monitor, M, F, A, ProcessIndex, ProcessCount, ThreadCount,
                                                 TimeStart, TimeRestart,
                                                 Restarts, TimeoutTerm,
                                                 RestartAll, RestartDelay,
-                                                MaxR, MaxT,
+                                                Critical, MaxR, MaxT,
                                                 ServiceId, Services),
             {reply, Success, State#state{services = ServicesNew}};
         {error, _} = Error ->
@@ -829,13 +832,15 @@ restart_stage3_async(Delay, Service, ServiceId, TimeTerminate, PidOld) ->
     ok.
 
 restart_stage2(#service{restart_count = 0,
+                        critical = Critical,
                         max_r = 0} = Service,
                ServiceId, _, PidOld, State) ->
     % no restarts allowed
-    ok = restart_log_failure_maxr0(PidOld, service_id(ServiceId)),
-    restart_failed(Service, ServiceId, State);
+    ok = restart_log_failure_maxr0(PidOld, Critical, service_id(ServiceId)),
+    restart_failed(Critical, Service, ServiceId, State);
 restart_stage2(#service{restart_count = RestartCount,
                         restart_times = RestartTimes,
+                        critical = Critical,
                         max_r = MaxR,
                         max_t = MaxT} = Service,
                ServiceId, TimeTerminate, PidOld, State)
@@ -854,9 +859,9 @@ restart_stage2(#service{restart_count = RestartCount,
                                restart_times = RestartTimesNew},
                            ServiceId, TimeTerminate, PidOld, State);
         true ->
-            ok = restart_log_failure_maxr(PidOld, MaxR, MaxT,
+            ok = restart_log_failure_maxr(PidOld, Critical, MaxR, MaxT,
                                           service_id(ServiceId)),
-            restart_failed(Service, ServiceId, State)
+            restart_failed(Critical, Service, ServiceId, State)
     end;
 restart_stage2(#service{restart_times = RestartTimes,
                         restart_delay = RestartDelay,
@@ -1035,10 +1040,10 @@ restart_success_all(ProcessIndex,
                         Service, ServiceId, TimeTerminate,
                         State#state{services = ServicesNew}).
 
-restart_failed(Service, ServiceId,
+restart_failed(Critical, Service, ServiceId,
                #state{services = Services,
                       failed = Failed} = State) ->
-    StateNew = case cloudi_x_key2value:find1(ServiceId, Services) of
+    StateNext = case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
             % if other processes were started by this service instance
             % they will get a shutdown here
@@ -1047,8 +1052,15 @@ restart_failed(Service, ServiceId,
         error ->
             State
     end,
-    terminated_service(true, ServiceId,
-                       StateNew#state{failed = Failed + 1}).
+    StateNew = terminated_service(true, ServiceId,
+                                  StateNext#state{failed = Failed + 1}),
+    if
+        Critical =:= true ->
+            ok = init:stop(1);
+        Critical =:= false ->
+            ok
+    end,
+    StateNew.
 
 restart_log_success_one(PidOld, RestartCount, T,
                         Pid, ServiceIdStr)
@@ -1159,23 +1171,36 @@ restart_log_success_all(PidOld, RestartCount, T,
             end
     end.
 
-restart_log_failure_maxr0(undefined, ServiceIdStr) ->
-    ?LOG_WARN_SYNC("max restarts (MaxR = 0)~n"
-                   " ~p",
-                   [ServiceIdStr]);
-restart_log_failure_maxr0(PidOld, ServiceIdStr) ->
-    ?LOG_WARN_SYNC("max restarts (MaxR = 0) ~p~n"
-                   " ~p",
-                   [PidOld, ServiceIdStr]).
+restart_log_failure_critical(true) ->
+    {fatal, " (critical service failure shutdown!)"};
+restart_log_failure_critical(false) ->
+    {warn, ""}.
 
-restart_log_failure_maxr(undefined, MaxR, MaxT, ServiceIdStr) ->
-    ?LOG_WARN_SYNC("max restarts (MaxR = ~p, MaxT = ~p seconds)~n"
-                   " ~p",
-                   [MaxR, MaxT, ServiceIdStr]);
-restart_log_failure_maxr(PidOld, MaxR, MaxT, ServiceIdStr) ->
-    ?LOG_WARN_SYNC("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
-                   " ~p",
-                   [MaxR, MaxT, PidOld, ServiceIdStr]).
+restart_log_failure_maxr0(undefined, Critical, ServiceIdStr) ->
+    {Level, CriticalStr} = restart_log_failure_critical(Critical),
+    ?LOG_SYNC(Level,
+              "max restarts (MaxR = 0)~n"
+              " ~p~s",
+              [ServiceIdStr, CriticalStr]);
+restart_log_failure_maxr0(PidOld, Critical, ServiceIdStr) ->
+    {Level, CriticalStr} = restart_log_failure_critical(Critical),
+    ?LOG_SYNC(Level,
+              "max restarts (MaxR = 0) ~p~n"
+              " ~p~s",
+              [PidOld, ServiceIdStr, CriticalStr]).
+
+restart_log_failure_maxr(undefined, Critical, MaxR, MaxT, ServiceIdStr) ->
+    {Level, CriticalStr} = restart_log_failure_critical(Critical),
+    ?LOG_SYNC(Level,
+              "max restarts (MaxR = ~p, MaxT = ~p seconds)~n"
+              " ~p~s",
+              [MaxR, MaxT, ServiceIdStr, CriticalStr]);
+restart_log_failure_maxr(PidOld, Critical, MaxR, MaxT, ServiceIdStr) ->
+    {Level, CriticalStr} = restart_log_failure_critical(Critical),
+    ?LOG_SYNC(Level,
+              "max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
+              " ~p~s",
+              [MaxR, MaxT, PidOld, ServiceIdStr, CriticalStr]).
 
 restart_log_failure({error, _} = Error, ServiceIdStr) ->
     ?LOG_ERROR_SYNC("failed ~tp restart~n"
@@ -1517,6 +1542,7 @@ pids_change_increase_loop(Count, ProcessIndex,
                                    timeout_term = TimeoutTerm,
                                    restart_all = RestartAll,
                                    restart_delay = RestartDelay,
+                                   critical = Critical,
                                    max_r = MaxR,
                                    max_t = MaxT} = Service,
                           ServiceId, Services) ->
@@ -1531,7 +1557,7 @@ pids_change_increase_loop(Count, ProcessIndex,
                                   ThreadCount, Scope, [Pid],
                                   TimeStart, TimeRestart, Restarts,
                                   TimeoutTerm, RestartAll, RestartDelay,
-                                  MaxR, MaxT, ServiceId, Services);
+                                  Critical, MaxR, MaxT, ServiceId, Services);
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
                       [service_id(ServiceId), Pids]),
@@ -1540,7 +1566,7 @@ pids_change_increase_loop(Count, ProcessIndex,
                                   ThreadCount, Scope, Pids,
                                   TimeStart, TimeRestart, Restarts,
                                   TimeoutTerm, RestartAll, RestartDelay,
-                                  MaxR, MaxT, ServiceId, Services);
+                                  Critical, MaxR, MaxT, ServiceId, Services);
         {error, _} = Error ->
             ?LOG_ERROR("failed ~tp increase (count_process_dynamic)~n ~p",
                        [Error, service_id(ServiceId)]),
@@ -2558,14 +2584,14 @@ new_service_processes(Init, M, F, A,
                       ProcessIndex, ProcessCount, ThreadCount, Scope, Pids,
                       TimeStart, TimeRestart, Restarts,
                       TimeoutTerm, RestartAll, RestartDelay,
-                      MaxR, MaxT, ServiceId, Services) ->
+                      Critical, MaxR, MaxT, ServiceId, Services) ->
     ServicesNew = new_service_processes_store(Pids, M, F, A,
                                               ProcessIndex, ProcessCount,
                                               ThreadCount, Scope, Pids,
                                               TimeStart, TimeRestart, Restarts,
                                               TimeoutTerm, RestartAll,
-                                              RestartDelay, MaxR, MaxT,
-                                              ServiceId, Services),
+                                              RestartDelay, Critical,
+                                              MaxR, MaxT, ServiceId, Services),
     if
         Init =:= true ->
             ok = process_init_begin(Pids);
@@ -2575,14 +2601,14 @@ new_service_processes(Init, M, F, A,
     ServicesNew.
 
 new_service_processes_store([], _, _, _, _, _, _, _, _, _,
-                            _, _, _, _, _, _, _, _, Services) ->
+                            _, _, _, _, _, _, _, _, _, Services) ->
     Services;
 new_service_processes_store([P | L], M, F, A,
                             ProcessIndex, ProcessCount,
                             ThreadCount, Scope, Pids,
                             TimeStart, TimeRestart, Restarts,
                             TimeoutTerm, RestartAll, RestartDelay,
-                            MaxR, MaxT, ServiceId, Services) ->
+                            Critical, MaxR, MaxT, ServiceId, Services) ->
     OSPid = undefined,
     MonitorRef = erlang:monitor(process, P),
     Service = new_service_process(M, F, A,
@@ -2590,7 +2616,7 @@ new_service_processes_store([P | L], M, F, A,
                                   Scope, Pids, OSPid, MonitorRef,
                                   TimeStart, TimeRestart, Restarts,
                                   TimeoutTerm, RestartAll, RestartDelay,
-                                  MaxR, MaxT),
+                                  Critical, MaxR, MaxT),
     ServicesNew = cloudi_x_key2value:store(ServiceId, P,
                                            Service, Services),
     new_service_processes_store(L, M, F, A,
@@ -2598,13 +2624,13 @@ new_service_processes_store([P | L], M, F, A,
                                 ThreadCount, Scope, Pids,
                                 TimeStart, TimeRestart, Restarts,
                                 TimeoutTerm, RestartAll, RestartDelay,
-                                MaxR, MaxT, ServiceId, ServicesNew).
+                                Critical, MaxR, MaxT, ServiceId, ServicesNew).
 
 new_service_process(M, F, A, ProcessIndex, ProcessCount, ThreadCount,
                     Scope, Pids, OSPid, MonitorRef,
                     TimeStart, TimeRestart, Restarts,
                     TimeoutTerm, RestartAll, RestartDelay,
-                    MaxR, MaxT) ->
+                    Critical, MaxR, MaxT) ->
     #service{service_m = M,
              service_f = F,
              service_a = A,
@@ -2621,6 +2647,7 @@ new_service_process(M, F, A, ProcessIndex, ProcessCount, ThreadCount,
              timeout_term = TimeoutTerm,
              restart_all = RestartAll,
              restart_delay = RestartDelay,
+             critical = Critical,
              max_r = MaxR,
              max_t = MaxT}.
 

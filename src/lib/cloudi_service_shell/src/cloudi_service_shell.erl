@@ -342,6 +342,7 @@ isolated_request(Exec, Timeout,
     ShellOutput = isolated_request_output(Shell, [], KillSignalTerminate),
     ok = kill_timer_stop(KillTimer, Shell),
     ok = kill_on_exit_stop(KillOnExit),
+    catch erlang:port_close(Shell),
     ShellOutput.
 
 isolated_request_output(Shell, Output, KillSignalTerminate) ->
@@ -393,7 +394,7 @@ interactive_request(Eval, Timeout,
     KillTimer = kill_timer_start(KillSignalTimeout, Shell, Timeout),
     true = erlang:port_connect(Shell, self()),
     true = erlang:port_command(Shell, ShellInput),
-    Output = interactive_request_output(Shell, [], Timeout,
+    Output = interactive_request_output(Shell, [], Timeout + 500,
                                         KillSignalTerminate),
     ok = kill_timer_stop(KillTimer, Shell),
     ok = kill_on_exit_stop(KillOnExit),

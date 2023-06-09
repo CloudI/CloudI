@@ -1147,6 +1147,7 @@ service_start_internal(ProcessIndex, Pids,
                            options = #config_service_options{
                                restart_all = RestartAll,
                                restart_delay = RestartDelay,
+                               critical = Critical,
                                scope = Scope,
                                bind = Bind} = Options,
                            max_r = MaxR,
@@ -1165,7 +1166,7 @@ service_start_internal(ProcessIndex, Pids,
                   Options#config_service_options{bind = BindNew}, ID],
                  ProcessIndex, ProcessCount, 1, Scope,
                  TimeoutTerm, RestartAll, RestartDelay,
-                 MaxR, MaxT, ID, Timeout) of
+                 Critical, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
             service_start_internal(ProcessIndex + 1, [P | Pids],
@@ -1201,6 +1202,7 @@ service_start_external(ProcessIndex, Pids,
                            options = #config_service_options{
                                restart_all = RestartAll,
                                restart_delay = RestartDelay,
+                               critical = Critical,
                                scope = Scope,
                                bind = Bind} = Options,
                            max_r = MaxR,
@@ -1221,7 +1223,7 @@ service_start_external(ProcessIndex, Pids,
                   Options#config_service_options{bind = BindNew}, ID],
                  ProcessIndex, ProcessCount, ThreadCount, Scope,
                  TimeoutTerm, RestartAll, RestartDelay,
-                 MaxR, MaxT, ID, Timeout) of
+                 Critical, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             service_format_log(Service, P),
             service_start_external(ProcessIndex + 1, [P | Pids], Service,

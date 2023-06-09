@@ -134,6 +134,7 @@
      service_options_timeout_terminate_decrease |
      service_options_restart_all_invalid |
      service_options_restart_delay_invalid |
+     service_options_critical_invalid |
      service_options_scope_invalid |
      service_options_monkey_latency_invalid |
      service_options_monkey_chaos_invalid |
@@ -1243,181 +1244,190 @@ services_format_options_external(Options) ->
             OptionsList17
     end,
     OptionsList19 = if
-        Options#config_service_options.scope /= ?SCOPE_DEFAULT ->
-            [{scope,
-              ?SCOPE_FORMAT(Options#config_service_options.scope)} |
+        Options#config_service_options.critical /=
+        Defaults#config_service_options.critical ->
+            [{critical,
+              Options#config_service_options.critical} |
              OptionsList18];
         true ->
             OptionsList18
     end,
     OptionsList20 = if
+        Options#config_service_options.scope /= ?SCOPE_DEFAULT ->
+            [{scope,
+              ?SCOPE_FORMAT(Options#config_service_options.scope)} |
+             OptionsList19];
+        true ->
+            OptionsList19
+    end,
+    OptionsList21 = if
         Options#config_service_options.monkey_latency /=
         Defaults#config_service_options.monkey_latency ->
             [{monkey_latency,
               cloudi_core_i_runtime_testing:
               monkey_latency_format(
                   Options#config_service_options.monkey_latency)} |
-             OptionsList19];
+             OptionsList20];
         true ->
-            OptionsList19
+            OptionsList20
     end,
-    OptionsList21 = if
+    OptionsList22 = if
         Options#config_service_options.monkey_chaos /=
         Defaults#config_service_options.monkey_chaos ->
             [{monkey_chaos,
               cloudi_core_i_runtime_testing:
               monkey_chaos_format(
                   Options#config_service_options.monkey_chaos)} |
-             OptionsList20];
-        true ->
-            OptionsList20
-    end,
-    OptionsList22 = if
-        Options#config_service_options.automatic_loading /=
-        Defaults#config_service_options.automatic_loading ->
-            [{automatic_loading,
-              Options#config_service_options.automatic_loading} |
              OptionsList21];
         true ->
             OptionsList21
     end,
     OptionsList23 = if
-        Options#config_service_options.dispatcher_pid_options /=
-        ?PID_OPTIONS_DEFAULT ->
-            [{dispatcher_pid_options,
-              pid_options_format(
-                  Options#config_service_options.dispatcher_pid_options)} |
+        Options#config_service_options.automatic_loading /=
+        Defaults#config_service_options.automatic_loading ->
+            [{automatic_loading,
+              Options#config_service_options.automatic_loading} |
              OptionsList22];
         true ->
             OptionsList22
     end,
     OptionsList24 = if
-        Options#config_service_options.bind /= false ->
-            [{bind,
-              cloudi_core_i_concurrency:bind_format(
-                  Options#config_service_options.bind)} |
+        Options#config_service_options.dispatcher_pid_options /=
+        ?PID_OPTIONS_DEFAULT ->
+            [{dispatcher_pid_options,
+              pid_options_format(
+                  Options#config_service_options.dispatcher_pid_options)} |
              OptionsList23];
         true ->
             OptionsList23
     end,
     OptionsList25 = if
-        Options#config_service_options.aspects_init_after /=
-        Defaults#config_service_options.aspects_init_after ->
-            [{aspects_init_after,
-              Options#config_service_options.aspects_init_after} |
+        Options#config_service_options.bind /= false ->
+            [{bind,
+              cloudi_core_i_concurrency:bind_format(
+                  Options#config_service_options.bind)} |
              OptionsList24];
         true ->
             OptionsList24
     end,
     OptionsList26 = if
-        Options#config_service_options.aspects_request_before /=
-        Defaults#config_service_options.aspects_request_before ->
-            [{aspects_request_before,
-              Options#config_service_options.aspects_request_before} |
+        Options#config_service_options.aspects_init_after /=
+        Defaults#config_service_options.aspects_init_after ->
+            [{aspects_init_after,
+              Options#config_service_options.aspects_init_after} |
              OptionsList25];
         true ->
             OptionsList25
     end,
     OptionsList27 = if
-        Options#config_service_options.aspects_request_after /=
-        Defaults#config_service_options.aspects_request_after ->
-            [{aspects_request_after,
-              Options#config_service_options.aspects_request_after} |
+        Options#config_service_options.aspects_request_before /=
+        Defaults#config_service_options.aspects_request_before ->
+            [{aspects_request_before,
+              Options#config_service_options.aspects_request_before} |
              OptionsList26];
         true ->
             OptionsList26
     end,
     OptionsList28 = if
-        Options#config_service_options.aspects_terminate_before /=
-        Defaults#config_service_options.aspects_terminate_before ->
-            [{aspects_terminate_before,
-              Options#config_service_options.aspects_terminate_before} |
+        Options#config_service_options.aspects_request_after /=
+        Defaults#config_service_options.aspects_request_after ->
+            [{aspects_request_after,
+              Options#config_service_options.aspects_request_after} |
              OptionsList27];
         true ->
             OptionsList27
     end,
     OptionsList29 = if
-        Options#config_service_options.aspects_suspend /=
-        Defaults#config_service_options.aspects_suspend ->
-            [{aspects_suspend,
-              Options#config_service_options.aspects_suspend} |
+        Options#config_service_options.aspects_terminate_before /=
+        Defaults#config_service_options.aspects_terminate_before ->
+            [{aspects_terminate_before,
+              Options#config_service_options.aspects_terminate_before} |
              OptionsList28];
         true ->
             OptionsList28
     end,
     OptionsList30 = if
-        Options#config_service_options.aspects_resume /=
-        Defaults#config_service_options.aspects_resume ->
-            [{aspects_resume,
-              Options#config_service_options.aspects_resume} |
+        Options#config_service_options.aspects_suspend /=
+        Defaults#config_service_options.aspects_suspend ->
+            [{aspects_suspend,
+              Options#config_service_options.aspects_suspend} |
              OptionsList29];
         true ->
             OptionsList29
     end,
     OptionsList31 = if
-        Options#config_service_options.limit /=
-        Defaults#config_service_options.limit ->
-            [{limit,
-              Options#config_service_options.limit} |
+        Options#config_service_options.aspects_resume /=
+        Defaults#config_service_options.aspects_resume ->
+            [{aspects_resume,
+              Options#config_service_options.aspects_resume} |
              OptionsList30];
         true ->
             OptionsList30
     end,
     OptionsList32 = if
-        Options#config_service_options.owner /=
-        Defaults#config_service_options.owner ->
-            [{owner,
-              Options#config_service_options.owner} |
+        Options#config_service_options.limit /=
+        Defaults#config_service_options.limit ->
+            [{limit,
+              Options#config_service_options.limit} |
              OptionsList31];
         true ->
             OptionsList31
     end,
     OptionsList33 = if
-        Options#config_service_options.nice /=
-        Defaults#config_service_options.nice ->
-            [{nice,
-              Options#config_service_options.nice} |
+        Options#config_service_options.owner /=
+        Defaults#config_service_options.owner ->
+            [{owner,
+              Options#config_service_options.owner} |
              OptionsList32];
         true ->
             OptionsList32
     end,
     OptionsList34 = if
-        Options#config_service_options.cgroup /=
-        Defaults#config_service_options.cgroup ->
-            [{cgroup,
-              Options#config_service_options.cgroup} |
+        Options#config_service_options.nice /=
+        Defaults#config_service_options.nice ->
+            [{nice,
+              Options#config_service_options.nice} |
              OptionsList33];
         true ->
             OptionsList33
     end,
     OptionsList35 = if
-        Options#config_service_options.chroot /=
-        Defaults#config_service_options.chroot ->
-            [{chroot,
-              Options#config_service_options.chroot} |
+        Options#config_service_options.cgroup /=
+        Defaults#config_service_options.cgroup ->
+            [{cgroup,
+              Options#config_service_options.cgroup} |
              OptionsList34];
         true ->
             OptionsList34
     end,
     OptionsList36 = if
-        Options#config_service_options.syscall_lock /=
-        Defaults#config_service_options.syscall_lock ->
-            [{syscall_lock,
-              Options#config_service_options.syscall_lock} |
+        Options#config_service_options.chroot /=
+        Defaults#config_service_options.chroot ->
+            [{chroot,
+              Options#config_service_options.chroot} |
              OptionsList35];
         true ->
             OptionsList35
     end,
     OptionsList37 = if
-        Options#config_service_options.directory /=
-        Defaults#config_service_options.directory ->
-            [{directory,
-              Options#config_service_options.directory} |
+        Options#config_service_options.syscall_lock /=
+        Defaults#config_service_options.syscall_lock ->
+            [{syscall_lock,
+              Options#config_service_options.syscall_lock} |
              OptionsList36];
         true ->
             OptionsList36
     end,
-    lists:reverse(OptionsList37).
+    OptionsList38 = if
+        Options#config_service_options.directory /=
+        Defaults#config_service_options.directory ->
+            [{directory,
+              Options#config_service_options.directory} |
+             OptionsList37];
+        true ->
+            OptionsList37
+    end,
+    lists:reverse(OptionsList38).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -2167,6 +2177,7 @@ services_add_service([Service | Services], Added, Concurrency, Timeout) ->
       service_options_timeout_terminate_decrease |
       service_options_restart_all_invalid |
       service_options_restart_delay_invalid |
+      service_options_critical_invalid |
       service_options_scope_invalid |
       service_options_monkey_latency_invalid |
       service_options_monkey_chaos_invalid |
@@ -2711,6 +2722,7 @@ pid_options_format([Option | OptionsList]) ->
       service_options_timeout_terminate_decrease |
       service_options_restart_all_invalid |
       service_options_restart_delay_invalid |
+      service_options_critical_invalid |
       service_options_scope_invalid |
       service_options_monkey_latency_invalid |
       service_options_monkey_chaos_invalid |
@@ -2775,6 +2787,8 @@ services_validate_options_internal(OptionsList,
          Options#config_service_options.restart_all},
         {restart_delay,
          Options#config_service_options.restart_delay},
+        {critical,
+         Options#config_service_options.critical},
         {scope,
          Options#config_service_options.scope},
         {monkey_latency,
@@ -2823,14 +2837,14 @@ services_validate_options_internal(OptionsList,
          Options#config_service_options.reload}],
     case cloudi_proplists:take_values(Defaults, OptionsList) of
         [PriorityDefault, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
                   (PriorityDefault =< ?PRIORITY_LOW)) ->
             {error, {service_options_priority_default_invalid,
                      PriorityDefault}};
         [_, QueueLimit, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((QueueLimit =:= undefined) orelse
                   (is_integer(QueueLimit) andalso
@@ -2838,7 +2852,7 @@ services_validate_options_internal(OptionsList,
             {error, {service_options_queue_limit_invalid,
                      QueueLimit}};
         [_, _, QueueSize, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((QueueSize =:= undefined) orelse
                   (is_integer(QueueSize) andalso
@@ -2846,7 +2860,7 @@ services_validate_options_internal(OptionsList,
             {error, {service_options_queue_size_invalid,
                      QueueSize}};
         [_, _, _, RateRequestMax, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((RateRequestMax =:= undefined) orelse
                   is_number(RateRequestMax) orelse
@@ -2854,103 +2868,109 @@ services_validate_options_internal(OptionsList,
             {error, {service_options_rate_request_max_invalid,
                      RateRequestMax}};
         [_, _, _, _, DestRefreshStart, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ?DEST_REFRESH_START_GUARD(DestRefreshStart) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
         [_, _, _, _, _, DestRefreshDelay, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ?DEST_REFRESH_DELAY_GUARD(DestRefreshDelay) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
         [_, _, _, _, _, _, RequestNameLookup, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((RequestNameLookup =:= sync) orelse
                   (RequestNameLookup =:= async)) ->
             {error, {service_options_request_name_lookup_invalid,
                      RequestNameLookup}};
         [_, _, _, _, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(RequestTimeoutAdjustment) ->
             {error, {service_options_request_timeout_adjustment_invalid,
                      RequestTimeoutAdjustment}};
         [_, _, _, _, _, _, _, _, RequestTimeoutImmediateMax, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ?REQUEST_TIMEOUT_IMMEDIATE_MAX_GUARD(
                      RequestTimeoutImmediateMax) ->
             {error, {service_options_request_timeout_immediate_max_invalid,
                      RequestTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(ResponseTimeoutAdjustment) ->
             {error, {service_options_response_timeout_adjustment_invalid,
                      ResponseTimeoutAdjustment}};
         [_, _, _, _, _, _, _, _, _, _, ResponseTimeoutImmediateMax, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_GUARD(
                      ResponseTimeoutImmediateMax) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, _, _, CountProcessDynamic, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((CountProcessDynamic =:= false) orelse
                   is_list(CountProcessDynamic)) ->
             {error, {service_options_count_process_dynamic_invalid,
                      CountProcessDynamic}};
         [_, _, _, _, _, _, _, _, _, _, _, _, FatalExceptions, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(FatalExceptions) ->
             {error, {service_options_fatal_exceptions_invalid,
                      FatalExceptions}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, FatalTimeout,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(FatalTimeout) ->
             {error, {service_options_fatal_timeout_invalid,
                      FatalTimeout}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         FatalTimeoutDelay, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         FatalTimeoutDelay, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ?FATAL_TIMEOUT_DELAY_GUARD(FatalTimeoutDelay) ->
             {error, {service_options_fatal_timeout_delay_invalid,
                      FatalTimeoutDelay}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, TimeoutTerminate, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, TimeoutTerminate, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((TimeoutTerminate =:= undefined) orelse
                   ?TIMEOUT_TERMINATE_GUARD(TimeoutTerminate)) ->
             {error, {service_options_timeout_terminate_invalid,
                      TimeoutTerminate}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, RestartAll, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, RestartAll, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(RestartAll) ->
             {error, {service_options_restart_all_invalid,
                      RestartAll}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, RestartDelay, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, RestartDelay, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((RestartDelay =:= false) orelse
                   is_list(RestartDelay)) ->
             {error, {service_options_restart_delay_invalid,
                      RestartDelay}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, Scope, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, Critical, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _]
+        when not is_boolean(Critical) ->
+            {error, {service_options_critical_invalid,
+                     Critical}};
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, Scope, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_atom(Scope) ->
             {error, {service_options_scope_invalid,
                      Scope}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, MonkeyLatency, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, MonkeyLatency, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((MonkeyLatency =:= false) orelse
                   (MonkeyLatency =:= system) orelse
@@ -2958,7 +2978,7 @@ services_validate_options_internal(OptionsList,
             {error, {service_options_monkey_latency_invalid,
                      MonkeyLatency}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, MonkeyChaos, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, MonkeyChaos, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not ((MonkeyChaos =:= false) orelse
                   (MonkeyChaos =:= system) orelse
@@ -2966,37 +2986,37 @@ services_validate_options_internal(OptionsList,
             {error, {service_options_monkey_chaos_invalid,
                      MonkeyChaos}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, AutomaticLoading, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, AutomaticLoading, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_boolean(AutomaticLoading) ->
             {error, {service_options_automatic_loading_invalid,
                      AutomaticLoading}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, DispatcherPidOptions, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, DispatcherPidOptions, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_list(DispatcherPidOptions) ->
             {error, {service_options_dispatcher_pid_options_invalid,
                      DispatcherPidOptions}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, Bind, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, Bind, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not (is_boolean(Bind) orelse is_list(Bind)) ->
             {error, {service_options_bind_invalid,
                      Bind}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, ApplicationName, _, _, _, _, _, _, _, _]
         when not is_atom(ApplicationName) ->
             {error, {service_options_application_name_invalid,
                      ApplicationName}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, InitPidOptions, _, _, _, _, _, _, _]
         when not is_list(InitPidOptions) ->
             {error, {service_options_init_pid_options_invalid,
                      InitPidOptions}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, RequestPidUses, _, _, _, _, _, _]
         when not ((RequestPidUses =:= infinity) orelse
                   (is_integer(RequestPidUses) andalso
@@ -3004,13 +3024,13 @@ services_validate_options_internal(OptionsList,
             {error, {service_options_request_pid_uses_invalid,
                      RequestPidUses}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, RequestPidOptions, _, _, _, _, _]
         when not is_list(RequestPidOptions) ->
             {error, {service_options_request_pid_options_invalid,
                      RequestPidOptions}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, InfoPidUses, _, _, _, _]
         when not ((InfoPidUses =:= infinity) orelse
                   (is_integer(InfoPidUses) andalso
@@ -3018,26 +3038,26 @@ services_validate_options_internal(OptionsList,
             {error, {service_options_info_pid_uses_invalid,
                      InfoPidUses}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, InfoPidOptions, _, _, _]
         when not is_list(InfoPidOptions) ->
             {error, {service_options_info_pid_options_invalid,
                      InfoPidOptions}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, DuoMode, _, _]
         when not is_boolean(DuoMode) ->
             {error, {service_options_duo_mode_invalid,
                      DuoMode}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, Hibernate, _]
         when not (is_boolean(Hibernate) orelse
                   is_list(Hibernate)) ->
             {error, {service_options_hibernate_invalid,
                      Hibernate}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, Reload]
         when not is_boolean(Reload) ->
             {error, {service_options_reload_invalid,
@@ -3048,7 +3068,7 @@ services_validate_options_internal(OptionsList,
          ResponseTimeoutAdjustment, ResponseTimeoutImmediateMax,
          CountProcessDynamic, FatalExceptions, FatalTimeout,
          FatalTimeoutDelay, TimeoutTerminate,
-         RestartAll, RestartDelay, Scope,
+         RestartAll, RestartDelay, Critical, Scope,
          MonkeyLatency, MonkeyChaos, AutomaticLoading, DispatcherPidOptions,
          Bind, AspectsInitAfter, AspectsRequestBefore, AspectsRequestAfter,
          AspectsInfoBefore, AspectsInfoAfter, AspectsTerminateBefore,
@@ -3152,6 +3172,8 @@ services_validate_options_internal(OptionsList,
                              RestartAll,
                          restart_delay =
                              RestartDelayNew,
+                         critical =
+                             Critical,
                          scope =
                              ?SCOPE_ASSIGN(Scope),
                          monkey_latency =
@@ -3203,11 +3225,11 @@ services_validate_options_internal(OptionsList,
                     Error
             end;
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _] ->
             {error, {service_options_invalid, OptionsList}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
@@ -3360,6 +3382,7 @@ services_validate_options_internal_checks(RateRequestMax,
       service_options_timeout_terminate_decrease |
       service_options_restart_all_invalid |
       service_options_restart_delay_invalid |
+      service_options_critical_invalid |
       service_options_scope_invalid |
       service_options_monkey_latency_invalid |
       service_options_monkey_chaos_invalid |
@@ -3422,6 +3445,8 @@ services_validate_options_external(OptionsList,
          Options#config_service_options.restart_all},
         {restart_delay,
          Options#config_service_options.restart_delay},
+        {critical,
+         Options#config_service_options.critical},
         {scope,
          Options#config_service_options.scope},
         {monkey_latency,
@@ -3462,14 +3487,14 @@ services_validate_options_external(OptionsList,
          Options#config_service_options.directory}],
     case cloudi_proplists:take_values(Defaults, OptionsList) of
         [PriorityDefault, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((PriorityDefault >= ?PRIORITY_HIGH) andalso
                   (PriorityDefault =< ?PRIORITY_LOW)) ->
             {error, {service_options_priority_default_invalid,
                      PriorityDefault}};
         [_, QueueLimit, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((QueueLimit =:= undefined) orelse
                   (is_integer(QueueLimit) andalso
@@ -3477,7 +3502,7 @@ services_validate_options_external(OptionsList,
             {error, {service_options_queue_limit_invalid,
                      QueueLimit}};
         [_, _, QueueSize, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((QueueSize =:= undefined) orelse
                   (is_integer(QueueSize) andalso
@@ -3485,7 +3510,7 @@ services_validate_options_external(OptionsList,
             {error, {service_options_queue_size_invalid,
                      QueueSize}};
         [_, _, _, RateRequestMax, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((RateRequestMax =:= undefined) orelse
                   is_number(RateRequestMax) orelse
@@ -3493,103 +3518,109 @@ services_validate_options_external(OptionsList,
             {error, {service_options_rate_request_max_invalid,
                      RateRequestMax}};
         [_, _, _, _, DestRefreshStart, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ?DEST_REFRESH_START_GUARD(DestRefreshStart) ->
             {error, {service_options_dest_refresh_start_invalid,
                      DestRefreshStart}};
         [_, _, _, _, _, DestRefreshDelay, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ?DEST_REFRESH_DELAY_GUARD(DestRefreshDelay) ->
             {error, {service_options_dest_refresh_delay_invalid,
                      DestRefreshDelay}};
         [_, _, _, _, _, _, RequestNameLookup, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((RequestNameLookup =:= sync) orelse
                   (RequestNameLookup =:= async)) ->
             {error, {service_options_request_name_lookup_invalid,
                      RequestNameLookup}};
         [_, _, _, _, _, _, _, RequestTimeoutAdjustment, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_boolean(RequestTimeoutAdjustment) ->
             {error, {service_options_request_timeout_adjustment_invalid,
                      RequestTimeoutAdjustment}};
         [_, _, _, _, _, _, _, _, RequestTimeoutImmediateMax, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ?REQUEST_TIMEOUT_IMMEDIATE_MAX_GUARD(
                      RequestTimeoutImmediateMax) ->
             {error, {service_options_request_timeout_immediate_max_invalid,
                      RequestTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_boolean(ResponseTimeoutAdjustment) ->
             {error, {service_options_response_timeout_adjustment_invalid,
                      ResponseTimeoutAdjustment}};
         [_, _, _, _, _, _, _, _, _, _, ResponseTimeoutImmediateMax, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ?RESPONSE_TIMEOUT_IMMEDIATE_MAX_GUARD(
                      ResponseTimeoutImmediateMax) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, _, _, CountProcessDynamic, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((CountProcessDynamic =:= false) orelse
                   is_list(CountProcessDynamic)) ->
             {error, {service_options_count_process_dynamic_invalid,
                      CountProcessDynamic}};
         [_, _, _, _, _, _, _, _, _, _, _, _, FatalExceptions, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_boolean(FatalExceptions) ->
             {error, {service_options_fatal_exceptions_invalid,
                      FatalExceptions}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, FatalTimeout, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_boolean(FatalTimeout) ->
             {error, {service_options_fatal_timeout_invalid,
                      FatalTimeout}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, FatalTimeoutDelay,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ?FATAL_TIMEOUT_DELAY_GUARD(FatalTimeoutDelay) ->
             {error, {service_options_fatal_timeout_delay_invalid,
                      FatalTimeoutDelay}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         TimeoutTerminate, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         TimeoutTerminate, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((TimeoutTerminate =:= undefined) orelse
                   ?TIMEOUT_TERMINATE_GUARD(TimeoutTerminate)) ->
             {error, {service_options_timeout_terminate_invalid,
                      TimeoutTerminate}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, RestartAll, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, RestartAll, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_boolean(RestartAll) ->
             {error, {service_options_restart_all_invalid,
                      RestartAll}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, RestartDelay, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, RestartDelay, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((RestartDelay =:= false) orelse
                   is_list(RestartDelay)) ->
             {error, {service_options_restart_delay_invalid,
                      RestartDelay}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, Scope, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, Critical, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _]
+        when not is_boolean(Critical) ->
+            {error, {service_options_critical_invalid,
+                     Critical}};
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, Scope, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_atom(Scope) ->
             {error, {service_options_scope_invalid,
                      Scope}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, MonkeyLatency, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, MonkeyLatency, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((MonkeyLatency =:= false) orelse
                   (MonkeyLatency =:= system) orelse
@@ -3597,7 +3628,7 @@ services_validate_options_external(OptionsList,
             {error, {service_options_monkey_latency_invalid,
                      MonkeyLatency}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, MonkeyChaos, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, MonkeyChaos, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not ((MonkeyChaos =:= false) orelse
                   (MonkeyChaos =:= system) orelse
@@ -3605,32 +3636,32 @@ services_validate_options_external(OptionsList,
             {error, {service_options_monkey_chaos_invalid,
                      MonkeyChaos}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, AutomaticLoading, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, AutomaticLoading, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_boolean(AutomaticLoading) ->
             {error, {service_options_automatic_loading_invalid,
                      AutomaticLoading}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, DispatcherPidOptions, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, DispatcherPidOptions, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not is_list(DispatcherPidOptions) ->
             {error, {service_options_dispatcher_pid_options_invalid,
                      DispatcherPidOptions}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, Bind, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, Bind, _, _, _, _, _, _, _,
          _, _, _, _, _, _]
         when not (is_boolean(Bind) orelse is_list(Bind)) ->
             {error, {service_options_bind_invalid,
                      Bind}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, Nice, _, _, _, _]
         when not (is_integer(Nice) andalso
                   (Nice >= -20) andalso (Nice =< 20)) ->
             {error, {service_options_nice_invalid,
                      Nice}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, Chroot, _, _]
         when not ((Chroot =:= undefined) orelse
                   (is_list(Chroot) andalso
@@ -3638,7 +3669,7 @@ services_validate_options_external(OptionsList,
             {error, {service_options_chroot_invalid,
                      Chroot}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, SyscallLock, _]
         when not ((SyscallLock =:= undefined) orelse
                   (is_list(SyscallLock) andalso
@@ -3646,7 +3677,7 @@ services_validate_options_external(OptionsList,
             {error, {service_options_syscall_lock_invalid,
                      SyscallLock}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, Directory]
         when not ((Directory =:= undefined) orelse
                   (is_list(Directory) andalso
@@ -3658,7 +3689,7 @@ services_validate_options_external(OptionsList,
          RequestTimeoutAdjustment, RequestTimeoutImmediateMax,
          ResponseTimeoutAdjustment, ResponseTimeoutImmediateMax,
          CountProcessDynamic, FatalExceptions, FatalTimeout, FatalTimeoutDelay,
-         TimeoutTerminate, RestartAll, RestartDelay, Scope,
+         TimeoutTerminate, RestartAll, RestartDelay, Critical, Scope,
          MonkeyLatency, MonkeyChaos,
          AutomaticLoading, DispatcherPidOptions, Bind,
          AspectsInitAfter, AspectsRequestBefore,
@@ -3760,6 +3791,8 @@ services_validate_options_external(OptionsList,
                                      RestartAll,
                                  restart_delay =
                                      RestartDelayNew,
+                                 critical =
+                                     Critical,
                                  scope =
                                      ?SCOPE_ASSIGN(Scope),
                                  monkey_latency =
@@ -3806,7 +3839,7 @@ services_validate_options_external(OptionsList,
                     Error
             end;
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+         _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _ | Extra] ->
             {error, {service_options_invalid, Extra}}
     end.
