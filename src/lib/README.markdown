@@ -10,8 +10,8 @@ Erlang `cgroups`
 `Erlang native cgroups interface`
 
 - `https://github.com/okeuday/cgroups`
-- `commit de55074cbb48a472167e0fe09c21145f54fdf880 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit 48f9893364b9ac6d1676a44a3cdc2ec0c6562e52`
+- `Mon Jun 12 22:44:27 UTC 2023`
 - `MIT`
 
 Erlang `cpg`

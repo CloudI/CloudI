@@ -3,7 +3,11 @@
 # Use this script on Linux if you are unable to install as root but
 # you still need to be able to use one or more of the following
 # external service configuration options:
-# 'cgroup', 'chroot', 'limit', 'nice', 'owner', 'syscall_lock'
+# 'chroot', 'limit', 'nice', 'owner', 'syscall_lock'
+
+# The 'cgroup' external service configuration option is unable to be used
+# without root execution due to automatic management of the OS pids as they
+# start/stop (root is required to add the OS pids to the cgroup).
 
 # Execute the script (after installation) with:
 # sudo sh linux_setcap.sh
@@ -21,11 +25,7 @@ if [ ! -d $ROOTDIR ]; then
     echo "$ROOTDIR does not exist!"
     exit 1
 fi
-EXECUTABLE_BEAM="$ROOTDIR/erts-@ERLANG_ERTS_VER@/bin/beam.smp"
 EXECUTABLE_SPAWN="$ROOTDIR/lib/cloudi_core-@VERSION@/priv/cloudi_os_spawn"
-
-# required for 'cgroup'
-setcap CAP_SYS_ADMIN=+ep $EXECUTABLE_BEAM
 
 # required for 'chroot', 'limit', 'nice', 'owner', 'syscall_lock'
 setcap CAP_SYS_CHROOT,CAP_SYS_RESOURCE,CAP_SYS_NICE,CAP_SETUID,CAP_SETGID,CAP_SYS_ADMIN=+ep $EXECUTABLE_SPAWN

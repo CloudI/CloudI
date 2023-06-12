@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2016-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2016-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2016-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2016-2023 Michael Truog
+%%% @version 2.0.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cgroups).
@@ -52,7 +52,8 @@
     {
         version :: pos_integer(),
         path :: string(),
-        mounted :: boolean()
+        mounted :: boolean(),
+        root :: boolean()
     }).
 -define(APPLICATION, cgroups).
 
@@ -90,7 +91,8 @@
     {error, any()}.
 
 create([_ | _] = CGroupPath, OSPids, CGroupParameters,
-       #cgroups{path = Path} = State) ->
+       #cgroups{path = Path,
+                root = true} = State) ->
     CGroupPathValid = cgroup_path_valid(CGroupPath),
     if
         CGroupPathValid =:= false ->
@@ -103,7 +105,10 @@ create([_ | _] = CGroupPath, OSPids, CGroupParameters,
                 false ->
                     create_cgroup(CGroupPath, OSPids, CGroupParameters, State)
             end
-    end.
+    end;
+create(_, _, _,
+       #cgroups{root = false}) ->
+    {error, root_required}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -119,7 +124,8 @@ create([_ | _] = CGroupPath, OSPids, CGroupParameters,
     {error, any()}.
 
 delete([_ | _] = CGroupPath,
-       #cgroups{path = Path}) ->
+       #cgroups{path = Path,
+                root = true}) ->
     CGroupPathValid = cgroup_path_valid(CGroupPath),
     if
         CGroupPathValid =:= false ->
@@ -132,7 +138,10 @@ delete([_ | _] = CGroupPath,
                 {Status, Output} ->
                     {error, {rmdir, Status, Output}}
             end
-    end.
+    end;
+delete(_,
+       #cgroups{root = false}) ->
+    {error, root_required}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -148,7 +157,8 @@ delete([_ | _] = CGroupPath,
     {error, any()}.
 
 delete_recursive([_ | _] = CGroupPath,
-                 #cgroups{path = Path}) ->
+                 #cgroups{path = Path,
+                          root = true}) ->
     CGroupPathValid = cgroup_path_valid(CGroupPath),
     if
         CGroupPathValid =:= false ->
@@ -163,7 +173,10 @@ delete_recursive([_ | _] = CGroupPath,
                 {Status, Output} ->
                     {error, {rmdir, Status, Output}}
             end
-    end.
+    end;
+delete_recursive(_,
+                 #cgroups{root = false}) ->
+    {error, root_required}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -230,8 +243,9 @@ new(Options0) ->
            ($/ == hd(lists:reverse(PathV2))) andalso (length(PathV2) > 1),
     true = (PathMounts =:= undefined) orelse
            (is_list(PathMounts) andalso is_integer(hd(PathMounts))),
+    Root = os:getenv("USER") == "root",
     new_state(VersionDefault, VersionDefaultRequired,
-              PathV1, PathV2, PathMounts).
+              PathV1, PathV2, PathMounts, Root).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -267,7 +281,8 @@ shell(Command, Arguments) ->
 
 update(CGroupPath, OSPids, CGroupParameters,
        #cgroups{version = Version,
-                path = Path}) ->
+                path = Path,
+                root = Root}) ->
     CGroupPathValid = cgroup_path_valid(CGroupPath),
     OSPidsValid = lists:all(fun(OSPid) ->
         is_integer(OSPid) andalso (OSPid > 0)
@@ -290,9 +305,9 @@ update(CGroupPath, OSPids, CGroupParameters,
         true ->
             CGroupPathFull = Path ++ CGroupPath,
             case update_parameters(Version, CGroupParameters,
-                                   CGroupPathFull, Path) of
+                                   CGroupPathFull, Path, Root) of
                 ok ->
-                    update_pids(OSPids, CGroupPathFull);
+                    update_pids(OSPids, CGroupPathFull, Root);
                 {error, _} = Error ->
                     Error
             end
@@ -312,7 +327,8 @@ update(CGroupPath, OSPids, CGroupParameters,
     {error, any()}.
 
 update_or_create([_ | _] = CGroupPath, OSPids, CGroupParameters,
-                 #cgroups{path = Path} = State) ->
+                 #cgroups{path = Path,
+                          root = true} = State) ->
     CGroupPathValid = cgroup_path_valid(CGroupPath),
     if
         CGroupPathValid =:= false ->
@@ -325,7 +341,10 @@ update_or_create([_ | _] = CGroupPath, OSPids, CGroupParameters,
                 false ->
                     create_cgroup(CGroupPath, OSPids, CGroupParameters, State)
             end
-    end.
+    end;
+update_or_create(_, _, _,
+                 #cgroups{root = false}) ->
+    {error, root_required}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -344,14 +363,14 @@ version(#cgroups{version = Version}) ->
 %%%------------------------------------------------------------------------
 
 new_state(1 = Version, VersionDefaultRequired,
-          PathV1, PathV2, PathMounts) ->
+          PathV1, PathV2, PathMounts, Root) ->
     case new_paths(PathV1, PathV2, PathMounts) of
         {ok, {MountedV1, NewPathV1}, {MountedV2, NewPathV2}} ->
-            case new_state_init(Version, MountedV1, NewPathV1) of
+            case new_state_init(Version, MountedV1, NewPathV1, Root) of
                 {ok, _} = Success ->
                     Success;
                 {error, _} = Error when VersionDefaultRequired =:= false ->
-                    case new_state_init(2, MountedV2, NewPathV2) of
+                    case new_state_init(2, MountedV2, NewPathV2, Root) of
                         {ok, _} = Success ->
                             Success;
                         {error, _} ->
@@ -364,14 +383,14 @@ new_state(1 = Version, VersionDefaultRequired,
             Error
     end;
 new_state(2 = Version, VersionDefaultRequired,
-          PathV1, PathV2, PathMounts) ->
+          PathV1, PathV2, PathMounts, Root) ->
     case new_paths(PathV1, PathV2, PathMounts) of
         {ok, {MountedV1, NewPathV1}, {MountedV2, NewPathV2}} ->
-            case new_state_init(Version, MountedV2, NewPathV2) of
+            case new_state_init(Version, MountedV2, NewPathV2, Root) of
                 {ok, _} = Success ->
                     Success;
                 {error, _} = Error when VersionDefaultRequired =:= false ->
-                    case new_state_init(1, MountedV1, NewPathV1) of
+                    case new_state_init(1, MountedV1, NewPathV1, Root) of
                         {ok, _} = Success ->
                             Success;
                         {error, _} ->
@@ -383,28 +402,31 @@ new_state(2 = Version, VersionDefaultRequired,
         {error, _} = Error ->
             Error
     end;
-new_state(Version, _, _, _, _) ->
+new_state(Version, _, _, _, _, _) ->
     {error, {version_default, Version}}.
 
-new_state_init(Version, true, Path) ->
+new_state_init(Version, true, Path, Root) ->
     {ok, #cgroups{version = Version,
                   path = Path,
-                  mounted = false}};
-new_state_init(1 = Version, false, Path) ->
+                  mounted = false,
+                  root = Root}};
+new_state_init(1 = Version, false, Path, Root) ->
     case shell("mount -t cgroup none \"~s\"", [Path]) of
         {0, _} ->
             {ok, #cgroups{version = Version,
                           path = Path,
-                          mounted = true}};
+                          mounted = true,
+                          root = Root}};
         {Status, Output} ->
             {error, {path_v1, Status, Output}}
     end;
-new_state_init(2 = Version, false, Path) ->
+new_state_init(2 = Version, false, Path, Root) ->
     case shell("mount -t cgroup2 none \"~s\"", [Path]) of
         {0, _} ->
             {ok, #cgroups{version = Version,
                           path = Path,
-                          mounted = true}};
+                          mounted = true,
+                          root = Root}};
         {Status, Output} ->
             {error, {path_v2, Status, Output}}
     end.
@@ -589,15 +611,17 @@ delete_recursive_subpath(CGroupSubPathFull, Path) ->
             ok
     end.
 
-update_parameters(1, CGroupParameters, CGroupPathFull, _) ->
+update_parameters(1, _, _, _, false) ->
+    {error, root_required};
+update_parameters(1, CGroupParameters, CGroupPathFull, _, true) ->
     update_parameters(CGroupParameters, CGroupPathFull);
-update_parameters(2, CGroupParameters, CGroupPathFull, Path) ->
+update_parameters(2, CGroupParameters, CGroupPathFull, Path, Root) ->
     Controllers = lists:usort([subsystem(SubsystemParameter)
                                || {SubsystemParameter, _} <- CGroupParameters]),
     ControlAdded = ["+" ++ Controller || Controller <- Controllers],
     case subtree_control_add(subdirectory(CGroupPathFull, Path),
                              lists:join($ , ControlAdded),
-                             Path) of
+                             Path, Root) of
         ok ->
             update_parameters(CGroupParameters, CGroupPathFull);
         {error, _} = Error ->
@@ -614,6 +638,26 @@ update_parameters([{SubsystemParameter, Value} | CGroupParameters],
             update_parameters(CGroupParameters, CGroupPathFull);
         {Status, Output} ->
             {error, {subsystem_parameter, Status, Output}}
+    end.
+
+update_pids(OSPids, CGroupPathFull, true) ->
+    update_pids(OSPids, CGroupPathFull);
+update_pids(OSPids, CGroupPathFull, false) ->
+    case shell("cat \"~s/cgroup.procs\"",
+               [CGroupPathFull]) of
+        {0, OSPidsUpdated} ->
+            OSPidsUpdatedL = split(shell_output_string(OSPidsUpdated), "\n"),
+            OSPidsSet = sets:from_list([erlang:integer_to_list(OSPid)
+                                        || OSPid <- OSPids]),
+            Updated = sets:is_subset(OSPidsSet, sets:from_list(OSPidsUpdatedL)),
+            if
+                Updated =:= true ->
+                    ok;
+                Updated =:= false ->
+                    {error, root_required}
+            end;
+        {Status, Output} ->
+            {error, {procs, Status, Output}}
     end.
 
 update_pids([], _) ->
@@ -664,11 +708,16 @@ subsystem_parameter_error_reason(SubsystemParameter, Suffix) ->
         end
     end, SubsystemParameter) ++ Suffix).
 
-subtree_control_add(Path, Value, Path) ->
-    subtree_control_set(Path, Value);
-subtree_control_add(CGroupSubPathFull, Value, Path) ->
+subtree_control_add(Path, Value, Path, Root) ->
+    if
+        Root =:= true ->
+            subtree_control_set(Path, Value);
+        Root =:= false ->
+            ok
+    end;
+subtree_control_add(CGroupSubPathFull, Value, Path, Root) ->
     case subtree_control_add(subdirectory(CGroupSubPathFull),
-                             Value, Path) of
+                             Value, Path, Root) of
         ok ->
             subtree_control_set(CGroupSubPathFull, Value);
         {error, _} = Error ->

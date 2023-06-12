@@ -14,9 +14,10 @@ Example
 -------
 
 Update or create the cgroup "group1/nested1" with the OS pid 19368,
-then delete the cgroup path after moving the OS pid back to the root cgroup.
+then delete the cgroup path after moving the OS pid back to the root cgroup
+(executed as root).
 
-    $ erl -pz ebin
+    # erl -pz ebin
     1> application:start(cgroups).
     2> OSPid0 = 19368.
     3> CGroupPath = "group1/nested1".
@@ -49,6 +50,9 @@ Troubleshooting
   `systemd.unified_cgroup_hierarchy=1` can be used
   (with systemd >= `v226` and kernel >= `4.2`) or
   `cgroup_no_v1=all` can be used (with kernel >= `4.6`).
+* Any non-root use should only use `cgroups:update/4` with more limited
+  controllers (memory, pids, possibly cpu and/or io) and all OS pids added
+  elsewhere as root
 
 Author
 ------
