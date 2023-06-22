@@ -5,8 +5,8 @@ June 21, 2023
   * Added the Rust CloudI API (rustc >= 1.66.1)
   * Added the bind service configuration option for binding
     CloudI service execution to logical processors
-    (supported by the ATS, C/C++, Erlang, Python/C CloudI API and
-     when the Erlang VM was started with the +sbt command-line argument)
+    (supported by the ATS, C/C++, Erlang, Python/C CloudI API when
+     the Erlang VM was started with the +sbt command-line argument)
   * Added static CloudI API functions for use before initialization:
     timeout_initialize, timeout_terminate,
     process_index, process_count_max, process_count_min
