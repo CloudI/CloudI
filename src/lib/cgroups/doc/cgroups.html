@@ -12,9 +12,9 @@
 <h1>Module cgroups</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="cgroups_Manipulation_Functions">cgroups Manipulation Functions</a></h3>.
-<p>Copyright © 2016-2020 Michael Truog</p>
+<p>Copyright © 2016-2023 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.1 Nov 26 2020 14:26:58
+<p><b>Version:</b> 2.0.6 Jun 20 2023 17:46:56
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -66,7 +66,8 @@
 
 <h3 class="function"><a name="create-4">create/4</a></h3>
 <div class="spec">
-<p><tt>create(CGroupPath::nonempty_string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p><tt>create(CGroupPath::nonempty_string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_a_specific_cgroup.">Create a specific cgroup.</a></h4>
   With cgroups v1, files cpuset.cpus and cpuset.mems are set
@@ -75,7 +76,8 @@
 
 <h3 class="function"><a name="delete-2">delete/2</a></h3>
 <div class="spec">
-<p><tt>delete(CGroupPath::nonempty_string(), State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p><tt>delete(CGroupPath::nonempty_string(), State::#cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Delete_a_specific_cgroup.">Delete a specific cgroup.</a></h4>
   The cgroup must not contain any OS processes for this
@@ -83,7 +85,8 @@
 
 <h3 class="function"><a name="delete_recursive-2">delete_recursive/2</a></h3>
 <div class="spec">
-<p><tt>delete_recursive(CGroupPath::nonempty_string(), State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p><tt>delete_recursive(CGroupPath::nonempty_string(), State::#cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Delete_a_specific_cgroup_and_as_many_non-leaf_cgroups_as_possible.">Delete a specific cgroup and as many non-leaf cgroups as possible.</a></h4>
   The cgroup must not contain any OS processes for this
@@ -91,21 +94,24 @@
 
 <h3 class="function"><a name="destroy-1">destroy/1</a></h3>
 <div class="spec">
-<p><tt>destroy(Cgroups::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok</tt><br></p>
+<p><tt>destroy(Cgroups::#cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}) -&gt; ok</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Destroy_cgroups_state_data.">Destroy cgroups state data.</a></h4>
 </p>
 
 <h3 class="function"><a name="new-0">new/0</a></h3>
 <div class="spec">
-<p><tt>new() -&gt; {ok, #cgroups{version = pos_integer(), path = string(), mounted = boolean()}} | {error, <a href="#type-new_error_reasons">new_error_reasons()</a>}</tt><br></p>
+<p><tt>new() -&gt; {ok, #cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}} | {error, <a href="#type-new_error_reasons">new_error_reasons()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_new_cgroups_state_data.">Create new cgroups state data.</a></h4>
 </p>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
-<p><tt>new(Options0::<a href="#type-options">options()</a>) -&gt; {ok, #cgroups{version = pos_integer(), path = string(), mounted = boolean()}} | {error, <a href="#type-new_error_reasons">new_error_reasons()</a>}</tt><br></p>
+<p><tt>new(Options0::<a href="#type-options">options()</a>) -&gt; {ok, #cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}} | {error, <a href="#type-new_error_reasons">new_error_reasons()</a>}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Create_new_cgroups_state_data_with_local_options.">Create new cgroups state data with local options.</a></h4>
 </p>
@@ -113,27 +119,31 @@
 <h3 class="function"><a name="shell-2">shell/2</a></h3>
 <div class="spec">
 <p><tt>shell(Command::string(), Arguments::list()) -&gt; {non_neg_integer(), [binary()]}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Execute_a_command_with_the_default_shell.">Execute a command with the default shell.</a></h4>
 </p>
 
 <h3 class="function"><a name="update-4">update/4</a></h3>
 <div class="spec">
-<p><tt>update(CGroupPath::string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p><tt>update(CGroupPath::string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Update_a_cgroup_path.">Update a cgroup path.</a></h4>
   May be used on the cgroup root path.</p>
 
 <h3 class="function"><a name="update_or_create-4">update_or_create/4</a></h3>
 <div class="spec">
-<p><tt>update_or_create(CGroupPath::nonempty_string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p><tt>update_or_create(CGroupPath::nonempty_string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="Update_or_create_a_specific_cgroup.">Update or create a specific cgroup.</a></h4>
 </p>
 
 <h3 class="function"><a name="version-1">version/1</a></h3>
 <div class="spec">
-<p><tt>version(Cgroups::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; pos_integer()</tt><br></p>
+<p><tt>version(Cgroups::#cgroups{version = pos_integer(), path = string(), mounted = boolean(), root = boolean()}) -&gt; pos_integer()</tt><br></p>
+<p> </p>
 </div><p>
   <h4><a name="The_cgroup_version_used.">The cgroup version used.</a></h4>
 </p>

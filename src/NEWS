@@ -1,5 +1,25 @@
 ------------------------------------------------------------------------        
 
+June 21, 2023
+  Version 2.0.6 released.
+  * Added the Rust CloudI API (rustc >= 1.66.1)
+  * Added the bind service configuration option for binding
+    CloudI service execution to logical processors
+    (supported by the ATS, C/C++, Erlang, Python/C CloudI API and
+     when the Erlang VM was started with the +sbt command-line argument)
+  * Added static CloudI API functions for use before initialization:
+    timeout_initialize, timeout_terminate,
+    process_index, process_count_max, process_count_min
+  * Added cloudi_service_cron support for random ranges with the
+    ~ (tilde) character based on OpenBSD cron
+  * Added the cloudi_service_shell interactive argument which allows
+    accessing an interpreter with CloudI service requests
+  * Added the critical service configuration option for stopping the
+    CloudI node when a critical service failed after MaxR restarts
+  * Erlang/OTP 26 support was added
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 October 12, 2022
   Version 2.0.5 released.
   * backwards incompatible changes:

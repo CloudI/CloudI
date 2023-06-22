@@ -1,4 +1,4 @@
-# [CloudI 2.0.5](https://cloudi.org)
+# [CloudI 2.0.6](https://cloudi.org)
 
 [![Build Status](https://app.travis-ci.com/CloudI/CloudI.svg?branch=develop)](https://app.travis-ci.com/CloudI/CloudI) [![Project Status](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI) [![RSS](https://raw.githubusercontent.com/CloudI/CloudI/develop/.badge_rss_releases.png)](https://osdn.net/projects/cloudi/releases/rss) [![Twitter](https://img.shields.io/twitter/follow/CloudI_org?style=social)](https://twitter.com/intent/follow?screen_name=CloudI_org) [![IRC](https://raw.githubusercontent.com/CloudI/CloudI/develop/.badge_irc_cloudi.png)](https://webchat.oftc.net/?randomnick=1&channels=cloudi) [![Email](https://raw.githubusercontent.com/CloudI/CloudI/develop/.badge_email_questions.png)](https://lists.osdn.me/mailman/listinfo/cloudi-questions)
 

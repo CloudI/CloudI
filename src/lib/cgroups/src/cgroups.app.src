@@ -3,7 +3,7 @@
 
 {application, cgroups,
   [{description, "Erlang native cgroups interface"},
-   {vsn, "2.0.5"},
+   {vsn, "2.0.6"},
    {modules, [cgroups]},
    {registered, []},
    {applications, [stdlib, kernel]},

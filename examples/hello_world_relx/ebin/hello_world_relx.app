@@ -3,7 +3,7 @@
 
 {application, hello_world_relx,
   [{description, "Hello World Relx Example Application"},
-   {vsn, "2.0.5"},
+   {vsn, "2.0.6"},
    {modules, [
         hello_world_relx]},
    {registered, []},

@@ -11,7 +11,7 @@
   <link rel="shortcut icon" href="images/cloud.ico" type="image/x-icon" />
   <!-- Open Graph Protocol (OGP) with LinkedIn requirements -->
   <meta property="og:title" content="CloudI: A Cloud at the lowest level - API Documentation" />
-  <meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of ATS, C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, or Ruby services.
+  <meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of ATS, C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, Ruby, or Rust services.
 
 The bare essentials for efficient fault-tolerant processing on a cloud!" />
   <meta property="og:image" content="https://cloudi.org/images/cloud_ogp.png" />
@@ -33,7 +33,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.5.tar.gz" rel="noopener" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.6.tar.gz" rel="noopener" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -41,8 +41,8 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <h3 style="text-align:center">version 2.0.5<br />
-  last updated on October 12<sup>th</sup> 2022</h3>
+  <h3 style="text-align:center">version 2.0.6<br />
+  last updated on June 21<sup>st</sup> 2023</h3>
 
   <h2 id="Service">CloudI API - Making a Service</h2>
   <ul class="api">
@@ -123,7 +123,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     understand the Erlang programming language (or Elixir), to use the
     CloudI API since a full CloudI API implementation is provided for every
     supported programming language (ATS, C/C++, Elixir, Erlang, Go, Haskell,
-    Java, JavaScript, OCaml, Perl, PHP, Python, and Ruby, currently).
+    Java, JavaScript, OCaml, Perl, PHP, Python, Ruby, and Rust, currently).
   </p>
   <p class="paragraph">
     The CloudI API messaging is different from other messaging APIs and
@@ -435,13 +435,13 @@ CloudI::API.new(thread_index)
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-2.0.5/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-2.0.6/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-2.0.5/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-2.0.6/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -1718,7 +1718,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-2.0.5/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-2.0.6/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre class="code">
@@ -2099,7 +2099,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-2.0.5/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-2.0.6/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre class="code">
@@ -2574,7 +2574,7 @@ CloudI::API.return_(request_type, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-2.0.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-2.0.6/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -2742,7 +2742,7 @@ CloudI::API.forward_(request_type, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-2.0.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-2.0.6/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -2989,7 +2989,7 @@ CloudI::API.shutdown(reason=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-2.0.5/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-2.0.6/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -3255,8 +3255,9 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     true
   </td><td>
     Uncaught exceptions should cause the service to restart instead of
-    causing a null response.  A programming language's fatal exception
-    types will always cause a service restart when this option is set to false.
+    causing a <a href="faq.html#4_Null">null response</a>.
+    A programming language's fatal exception types will always cause a
+    service restart when this option is set to false.
   </td></tr><tr><td>
     fatal_timeout
   </td><td>
@@ -3307,6 +3308,13 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     <a href="#2_services_add_config_opts_restart_delay">
     options can be provided</a>.
   </td></tr><tr><td>
+    critical
+  </td><td>
+    false
+  </td><td>
+    Stop the CloudI node if the service fails by being unable to restart
+    (all possible restarts (MaxR) already occurred (in MaxT seconds)).
+  </td></tr><tr><td>
     scope
   </td><td>
     default
@@ -3339,6 +3347,20 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     application configuration.  When set to a list ([])
     <a href="#2_services_add_config_opts_monkey_chaos">
     options can be provided</a>.
+  </td></tr><tr><td>
+    <a href="#2_services_add_config_opts_bind">
+    bind
+    </a>
+  </td><td>
+    false
+  </td><td>
+    Bind execution to specific logical processors.
+    Usage requires the Erlang VM was started with the <a href="https://www.erlang.org/doc/man/erl.html#+sbt" rel="noreferrer" target="_blank">+sbt</a>
+    command-line argument to bind Erlang process scheduler threads to
+    logical processors (e.g., +sbt db).  When set to true the logical
+    processors are assigned using round-robin order.  When set to a
+    <a href="#2_services_add_config_opts_bind">
+    string value all logical processors are provided explicitly</a>.
   </td></tr><tr><td>
     <a href="#2_services_add_config_opts_limit">
     limit</a>
@@ -3545,7 +3567,8 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     max_heap_size, sensitive, message_queue_data).  The dispatcher process
     lifetime is tied to the service lifetime, making it a long-lived
     Erlang process that avoids the accumulation of memory.  The dispatcher
-    process is used in internal services to execute cloudi_service_init/4.
+    process is used in internal services to execute cloudi_service_init/4 if
+    duo_mode is false (otherwise the info process is used).
   </td></tr><tr><td>
     init_pid_options
   </td><td>
@@ -3777,6 +3800,27 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     The probability that a service process will be terminated at a random
     point during the day.
   </td></tr></table>
+  <h4 id="2_services_add_config_opts_bind">bind:</h4>
+  <p class="paragraph">
+    If a string value is provided all logical processors are assigned
+    explicitly based on the string contents.  The string may contain
+    comma delimited non-negative integers with hyphens for integer ranges.
+    All internal service processes and external service threads need
+    exactly one logical processor specified.
+    For example, the string value "1,13,3,15,5,17,7,19,9,21" could be used
+    with an internal service that has 10 processes or an external service
+    that has 10 total threads.  To understand what logical processors are
+    available, check the result of the Erlang function <a href="https://www.erlang.org/doc/man/erlang.html#system_info_cpu_topology" rel="noreferrer" target="_blank">erlang:system_info(cpu_topology)</a>.
+  </p>
+  <p class="paragraph">
+    The bind service configuration option support depends on programming
+    language support of bind functionality.  That means bind use currently
+    is supported by the ATS, C/C++, Erlang and Python/C CloudI APIs.
+    Using the bind service configuration option should be preferred instead of
+    using the <a href="api.html#2_services_add_config_opts_cgroup">cgroup</a>
+    service configuration option with "cpuset.cpus" because bind has
+    cross-platform support with less CloudI execution user privileges required.
+  </p>
   <h4 id="2_services_add_config_opts_limit">limit:</h4>
   <p class="paragraph">
     The value for any option can be an integer or 'infinity' to set the

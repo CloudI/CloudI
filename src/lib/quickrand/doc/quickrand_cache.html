@@ -19,9 +19,9 @@ crypto:strong_rand_bytes/1 function call.</p>
   
    The cache_size option may be provided to either the init/1 function or
    the new/1 function to adjust the amount of data cached.
-<p>Copyright © 2017-2022 Michael Truog</p>
+<p>Copyright © 2017-2023 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.5 Oct 11 2022 19:03:19
+<p><b>Version:</b> 2.0.6 Jun 20 2023 17:54:03
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -50,7 +50,9 @@ crypto:strong_rand_bytes/1 function call.</p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#float-0">float/0</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#destroy-0">destroy/0</a></td><td>
+  <h4><a name="Destroy_cached_process_dictionary_data_if_it_exists.">Destroy cached process dictionary data if it exists.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#float-0">float/0</a></td><td>
   <h4><a name="Process_dictionary_cache_version_of_quickrand:strong_float/0.">Process dictionary cache version of quickrand:strong_float/0.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#float-1">float/1</a></td><td>
   <h4><a name="State_cache_version_of_quickrand:strong_float/0.">State cache version of quickrand:strong_float/0.</a></h4>.</td></tr>
@@ -89,6 +91,14 @@ crypto:strong_rand_bytes/1 function call.</p>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="destroy-0">destroy/0</a></h3>
+<div class="spec">
+<p><tt>destroy() -&gt; ok</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Destroy_cached_process_dictionary_data_if_it_exists.">Destroy cached process dictionary data if it exists.</a></h4>
+</p>
 
 <h3 class="function"><a name="float-0">float/0</a></h3>
 <div class="spec">
@@ -220,7 +230,7 @@ crypto:strong_rand_bytes/1 function call.</p>
 
 <h3 class="function"><a name="uniform_range-2">uniform_range/2</a></h3>
 <div class="spec">
-<p><tt>uniform_range(Min::non_neg_integer(), Max::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+<p><tt>uniform_range(Min::integer(), Max::non_neg_integer()) -&gt; integer()</tt><br></p>
 <p> </p>
 </div><p>
   <h4><a name="Process_dictionary_cache_version_of_quickrand:strong_uniform_range/2.">Process dictionary cache version of quickrand:strong_uniform_range/2.</a></h4>
@@ -228,7 +238,7 @@ crypto:strong_rand_bytes/1 function call.</p>
 
 <h3 class="function"><a name="uniform_range-3">uniform_range/3</a></h3>
 <div class="spec">
-<p><tt>uniform_range(Min::non_neg_integer(), Max::non_neg_integer(), State::<a href="#type-state">state()</a>) -&gt; {non_neg_integer(), <a href="#type-state">state()</a>}</tt><br></p>
+<p><tt>uniform_range(Min::integer(), Max::non_neg_integer(), State::<a href="#type-state">state()</a>) -&gt; {integer(), <a href="#type-state">state()</a>}</tt><br></p>
 <p> </p>
 </div><p>
   <h4><a name="State_cache_version_of_quickrand:strong_uniform_range/2.">State cache version of quickrand:strong_uniform_range/2.</a></h4>

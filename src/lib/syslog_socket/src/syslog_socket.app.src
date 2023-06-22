@@ -3,7 +3,7 @@
 
 {application, syslog_socket,
   [{description, "syslog Client Interface"},
-   {vsn, "2.0.5"},
+   {vsn, "2.0.6"},
    {modules, [syslog_socket]},
    {registered, []},
    {applications, [stdlib, kernel]}]}.

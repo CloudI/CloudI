@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 2.0.5
-:revdate: 2022-10-12
+:revnumber: 2.0.6
+:revdate: 2023-06-21
 :lang: en
 :encoding: UTF-8
 :toc:

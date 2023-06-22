@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_core_i_concurrency</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_core_i_concurrency</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Service_Concurrency">CloudI Service Concurrency</a></h3>.
+<p>Copyright © 2023 Michael Truog</p>
+
+<p><b>Version:</b> 2.0.6 Jun 20 2023 18:35:36
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Service_Concurrency">CloudI Service Concurrency</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-logical_processor">logical_processor()</a></h3>
+<p><tt>logical_processor() = non_neg_integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-scheduler_id">scheduler_id()</a></h3>
+<p><tt>scheduler_id() = pos_integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#bind_assign_process-3">bind_assign_process/3</a></td><td>
+  <h4><a name="Assign_bind_internal_service_process_data.">Assign bind internal service process data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#bind_assign_process-4">bind_assign_process/4</a></td><td>
+  <h4><a name="Assign_bind_external_service_process_data.">Assign bind external service process data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#bind_format-1">bind_format/1</a></td><td>
+  <h4><a name="Convert_internal_state_to_the_bind_configuration_format.">Convert internal state to the bind configuration format.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#bind_increment_thread-1">bind_increment_thread/1</a></td><td>
+  <h4><a name="Increment_the_bind_thread_index.">Increment the bind thread_index.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#bind_init-1">bind_init/1</a></td><td>
+  <h4><a name="Bind_the_CloudI_service_dispatcher_process.">Bind the CloudI service dispatcher process.</a></h4>
+  The other CloudI service Erlang processes automatically get the
+  same bind when spawn occurs from the dispatcher process.</td></tr>
+<tr><td valign="top"><a href="#bind_logical_processor-1">bind_logical_processor/1</a></td><td>
+  <h4><a name="Logical_processor_for_binding_external_service_threads.">Logical processor for binding external service threads.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#bind_validate-4">bind_validate/4</a></td><td>
+  <h4><a name="Convert_the_bind_configuration_format_to_internal_state.">Convert the bind configuration format to internal state.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#count-2">count/2</a></td><td>
+  <h4><a name="Convert_count_process/count_thread_to_the_integer_process_count/thread_count_values.">Convert count_process/count_thread to the integer process_count/thread_count values.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_concurrency_information.">Create concurrency information.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="bind_assign_process-3">bind_assign_process/3</a></h3>
+<div class="spec">
+<p><tt>bind_assign_process(Bind::#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false, ProcessIndex::non_neg_integer(), Concurrency::#concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>}) -&gt; {#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false, #concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>}}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Assign_bind_internal_service_process_data.">Assign bind internal service process data.</a></h4>
+</p>
+
+<h3 class="function"><a name="bind_assign_process-4">bind_assign_process/4</a></h3>
+<div class="spec">
+<p><tt>bind_assign_process(Bind::#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false, ProcessIndex::non_neg_integer(), ThreadCount::pos_integer(), Concurrency::#concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>}) -&gt; {#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false, #concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>}}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Assign_bind_external_service_process_data.">Assign bind external service process data.</a></h4>
+</p>
+
+<h3 class="function"><a name="bind_format-1">bind_format/1</a></h3>
+<div class="spec">
+<p><tt>bind_format(Bind::#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false) -&gt; boolean() | nonempty_string()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Convert_internal_state_to_the_bind_configuration_format.">Convert internal state to the bind configuration format.</a></h4>
+</p>
+
+<h3 class="function"><a name="bind_increment_thread-1">bind_increment_thread/1</a></h3>
+<div class="spec">
+<p><tt>bind_increment_thread(Bind::#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false) -&gt; #bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Increment_the_bind_thread_index.">Increment the bind thread_index.</a></h4>
+</p>
+
+<h3 class="function"><a name="bind_init-1">bind_init/1</a></h3>
+<div class="spec">
+<p><tt>bind_init(Bind::#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false) -&gt; ok</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Bind_the_CloudI_service_dispatcher_process.">Bind the CloudI service dispatcher process.</a></h4>
+  The other CloudI service Erlang processes automatically get the
+  same bind when spawn occurs from the dispatcher process.</p>
+
+<h3 class="function"><a name="bind_logical_processor-1">bind_logical_processor/1</a></h3>
+<div class="spec">
+<p><tt>bind_logical_processor(Bind::#bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false) -&gt; non_neg_integer() | -1</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Logical_processor_for_binding_external_service_threads.">Logical processor for binding external service threads.</a></h4>
+</p>
+
+<h3 class="function"><a name="bind_validate-4">bind_validate/4</a></h3>
+<div class="spec">
+<p><tt>bind_validate(Bind::boolean(), CountProcess::pos_integer() | float(), CountThread::pos_integer() | float(), Concurrency::#concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>} | undefined) -&gt; {ok, #bind{string_exact = nonempty_string() | undefined, thread_count = pos_integer() | undefined, thread_index = non_neg_integer(), scheduler_ids_exact = tuple() | undefined, logical_processors_exact = tuple() | undefined, scheduler_ids = tuple() | undefined, logical_processors = tuple() | undefined} | false} | {error, {service_options_bind_invalid, any()}}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Convert_the_bind_configuration_format_to_internal_state.">Convert the bind configuration format to internal state.</a></h4>
+</p>
+
+<h3 class="function"><a name="count-2">count/2</a></h3>
+<div class="spec">
+<p><tt>count(I::pos_integer() | float(), Concurrency::#concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>}) -&gt; pos_integer()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Convert_count_process/count_thread_to_the_integer_process_count/thread_count_values.">Convert count_process/count_thread to the integer process_count/thread_count values.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; #concurrency{schedulers = pos_integer(), scheduler_bindings = tuple() | undefined, scheduler_id_lookup = #{<a href="#type-logical_processor">logical_processor()</a> := <a href="#type-scheduler_id">scheduler_id()</a>} | undefined, scheduler_id_bind = <a href="#type-scheduler_id">scheduler_id()</a>}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Create_concurrency_information.">Create concurrency information.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

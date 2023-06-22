@@ -11,7 +11,7 @@
   <link rel="shortcut icon" href="images/cloud.ico" type="image/x-icon" />
   <!-- Open Graph Protocol (OGP) with LinkedIn requirements -->
   <meta property="og:title" content="CloudI: A Cloud at the lowest level - Frequently Asked Questions" />
-  <meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of ATS, C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, or Ruby services.
+  <meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of ATS, C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, Ruby, or Rust services.
 
 The bare essentials for efficient fault-tolerant processing on a cloud!" />
   <meta property="og:image" content="https://cloudi.org/images/cloud_ogp.png" />
@@ -33,7 +33,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.5.tar.gz" rel="noopener" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.6.tar.gz" rel="noopener" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -41,8 +41,8 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <h3 style="text-align:center">version 2.0.5<br />
-  last updated on October 12<sup>th</sup> 2022</h3>
+  <h3 style="text-align:center">version 2.0.6<br />
+  last updated on June 21<sup>st</sup> 2023</h3>
 
   <h2 id="1_contents">1 - Introduction to CloudI</h2>
   <ul class="faq">
@@ -113,26 +113,29 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   </ul>
   <h2 id="6_contents">6 - Services</h2>
   <ul class="faq">
-    <li><a href="#6_C"          >6.1 - C/C++ Service Implementation</a></li>
-    <li><a href="#6_Erlang"     >6.2 - Erlang Service Implementation</a></li>
-    <li><a href="#6_Go"         >6.3 - Go Service Implementation</a></li>
-    <li><a href="#6_Haskell"    >6.4 - Haskell Service Implementation</a></li>
-    <li><a href="#6_Java"       >6.5 - Java Service Implementation</a></li>
-    <li><a href="#6_JavaScript" >6.6 - JavaScript/node.js Service Implementation</a></li>
-    <li><a href="#6_OCaml"      >6.7 - OCaml Service Implementation</a></li>
-    <li><a href="#6_Perl"       >6.8 - Perl Service Implementation</a></li>
-    <li><a href="#6_PHP"        >6.9 - PHP Service Implementation</a></li>
-    <li><a href="#6_Python"     >6.10 - Python Service Implementation</a></li>
-    <li><a href="#6_Ruby"       >6.11 - Ruby Service Implementation</a></li>
-    <li><a href="#6_HTTP"       >6.12 - HTTP Integration</a></li>
-    <li><a href="#6_FaultTolerance">6.13 - Service Fault Tolerance</a></li>
-    <li><a href="#6_Monitoring" >6.14 - Service Monitoring</a></li>
+    <li><a href="#6_ATS"        >6.1 - ATS Service Implementation</a></li>
+    <li><a href="#6_C"          >6.2 - C/C++ Service Implementation</a></li>
+    <li><a href="#6_Erlang"     >6.3 - Erlang Service Implementation</a></li>
+    <li><a href="#6_Go"         >6.4 - Go Service Implementation</a></li>
+    <li><a href="#6_Haskell"    >6.5 - Haskell Service Implementation</a></li>
+    <li><a href="#6_Java"       >6.6 - Java Service Implementation</a></li>
+    <li><a href="#6_JavaScript" >6.7 - JavaScript/node.js Service Implementation</a></li>
+    <li><a href="#6_OCaml"      >6.8 - OCaml Service Implementation</a></li>
+    <li><a href="#6_Perl"       >6.9 - Perl Service Implementation</a></li>
+    <li><a href="#6_PHP"        >6.10 - PHP Service Implementation</a></li>
+    <li><a href="#6_Python"     >6.11 - Python Service Implementation</a></li>
+    <li><a href="#6_Ruby"       >6.12 - Ruby Service Implementation</a></li>
+    <li><a href="#6_Rust"       >6.13 - Rust Service Implementation</a></li>
+    <li><a href="#6_HTTP"       >6.14 - HTTP Integration</a></li>
+    <li><a href="#6_FaultTolerance">6.15 - Service Fault Tolerance</a></li>
+    <li><a href="#6_Monitoring" >6.16 - Service Monitoring</a></li>
   </ul>
   <h2 id="7_contents">7 - Troubleshooting</h2>
   <ul class="faq">
     <li><a href="#7_start"      >7.1 - Why does CloudI stop shortly after being started?</a></li>
     <li><a href="#7_slow"       >7.2 - Why is CloudI making my Linux machine slow?</a></li>
     <li><a href="#7_install"    >7.3 - Why does my container or guest VM installation of CloudI have problems?</a></li>
+    <li><a href="#7_cpu"        >7.4 - How can I control the CPU utilization of CloudI?</a></li>
   </ul>
 
   <hr>
@@ -436,7 +439,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     and frameworks.  The <a href="api.html#Service">CloudI API</a>
     provides a light-weight interface for
     creating services in ATS, C++/C, Elixir, Erlang, Go, Haskell, Java,
-    JavaScript, OCaml, Perl, PHP, Python, and Ruby.  By using
+    JavaScript, OCaml, Perl, PHP, Python, Ruby, and Rust.  By using
     CloudI, external software can become more scalable and fault-tolerant
     by utilizing CloudI's load balancing of CloudI requests.  CloudI
     messaging enforces realtime constraints using timeouts, so that request
@@ -540,7 +543,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     <a href="api.html#Service">service requests</a> are transactional
     and a service request response may be used to confirm any state change.
     To understand consistency, as it relates to CloudI service
-    fault tolerance, please refer to <a href="#6_FaultTolerance">"6.13 - Service Fault Tolerance"</a>.
+    fault tolerance, please refer to <a href="#6_FaultTolerance">"6.15 - Service Fault Tolerance"</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -687,7 +690,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     for each datum within the data of a service request when the
     service request handling function is called
     (with the function arity as 9 in Java, Perl, PHP, Ruby, 10 in Python,
-     11 in ATS, Erlang/Elixir, Go, Haskell, OCaml, 13 in C++ and 14 in C,
+     11 in ATS, Erlang/Elixir, Go, Haskell, OCaml, Rust, 13 in C++ and 14 in C,
      where arities higher than 9 are due to data handling details specific
      to the programming languages).
     Using a relatively high arity count does initially make developers
@@ -1220,6 +1223,11 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   </td><td>
   Disable the Ruby CloudI API,<br />
   requires Ruby&nbsp;&ge;&nbsp;1.9.0<br />(default="no")
+  </td></tr><tr><td style="white-space:nowrap">
+  --enable-rust-support
+  </td><td>
+  Enable the Rust CloudI API,<br />
+  requires Rust&nbsp;&ge;&nbsp;1.66.1<br />(default="no")
   </td></tr></table>
   <p class="paragraph">
     For more installation configuration option details, please execute
@@ -1366,7 +1374,7 @@ sudo cloudi stop
   <p class="paragraph">
     The CloudI API provides a light-weight interface for creating services
     in ATS, C++/C, Elixir, Erlang, Go, Haskell, Java, Javascript, OCaml, Perl,
-    PHP, Python, and Ruby.  Services subscribe to receive requests from
+    PHP, Python, Ruby, and Rust.  Services subscribe to receive requests from
     other services using the CloudI API
     "<a href="api.html#1_subscribe">subscribe</a>" function
     call.  The subscribe function call takes a suffix string that is expected
@@ -2134,6 +2142,7 @@ sudo cloudi stop
      service request timeout period without any errors or timeouts):
   </p>
   <ul>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_request_rate/results/results_v2_0_4#readme" rel="noopener" target="_blank">2.0.5 (prerelease) results (all CloudI API implementations)</a></li>
     <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_request_rate/results/results_v1_7_1#readme" rel="noopener" target="_blank">1.7.1 results (all CloudI API implementations)</a></li>
     <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_request_rate/results/results_v1_5_4#readme" rel="noopener" target="_blank">1.5.4 results (including cloudi_service_queue)</a></li>
     <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_request_rate/results/results_v1_5_1/results.txt" rel="noopener" target="_blank">1.5.1 results</a></li>
@@ -2208,7 +2217,37 @@ sudo cloudi stop
   <hr>
   <h2>6 - Services</h2>
 
-  <h3 id="6_C">6.1 - C/C++ Service Implementation</h3>
+  <h3 id="6_ATS">6.1 - ATS Service Implementation</h3>
+  <p class="paragraph">
+    The <a href="https://github.com/CloudI/CloudI/blob/master/src/api/ats/v2/cloudi.sats" rel="noopener" target="_blank">ATS CloudI API</a>
+    provides an ATS2/Postiats interface to the C CloudI API for utilizing any
+    <a href="https://en.wikipedia.org/wiki/ATS_(programming_language)" rel="noreferrer" target="_blank">ATS programming language</a>
+    features in the implementation of a CloudI service.  The ATS CloudI API
+    only utilizes the view types subset of the ATS2/Postiats programming
+    language so it doesn't require compilation with garbage collection.
+    That means the ATS CloudI API compilation utilizes -DATS_MEMALLOC_LIBC
+    without ATS types causing memory leaks.  The ATS2/Postiats exception
+    handling implementation is currently not thread-safe, so ATS service
+    configurations should always have count_thread set to 1 (the default).
+    Some of the integration tests that provide example usage of the ATS
+    <a href="api.html#Service">CloudI API</a> are:
+  </p>
+  <ul>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/ats/v2/main.dats" rel="noopener" target="_blank">src/tests/count
+        Basic Count Test</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/ats/v2/main.dats" rel="noopener" target="_blank">src/tests/http_req
+        Basic HTTP Request Test</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/ats/v2/main.dats" rel="noopener" target="_blank">src/tests/msg_size
+        Basic Message Size (Forwarding) Test</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/ats/v2/main.dats" rel="noopener" target="_blank">src/tests/messaging
+        Basic Messaging Test</a></li>
+  </ul>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <h3 id="6_C">6.2 - C/C++ Service Implementation</h3>
   <p class="paragraph">
     There are separate header files that provide both a C CloudI API
     (<a href="https://github.com/CloudI/CloudI/blob/master/src/api/c/cloudi.h" rel="noopener" target="_blank">cloudi.h</a>)
@@ -2252,7 +2291,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Erlang">6.2 - Erlang Service Implementation</h3>
+  <h3 id="6_Erlang">6.3 - Erlang Service Implementation</h3>
   <p class="paragraph">
     Erlang CloudI services use the cloudi_service behavior to create an
     "internal" service (all non-Erlang CloudI services are "external").
@@ -2297,7 +2336,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Go">6.3 - Go Service Implementation</h3>
+  <h3 id="6_Go">6.4 - Go Service Implementation</h3>
   <p class="paragraph">
     The Go CloudI API provides a simple interface for making Go CloudI
     services.  The Go CloudI API only uses Go source code internally
@@ -2324,7 +2363,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Haskell">6.4 - Haskell Service Implementation</h3>
+  <h3 id="6_Haskell">6.5 - Haskell Service Implementation</h3>
   <p class="paragraph">
     The Haskell CloudI API provides a simple interface for making Haskell CloudI
     services.  The Haskell CloudI API only uses Haskell source code internally
@@ -2354,7 +2393,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Java">6.5 - Java Service Implementation</h3>
+  <h3 id="6_Java">6.6 - Java Service Implementation</h3>
   <p class="paragraph">
     The Java CloudI API uses synchronous IO on file descriptors for
     an efficient light-weight interface using only Java source code,
@@ -2385,7 +2424,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_JavaScript">6.6 - JavaScript/node.js Service Implementation</h3>
+  <h3 id="6_JavaScript">6.7 - JavaScript/node.js Service Implementation</h3>
   <p class="paragraph">
     The JavaScript CloudI API provides a simple interface for making JavaScript
     CloudI services. The JavaScript CloudI API only uses JavaScript source code
@@ -2414,7 +2453,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_OCaml">6.7 - OCaml Service Implementation</h3>
+  <h3 id="6_OCaml">6.8 - OCaml Service Implementation</h3>
   <p class="paragraph">
     The OCaml CloudI API provides a simple interface for making OCaml CloudI
     services.  The OCaml CloudI API only uses OCaml source code internally
@@ -2440,7 +2479,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Perl">6.8 - Perl Service Implementation</h3>
+  <h3 id="6_Perl">6.9 - Perl Service Implementation</h3>
   <p class="paragraph">
     The Perl CloudI API provides a simple interface for making Perl
     CloudI services. The Perl CloudI API only uses Perl source code
@@ -2465,7 +2504,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_PHP">6.9 - PHP Service Implementation</h3>
+  <h3 id="6_PHP">6.10 - PHP Service Implementation</h3>
   <p class="paragraph">
     The PHP CloudI API provides a simple interface for making PHP
     CloudI services. The PHP CloudI API only uses PHP source code
@@ -2490,7 +2529,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Python">6.10 - Python Service Implementation</h3>
+  <h3 id="6_Python">6.11 - Python Service Implementation</h3>
   <p class="paragraph">
     The Python CloudI API provides a simple interface for making Python
     CloudI services.  Some of the integration tests that provide example usage
@@ -2531,7 +2570,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Ruby">6.11 - Ruby Service Implementation</h3>
+  <h3 id="6_Ruby">6.12 - Ruby Service Implementation</h3>
   <p class="paragraph">
     The Ruby CloudI API provides a simple interface for making Ruby
     CloudI services. The Ruby CloudI API only uses Ruby source code
@@ -2554,7 +2593,30 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_HTTP">6.12 - HTTP Integration</h3>
+  <h3 id="6_Rust">6.13 - Rust Service Implementation</h3>
+  <p class="paragraph">
+    The Rust CloudI API provides a simple interface for making Rust
+    CloudI services. The Rust CloudI API only uses Rust source code
+    internally to avoid errors and simplify concurrency.
+    Some of the integration tests that provide example
+    usage of the Rust <a href="api.html#Service">CloudI API</a> are:
+  </p>
+  <ul>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/rust/main.rs" rel="noopener" target="_blank">src/tests/count
+        Basic Count Test</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/rust/main.rs" rel="noopener" target="_blank">src/tests/http_req
+        Basic HTTP Request Test</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/rust/main.rs" rel="noopener" target="_blank">src/tests/msg_size
+        Basic Message Size (Forwarding) Test</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/rust/main.rs" rel="noopener" target="_blank">src/tests/messaging
+        Basic Messaging Test</a></li>
+  </ul>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <h3 id="6_HTTP">6.14 - HTTP Integration</h3>
   <p class="paragraph">
     HTTP integration with CloudI services uses service names that have a prefix
     that matches the Uniform Resource Locator (URL) path.  A simple example
@@ -2660,7 +2722,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_FaultTolerance">6.13 - Service Fault Tolerance</h3>
+  <h3 id="6_FaultTolerance">6.15 - Service Fault Tolerance</h3>
   <p class="paragraph">
     General fault tolerance considerations within the CloudI framework are
     described in <a href="#5_Stability">"5.3 - Stability and Fault Tolerance Considerations"</a>.
@@ -2725,7 +2787,7 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <h3 id="6_Monitoring">6.14 - Service Monitoring</h3>
+  <h3 id="6_Monitoring">6.16 - Service Monitoring</h3>
   <p class="paragraph">
     The <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl" rel="noopener" target="_blank">cloudi_service_monitoring</a>
     provides the ability to monitor the internals of any CloudI service
@@ -2854,6 +2916,127 @@ sudo cloudi stop
     (non-multiqueue) "noop" with Linux&nbsp;&lt;&nbsp;5.0 .
     Various CloudI testing occurs in guest VM execution without problems,
     though execution is slower than bare-metal execution.
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
+
+  <h3 id="7_cpu">7.4 - How can I control the CPU utilization of CloudI?</h3>
+  <p class="paragraph">
+    The Erlang VM is able to detect the CPU topology on most
+    Operating Systems (OS) and the CPU topology is used for binding scheduler
+    threads to logical processors.  The number of scheduler threads may be
+    set with the erl <a href="https://www.erlang.org/doc/man/erl.html#+S" rel="noreferrer" target="_blank">+S</a>
+    command-line argument.  Additional <a href="https://www.erlang.org/doc/man/erl.html#emulator-flags" rel="noreferrer" target="_blank">erl</a>
+    command-line arguments for CloudI execution (like +S) can be added to the
+    etc directory vm.args file (or the NODE.args node-specific file where
+    NODE is the node name configured for the CloudI build).
+  </p>
+  <p class="paragraph">
+    To control the specific CPUs that are used by the Erlang VM
+    (in a cross-platform way, i.e., any OS) it may be necessary to provide the
+    CPU topology explicitly with the erl <a href="https://www.erlang.org/doc/man/erl.html#+sct" rel="noreferrer" target="_blank">+sct</a>
+    command-line argument.  An example is provided below using a
+    <a href="https://en.wikipedia.org/wiki/List_of_PowerEdge_servers#Generation_11" rel="noreferrer" target="_blank">Dell PowerEdge R710</a>
+    with 2 <a href="https://en.wikipedia.org/wiki/List_of_Intel_Xeon_processors_(Nehalem-based)#ark47922" rel="noreferrer" target="_blank">Xeon X5650</a>
+    CPUs, each with 6 cores and 2 hyper-threads per core.
+    The example below provides configuration for using only the
+    second physical CPU for execution.
+  </p>
+  <p class="paragraph">
+    If the Erlang VM is able to automatically detect the CPU topology on the OS,
+    it will do so when binding the scheduler threads to the available
+    logical processors (by default the scheduler threads are unbound).
+    The default scheduler bind type is used below with the erl <a href="https://www.erlang.org/doc/man/erl.html#+sbt" rel="noreferrer" target="_blank">+sbt</a>
+    command-line argument:
+  </p>
+<pre>
+$ erl +sbt db
+1> erlang:system_info(cpu_topology).
+[{node,[{processor,[{core,[{thread,{logical,1}},
+                           {thread,{logical,13}}]},
+                    {core,[{thread,{logical,3}},{thread,{logical,15}}]},
+                    {core,[{thread,{logical,5}},{thread,{logical,17}}]},
+                    {core,[{thread,{logical,7}},{thread,{logical,19}}]},
+                    {core,[{thread,{logical,9}},{thread,{logical,21}}]},
+                    {core,[{thread,{logical,11}},{thread,{logical,23}}]}]}]},
+ {node,[{processor,[{core,[{thread,{logical,0}},
+                           {thread,{logical,12}}]},
+                    {core,[{thread,{logical,2}},{thread,{logical,14}}]},
+                    {core,[{thread,{logical,4}},{thread,{logical,16}}]},
+                    {core,[{thread,{logical,6}},{thread,{logical,18}}]},
+                    {core,[{thread,{logical,8}},{thread,{logical,20}}]},
+                    {core,[{thread,{logical,10}},{thread,{logical,22}}]}]}]}]
+2> erlang:system_info(scheduler_bindings).
+{1,3,5,7,9,11,0,2,4,6,8,10,13,15,17,19,21,23,12,14,16,18,20,22}
+</pre>
+  <p class="paragraph">
+    On Linux we can verify the logical processors that belong to each
+    physical CPU with:
+  </p>
+<pre>
+$ cat /sys/devices/system/node/node0/cpulist
+0,2,4,6,8,10,12,14,16,18,20,22
+$ cat /sys/devices/system/node/node1/cpulist
+1,3,5,7,9,11,13,15,17,19,21,23
+</pre>
+  <p class="paragraph">
+    To use only the second physical CPU, the CPU topology can be
+    manually specified with the erl <a href="https://www.erlang.org/doc/man/erl.html#+sct" rel="noreferrer" target="_blank">+sct</a>
+    command-line argument as:
+  </p>
+<pre>
+L1,13t0-1c0p0N1:L3,15t2-3c1p0N1:L5,17t4-5c2p0N1:L7,19t6-7c3p0N1:L9,21t8-9c4p0N1:L11,23t10-11c5p0N1:L0,12t0-1c0p1N0:L2,14t2-3c1p1N0:L4,16t4-5c2p1N0:L6,18t6-7c3p1N0:L8,20t8-9c4p1N0:L10,22t10-11c5p1N0
+</pre>
+  <p class="paragraph">
+    The +sct value above has the "p" processor (physical CPU) integers using a
+    reverse ordering when compared to the "N" NUMA Node integers.
+    To bind scheduler threads in the same order as the provided
+    CPU topology the erl <a href="https://www.erlang.org/doc/man/erl.html#+sbt" rel="noreferrer" target="_blank">+sbt</a>
+    command-line argument can be provided the "ns" value (for no_spread).
+    Combining the <a href="https://www.erlang.org/doc/man/erl.html#emulator-flags" rel="noreferrer" target="_blank">erl</a> command-line arguments together
+    for using only the second physical CPU would look like:
+  </p>
+<pre>
++sct L1,13t0-1c0p0N1:L3,15t2-3c1p0N1:L5,17t4-5c2p0N1:L7,19t6-7c3p0N1:L9,21t8-9c4p0N1:L11,23t10-11c5p0N1:L0,12t0-1c0p1N0:L2,14t2-3c1p1N0:L4,16t4-5c2p1N0:L6,18t6-7c3p1N0:L8,20t8-9c4p1N0:L10,22t10-11c5p1N0
++sbt ns
++S 12
+</pre>
+  <p class="paragraph">
+    The +S command-line argument ensures only 12 scheduler threads are used
+    and the single physical CPU in the example has 6 cores with 2 hyper-threads
+    per core, so the CPU topology ordering allows the scheduler threads to be
+    bound to only the second physical CPU.
+  </p>
+  <h4>External Services</h4>
+  <p class="paragraph">
+    External CloudI services require separate configuration to control their
+    CPU use.  On Linux it is best to use the <a href="api.html#2_services_add_config_opts_cgroup">cgroup</a>
+    service configuration option (instead of the taskset executable).
+    The cgroup configuration example below would ensure an external service
+    only uses the second physical CPU described above:
+  </p>
+<pre class="code">
+{cgroup,
+ [{name, "CloudI/external_service_example1"},
+  {parameters,
+   [{"cpuset.cpus", "1,13,3,15,5,17,7,19,9,21,11,23"}]}]}
+</pre>
+  <p class="paragraph">
+    With the develop branch CloudI source code it is possible to use the
+    <a href="api.html#2_services_add_config_opts_bind">bind</a> service
+    configuration option with the same string value
+    (i.e.,&nbsp;"1,13,3,15,5,17,7,19,9,21,11,23").  In the future,
+    <a href="api.html#2_services_add_config_opts_bind">bind</a> should be
+    preferred due to cross-platform support with less CloudI execution
+    user privileges required.
+  </p>
+  <p class="paragraph">
+    External CloudI services have additional service configuration options
+    which influence CPU utilization in a more general way:
+    <ul>
+      <li><a href="api.html#2_services_add_config_opts">nice</a> - modify process scheduling priority</li>
+      <li><a href="api.html#2_services_add_config_opts_limit">limit</a> - explicit limits</li>
+      <li><a href="api.html#2_services_add_config_opts_owner">owner</a> - user/group limits</li>
+    </ul>
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
 </div>

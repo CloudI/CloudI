@@ -10,9 +10,9 @@
 %%%
 %%% Use the interactive argument if you need to utilize a programming
 %%% language interpreter.  For example, SBCL could be used with
-%%% "exec /usr/bin/sbcl --noinform --disable-debugger --eval '(setf sb-int:*repl-prompt-fun* (lambda (stream) (format stream \"~&\")))'"
+%%% ``exec /usr/bin/sbcl --noinform --disable-debugger --eval '(setf sb-int:*repl-prompt-fun* (lambda (stream) (format stream \"~&\")))' ''
 %%% and Python could be used with
-%%% "exec /usr/bin/python3 -ui -c 'import sys; sys.ps1 = sys.ps2 = \"\"'".
+%%% ``exec /usr/bin/python3 -ui -c 'import sys; sys.ps1 = sys.ps2 = \"\"'''.
 %%% @end
 %%%
 %%% MIT License

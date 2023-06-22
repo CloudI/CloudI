@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-21 Michael Truog   <mjtruog at protonmail dot com>
+
+    * CloudI version 2.0.6 released
+
 2023-06-12 Michael Truog   <mjtruog at protonmail dot com>
 
     * Remove linux_setcap.sh modifications for the 'cgroup'

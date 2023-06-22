@@ -27,9 +27,9 @@ methods are provided as specified within the RFC.</p>
    The ordered version 1 variant is not present in the RFC,
    though it is the most standards-compliant way of providing
    timestamp UUID ordering.
-<p>Copyright © 2011-2022 Michael Truog</p>
+<p>Copyright © 2011-2023 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.5 Oct 11 2022 19:12:17
+<p><b>Version:</b> 2.0.6 Jun 20 2023 18:00:26
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -106,6 +106,12 @@ methods are provided as specified within the RFC.</p>
 <tr><td valign="top"><a href="#get_v1_time-1">get_v1_time/1</a></td><td>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
   The result is an integer in microseconds since the UNIX epoch.</td></tr>
+<tr><td valign="top"><a href="#get_v1_time_ns-0">get_v1_time_ns/0</a></td><td>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in nanoseconds since the UNIX epoch.</td></tr>
+<tr><td valign="top"><a href="#get_v1_time_ns-1">get_v1_time_ns/1</a></td><td>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in nanoseconds since the UNIX epoch.</td></tr>
 <tr><td valign="top"><a href="#get_v3-1">get_v3/1</a></td><td>
   <h4><a name="Get_a_v3_UUID.">Get a v3 UUID.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_v3-2">get_v3/2</a></td><td>
@@ -211,11 +217,29 @@ methods are provided as specified within the RFC.</p>
 
 <h3 class="function"><a name="get_v1_time-1">get_v1_time/1</a></h3>
 <div class="spec">
-<p><tt>get_v1_time(Uuid_state::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p><tt>get_v1_time(Value::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a>) -&gt; non_neg_integer()</tt><br></p>
 <p> </p>
 </div><p>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
   The result is an integer in microseconds since the UNIX epoch.
+  (The UNIX epoch is 1970-01-01T00:00:00Z)</p>
+
+<h3 class="function"><a name="get_v1_time_ns-0">get_v1_time_ns/0</a></h3>
+<div class="spec">
+<p><tt>get_v1_time_ns() -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in nanoseconds since the UNIX epoch.
+  (The UNIX epoch is 1970-01-01T00:00:00Z)</p>
+
+<h3 class="function"><a name="get_v1_time_ns-1">get_v1_time_ns/1</a></h3>
+<div class="spec">
+<p><tt>get_v1_time_ns(Uuid_state::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
+  The result is an integer in nanoseconds since the UNIX epoch.
   (The UNIX epoch is 1970-01-01T00:00:00Z)</p>
 
 <h3 class="function"><a name="get_v3-1">get_v3/1</a></h3>

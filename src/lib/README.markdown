@@ -10,8 +10,8 @@ Erlang `cgroups`
 `Erlang native cgroups interface`
 
 - `https://github.com/okeuday/cgroups`
-- `commit 48f9893364b9ac6d1676a44a3cdc2ec0c6562e52`
-- `Mon Jun 12 22:44:27 UTC 2023`
+- `commit f1cc0faa0011c1d42ee9534eb9865bab86781792 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `cpg`
@@ -19,8 +19,8 @@ Erlang `cpg`
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit fc8a7599f212784cad1d8d5830689638c35051d7`
-- `Sat Jun  3 19:06:12 UTC 2023`
+- `commit 07140b73fb2d8c150b59e6cf85d34af2fbb8ad94 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `erlang_term`
@@ -28,8 +28,8 @@ Erlang `erlang_term`
 `Erlang Term Info`
 
 - `https://github.com/okeuday/erlang_term`
-- `commit 9d3e04c6202f47da74c3bd1b15cf745fb5695282 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit ae74f5f1983a00b1c0931a3f512bafd22b9eb838 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `key2value`
@@ -37,8 +37,8 @@ Erlang `key2value`
 `Erlang 2-way map`
 
 - `https://github.com/okeuday/key2value`
-- `commit 4c1dab1e47d16598f12507e5dc1dc5b141ad09c6 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit ccf995fdd351302b098f121b48fa9a6e41cf375a (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `keys1value`
@@ -46,8 +46,8 @@ Erlang `keys1value`
 `Erlang set associative map for key lists`
 
 - `https://github.com/okeuday/keys1value`
-- `commit 47251eb5cb7182721a72433ad3592af1186c465c (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit 2395f98c6740d848076bd15b424fc3012d4bd585 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `pqueue`
@@ -55,8 +55,8 @@ Erlang `pqueue`
 `Erlang Priority Queues`
 
 - `https://github.com/okeuday/pqueue`
-- `commit 9f986dd62750977ca032921a9bda8ca2cc98e522 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit b67b3a0444f2872938dd71dc53cc71e014e6884b (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `quickrand`
@@ -64,8 +64,8 @@ Erlang `quickrand`
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit 16c004ac4ddfb1bef223f071608fc048446f77be`
-- `Mon May  8 22:26:33 UTC 2023`
+- `commit 98c097d9c367c5f5567c5b6ba74255f2b627d94f (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `reltool_util`
@@ -73,8 +73,8 @@ Erlang `reltool_util`
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit 2901ab7e2eab8bbde85cd9027256e12b60371533 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit 42e1d024e2f5fab5f39138bac8866213256679a7 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `supool`
@@ -82,8 +82,8 @@ Erlang `supool`
 `Erlang Process Pool as a Supervisor`
 
 - `https://github.com/okeuday/supool`
-- `commit b9a72e282dfa97b43a21a419a0fbcdb71aecb5f7 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit cb8f579f8ef51daa69508964daf12e7e0ffeecbb (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `syslog_socket`
@@ -91,8 +91,8 @@ Erlang `syslog_socket`
 `Erlang syslog Client Interface`
 
 - `https://github.com/okeuday/syslog_socket`
-- `commit bd8dc6208fa213a2723328caaf591a911b15b5c8 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit aeb66654d19c57c1a13202f41e0df0761e9afc63 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `trie`
@@ -100,8 +100,8 @@ Erlang `trie`
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
-- `commit 237bf6882d24aa22f8d4434b72c162ec581e4da8 (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit 00cde3f5c72d835e1a23d328578bae250d4f85b1 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `uuid`
@@ -109,8 +109,8 @@ Erlang `uuid`
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
-- `commit 8e10edd6ae77a055b4e15a98f98f9870a2cce635`
-- `Thu Feb  9 05:35:01 UTC 2023`
+- `commit 00eebcdaa6f595727685046c5cd1d9ff846c5eb9 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Erlang `varpool`
@@ -118,8 +118,8 @@ Erlang `varpool`
 `Erlang Process Pools as a Local Variable`
 
 - `https://github.com/okeuday/varpool`
-- `commit c57982b1ed50d76b2974c011ddb1325380e5c04d (v2.0.5)`
-- `Thu Oct 13 03:15:18 UTC 2022`
+- `commit d29da292c1ce78eabde21cbe436fc886bc4b7aed (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Go `erlang_go`
@@ -128,8 +128,8 @@ Go `erlang_go`
 
 - `https://github.com/okeuday/erlang_go`
 - `repository location: src/api/go/`
-- `commit 410cfc316ce98e58727636abaab555b35a5d7fe7`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit a2df81d568d1627f7a6e4da845079c9615f6c104 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Haskell `erlang_hs`
@@ -138,8 +138,8 @@ Haskell `erlang_hs`
 
 - `https://github.com/okeuday/erlang_hs`
 - `repository location: src/api/haskell/src/Foreign/`
-- `commit f004aad640f8bceffe47be0bf4aca2c3a04f9784`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit 90e2bf14724222ff66178417f97b759a5abff20d (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 JavaScript `erlang_js`
@@ -148,8 +148,8 @@ JavaScript `erlang_js`
 
 - `https://github.com/okeuday/erlang_js`
 - `repository location: src/api/javascript/`
-- `commit 9de883abc9a1e677599aaf3423d438023e6bf26a`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit ac23804cf84ed0f46dc03dec2f6d98a5998e7920 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 OCaml `erlang_ml`
@@ -158,8 +158,8 @@ OCaml `erlang_ml`
 
 - `https://github.com/okeuday/erlang_ml`
 - `repository location: src/api/ocaml/`
-- `commit 51feeec848c26d47781e162dfccec9400cb391f7`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit 3817457045dcb413a2fa461b97e051fab24721b7 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Perl `erlang_pl`
@@ -168,8 +168,8 @@ Perl `erlang_pl`
 
 - `https://github.com/okeuday/erlang_pl`
 - `repository location: src/api/perl/`
-- `commit 2f4adac1b2a62371044ba7a309a2a9d53033338b`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit 744595425cf9531728c5a436cce193a697a40600 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 PHP `erlang_php`
@@ -178,8 +178,8 @@ PHP `erlang_php`
 
 - `https://github.com/okeuday/erlang_php`
 - `repository location: src/api/php/`
-- `commit 414868b4c1bb41cbb1bc9443970f56305323b038`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit 9bd5275eef7fb7a862960d96658635e901b7e99e (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Python `erlang_py`
@@ -188,8 +188,8 @@ Python `erlang_py`
 
 - `https://github.com/okeuday/erlang_py`
 - `repository location: src/api/python/`
-- `commit 96f580dca53f0068c7931cda6bc91d11a1ecd3f9`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit 321da3e3457a571337a1ba925bdaff925cb3fdf7 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Ruby `erlang_rb`
@@ -198,8 +198,8 @@ Ruby `erlang_rb`
 
 - `https://github.com/okeuday/erlang_rb`
 - `repository location: src/api/ruby/`
-- `commit b5c0b3721968542cec868c05835019d89514235f`
-- `Sat May 20 22:08:49 UTC 2023`
+- `commit 8ef3b60edc70eeec88162cfdafa9f221ef0e462d (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 
 Rust `erlang_rs`
@@ -208,7 +208,7 @@ Rust `erlang_rs`
 
 - `https://github.com/okeuday/erlang_rs`
 - `repository location: src/api/rust/`
-- `commit 29b61f42363bed409c964a1303774ae3706440d2`
-- `Sat May 27 00:51:23 UTC 2023`
+- `commit d208d826dbbfd051d83ecc24e99dc0e4e006ed15 (v2.0.6)`
+- `Wed Jun 21 20:05:07 UTC 2023`
 - `MIT`
 

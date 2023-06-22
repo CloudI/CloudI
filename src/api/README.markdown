@@ -147,11 +147,11 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [Rust](https://cloudi.org/faq.html#6_Rust)
 
-* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/rust/main.rs)
-* [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/rust/main.rs)
-* [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/rust/main.rs)
-* [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/rust/main.rs)
-* [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/null/rust/main.rs)
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/rust/main.rs)
+* [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/rust/main.rs)
+* [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/rust/main.rs)
+* [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/rust/main.rs)
+* [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/rust/main.rs)
 
 Please see the [CloudI API documentation](https://cloudi.org/api.html#Service)
 for more details.

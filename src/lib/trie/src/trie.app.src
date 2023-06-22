@@ -3,7 +3,7 @@
 
 {application, trie,
   [{description, "Trie Data Structure"},
-   {vsn, "2.0.5"},
+   {vsn, "2.0.6"},
    {modules, [btrie, trie]},
    {registered, []},
    {applications, [stdlib, kernel]}]}.
