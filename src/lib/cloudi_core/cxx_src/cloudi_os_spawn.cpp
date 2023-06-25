@@ -48,6 +48,8 @@
 #include "cloudi_os_syscall_lock.hpp"
 #include "assert.hpp"
 
+#define UNCHECKED(RESULT) ((void) (RESULT + 1))
+
 namespace
 {
     namespace spawn_status
@@ -830,7 +832,7 @@ namespace
     void fork_exit(int const status, int const fd)
     {
         unsigned char const fork_status = status;
-        ::write(fd, &fork_status, 1);
+        UNCHECKED(::write(fd, &fork_status, 1));
         ::_exit(status);
     }
 
