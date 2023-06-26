@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -42,6 +42,7 @@ class _Task(threading.Thread):
         self.__thread_index = thread_index
 
     def run(self):
+        # pylint: disable=broad-except
         try:
             self.__api = API(self.__thread_index)
             self.__api.subscribe('bounce/get', self.__request)
@@ -63,6 +64,7 @@ class _Task(threading.Thread):
                   timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
+        # pylint: disable=no-self-use
         assert request == b'CONNECT'
         print('connect: %s' %
               str(API.info_key_value_parse(request_info)))
@@ -72,6 +74,7 @@ class _Task(threading.Thread):
                      timeout, priority, trans_id, source):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
+        # pylint: disable=no-self-use
         assert request == b'DISCONNECT'
         print('disconnect: %s' %
               str(API.info_key_value_parse(request_info)))

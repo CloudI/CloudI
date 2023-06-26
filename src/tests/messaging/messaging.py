@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -38,19 +38,21 @@ class Task(threading.Thread):
     """
     messaging thread task
     """
-    def __init__(self, thread_index, name, terminate):
+    def __init__(self, thread_index, name, api_class, terminate_exception):
         threading.Thread.__init__(self)
         self.__api = None
         self.__thread_index = thread_index
         self.__name = name
-        self.__terminate_exception = terminate
+        self.__api_class = api_class
+        self.__terminate_exception = terminate_exception
 
     def run(self):
         """
         run the messaging thread
         """
+        # pylint: disable=broad-except
         try:
-            self.__api = API(self.__thread_index)
+            self.__api = self.__api_class(self.__thread_index)
             self.__api.subscribe('a/b/c/d', self.__sequence1_abcd)
             self.__api.subscribe('a/b/c/*', self.__sequence1_abc_)
             self.__api.subscribe('a/b/*/d', self.__sequence1_ab_d)
@@ -106,7 +108,7 @@ class Task(threading.Thread):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/b/c/*')
-        assert request == b'test2' or request == b'test3'
+        assert request in (b'test2', b'test3')
         self.__api.return_(request_type, name, pattern,
                            b'', request, timeout, trans_id, source)
 
@@ -116,7 +118,7 @@ class Task(threading.Thread):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/b/*/d')
-        assert request == b'test4' or request == b'test5'
+        assert request in (b'test4', b'test5')
         self.__api.return_(request_type, name, pattern,
                            b'', request, timeout, trans_id, source)
 
@@ -126,7 +128,7 @@ class Task(threading.Thread):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + 'a/*/c/d')
-        assert request == b'test6' or request == b'test7'
+        assert request in (b'test6', b'test7')
         self.__api.return_(request_type, name, pattern,
                            b'', request, timeout, trans_id, source)
 
@@ -136,7 +138,7 @@ class Task(threading.Thread):
         # pylint: disable=unused-argument
         # pylint: disable=too-many-arguments
         assert pattern == (self.__api.prefix() + '*/b/c/d')
-        assert request == b'test8' or request == b'test9'
+        assert request in (b'test8', b'test9')
         self.__api.return_(request_type, name, pattern,
                            b'', request, timeout, trans_id, source)
 
@@ -429,17 +431,16 @@ class Task(threading.Thread):
                 e_check_list.sort()
                 assert b''.join(e_check_list) == b'111222333444555666777888'
                 break
-            else:
-                print('Waiting for %s services to initialize' % (
-                    str(4 - len(e_ids) / 8.0),
-                ))
-                for e_id in e_ids:
-                    (_,
-                     e_check,
-                     e_id_check) = self.__api.recv_async(trans_id=e_id)
-                    assert e_id == e_id_check
-                null_id = self.__api.recv_async(timeout=1000)[2]
-                assert null_id == b'\0' * 16
+            print('Waiting for %s services to initialize' % (
+                str(4 - len(e_ids) / 8.0),
+            ))
+            for e_id in e_ids:
+                (_,
+                 e_check,
+                 e_id_check) = self.__api.recv_async(trans_id=e_id)
+                assert e_id == e_id_check
+            null_id = self.__api.recv_async(timeout=1000)[2]
+            assert null_id == b'\0' * 16
         print('messaging sequence2 end %s (%s)' % (
             self.__name,
             iteration,
@@ -524,7 +525,7 @@ def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
 
-    threads = [Task(thread_index, 'python', TerminateException)
+    threads = [Task(thread_index, 'python', API, TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

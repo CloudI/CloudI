@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -43,18 +43,20 @@ class Task(threading.Thread):
     """
     api_name = None
 
-    def __init__(self, thread_index, terminate):
+    def __init__(self, thread_index, api_class, terminate_exception):
         threading.Thread.__init__(self)
         self.__api = None
         self.__thread_index = thread_index
-        self.__terminate_exception = terminate
+        self.__api_class = api_class
+        self.__terminate_exception = terminate_exception
 
     def run(self):
         """
         run the msg_size thread
         """
+        # pylint: disable=broad-except
         try:
-            self.__api = API(self.__thread_index)
+            self.__api = self.__api_class(self.__thread_index)
             self.__api.subscribe(Task.api_name, _request)
 
             result = self.__api.poll()
@@ -86,7 +88,7 @@ def _main():
     assert thread_count >= 1
 
     Task.api_name = 'python'
-    threads = [Task(thread_index, TerminateException)
+    threads = [Task(thread_index, API, TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

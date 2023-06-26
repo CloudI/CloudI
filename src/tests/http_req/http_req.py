@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -38,19 +38,21 @@ class Task(threading.Thread):
     """
     http_req thread task
     """
-    def __init__(self, thread_index, name, exception):
+    def __init__(self, thread_index, name, api_class, terminate_exception):
         threading.Thread.__init__(self)
         self.__api = None
         self.__thread_index = thread_index
         self.__name = name
-        self.__terminate_exception = exception
+        self.__api_class = api_class
+        self.__terminate_exception = terminate_exception
 
     def run(self):
         """
         run the http_req thread
         """
+        # pylint: disable=broad-except
         try:
-            self.__api = API(self.__thread_index)
+            self.__api = self.__api_class(self.__thread_index)
             if self.__name == 'python':
                 assert self.__api.subscribe_count('python.xml/get') == 0
 
@@ -92,7 +94,7 @@ def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
 
-    threads = [Task(thread_index, 'python', TerminateException)
+    threads = [Task(thread_index, 'python', API, TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

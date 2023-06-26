@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix Python/C integration tests API class instantiation
+      (so the Python CloudI API is not being used instead)
+    * Add 2.0.6 release cloudi_service_request_rate results
+
 2023-06-24 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix compiler warning
