@@ -68,7 +68,7 @@ configuration file (/usr/local/etc/cloudi/cloudi.conf) was empty.
     sudo ./make_dev install
     sudo mv /usr/local/etc/cloudi/cloudi.conf /usr/local/etc/cloudi/cloudi_tests.conf
     sudo touch /usr/local/etc/cloudi/cloudi.conf
-    sudo sh -c 'echo "# default scheduler bind type\n+sbt db\n" >> /usr/local/etc/cloudi/cloudi.args'
+    sudo sh -c 'echo -e "# default scheduler bind type\n+sbt db\n" >> /usr/local/etc/cloudi/cloudi.args'
     sudo cloudi start
     sudo cloudi attach
 

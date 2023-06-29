@@ -70,8 +70,8 @@ cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset), &cpuset);
             [],
             [bind=""])
     elif test "x$bind" = "xpthread"; then
-        CPPFLAGS_SAVED="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $PTHREAD_CFLAGS"
+        CXXFLAGS_SAVED="$CXXFLAGS"
+        CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
         LIBS_SAVED="$LIBS"
         LIBS="$PTHREAD_LIBS $LIBS"
         AC_LINK_IFELSE(
@@ -94,10 +94,10 @@ pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
              ]])],
             [],
             [bind=""])
-        CPPFLAGS="$CPPFLAGS_SAVED"
+        CXXFLAGS="$CXXFLAGS_SAVED"
         LIBS="$LIBS_SAVED"
     fi
-    BIND_CPPFLAGS=""
+    BIND_CXXFLAGS=""
     BIND_LIBS=""
     AC_MSG_CHECKING([for bind])
     if test "x$bind" = "xlinux"; then
@@ -109,7 +109,7 @@ pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
                   [Provide bind option with cpuset_setaffinity.])
         AC_MSG_RESULT([freebsd])
     elif test "x$bind" = "xpthread"; then
-        BIND_CPPFLAGS="$PTHREAD_CFLAGS"
+        BIND_CXXFLAGS="$PTHREAD_CFLAGS"
         BIND_LIBS="$PTHREAD_LIBS"
         AC_DEFINE([BIND_USE_PTHREAD], [1],
                   [Provide bind option with pthread_setaffinity_np.])
@@ -118,6 +118,6 @@ pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
         AC_MSG_RESULT([none])
     fi
     AC_LANG_POP([C++])
-    AC_SUBST(BIND_CPPFLAGS)
+    AC_SUBST(BIND_CXXFLAGS)
     AC_SUBST(BIND_LIBS)
 ])

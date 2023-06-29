@@ -12,7 +12,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2023 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -70,8 +70,8 @@ dladdr(0, 0);
     dnl use instead of booster, if possible
     if test "x$backtrace" = "xbooster" -a "x$has_dladdr" = "xyes"; then
         AC_MSG_CHECKING([for boost::stacktrace])
-        CPPFLAGS_SAVED="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
+        CXXFLAGS_SAVED="$CXXFLAGS"
+        CXXFLAGS="$CXXFLAGS $BOOST_CXXFLAGS"
         LDFLAGS_SAVED="$LDFLAGS"
         LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
         LIBS_SAVED="$LIBS"
@@ -91,7 +91,7 @@ std::cout << boost::stacktrace::stacktrace();
             [has_boost_stacktrace="yes"
              backtrace="boost"])
         AC_MSG_RESULT($has_boost_stacktrace)
-        CPPFLAGS="$CPPFLAGS_SAVED"
+        CXXFLAGS="$CXXFLAGS_SAVED"
         LDFLAGS="$LDFLAGS_SAVED"
         LIBS="$LIBS_SAVED"
     fi
@@ -200,12 +200,12 @@ dwfl_begin(0);
             [want_dw="no"])
     fi
 
-    BACKTRACE_CPPFLAGS=""
+    BACKTRACE_CXXFLAGS=""
     BACKTRACE_LDFLAGS=""
     BACKTRACE_LIB=""
     AC_MSG_CHECKING([for C/C++ backtrace])
     if test "x$backtrace" = "xbackward"; then
-        BACKTRACE_CPPFLAGS="-I\$(top_srcdir)/external/backward-cpp/"
+        BACKTRACE_CXXFLAGS="-I\$(top_srcdir)/external/backward-cpp/"
         if test "x$has_libunwind" = "xyes"; then
             AC_DEFINE([BACKWARD_HAS_UNWIND], [0],
                       [Define if libgcc has _Unwind_GetIP().])
@@ -265,14 +265,14 @@ dwfl_begin(0);
         AC_DEFINE([BACKTRACE_USE_BACKWARD], [1],
                   [Provide C++ backtraces with backward code.])
     elif test "x$backtrace" = "xboost"; then
-        BACKTRACE_CPPFLAGS=""
+        BACKTRACE_CXXFLAGS=""
         BACKTRACE_LDFLAGS=""
         BACKTRACE_LIB="-lboost_stacktrace_basic $DL_LIB"
         AC_DEFINE([BACKTRACE_USE_BOOST], [1],
                   [Provide C++ backtraces with boost::stacktrace.])
         AC_MSG_RESULT([boost])
     elif test "x$backtrace" = "xbooster"; then
-        BACKTRACE_CPPFLAGS="-I\$(top_srcdir)/external/booster"
+        BACKTRACE_CXXFLAGS="-I\$(top_srcdir)/external/booster"
         BACKTRACE_LDFLAGS="$DL_LDFLAGS $EXECINFO_LDFLAGS"
         BACKTRACE_LIB="$DL_LIB $EXECINFO_LIB"
         if test "x$has_unwind" = "xyes"; then
@@ -299,7 +299,7 @@ dwfl_begin(0);
         AC_MSG_RESULT([none])
     fi
     AC_LANG_POP([C++])
-    AC_SUBST(BACKTRACE_CPPFLAGS)
+    AC_SUBST(BACKTRACE_CXXFLAGS)
     AC_SUBST(BACKTRACE_LDFLAGS)
     AC_SUBST(BACKTRACE_LIB)
 ])

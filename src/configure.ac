@@ -59,6 +59,7 @@ AX_CXX_EXCEPTIONS
 if test "x$ax_cv_cxx_exceptions" = "xno"; then
     AC_MSG_ERROR([$CXX does not support exceptions])
 fi
+AX_CXX_STDLIB()
 AC_LANG_PUSH(C++)
 AX_COMPILER_VENDOR
 AX_COMPILER_VERSION

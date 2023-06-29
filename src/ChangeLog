@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-28 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add m4/ax_cxx_stdlib.m4 for usage of LLVM libc++ as
+      clang's stdlib (instead of the GCC libstdc++)
+    * Update m4/ax_compiler_version.m4
+
 2023-06-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Python/C integration tests API class instantiation

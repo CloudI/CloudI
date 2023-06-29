@@ -15,9 +15,8 @@ libcloudi_la_SOURCES = \
     bind.cpp
 libcloudi_la_CPPFLAGS = -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
                         $(BOOST_CPPFLAGS) \
-                        $(BACKTRACE_CPPFLAGS) \
-                        $(BIND_CPPFLAGS) \
-                        $(CXXFLAGS)
+                        $(BACKTRACE_CXXFLAGS) \
+                        $(BIND_CXXFLAGS)
 libcloudi_la_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/ \
                        -no-undefined \
                        $(BOOST_LDFLAGS) \

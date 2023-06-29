@@ -20,7 +20,8 @@ libcloudi_ats2_la_LIBADD = ../../c/libcloudi_la-cloudi.lo \
                            ../../c/libcloudi_la-timer.lo \
                            ../../c/libcloudi_la-bind.lo \
                            $(ATS2_LIB) $(PTHREAD_LIBS) \
-                           -lei $(BIND_LIBS) $(RT_LIB) $(BACKTRACE_LIB) -lstdc++
+                           -lei $(BIND_LIBS) $(RT_LIB) $(BACKTRACE_LIB) \
+                           $(CXX_STDLIB_LIB)
 
 %_sats.c: %.sats
 	PATSHOME=$(PATSHOME) $(ATS2CC) $(ATS2CFLAGS) -ccats $<

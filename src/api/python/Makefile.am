@@ -36,7 +36,8 @@ libcloudi_py_la_LIBADD = ../c/libcloudi_la-cloudi.lo \
                          ../c/libcloudi_la-assert.lo \
                          ../c/libcloudi_la-timer.lo \
                          ../c/libcloudi_la-bind.lo \
-                         -lei $(BIND_LIBS) $(RT_LIB) $(BACKTRACE_LIB) -lstdc++
+                         -lei $(BIND_LIBS) $(RT_LIB) $(BACKTRACE_LIB) \
+                         $(CXX_STDLIB_LIB)
 
 PYTHON_C_INSTALL_HOOK = python-c-install
 endif
