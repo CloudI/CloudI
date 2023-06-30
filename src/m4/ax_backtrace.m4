@@ -142,24 +142,15 @@ backtrace(0, 0);
     fi
 
     if test "x$backtrace" = "xbackward"; then
-        dnl libunwind can provide more accurate stacktraces
-        dnl (e.g., signal handlers) but is unsupported on some architectures
-        AS_CASE([$host_cpu],
-                [x86*|arm*], [has_libunwind="yes"],
-                [*], [has_libunwind="no"])
-        if test "x$has_libunwind" = "xyes"; then
-            AX_CHECK_PRIVATE_LIB(unwind, unw_getcontext,
-                [AC_LANG_PROGRAM([[
-#include <libunwind.h>
-                 ]], [[
-unw_getcontext(0);
-                 ]])],
-                [has_libunwind="yes"],
-                [has_libunwind="no"])
-        else
-            UNWIND_LDFLAGS=""
-            UNWIND_LIB=""
-        fi
+        dnl nongnu-libunwind improved stacktraces in the past
+        dnl for x86*|arm* architectures though it has also caused
+        dnl memory corruption (unreliable execution) when combined with
+        dnl the libgcc unwinder (release gcc/g++ builds with 1.2.1).
+        dnl To avoid potential problems in the future, it is best
+        dnl to not use nongnu-libunwind.
+        has_libunwind="no"
+        UNWIND_LDFLAGS=""
+        UNWIND_LIB=""
 
         want_dwarf="no"
         want_bfd="no"

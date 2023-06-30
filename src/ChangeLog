@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-06-29 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Remove nongnu-libunwind usage from the C++ backtrace
+      functionality due to the instability it caused with
+      gcc/g++ compilations with optimization level -O1 or higher
+      using libunwind 1.2.1
+      (libstdc++ uses the libgcc unwinder which created a SEGV
+       if libunwind 1.2.1 was linked into the release build,
+       if C++ throw was called very quickly for a long period of time)
+    * Fix OCaml CloudI API compilation with parallel make
+
 2023-06-28 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add m4/ax_cxx_stdlib.m4 for usage of LLVM libc++ as

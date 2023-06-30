@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1060,8 +1060,10 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
     PY_ASSERT(api->get_trans_id_count() == 1);
     Py_ssize_t const response_info_size_tmp = api->get_response_info_size();
     Py_ssize_t const response_size_tmp = api->get_response_size();
-    PY_ASSERT(response_info_size_tmp == api->get_response_info_size());
-    PY_ASSERT(response_size_tmp == api->get_response_size());
+    PY_ASSERT(static_cast<uint32_t>(response_info_size_tmp) ==
+              api->get_response_info_size());
+    PY_ASSERT(static_cast<uint32_t>(response_size_tmp) ==
+              api->get_response_size());
     return Py_BuildValue("(" BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ")",
@@ -1413,8 +1415,10 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
     }
     Py_ssize_t const response_info_size_tmp = api->get_response_info_size();
     Py_ssize_t const response_size_tmp = api->get_response_size();
-    PY_ASSERT(response_info_size_tmp == api->get_response_info_size());
-    PY_ASSERT(response_size_tmp == api->get_response_size());
+    PY_ASSERT(static_cast<uint32_t>(response_info_size_tmp) ==
+              api->get_response_info_size());
+    PY_ASSERT(static_cast<uint32_t>(response_size_tmp) ==
+              api->get_response_size());
     PY_ASSERT(api->get_trans_id_count() == 1);
     return Py_BuildValue("(" BUILDVALUE_BYTES ","
                          BUILDVALUE_BYTES ","
