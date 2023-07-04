@@ -2,10 +2,10 @@
 
 # flags common for development
 
-# clang++ is angered by Python C API __attribute__((deprecated)) use
-#PEDANTIC_DISABLE="-Wno-error=deprecated-declarations"
 # g++
 PEDANTIC_DISABLE=""
+# clang++ is angered by Python2 C register use due to C++17
+#PEDANTIC_DISABLE="$PEDANTIC_DISABLE -Wno-deprecated-register"
 
 # gcc >= 9.3.0 or clang >= 10.0.0 are best when checking pedantic errors
 #PEDANTIC="-pedantic-errors $PEDANTIC_DISABLE"

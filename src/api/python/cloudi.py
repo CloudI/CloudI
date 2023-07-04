@@ -60,6 +60,7 @@ __all__ = [
     'InvalidInputException',
     'MessageDecodingException',
     'TerminateException',
+    'FatalError',
 ]
 
 _MESSAGE_INIT = 1

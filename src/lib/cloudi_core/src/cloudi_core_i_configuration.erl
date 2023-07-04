@@ -4,6 +4,7 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Configuration==
+%%% All configuration validation occurs in this module.
 %%% @end
 %%%
 %%% MIT License
@@ -30,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -3921,6 +3922,10 @@ services_validate_options_external_checks(RateRequestMax,
             Error
     end.
 
+services_validate_options_common_checks(_, CountProcessDynamic,
+                                        _, _, _, _, Bind, _, _, _, _, _)
+    when CountProcessDynamic /= false andalso Bind /= false ->
+    {error, {service_options_bind_invalid, count_process_dynamic}};
 services_validate_options_common_checks(RateRequestMax,
                                         CountProcessDynamic,
                                         TimeoutTerminate,

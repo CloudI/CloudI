@@ -42,6 +42,7 @@ __all__ = [
     'InvalidInputException',
     'MessageDecodingException',
     'TerminateException',
+    'FatalError',
 ]
 
 if sys.version_info[0] >= 3:
@@ -69,7 +70,11 @@ class API(object):
         self.__api = libcloudi_py.cloudi_c(thread_index,
                                            InvalidInputException,
                                            MessageDecodingException,
-                                           TerminateException)
+                                           TerminateException,
+                                           ReturnSyncException,
+                                           ReturnAsyncException,
+                                           ForwardSyncException,
+                                           ForwardAsyncException)
 
     @staticmethod
     def thread_count():
@@ -147,8 +152,6 @@ class API(object):
         if priority is not None:
             kwargs['priority'] = priority
         trans_ids = self.__api.mcast_async(name, request, **kwargs)
-        if trans_ids is None:
-            return tuple()
         return tuple([
             trans_ids[i:i + 16] for i in range(0, len(trans_ids), 16)
         ])
@@ -335,13 +338,7 @@ class API(object):
         """
         blocks to process incoming CloudI service requests
         """
-        if timeout is None:
-            timeout = -1
-        try:
-            return self.__api.poll(timeout)
-        except AssertionError:
-            traceback.print_exc(file=sys.stderr)
-            sys.exit(1)
+        return self.__api.poll(timeout)
 
     def shutdown(self, reason=None):
         """
@@ -350,7 +347,7 @@ class API(object):
         kwargs = {}
         if reason is not None:
             kwargs['reason'] = reason
-        return self.__api.shutdown(**kwargs)
+        self.__api.shutdown(**kwargs)
 
     @staticmethod
     def __text_pairs_parse(text):

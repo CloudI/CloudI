@@ -48,7 +48,9 @@ AC_DEFUN([AX_BIND],
     if test "x$bind" = "xlinux"; then
         AC_LINK_IFELSE(
             [AC_LANG_PROGRAM([[
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
              ]], [[
 cpu_set_t cpuset;

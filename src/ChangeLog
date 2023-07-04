@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-07-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve Python/C CloudI API type usage for clang compilation,
+      compiler optimization and portability
+    * Add configuration validation to prevent
+      the bind service configuration option from being used with
+      the count_process_dynamic service configuration option to
+      ensure bind is only used for static allocations of processes
+      among logical processors
+
 2023-06-29 Michael Truog   <mjtruog at protonmail dot com>
 
     * Remove nongnu-libunwind usage from the C++ backtrace
