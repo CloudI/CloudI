@@ -448,11 +448,15 @@ static PyTypeObject python_cloudi_instance_type = {
     0                                        // tp_vectorcall
 #endif
 #ifdef PYTHON_VERSION_3_8
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     ,
     0                                        // deprecated tp_print
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 #endif
 #ifdef COUNT_ALLOCS
     ,
@@ -626,9 +630,13 @@ class callback : public CloudI::API::function_object_c
             int const priority_tmp = priority;
             Py_ssize_t const trans_id_size_tmp = 16;
             Py_ssize_t const source_size_tmp = source_size;
-            assert(request_info_size_tmp == request_info_size);
-            assert(request_size_tmp == request_size);
-            assert(source_size_tmp == source_size);
+            PY_ASSERT_VOID(static_cast<uint32_t>(request_info_size_tmp) ==
+                           request_info_size);
+            PY_ASSERT_VOID(static_cast<uint32_t>(request_size_tmp) ==
+                           request_size);
+            PY_ASSERT_VOID(timeout_tmp == timeout);
+            PY_ASSERT_VOID(static_cast<uint32_t>(source_size_tmp) ==
+                           source_size);
             PyObject * result = NULL;
 
             THREADS_END;
@@ -714,18 +722,16 @@ class callback : public CloudI::API::function_object_c
                 }
                 THREADS_BEGIN;
 
-                if (exception_success == CALLBACK_ERROR)
-                {
-                    if (immediate_exit_code)
-                        ::exit(immediate_exit_code);
-                    return;
-                }
-
-                // return from the callback
-                // (the CloudI API return or forward function was
-                //  already called with valid data)
                 switch (exception_success)
                 {
+                    case CALLBACK_ERROR:
+                        if (immediate_exit_code)
+                            ::exit(immediate_exit_code);
+                        // allow empty response to automatically be sent
+                        return;
+                    // return from the callback
+                    // (the CloudI API return or forward function was
+                    //  already called with valid data)
                     case CALLBACK_RETURN_ASYNC:
                         throw CloudI::API::return_async_exception();
                     case CALLBACK_RETURN_SYNC:
@@ -735,7 +741,7 @@ class callback : public CloudI::API::function_object_c
                     case CALLBACK_FORWARD_SYNC:
                         throw CloudI::API::forward_sync_exception();
                     default:
-                        assert(false);
+                        PY_ASSERT_VOID(false);
                         break;
                 }
             }
