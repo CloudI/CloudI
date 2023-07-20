@@ -184,22 +184,16 @@ cert(Config) ->
 		ssl -> do_cert(Config)
 	end.
 
-do_cert(Config0) ->
+do_cert(Config) ->
 	doc("A client TLS certificate was provided."),
-	{CaCert, Cert, Key} = ct_helper:make_certs(),
-	Config = [{tls_opts, [
-		{cert, Cert},
-		{key, Key},
-		{cacerts, [CaCert]}
-	]}|Config0],
 	Cert = do_get_body("/cert", Config),
 	Cert = do_get_body("/direct/cert", Config),
 	ok.
 
 cert_undefined(Config) ->
 	doc("No client TLS certificate was provided."),
-	<<"undefined">> = do_get_body("/cert", Config),
-	<<"undefined">> = do_get_body("/direct/cert", Config),
+	<<"undefined">> = do_get_body("/cert", [{no_cert, true}|Config]),
+	<<"undefined">> = do_get_body("/direct/cert", [{no_cert, true}|Config]),
 	ok.
 
 header(Config) ->
@@ -239,8 +233,10 @@ match_cookies(Config) ->
 	<<"#{}">> = do_get_body("/match/cookies", [{<<"cookie">>, "a=b; c=d"}], Config),
 	<<"#{a => <<\"b\">>}">> = do_get_body("/match/cookies/a", [{<<"cookie">>, "a=b; c=d"}], Config),
 	<<"#{c => <<\"d\">>}">> = do_get_body("/match/cookies/c", [{<<"cookie">>, "a=b; c=d"}], Config),
-	<<"#{a => <<\"b\">>,c => <<\"d\">>}">> = do_get_body("/match/cookies/a/c",
-		[{<<"cookie">>, "a=b; c=d"}], Config),
+	case do_get_body("/match/cookies/a/c", [{<<"cookie">>, "a=b; c=d"}], Config) of
+		<<"#{a => <<\"b\">>,c => <<\"d\">>}">> -> ok;
+		<<"#{c => <<\"d\">>,a => <<\"b\">>}">> -> ok
+	end,
 	%% Ensure match errors result in a 400 response.
 	{400, _, _} = do_get("/match/cookies/a/c",
 		[{<<"cookie">>, "a=b"}], Config),
@@ -253,9 +249,18 @@ match_qs(Config) ->
 	<<"#{}">> = do_get_body("/match/qs?a=b&c=d", Config),
 	<<"#{a => <<\"b\">>}">> = do_get_body("/match/qs/a?a=b&c=d", Config),
 	<<"#{c => <<\"d\">>}">> = do_get_body("/match/qs/c?a=b&c=d", Config),
-	<<"#{a => <<\"b\">>,c => <<\"d\">>}">> = do_get_body("/match/qs/a/c?a=b&c=d", Config),
-	<<"#{a => <<\"b\">>,c => true}">> = do_get_body("/match/qs/a/c?a=b&c", Config),
-	<<"#{a => true,c => <<\"d\">>}">> = do_get_body("/match/qs/a/c?a&c=d", Config),
+	case do_get_body("/match/qs/a/c?a=b&c=d", Config) of
+		<<"#{a => <<\"b\">>,c => <<\"d\">>}">> -> ok;
+		<<"#{c => <<\"d\">>,a => <<\"b\">>}">> -> ok
+	end,
+	case do_get_body("/match/qs/a/c?a=b&c", Config) of
+		<<"#{a => <<\"b\">>,c => true}">> -> ok;
+		<<"#{c => true,a => <<\"b\">>}">> -> ok
+	end,
+	case do_get_body("/match/qs/a/c?a&c=d", Config) of
+		<<"#{a => true,c => <<\"d\">>}">> -> ok;
+		<<"#{c => <<\"d\">>,a => true}">> -> ok
+	end,
 	%% Ensure match errors result in a 400 response.
 	{400, _, _} = do_get("/match/qs/a/c?a=b", [], Config),
 	%% This function is tested more extensively through unit tests.
@@ -607,10 +612,18 @@ read_and_match_urlencoded_body(Config) ->
 	<<"#{}">> = do_body("POST", "/match/body_qs", [], "a=b&c=d", Config),
 	<<"#{a => <<\"b\">>}">> = do_body("POST", "/match/body_qs/a", [], "a=b&c=d", Config),
 	<<"#{c => <<\"d\">>}">> = do_body("POST", "/match/body_qs/c", [], "a=b&c=d", Config),
-	<<"#{a => <<\"b\">>,c => <<\"d\">>}">>
-		= do_body("POST", "/match/body_qs/a/c", [], "a=b&c=d", Config),
-	<<"#{a => <<\"b\">>,c => true}">> = do_body("POST", "/match/body_qs/a/c", [], "a=b&c", Config),
-	<<"#{a => true,c => <<\"d\">>}">> = do_body("POST", "/match/body_qs/a/c", [], "a&c=d", Config),
+	case do_body("POST", "/match/body_qs/a/c", [], "a=b&c=d", Config) of
+		<<"#{a => <<\"b\">>,c => <<\"d\">>}">> -> ok;
+		<<"#{c => <<\"d\">>,a => <<\"b\">>}">> -> ok
+	end,
+	case do_body("POST", "/match/body_qs/a/c", [], "a=b&c", Config) of
+		<<"#{a => <<\"b\">>,c => true}">> -> ok;
+		<<"#{c => true,a => <<\"b\">>}">> -> ok
+	end,
+	case do_body("POST", "/match/body_qs/a/c", [], "a&c=d", Config) of
+		<<"#{a => true,c => <<\"d\">>}">> -> ok;
+		<<"#{c => <<\"d\">>,a => true}">> -> ok
+	end,
 	%% Ensure match errors result in a 400 response.
 	{400, _} = do_body_error("POST", "/match/body_qs/a/c", [], "a=b", Config),
 	%% Ensure parse errors result in a 400 response.
@@ -768,18 +781,18 @@ set_resp_cookie(Config) ->
 	doc("Response using set_resp_cookie."),
 	%% Single cookie, no options.
 	{200, Headers1, _} = do_get("/resp/set_resp_cookie3", Config),
-	{_, <<"mycookie=myvalue; Version=1">>}
+	{_, <<"mycookie=myvalue">>}
 		= lists:keyfind(<<"set-cookie">>, 1, Headers1),
 	%% Single cookie, with options.
 	{200, Headers2, _} = do_get("/resp/set_resp_cookie4", Config),
-	{_, <<"mycookie=myvalue; Version=1; Path=/resp/set_resp_cookie4">>}
+	{_, <<"mycookie=myvalue; Path=/resp/set_resp_cookie4">>}
 		= lists:keyfind(<<"set-cookie">>, 1, Headers2),
 	%% Multiple cookies.
 	{200, Headers3, _} = do_get("/resp/set_resp_cookie3/multiple", Config),
 	[_, _] = [H || H={<<"set-cookie">>, _} <- Headers3],
 	%% Overwrite previously set cookie.
 	{200, Headers4, _} = do_get("/resp/set_resp_cookie3/overwrite", Config),
-	{_, <<"mycookie=overwrite; Version=1">>}
+	{_, <<"mycookie=overwrite">>}
 		= lists:keyfind(<<"set-cookie">>, 1, Headers4),
 	ok.
 

@@ -1,4 +1,4 @@
-%% Copyright (c) 2014-2018, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2014-2023, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -1169,7 +1169,8 @@ cache_directive(<< $=, $", R/bits >>, Acc, T)
 	cache_directive_fields_list(R, Acc, T, []);
 cache_directive(<< $=, C, R/bits >>, Acc, T)
 		when ?IS_DIGIT(C), (T =:= <<"max-age">>) or (T =:= <<"max-stale">>)
-			or (T =:= <<"min-fresh">>) or (T =:= <<"s-maxage">>) ->
+			or (T =:= <<"min-fresh">>) or (T =:= <<"s-maxage">>)
+			or (T =:= <<"stale-while-revalidate">>) or (T =:= <<"stale-if-error">>) ->
 	cache_directive_delta(R, Acc, T, (C - $0));
 cache_directive(<< $=, $", R/bits >>, Acc, T) -> cache_directive_quoted_string(R, Acc, T, <<>>);
 cache_directive(<< $=, C, R/bits >>, Acc, T) when ?IS_TOKEN(C) -> cache_directive_token(R, Acc, T, << C >>);
@@ -1211,14 +1212,18 @@ cache_directive_unreserved_token() ->
 	?SUCHTHAT(T,
 		token(),
 		T =/= <<"max-age">> andalso T =/= <<"max-stale">> andalso T =/= <<"min-fresh">>
-			andalso T =/= <<"s-maxage">> andalso T =/= <<"no-cache">> andalso T =/= <<"private">>).
+			andalso T =/= <<"s-maxage">> andalso T =/= <<"no-cache">> andalso T =/= <<"private">>
+			andalso T =/= <<"stale-while-revalidate">> andalso T =/= <<"stale-if-error">>).
 
 cache_directive() ->
 	oneof([
 		token(),
 		{cache_directive_unreserved_token(), token()},
 		{cache_directive_unreserved_token(), quoted_string()},
-		{elements([<<"max-age">>, <<"max-stale">>, <<"min-fresh">>, <<"s-maxage">>]), non_neg_integer()},
+		{elements([
+				<<"max-age">>, <<"max-stale">>, <<"min-fresh">>, <<"s-maxage">>,
+				<<"stale-while-revalidate">>, <<"stale-if-error">>
+		]), non_neg_integer()},
 		{fields, elements([<<"no-cache">>, <<"private">>]), small_list(token())}
 	]).
 
@@ -1260,7 +1265,13 @@ parse_cache_control_test_() ->
 		{<<"max-age=30">>, [{<<"max-age">>, 30}]},
 		{<<"private, community=\"UCI\"">>, [<<"private">>, {<<"community">>, <<"UCI">>}]},
 		{<<"private=\"Content-Type, Content-Encoding, Content-Language\"">>,
-			[{<<"private">>, [<<"content-type">>, <<"content-encoding">>, <<"content-language">>]}]}
+			[{<<"private">>, [<<"content-type">>, <<"content-encoding">>, <<"content-language">>]}]},
+		%% RFC5861 3.1.
+		{<<"max-age=600, stale-while-revalidate=30">>,
+			[{<<"max-age">>, 600}, {<<"stale-while-revalidate">>, 30}]},
+		%% RFC5861 4.1.
+		{<<"max-age=600, stale-if-error=1200">>,
+			[{<<"max-age">>, 600}, {<<"stale-if-error">>, 1200}]}
 	],
 	[{V, fun() -> R = parse_cache_control(V) end} || {V, R} <- Tests].
 
@@ -3227,11 +3238,11 @@ parse_upgrade_error_test_() ->
 parse_variant_key(VariantKey, NumMembers) ->
 	List = cow_http_struct_hd:parse_list(VariantKey),
 	[case Inner of
-		{with_params, InnerList, #{}} ->
+		{list, InnerList, []} ->
 			NumMembers = length(InnerList),
 			[case Item of
-				{with_params, {token, Value}, #{}} -> Value;
-				{with_params, {string, Value}, #{}} -> Value
+				{item, {token, Value}, []} -> Value;
+				{item, {string, Value}, []} -> Value
 			end || Item <- InnerList]
 	end || Inner <- List].
 
@@ -3261,9 +3272,9 @@ parse_variant_key_error_test_() ->
 %% We assume that the lists are of correct length.
 variant_key(VariantKeys) ->
 	cow_http_struct_hd:list([
-		{with_params, [
-			{with_params, {string, Value}, #{}}
-		|| Value <- InnerList], #{}}
+		{list, [
+			{item, {string, Value}, []}
+		|| Value <- InnerList], []}
 	|| InnerList <- VariantKeys]).
 
 -ifdef(TEST).
@@ -3287,14 +3298,14 @@ variant_key_identity_test_() ->
 
 -spec parse_variants(binary()) -> [{binary(), [binary()]}].
 parse_variants(Variants) ->
-	{Dict0, Order} = cow_http_struct_hd:parse_dictionary(Variants),
-	Dict = maps:map(fun(_, {with_params, List, #{}}) ->
-		[case Item of
-			{with_params, {token, Value}, #{}} -> Value;
-			{with_params, {string, Value}, #{}} -> Value
-		end || Item <- List]
-	end, Dict0),
-	[{Key, maps:get(Key, Dict)} || Key <- Order].
+	Dict = cow_http_struct_hd:parse_dictionary(Variants),
+	[case DictItem of
+		{Key, {list, List, []}} ->
+			{Key, [case Item of
+				{item, {token, Value}, []} -> Value;
+				{item, {string, Value}, []} -> Value
+			end || Item <- List]}
+	end || DictItem <- Dict].
 
 -ifdef(TEST).
 parse_variants_test_() ->
@@ -3317,9 +3328,9 @@ parse_variants_test_() ->
 -spec variants([{binary(), [binary()]}]) -> iolist().
 variants(Variants) ->
 	cow_http_struct_hd:dictionary([
-		{Key, {with_params, [
-			{with_params, {string, Value}, #{}}
-		|| Value <- List], #{}}}
+		{Key, {list, [
+			{item, {string, Value}, []}
+		|| Value <- List], []}}
 	|| {Key, List} <- Variants]).
 
 -ifdef(TEST).
@@ -3383,29 +3394,19 @@ www_auth_list(<< C, R/bits >>, Acc) when ?IS_WS_COMMA(C) -> www_auth_list(R, Acc
 www_auth_list(<< C, R/bits >>, Acc) when ?IS_TOKEN(C) ->
 	?LOWER(www_auth_scheme, R, Acc, <<>>).
 
-www_auth_basic_before_realm(<< C, R/bits >>, Acc) when ?IS_WS(C) -> www_auth_basic_before_realm(R, Acc);
-www_auth_basic_before_realm(<< "realm=\"", R/bits >>, Acc) -> www_auth_basic(R, Acc, <<>>).
-
-www_auth_basic(<< $", R/bits >>, Acc, Realm) -> www_auth_list_sep(R, [{basic, Realm}|Acc]);
-www_auth_basic(<< $\\, C, R/bits >>, Acc, Realm) when ?IS_VCHAR_OBS(C) -> www_auth_basic(R, Acc, << Realm/binary, C >>);
-www_auth_basic(<< C, R/bits >>, Acc, Realm) when ?IS_VCHAR_OBS(C) -> www_auth_basic(R, Acc, << Realm/binary, C >>).
-
-www_auth_scheme(<< C, R/bits >>, Acc, Scheme) when ?IS_WS(C) ->
-	case Scheme of
-		<<"basic">> -> www_auth_basic_before_realm(R, Acc);
-		<<"bearer">> -> www_auth_params_list(R, Acc, bearer, []);
-		<<"digest">> -> www_auth_params_list(R, Acc, digest, []);
-		_ -> www_auth_params_list(R, Acc, Scheme, [])
-	end;
+www_auth_scheme(<< C, R/bits >>, Acc, Scheme0) when ?IS_WS(C) ->
+	Scheme = case Scheme0 of
+		<<"basic">> -> basic;
+		<<"bearer">> -> bearer;
+		<<"digest">> -> digest;
+		_ -> Scheme0
+	end,
+	www_auth_params_list(R, Acc, Scheme, []);
 www_auth_scheme(<< C, R/bits >>, Acc, Scheme) when ?IS_TOKEN(C) ->
 	?LOWER(www_auth_scheme, R, Acc, Scheme).
 
-www_auth_list_sep(<<>>, Acc) -> lists:reverse(Acc);
-www_auth_list_sep(<< C, R/bits >>, Acc) when ?IS_WS(C) -> www_auth_list_sep(R, Acc);
-www_auth_list_sep(<< $,, R/bits >>, Acc) -> www_auth_list(R, Acc).
-
 www_auth_params_list(<<>>, Acc, Scheme, Params) ->
-	lists:reverse([{Scheme, lists:reverse(nonempty(Params))}|Acc]);
+	lists:reverse([www_auth_tuple(Scheme, nonempty(Params))|Acc]);
 www_auth_params_list(<< C, R/bits >>, Acc, Scheme, Params) when ?IS_WS_COMMA(C) ->
 	www_auth_params_list(R, Acc, Scheme, Params);
 www_auth_params_list(<< "algorithm=", C, R/bits >>, Acc, Scheme, Params) when ?IS_TOKEN(C) ->
@@ -3442,7 +3443,7 @@ www_auth_param(<< $=, C, R/bits >>, Acc, Scheme, Params, K) when ?IS_TOKEN(C) ->
 www_auth_param(<< C, R/bits >>, Acc, Scheme, Params, K) when ?IS_TOKEN(C) ->
 	?LOWER(www_auth_param, R, Acc, Scheme, Params, K);
 www_auth_param(R, Acc, Scheme, Params, NewScheme) ->
-	www_auth_scheme(R, [{Scheme, lists:reverse(Params)}|Acc], NewScheme).
+	www_auth_scheme(R, [www_auth_tuple(Scheme, Params)|Acc], NewScheme).
 
 www_auth_token(<< C, R/bits >>, Acc, Scheme, Params, K, V) when ?IS_TOKEN(C) ->
 	www_auth_token(R, Acc, Scheme, Params, K, << V/binary, C >>);
@@ -3457,18 +3458,25 @@ www_auth_quoted(<< C, R/bits >>, Acc, Scheme, Params, K, V) when ?IS_VCHAR_OBS(C
 	www_auth_quoted(R, Acc, Scheme, Params, K, << V/binary, C >>).
 
 www_auth_params_list_sep(<<>>, Acc, Scheme, Params) ->
-	lists:reverse([{Scheme, lists:reverse(Params)}|Acc]);
+	lists:reverse([www_auth_tuple(Scheme, Params)|Acc]);
 www_auth_params_list_sep(<< C, R/bits >>, Acc, Scheme, Params) when ?IS_WS(C) ->
 	www_auth_params_list_sep(R, Acc, Scheme, Params);
 www_auth_params_list_sep(<< $,, R/bits >>, Acc, Scheme, Params) ->
 	www_auth_params_list_after_sep(R, Acc, Scheme, Params).
 
 www_auth_params_list_after_sep(<<>>, Acc, Scheme, Params) ->
-	lists:reverse([{Scheme, lists:reverse(Params)}|Acc]);
+	lists:reverse([www_auth_tuple(Scheme, Params)|Acc]);
 www_auth_params_list_after_sep(<< C, R/bits >>, Acc, Scheme, Params) when ?IS_WS_COMMA(C) ->
 	www_auth_params_list_after_sep(R, Acc, Scheme, Params);
 www_auth_params_list_after_sep(R, Acc, Scheme, Params) ->
 	www_auth_params_list(R, Acc, Scheme, Params).
+
+www_auth_tuple(basic, Params) ->
+	%% Unknown parameters MUST be ignored. (RFC7617 2)
+	{<<"realm">>, Realm} = lists:keyfind(<<"realm">>, 1, Params),
+	{basic, Realm};
+www_auth_tuple(Scheme, Params) ->
+	{Scheme, lists:reverse(Params)}.
 
 -ifdef(TEST).
 parse_www_authenticate_test_() ->
@@ -3496,6 +3504,18 @@ parse_www_authenticate_test_() ->
 			]}]},
 		{<<"Basic realm=\"WallyWorld\"">>,
 			[{basic, <<"WallyWorld">>}]},
+		%% RFC7617 2.1.
+		{<<"Basic realm=\"foo\", charset=\"UTF-8\"">>,
+			[{basic, <<"foo">>}]},
+		%% A real-world example.
+		{<<"Basic realm=\"https://123456789012.dkr.ecr.eu-north-1.amazonaws.com/\",service=\"ecr.amazonaws.com\"">>,
+			[{basic, <<"https://123456789012.dkr.ecr.eu-north-1.amazonaws.com/">>}]},
+		{<<"Bearer realm=\"example\", Basic realm=\"foo\", charset=\"UTF-8\"">>,
+			[{bearer, [{<<"realm">>, <<"example">>}]},
+			{basic, <<"foo">>}]},
+		{<<"Basic realm=\"foo\", foo=\"bar\", charset=\"UTF-8\", Bearer realm=\"example\",foo=\"bar\"">>,
+			[{basic, <<"foo">>},
+			{bearer, [{<<"realm">>, <<"example">>}, {<<"foo">>,<<"bar">>}]}]},
 		{<<"Digest realm=\"testrealm@host.com\", qop=\"auth,auth-int\", "
 				"nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\", "
 				"opaque=\"5ccc069c403ebaf9f0171e9517f40e41\"">>,

@@ -1,4 +1,4 @@
-%% Copyright (c) 2013-2018, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2013-2023, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -311,6 +311,7 @@ all_ext(<<"gdl">>) -> {<<"model">>, <<"vnd.gdl">>, []};
 all_ext(<<"geo">>) -> {<<"application">>, <<"vnd.dynageo">>, []};
 all_ext(<<"gex">>) -> {<<"application">>, <<"vnd.geometry-explorer">>, []};
 all_ext(<<"ggb">>) -> {<<"application">>, <<"vnd.geogebra.file">>, []};
+all_ext(<<"ggs">>) -> {<<"application">>, <<"vnd.geogebra.slides">>, []};
 all_ext(<<"ggt">>) -> {<<"application">>, <<"vnd.geogebra.tool">>, []};
 all_ext(<<"ghf">>) -> {<<"application">>, <<"vnd.groove-help">>, []};
 all_ext(<<"gif">>) -> {<<"image">>, <<"gif">>, []};
@@ -397,9 +398,9 @@ all_ext(<<"jpg">>) -> {<<"image">>, <<"jpeg">>, []};
 all_ext(<<"jpgm">>) -> {<<"video">>, <<"jpm">>, []};
 all_ext(<<"jpgv">>) -> {<<"video">>, <<"jpeg">>, []};
 all_ext(<<"jpm">>) -> {<<"video">>, <<"jpm">>, []};
-all_ext(<<"js">>) -> {<<"application">>, <<"javascript">>, []};
 all_ext(<<"json">>) -> {<<"application">>, <<"json">>, []};
 all_ext(<<"jsonml">>) -> {<<"application">>, <<"jsonml+json">>, []};
+all_ext(<<"js">>) -> {<<"text">>, <<"javascript">>, []};
 all_ext(<<"kar">>) -> {<<"audio">>, <<"midi">>, []};
 all_ext(<<"karbon">>) -> {<<"application">>, <<"vnd.kde.karbon">>, []};
 all_ext(<<"kfo">>) -> {<<"application">>, <<"vnd.kde.kformula">>, []};
@@ -480,6 +481,7 @@ all_ext(<<"mif">>) -> {<<"application">>, <<"vnd.mif">>, []};
 all_ext(<<"mime">>) -> {<<"message">>, <<"rfc822">>, []};
 all_ext(<<"mj2">>) -> {<<"video">>, <<"mj2">>, []};
 all_ext(<<"mjp2">>) -> {<<"video">>, <<"mj2">>, []};
+all_ext(<<"mjs">>) -> {<<"text">>, <<"javascript">>, []};
 all_ext(<<"mk3d">>) -> {<<"video">>, <<"x-matroska">>, []};
 all_ext(<<"mka">>) -> {<<"audio">>, <<"x-matroska">>, []};
 all_ext(<<"mks">>) -> {<<"video">>, <<"x-matroska">>, []};
@@ -912,6 +914,7 @@ all_ext(<<"vtu">>) -> {<<"model">>, <<"vnd.vtu">>, []};
 all_ext(<<"vxml">>) -> {<<"application">>, <<"voicexml+xml">>, []};
 all_ext(<<"w3d">>) -> {<<"application">>, <<"x-director">>, []};
 all_ext(<<"wad">>) -> {<<"application">>, <<"x-doom">>, []};
+all_ext(<<"wasm">>) -> {<<"application">>, <<"wasm">>, []};
 all_ext(<<"wav">>) -> {<<"audio">>, <<"x-wav">>, []};
 all_ext(<<"wax">>) -> {<<"audio">>, <<"x-ms-wax">>, []};
 all_ext(<<"wbmp">>) -> {<<"image">>, <<"vnd.wap.wbmp">>, []};

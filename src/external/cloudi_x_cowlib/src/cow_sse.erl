@@ -1,4 +1,4 @@
-%% Copyright (c) 2017-2018, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2017-2023, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -52,8 +52,9 @@ init() ->
 
 %% @todo Add a function to retrieve the retry value from the state.
 
--spec parse(binary(), state())
-	-> {event, parsed_event(), state()} | {more, state()}.
+-spec parse(binary(), State)
+	-> {event, parsed_event(), State} | {more, State}
+	when State::state().
 parse(Data0, State=#state{state_name=bom, buffer=Buffer}) ->
 	Data1 = case Buffer of
 		<<>> -> Data0;

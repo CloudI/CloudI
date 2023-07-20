@@ -60,8 +60,8 @@ Erlang `cowboy`
 `Erlang HTTP Server`
 
 - `https://github.com/ninenines/cowboy`
-- `commit 04ca4c5d31a92d4d3de087bbd7d6021dc4a6d409 (2.9.0)`
-- `Fri May 14 19:17:48 UTC 2021`
+- `commit 9e600f6c1df3c440bc196b66ebbc005d70107217 (2.10.0)`
+- `Thu Jul 20 20:51:35 UTC 2023`
 - `MIT`
 
 Erlang `cowboy1`
@@ -78,8 +78,8 @@ Erlang `cowlib`
 `cowboy Protocols`
 
 - `https://github.com/ninenines/cowlib`
-- `commit e9448e5628c8c1d9083223ff973af8de31a566d1 (2.11.0)`
-- `Fri May 14 19:17:48 UTC 2021`
+- `commit cc04201c1d0e1d5603cd1cde037ab729b192634c (2.12.1)`
+- `Thu Jul 20 20:51:35 UTC 2023`
 - `MIT`
 
 Erlang `cowlib1`

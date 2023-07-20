@@ -1,4 +1,4 @@
-%% Copyright (c) 2015-2018, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2015-2023, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -192,8 +192,8 @@ parse(<< 5:24, 2:8, _:9, StreamID:31, _:1, StreamID:31, _:8, Rest/bits >>) ->
 		'PRIORITY frames cannot make a stream depend on itself. (RFC7540 5.3.1)', Rest};
 parse(<< 5:24, 2:8, _:9, StreamID:31, E:1, DepStreamID:31, Weight:8, Rest/bits >>) ->
 	{ok, {priority, StreamID, parse_exclusive(E), DepStreamID, Weight + 1}, Rest};
-%% @todo figure out how to best deal with frame size errors; if we have everything fine
-%% if not we might want to inform the caller how much he should expect so that it can
+%% @todo Figure out how to best deal with non-fatal frame size errors; if we have everything
+%% then OK if not we might want to inform the caller how much he should expect so that it can
 %% decide if it should just close the connection
 parse(<< BadLen:24, 2:8, _:9, StreamID:31, _:BadLen/binary, Rest/bits >>) ->
 	{stream_error, StreamID, frame_size_error, 'PRIORITY frames MUST be 5 bytes wide. (RFC7540 6.3)', Rest};
@@ -204,8 +204,7 @@ parse(<< 4:24, 3:8, _:9, 0:31, _/bits >>) ->
 	{connection_error, protocol_error, 'RST_STREAM frames MUST be associated with a stream. (RFC7540 6.4)'};
 parse(<< 4:24, 3:8, _:9, StreamID:31, ErrorCode:32, Rest/bits >>) ->
 	{ok, {rst_stream, StreamID, parse_error_code(ErrorCode)}, Rest};
-%% @todo same as priority
-parse(<< _:24, 3:8, _:9, _:31, _/bits >>) ->
+parse(<< BadLen:24, 3:8, _:9, _:31, _/bits >>) when BadLen =/= 4 ->
 	{connection_error, frame_size_error, 'RST_STREAM frames MUST be 4 bytes wide. (RFC7540 6.4)'};
 %%
 %% SETTINGS frames.

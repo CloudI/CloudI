@@ -1,4 +1,4 @@
-%% Copyright (c) 2013-2020, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2013-2023, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@
 	path => binary(),
 	secure => true,
 	http_only => true,
-	same_site => strict | lax | none
+	same_site => default | none | strict | lax
 }.
 -export_type([cookie_attrs/0]).
 
@@ -35,7 +35,7 @@
 	http_only => boolean(),
 	max_age => non_neg_integer(),
 	path => binary(),
-	same_site => strict | lax | none,
+	same_site => default | none | strict | lax,
 	secure => boolean()
 }.
 -export_type([cookie_opts/0]).
@@ -173,17 +173,32 @@ parse_cookie_error_test_() ->
 	-> {ok, binary(), binary(), cookie_attrs()}
 	| ignore.
 parse_set_cookie(SetCookie) ->
-	{NameValuePair, UnparsedAttrs} = take_until_semicolon(SetCookie, <<>>),
-	{Name, Value} = case binary:split(NameValuePair, <<$=>>) of
-		[Value0] -> {<<>>, trim(Value0)};
-		[Name0, Value0] -> {trim(Name0), trim(Value0)}
-	end,
-	case {Name, Value} of
-		{<<>>, <<>>} ->
+	case has_non_ws_ctl(SetCookie) of
+		true ->
 			ignore;
-		_ ->
-			Attrs = parse_set_cookie_attrs(UnparsedAttrs, #{}),
-			{ok, Name, Value, Attrs}
+		false ->
+			{NameValuePair, UnparsedAttrs} = take_until_semicolon(SetCookie, <<>>),
+			{Name, Value} = case binary:split(NameValuePair, <<$=>>) of
+				[Value0] -> {<<>>, trim(Value0)};
+				[Name0, Value0] -> {trim(Name0), trim(Value0)}
+			end,
+			case {Name, Value} of
+				{<<>>, <<>>} ->
+					ignore;
+				_ ->
+					Attrs = parse_set_cookie_attrs(UnparsedAttrs, #{}),
+					{ok, Name, Value, Attrs}
+			end
+	end.
+
+has_non_ws_ctl(<<>>) ->
+	false;
+has_non_ws_ctl(<<C,R/bits>>) ->
+	if
+		C =< 16#08 -> true;
+		C >= 16#0A, C =< 16#1F -> true;
+		C =:= 16#7F -> true;
+		true -> has_non_ws_ctl(R)
 	end.
 
 parse_set_cookie_attrs(<<>>, Attrs) ->
@@ -194,13 +209,18 @@ parse_set_cookie_attrs(<<$;,Rest0/bits>>, Attrs) ->
 		[Name0] -> {trim(Name0), <<>>};
 		[Name0, Value0] -> {trim(Name0), trim(Value0)}
 	end,
-	case parse_set_cookie_attr(?LOWER(Name), Value) of
-		{ok, AttrName, AttrValue} ->
-			parse_set_cookie_attrs(Rest, Attrs#{AttrName => AttrValue});
-		{ignore, AttrName} ->
-			parse_set_cookie_attrs(Rest, maps:remove(AttrName, Attrs));
-		ignore ->
-			parse_set_cookie_attrs(Rest, Attrs)
+	if
+		byte_size(Value) > 1024 ->
+			parse_set_cookie_attrs(Rest, Attrs);
+		true ->
+			case parse_set_cookie_attr(?LOWER(Name), Value) of
+				{ok, AttrName, AttrValue} ->
+					parse_set_cookie_attrs(Rest, Attrs#{AttrName => AttrValue});
+				{ignore, AttrName} ->
+					parse_set_cookie_attrs(Rest, maps:remove(AttrName, Attrs));
+				ignore ->
+					parse_set_cookie_attrs(Rest, Attrs)
+			end
 	end.
 
 take_until_semicolon(Rest = <<$;,_/bits>>, Acc) -> {Acc, Rest};
@@ -254,16 +274,15 @@ parse_set_cookie_attr(<<"httponly">>, _) ->
 	{ok, http_only, true};
 parse_set_cookie_attr(<<"samesite">>, Value) ->
 	case ?LOWER(Value) of
+		<<"none">> ->
+			{ok, same_site, none};
 		<<"strict">> ->
 			{ok, same_site, strict};
 		<<"lax">> ->
 			{ok, same_site, lax};
-		%% Clients may have different defaults than "None".
-		<<"none">> ->
-			{ok, same_site, none};
 		%% Unknown values and lack of value are equivalent.
 		_ ->
-			ignore
+			{ok, same_site, default}
 	end;
 parse_set_cookie_attr(_, _) ->
 	ignore.
@@ -282,6 +301,10 @@ parse_set_cookie_test_() ->
 			{ok, <<"a">>, <<"b">>, #{domain => <<"foo.example.org">>}}},
 		{<<"a=b; Path=/path/to/resource; Path=/">>,
 			{ok, <<"a">>, <<"b">>, #{path => <<"/">>}}},
+		{<<"a=b; SameSite=UnknownValue">>, {ok, <<"a">>, <<"b">>, #{same_site => default}}},
+		{<<"a=b; SameSite=None">>, {ok, <<"a">>, <<"b">>, #{same_site => none}}},
+		{<<"a=b; SameSite=Lax">>, {ok, <<"a">>, <<"b">>, #{same_site => lax}}},
+		{<<"a=b; SameSite=Strict">>, {ok, <<"a">>, <<"b">>, #{same_site => strict}}},
 		{<<"a=b; SameSite=Lax; SameSite=Strict">>,
 			{ok, <<"a">>, <<"b">>, #{same_site => strict}}}
 	],
@@ -331,7 +354,7 @@ setcookie(Name, Value, Opts) ->
 			<<$\s>>, <<$\t>>, <<$\r>>, <<$\n>>, <<$\013>>, <<$\014>>]),
 	nomatch = binary:match(iolist_to_binary(Value), [<<$,>>, <<$;>>,
 			<<$\s>>, <<$\t>>, <<$\r>>, <<$\n>>, <<$\013>>, <<$\014>>]),
-	[Name, <<"=">>, Value, <<"; Version=1">>, attributes(maps:to_list(Opts))].
+	[Name, <<"=">>, Value, attributes(maps:to_list(Opts))].
 
 attributes([]) -> [];
 attributes([{domain, Domain}|Tail]) -> [<<"; Domain=">>, Domain|attributes(Tail)];
@@ -349,9 +372,10 @@ attributes([Opt={max_age, _}|_]) ->
 attributes([{path, Path}|Tail]) -> [<<"; Path=">>, Path|attributes(Tail)];
 attributes([{secure, false}|Tail]) -> attributes(Tail);
 attributes([{secure, true}|Tail]) -> [<<"; Secure">>|attributes(Tail)];
+attributes([{same_site, default}|Tail]) -> attributes(Tail);
+attributes([{same_site, none}|Tail]) -> [<<"; SameSite=None">>|attributes(Tail)];
 attributes([{same_site, lax}|Tail]) -> [<<"; SameSite=Lax">>|attributes(Tail)];
 attributes([{same_site, strict}|Tail]) -> [<<"; SameSite=Strict">>|attributes(Tail)];
-attributes([{same_site, none}|Tail]) -> [<<"; SameSite=None">>|attributes(Tail)];
 %% Skip unknown options.
 attributes([_|Tail]) -> attributes(Tail).
 
@@ -361,26 +385,32 @@ setcookie_test_() ->
 	Tests = [
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			#{http_only => true, domain => <<"acme.com">>},
-			<<"Customer=WILE_E_COYOTE; Version=1; "
+			<<"Customer=WILE_E_COYOTE; "
 				"Domain=acme.com; HttpOnly">>},
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			#{path => <<"/acme">>},
-			<<"Customer=WILE_E_COYOTE; Version=1; Path=/acme">>},
+			<<"Customer=WILE_E_COYOTE; Path=/acme">>},
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			#{secure => true},
-			<<"Customer=WILE_E_COYOTE; Version=1; Secure">>},
+			<<"Customer=WILE_E_COYOTE; Secure">>},
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			#{secure => false, http_only => false},
-			<<"Customer=WILE_E_COYOTE; Version=1">>},
+			<<"Customer=WILE_E_COYOTE">>},
+		{<<"Customer">>, <<"WILE_E_COYOTE">>,
+			#{same_site => default},
+			<<"Customer=WILE_E_COYOTE">>},
+		{<<"Customer">>, <<"WILE_E_COYOTE">>,
+			#{same_site => none},
+			<<"Customer=WILE_E_COYOTE; SameSite=None">>},
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			#{same_site => lax},
-			<<"Customer=WILE_E_COYOTE; Version=1; SameSite=Lax">>},
+			<<"Customer=WILE_E_COYOTE; SameSite=Lax">>},
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			#{same_site => strict},
-			<<"Customer=WILE_E_COYOTE; Version=1; SameSite=Strict">>},
+			<<"Customer=WILE_E_COYOTE; SameSite=Strict">>},
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			#{path => <<"/acme">>, badoption => <<"negatory">>},
-			<<"Customer=WILE_E_COYOTE; Version=1; Path=/acme">>}
+			<<"Customer=WILE_E_COYOTE; Path=/acme">>}
 	],
 	[{R, fun() -> R = iolist_to_binary(setcookie(N, V, O)) end}
 		|| {N, V, O, R} <- Tests].
@@ -391,7 +421,6 @@ setcookie_max_age_test() ->
 			setcookie(N, V, O)), <<";">>, [global])
 	end,
 	[<<"Customer=WILE_E_COYOTE">>,
-		<<" Version=1">>,
 		<<" Expires=", _/binary>>,
 		<<" Max-Age=111">>,
 		<<" Secure">>] = F(<<"Customer">>, <<"WILE_E_COYOTE">>,
@@ -400,7 +429,6 @@ setcookie_max_age_test() ->
 		{'EXIT', {{badarg, {max_age, -111}}, _}} -> ok
 	end,
 	[<<"Customer=WILE_E_COYOTE">>,
-		<<" Version=1">>,
 		<<" Expires=", _/binary>>,
 		<<" Max-Age=86417">>] = F(<<"Customer">>, <<"WILE_E_COYOTE">>,
 			 #{max_age => 86417}),

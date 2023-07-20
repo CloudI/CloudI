@@ -29,7 +29,7 @@ cookie_attrs() :: #{
     path => binary(),
     secure => true,
     http_only => true,
-    same_site => strict | lax | none
+    same_site => default | none | strict | lax
 }
 ----
 
@@ -48,7 +48,7 @@ cookie_opts() :: #{
     http_only => boolean(),
     max_age   => non_neg_integer(),
     path      => binary(),
-    same_site => strict | lax | none,
+    same_site => default | none | strict | lax,
     secure    => boolean()
 }
 ----
@@ -101,6 +101,8 @@ transfer. By default there are no restrictions.
 
 == Changelog
 
+* *2.12*: The `same_site` attribute and option may now be
+          set to `default`.
 * *2.10*: The `same_site` attribute and option may now be
           set to `none`.
 * *2.9*: The `cookie_attrs` type was added.

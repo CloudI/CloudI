@@ -1,4 +1,4 @@
-%% Copyright (c) 2019, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2019-2023, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -310,6 +310,9 @@ urlencode_unreserved(<<C,R/bits>>, Acc) ->
 urlencode_unreserved(<<>>, Acc) ->
 	Acc.
 
+urlencode_reserved(<<$%,H,L,R/bits>>, Acc)
+		when ?IS_HEX(H), ?IS_HEX(L) ->
+	urlencode_reserved(R, <<Acc/binary,$%,H,L>>);
 urlencode_reserved(<<C,R/bits>>, Acc)
 		when ?IS_URI_UNRESERVED(C) or ?IS_URI_GEN_DELIMS(C) or ?IS_URI_SUB_DELIMS(C) ->
 	urlencode_reserved(R, <<Acc/binary,C>>);
@@ -336,6 +339,7 @@ expand_uritemplate_test_() ->
 						end
 					])),
 					fun() ->
+						io:format("expected: ~0p", [Expected]),
 						case Expected of
 							false ->
 								{'EXIT', _} = (catch expand(URITemplate, Vars));

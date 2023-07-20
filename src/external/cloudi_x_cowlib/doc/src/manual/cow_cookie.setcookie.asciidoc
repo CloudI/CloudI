@@ -36,6 +36,7 @@ An iolist with the generated set-cookie header value.
 
 == Changelog
 
+* *2.12*: The `Version` attribute is no longer generated.
 * *1.0*: Function introduced.
 
 == Examples
