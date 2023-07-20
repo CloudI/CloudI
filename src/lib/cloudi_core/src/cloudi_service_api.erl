@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -1402,7 +1402,7 @@
               Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_acl_add()}.
 
 acl_add([_ | _] = L, Timeout)
@@ -1425,7 +1425,7 @@ acl_add([_ | _] = L, Timeout)
                  Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_acl_remove()}.
 
 acl_remove([_ | _] = L, Timeout)
@@ -1443,7 +1443,7 @@ acl_remove([_ | _] = L, Timeout)
 
 -spec acl(Timeout :: api_timeout_milliseconds()) ->
     {ok, list({atom(), list(cloudi_service:service_name_pattern())})} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 acl(Timeout)
     when ((is_integer(Timeout) andalso
@@ -1467,7 +1467,7 @@ acl(Timeout)
                             Timeout :: api_timeout_milliseconds()) ->
     {ok, list(cloudi_service:service_name_pattern())} |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {service_id_invalid, any()} | not_found}.
 
 service_subscriptions(ServiceId, Timeout)
@@ -1500,7 +1500,7 @@ service_subscriptions(ServiceId, Timeout)
                    Timeout :: api_timeout_milliseconds()) ->
     {ok, nonempty_list(service_id())} |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_services_add()}.
 
 services_add([_ | _] = L, Timeout)
@@ -1525,7 +1525,7 @@ services_add([_ | _] = L, Timeout)
                       Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {service_id_invalid, any()} |
      cloudi_core_i_configuration:error_reason_services_remove()}.
 
@@ -1559,7 +1559,7 @@ services_remove([_ | _] = L, Timeout)
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {service_id_invalid, any()} |
      cloudi_core_i_configuration:error_reason_services_restart()}.
 
@@ -1588,7 +1588,7 @@ services_restart([_ | _] = L, Timeout)
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {service_id_invalid, any()} |
      cloudi_core_i_configuration:error_reason_services_suspend()}.
 
@@ -1617,7 +1617,7 @@ services_suspend([_ | _] = L, Timeout)
                       Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {service_id_invalid, any()} |
      cloudi_core_i_configuration:error_reason_services_resume()}.
 
@@ -1652,7 +1652,7 @@ services_resume([_ | _] = L, Timeout)
     {ok, list({service_id(), service_internal()} |
               {service_id(), service_external()})} |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      service_name_invalid |
      cloudi_core_i_configuration:error_reason_services_search()}.
 
@@ -1688,7 +1688,7 @@ services_search(Name, Timeout)
                       Timeout :: api_timeout_milliseconds()) ->
     {ok, nonempty_list({service_id(), service_status()})} |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {service_id_invalid, any()} |
      {service_not_found, any()}}.
 
@@ -1730,7 +1730,7 @@ services_status(L, Timeout)
                  service_external_update_failed, any()}},
      ServiceIdsSetsSuccess :: nonempty_list(nonempty_list(service_id()))} |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {service_id_invalid, any()} |
      cloudi_core_i_configuration:error_reason_services_update()}.
 
@@ -1755,7 +1755,7 @@ services_update([_ | _] = L, Timeout)
 -spec services(Timeout :: api_timeout_milliseconds()) ->
     {ok, list({service_id(), service_internal()} |
               {service_id(), service_external()})} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 services(Timeout)
     when ((is_integer(Timeout) andalso
@@ -1774,7 +1774,7 @@ services(Timeout)
                 Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_nodes_set()}.
 
 nodes_set([_ | _] = L, Timeout)
@@ -1792,7 +1792,7 @@ nodes_set([_ | _] = L, Timeout)
 
 -spec nodes_get(Timeout :: api_timeout_milliseconds()) ->
     {ok, nodes_proplist()} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 nodes_get(Timeout)
     when ((is_integer(Timeout) andalso
@@ -1813,7 +1813,7 @@ nodes_get(Timeout)
                 Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_nodes_add()}.
 
 nodes_add([_ | _] = L, Timeout)
@@ -1834,7 +1834,7 @@ nodes_add([_ | _] = L, Timeout)
                    Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_nodes_remove()}.
 
 nodes_remove([_ | _] = L, Timeout)
@@ -1852,7 +1852,7 @@ nodes_remove([_ | _] = L, Timeout)
 
 -spec nodes_alive(Timeout :: api_timeout_milliseconds()) ->
     {ok, list(node())} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 nodes_alive(Timeout)
     when ((is_integer(Timeout) andalso
@@ -1869,7 +1869,7 @@ nodes_alive(Timeout)
 
 -spec nodes_dead(Timeout :: api_timeout_milliseconds()) ->
     {ok, list(node())} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 nodes_dead(Timeout)
     when ((is_integer(Timeout) andalso
@@ -1888,7 +1888,7 @@ nodes_dead(Timeout)
                    Timeout :: api_timeout_milliseconds()) ->
     {ok, nodes_status()} |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      {node_not_found, any()}}.
 
 nodes_status(L, Timeout)
@@ -1912,7 +1912,7 @@ nodes_status(L, Timeout)
 
 -spec nodes(Timeout :: api_timeout_milliseconds()) ->
     {ok, list(node())} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 nodes(Timeout)
     when ((is_integer(Timeout) andalso
@@ -2009,7 +2009,7 @@ logging_stdout_set(Stdout, Timeout)
                          Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_logging_syslog_set()}.
 
 logging_syslog_set(L, Timeout)
@@ -2034,7 +2034,7 @@ logging_syslog_set(L, Timeout)
                              Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_logging_formatters_set()}.
 
 logging_formatters_set(L, Timeout)
@@ -2073,7 +2073,7 @@ logging_redirect_set(Node, Timeout)
 
 -spec logging_status(Timeout :: api_timeout_milliseconds()) ->
     {ok, logging_status()} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 logging_status(Timeout)
     when ((is_integer(Timeout) andalso
@@ -2090,7 +2090,7 @@ logging_status(Timeout)
 
 -spec logging_status_reset(Timeout :: api_timeout_milliseconds()) ->
     ok |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 logging_status_reset(Timeout)
     when ((is_integer(Timeout) andalso
@@ -2107,7 +2107,7 @@ logging_status_reset(Timeout)
 
 -spec logging(Timeout :: api_timeout_milliseconds()) ->
     {ok, logging_proplist()} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 logging(Timeout)
     when ((is_integer(Timeout) andalso
@@ -2128,7 +2128,7 @@ logging(Timeout)
                     Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_code_path_add()}.
 
 code_path_add(Dir, Timeout)
@@ -2150,7 +2150,7 @@ code_path_add(Dir, Timeout)
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_code_path_remove()}.
 
 code_path_remove(Dir, Timeout)
@@ -2169,7 +2169,7 @@ code_path_remove(Dir, Timeout)
 
 -spec code_path(Timeout :: api_timeout_milliseconds()) ->
     {ok, nonempty_list(file_path())} |
-    {error, timeout | noproc}.
+    {error, timeout | noproc | shutdown}.
 
 code_path(Timeout)
     when ((is_integer(Timeout) andalso
@@ -2190,7 +2190,7 @@ code_path(Timeout)
 -spec code_status(Timeout :: api_timeout_milliseconds()) ->
     {ok, code_status()} |
     {error,
-     timeout | noproc |
+     timeout | noproc | shutdown |
      cloudi_core_i_configuration:error_reason_code_status()}.
 
 code_status(Timeout)

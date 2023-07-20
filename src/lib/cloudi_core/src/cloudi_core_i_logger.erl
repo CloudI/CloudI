@@ -469,7 +469,8 @@ trace(ModeInterface, Process, FileName, Line, Function, Arity, Format, Args) ->
 %%-------------------------------------------------------------------------
 
 -spec status(Timeout :: pos_integer() | infinity) ->
-    {ok, cloudi_service_api:logging_status()} | {error, timeout | noproc}.
+    {ok, cloudi_service_api:logging_status()} |
+    {error, timeout | noproc | shutdown}.
 
 status(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, status, Timeout)).
@@ -481,7 +482,7 @@ status(Timeout) ->
 %%-------------------------------------------------------------------------
 
 -spec status_reset(Timeout :: pos_integer() | infinity) ->
-    ok | {error, timeout | noproc}.
+    ok | {error, timeout | noproc | shutdown}.
 
 status_reset(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, status_reset, Timeout)).

@@ -1244,7 +1244,9 @@
        {hosts,
         [{"cloudi.org",
           [{interval, 5}, % seconds
-           {port, 80}]}]}]}]
+           {port, 80}]}]}]}],
+    [{module, cloudi_service_validate_config},
+     {max_r, 0}]
 ]}.
 % automatic node detection with a UDP multicast group
 {nodes, automatic}.

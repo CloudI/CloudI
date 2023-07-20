@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-07-19 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_validate_config service to
+      identify CloudI configuration inconsistencies
+
 2023-07-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve Python/C CloudI API compilation

@@ -34,6 +34,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_tcp/src \
      -d $(top_srcdir)/lib/cloudi_service_udp/src \
      -d $(top_srcdir)/lib/cloudi_service_validate/src \
+     -d $(top_srcdir)/lib/cloudi_service_validate_config/src \
      -d $(top_srcdir)/lib/cgroups/src \
      -d $(top_srcdir)/lib/cpg/src \
      -d $(top_srcdir)/lib/cpg/test \
@@ -242,6 +243,7 @@ dialyze: all \
               lib/cloudi_service_tcp/ebin \
               lib/cloudi_service_udp/ebin \
               lib/cloudi_service_validate/ebin \
+              lib/cloudi_service_validate_config/ebin \
               lib/cgroups/ebin \
               lib/cpg/ebin \
               lib/erlang_term/ebin \
@@ -311,6 +313,7 @@ dialyze-internal: all \
               lib/cloudi_service_tcp/ebin \
               lib/cloudi_service_udp/ebin \
               lib/cloudi_service_validate/ebin \
+              lib/cloudi_service_validate_config/ebin \
               lib/cgroups/ebin \
               lib/cpg/ebin \
               lib/erlang_term/ebin \

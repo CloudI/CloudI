@@ -978,6 +978,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
     lib/cloudi_service_validate/rebar.config
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
+    lib/cloudi_service_validate_config/src/cloudi_service_validate_config.app.src
     lib/syslog_socket/rebar.config
     api/Makefile
     api/ats/v2/Makefile

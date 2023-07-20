@@ -92,6 +92,8 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_validate,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_service_validate_config,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
   % application directories
   {lib_dirs,

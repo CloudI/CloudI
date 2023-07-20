@@ -32,6 +32,7 @@
   "lib/cloudi_service_tcp",
   "lib/cloudi_service_udp",
   "lib/cloudi_service_validate",
+  "lib/cloudi_service_validate_config",
   "lib/cgroups",
   "lib/cpg",
   "lib/erlang_term",
