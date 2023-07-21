@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -175,6 +175,7 @@
         % Request data (so using GET request body data will be ignored,
         % due to being bad practice).
 -define(DEFAULT_USE_WEBSOCKETS,                   false).
+-define(DEFAULT_USE_ONLY_HTTP2,                   false).
 -define(DEFAULT_USE_HOST_PREFIX,                  false). % for virtual hosts
 -define(DEFAULT_USE_CLIENT_IP_PREFIX,             false).
 -define(DEFAULT_USE_X_METHOD_OVERRIDE,            false).
@@ -274,6 +275,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {status_code_timeout,           ?DEFAULT_STATUS_CODE_TIMEOUT},
         {query_get_format,              ?DEFAULT_QUERY_GET_FORMAT},
         {use_websockets,                ?DEFAULT_USE_WEBSOCKETS},
+        {use_only_http2,                ?DEFAULT_USE_ONLY_HTTP2},
         {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,          ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_x_method_override,         ?DEFAULT_USE_X_METHOD_OVERRIDE},
@@ -294,7 +296,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      ContentTypeForced0, ContentTypesAccepted0, ContentSecurityPolicy0,
      ContentSecurityPolicyReport0,
      SetXForwardedFor, SetXXSSProtection, SetXContentTypeOptions,
-     StatusCodeTimeout, QueryGetFormat, UseWebSockets,
+     StatusCodeTimeout, QueryGetFormat, UseWebSockets, UseOnlyHTTP2,
      UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix,
      UpdateDelaySeconds] =
         cloudi_proplists:take_values(Defaults, Args),
@@ -456,6 +458,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
            (QueryGetFormat =:= text_pairs),
     true = (is_boolean(UseWebSockets) orelse
             (UseWebSockets =:= exclusively)),
+    true = is_boolean(UseOnlyHTTP2),
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseClientIpPrefix),
     true = ((UseXMethodOverride =:= true) andalso
@@ -503,6 +506,26 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         use_client_ip_prefix = UseClientIpPrefix,
         use_x_method_override = UseXMethodOverride,
         use_method_suffix = UseMethodSuffix},
+    ProtocolOptions0 = #{
+        env => #{dispatch => cowboy_dispatch(HandlerState)},
+        compress_threshold =>  CompressThreshold,
+        max_empty_lines => MaxEmptyLines,
+        max_header_name_length => MaxHeaderNameLength,
+        max_header_value_length => MaxHeaderValueLength,
+        max_headers => MaxHeaders,
+        max_keepalive => MaxKeepAlive,
+        max_request_line_length => MaxRequestLineLength,
+        idle_timeout => RecvTimeout},
+    ProtocolOptionsN = if
+        UseOnlyHTTP2 =:= true ->
+            ProtocolOptions0#{protocols => [http2]};
+        UseOnlyHTTP2 =:= false ->
+            ProtocolOptions0
+    end,
+    TransportOptions = #{
+        max_connections => MaxConnections,
+        connection_type => supervisor,
+        num_acceptors => 10},
     Service = cloudi_service:self(Dispatcher),
     erlang:send_after(UpdateDelaySeconds * 1000, Service,
                       {update, UpdateDelaySeconds}),
@@ -520,8 +543,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                                            Environment),
             cloudi_x_cowboy:start_tls(
                 Service, % Ref
-                #{
-                    % Transport options
+                TransportOptions#{
                     socket_opts => ReusePortOptL ++ [
                         {ip, Interface},
                         {port, Port},
@@ -529,51 +551,22 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                         {nodelay, NoDelay},
                         {certfile, CertFile} |
                         SSLOptsNew
-                    ],
-                    max_connections => MaxConnections,
-                    connection_type => supervisor,
-                    num_acceptors => 10
+                    ]
                 },
-                #{
-                    % Protocol options
-                    env => #{dispatch => cowboy_dispatch(HandlerState)},
-                    compress_threshold =>  CompressThreshold,
-                    max_empty_lines => MaxEmptyLines,
-                    max_header_name_length => MaxHeaderNameLength,
-                    max_header_value_length => MaxHeaderValueLength,
-                    max_headers => MaxHeaders,
-                    max_keepalive => MaxKeepAlive,
-                    max_request_line_length => MaxRequestLineLength,
-                    idle_timeout => RecvTimeout
-                }
+                ProtocolOptionsN
             );
         SSL =:= false ->
             cloudi_x_cowboy:start_clear(
                 Service, % Ref
-                #{
-                    % Transport options
+                TransportOptions#{
                     socket_opts => ReusePortOptL ++ [
                         {ip, Interface},
                         {port, Port},
                         {backlog, Backlog},
                         {nodelay, NoDelay}
-                    ],
-                    max_connections => MaxConnections,
-                    connection_type => supervisor,
-                    num_acceptors => 10
+                    ]
                 },
-                #{
-                    % Protocol options
-                    env => #{dispatch => cowboy_dispatch(HandlerState)},
-                    compress_threshold =>  CompressThreshold,
-                    max_empty_lines => MaxEmptyLines,
-                    max_header_name_length => MaxHeaderNameLength,
-                    max_header_value_length => MaxHeaderValueLength,
-                    max_headers => MaxHeaders,
-                    max_keepalive => MaxKeepAlive,
-                    max_request_line_length => MaxRequestLineLength,
-                    idle_timeout => RecvTimeout
-                }
+                ProtocolOptionsN
             )
     end,
     % based on testing it is best to force garbage collection here
