@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2015-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -41,6 +41,8 @@
 -export([function_required/2,
          function_required_pick/2,
          function_optional/2,
+         function_optional_pick/2,
+         function_optional_pick_any/2,
          period_to_milliseconds/3,
          period_to_milliseconds/4,
          period_to_seconds/2,
@@ -67,10 +69,32 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec function_required({{module(), atom()}} | {module(), atom()} | fun(),
+-spec function_required(fun() |
+                        {module(), atom()} |
+                        {{module(), atom()}} |
+                        {{module(), atom(), list()}},
                         Arity :: non_neg_integer()) ->
     fun().
 
+function_required({{M, F, A}}, Arity)
+    when is_atom(M), is_atom(F), is_list(A), is_integer(Arity), Arity >= 0 ->
+    ArityF = length(A),
+    case erlang:function_exported(M, F, ArityF) of
+        true ->
+            Function = erlang:apply(M, F, A),
+            if
+                is_function(Function) ->
+                    function_required(Function, Arity);
+                true ->
+                    ?LOG_ERROR_SYNC("function ~w:~tw/~w does not "
+                                    "return a function!", [M, F, ArityF]),
+                    erlang:exit(badarg)
+            end;
+        false ->
+            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!",
+                            [M, F, ArityF]),
+            erlang:exit(badarg)
+    end;
 function_required({{M, F}}, Arity)
     when is_atom(M), is_atom(F), is_integer(Arity), Arity >= 0 ->
     case erlang:function_exported(M, F, 0) of
@@ -85,7 +109,8 @@ function_required({{M, F}}, Arity)
                     erlang:exit(badarg)
             end;
         false ->
-            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!", [M, F, 0]),
+            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!",
+                            [M, F, 0]),
             erlang:exit(badarg)
     end;
 function_required({M, F}, Arity)
@@ -111,10 +136,32 @@ function_required(Function, _) ->
     ?LOG_ERROR_SYNC("not a function: ~tp", [Function]),
     erlang:exit(badarg).
 
--spec function_required_pick({{module(), atom()}} | {module(), atom()} | fun(),
+-spec function_required_pick(fun() |
+                             {module(), atom()} |
+                             {{module(), atom()}} |
+                             {{module(), atom(), list()}},
                              ArityOrder :: nonempty_list(non_neg_integer())) ->
     {fun(), Arity :: non_neg_integer()}.
 
+function_required_pick({{M, F, A}}, [_ | _] = ArityOrder)
+    when is_atom(M), is_atom(F), is_list(A) ->
+    ArityF = length(A),
+    case erlang:function_exported(M, F, ArityF) of
+        true ->
+            Function = erlang:apply(M, F, A),
+            if
+                is_function(Function) ->
+                    function_required_pick(Function, ArityOrder);
+                true ->
+                    ?LOG_ERROR_SYNC("function ~w:~tw/~w does not "
+                                    "return a function!", [M, F, ArityF]),
+                    erlang:exit(badarg)
+            end;
+        false ->
+            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!",
+                            [M, F, ArityF]),
+            erlang:exit(badarg)
+    end;
 function_required_pick({{M, F}}, [_ | _] = ArityOrder)
     when is_atom(M), is_atom(F) ->
     case erlang:function_exported(M, F, 0) of
@@ -129,7 +176,8 @@ function_required_pick({{M, F}}, [_ | _] = ArityOrder)
                     erlang:exit(badarg)
             end;
         false ->
-            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!", [M, F, 0]),
+            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!",
+                            [M, F, 0]),
             erlang:exit(badarg)
     end;
 function_required_pick({M, F}, [_ | _] = ArityOrder)
@@ -142,8 +190,10 @@ function_required_pick(Function, [_ | _]) ->
     ?LOG_ERROR_SYNC("not a function: ~tp", [Function]),
     erlang:exit(badarg).
 
--spec function_optional(undefined |
-                        {{module(), atom()}} | {module(), atom()} | fun(),
+-spec function_optional(undefined | fun() |
+                        {module(), atom()} |
+                        {{module(), atom()}} |
+                        {{module(), atom(), list()}},
                         Arity :: non_neg_integer()) ->
     undefined | fun().
 
@@ -151,6 +201,32 @@ function_optional(undefined, _) ->
     undefined;
 function_optional(Function, Arity) ->
     function_required(Function, Arity).
+
+-spec function_optional_pick(undefined | fun() |
+                             {module(), atom()} |
+                             {{module(), atom()}} |
+                             {{module(), atom(), list()}},
+                             ArityOrder :: nonempty_list(non_neg_integer())) ->
+    undefined | {fun(), Arity :: non_neg_integer()}.
+
+function_optional_pick(undefined, _) ->
+    undefined;
+function_optional_pick(Function, ArityOrder) ->
+    function_required_pick(Function, ArityOrder).
+
+-spec function_optional_pick_any(undefined | fun() |
+                                 {module(), atom()} |
+                                 {{module(), atom()}} |
+                                 {{module(), atom(), list()}},
+                                 ArityOrder ::
+                                     nonempty_list(non_neg_integer())) ->
+    undefined | fun().
+
+function_optional_pick_any(undefined, _) ->
+    undefined;
+function_optional_pick_any(Function, ArityOrder) ->
+    {FunctionNew, _} = function_required_pick(Function, ArityOrder),
+    FunctionNew.
 
 -spec period_to_milliseconds(Value :: period(),
                              Min :: non_neg_integer(),

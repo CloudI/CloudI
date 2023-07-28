@@ -387,11 +387,13 @@
 -type aspect_init_after_internal() ::
     aspect_init_after_internal_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_init_after_external() ::
     aspect_init_after_external_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -export_type([aspect_init_after_internal_f/0,
               aspect_init_after_external_f/0,
               aspect_init_after_internal/0,
@@ -455,19 +457,23 @@
 -type aspect_request_before_internal() ::
     aspect_request_before_internal_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_request_before_external() ::
     aspect_request_before_external_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_request_after_internal() ::
     aspect_request_after_internal_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_request_after_external() ::
     aspect_request_after_external_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -export_type([aspect_request_before_internal_f/0,
               aspect_request_before_external_f/0,
               aspect_request_after_internal_f/0,
@@ -485,7 +491,8 @@
 -type aspect_info_internal() ::
     aspect_info_internal_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_info_before_internal_f() ::
     aspect_info_internal_f().
 -type aspect_info_after_internal_f() ::
@@ -510,11 +517,13 @@
 -type aspect_terminate_before_internal() ::
     aspect_terminate_before_internal_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_terminate_before_external() ::
     aspect_terminate_before_external_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -export_type([aspect_terminate_before_internal_f/0,
               aspect_terminate_before_external_f/0,
               aspect_terminate_before_internal/0,
@@ -525,14 +534,16 @@
 -type aspect_suspend() ::
     aspect_suspend_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_resume_f() ::
     fun((State :: any()) ->
         {ok, State :: any()}).
 -type aspect_resume() ::
     aspect_resume_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -export_type([aspect_suspend_f/0,
               aspect_suspend/0,
               aspect_resume_f/0,
@@ -976,7 +987,8 @@
 -type module_state_internal() ::
     module_state_internal_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type service_update_plan_internal() ::
     nonempty_list({type, internal} |
                   {module, atom()} |
@@ -1218,11 +1230,13 @@
 -type aspect_log_before() ::
     aspect_log_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -type aspect_log_after() ::
     aspect_log_f() |
     {Module :: module(), Function :: atom()} |
-    {{Module :: module(), Function :: atom()}}.
+    {{Module :: module(), Function :: atom()}} |
+    {{Module :: module(), Function :: atom(), Arguments :: list()}}.
 -export_type([aspect_log_f/0,
               aspect_log_before/0,
               aspect_log_after/0]).

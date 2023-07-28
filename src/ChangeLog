@@ -1,6 +1,33 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-07-28 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add {{M :: atom(), F :: atom(), A :: list()}} closure
+      configuration argument format where the previously existing
+      {{M, F}} == {{M, F, []}}
+      (function M:F is called with arguments A to create the expected
+       function while the format {M, F} is used to provide the expected
+       function without the indirection of the closure)
+    * Add cloudi_service_health_check improvements
+        * Add a tcp_test function for creating a separate socket
+        * Add the tcp_test function implementations with closures
+          tcp_test_http and tcp_test_https
+        * Add the hosts.erl internal service subscription
+        * Improve unicode support
+    * Add cloudi_service_router improvements
+        * Add the http_redirect_health argument for getting
+          cloudi_service_health_check status every
+          http_redirect_health_refresh seconds
+        * Add the http_redirect_secondaries argument to provide
+          HTTP redirect failover based on the current
+          cloudi_service_health_check status
+        * Use 307/308 for http_redirect functionality by default
+          instead of 302/301 unless the http_redirect_get
+          argument is set to true
+    * Improve cloudi_service_api_requests unicode support
+    * Update trie
+
 2023-07-21 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_http_cowboy argument use_only_http2

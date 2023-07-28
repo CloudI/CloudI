@@ -41,7 +41,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2022-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -62,14 +62,18 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2022-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_health_check).
 -author('mjtruog at protonmail dot com').
 
 -behaviour(cloudi_service).
+
+%% external interface
+-export([tcp_test_http/3,
+         tcp_test_https/3]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -110,6 +114,8 @@
         % server's liveness, this function can be provided to test
         % the socket.  Otherwise, only the ability of the server to
         % accept a TCP connection for the configured port is tested.
+        % If the function needs to create the socket, the function arity
+        % can be 4 instead of 2.
 -define(DEFAULT_PING_FAILURE,           undefined).
 -define(DEFAULT_PING_RESTORED,          undefined).
 
@@ -149,7 +155,7 @@
     fun((Name :: hostname(),
          IP :: inet:ip_address(),
          Port :: tcp_port(),
-         Reason :: atom()) ->
+         Reason :: any()) ->
         ok).
 -type tcp_restored() ::
     fun((Name :: hostname(),
@@ -161,7 +167,12 @@
 -type tcp_test() ::
     fun((Socket :: gen_tcp:socket(),
          Timeout :: 1..?TIMEOUT_MAX_ERLANG) ->
-        ok | {error, atom()}).
+        ok | {error, any()}) |
+    fun((Name :: hostname(),
+         IP :: inet:ip_address(),
+         Port :: tcp_port(),
+         Timeout :: 1..?TIMEOUT_MAX_ERLANG) ->
+        ok | {error, any()}).
 -type ping_failure() ::
     fun((Name :: hostname(),
          IP :: inet:ip_address(),
@@ -268,6 +279,102 @@
 %%%------------------------------------------------------------------------
 
 %%%------------------------------------------------------------------------
+%%% tcp_test HTTP/HTTPS functions
+%%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===HTTP tcp_test function.===
+%% Add as
+%% {{cloudi_service_health_check, tcp_test_http, [Method, Path, StatusCode]}}
+%% with values provided for Method, Path and StatusCode.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec tcp_test_http(Method :: head | get,
+                    Path :: nonempty_string(),
+                    StatusCode :: 200..399) ->
+    fun((Name :: hostname(),
+         IP :: inet:ip_address(),
+         Port :: tcp_port(),
+         Timeout :: 1..?TIMEOUT_MAX_ERLANG) ->
+        ok | {error, any()}).
+
+tcp_test_http(Method, [_ | _] = Path, StatusCode)
+    when is_atom(Method), is_integer(StatusCode) ->
+    Profile = default,
+    fun(Name, IP, Port, Timeout) ->
+        URL = "http://" ++ inet:ntoa(IP) ++ ":" ++
+              erlang:integer_to_list(Port) ++ Path,
+        RequestHeaders = [{<<"host">>, unicode:characters_to_binary(Name)}],
+        case cloudi_x_hackney:request(Method, URL, RequestHeaders, <<>>,
+                                      [with_body,
+                                       {connect_timeout, Timeout},
+                                       {recv_timeout, Timeout},
+                                       {pool, Profile}]) of
+            {ok, ResponseStatusCode, ResponseHeaders, Response} ->
+                if
+                    ResponseStatusCode == StatusCode ->
+                        ok;
+                    true ->
+                        {error,
+                         {http_response_mismatch,
+                          ResponseStatusCode, ResponseHeaders, Response}}
+                end;
+            {error, _} = Error ->
+                Error
+        end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===HTTPS tcp_test function.===
+%% Add as
+%% {{cloudi_service_health_check, tcp_test_https, [Method, Path, StatusCode]}}
+%% with values provided for Method, Path and StatusCode.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec tcp_test_https(Method :: head | get,
+                     Path :: nonempty_string(),
+                     StatusCode :: 200..399) ->
+    fun((Name :: hostname(),
+         IP :: inet:ip_address(),
+         Port :: tcp_port(),
+         Timeout :: 1..?TIMEOUT_MAX_ERLANG) ->
+        ok | {error, any()}).
+
+tcp_test_https(Method, [_ | _] = Path, StatusCode)
+    when is_atom(Method), is_integer(StatusCode) ->
+    Profile = default,
+    fun(Name, IP, Port, Timeout) ->
+        URL = "https://" ++ inet:ntoa(IP) ++ ":" ++
+              erlang:integer_to_list(Port) ++ Path,
+        RequestHeaders = [{<<"host">>, unicode:characters_to_binary(Name)}],
+        SSLOptions = [{server_name_indication, Name}] ++
+                     cloudi_x_hackney_ssl:check_hostname_opts(Name) ++
+                     cloudi_x_hackney_ssl:cipher_opts(),
+        case cloudi_x_hackney:request(Method, URL, RequestHeaders, <<>>,
+                                      [with_body,
+                                       {ssl_options, SSLOptions},
+                                       {connect_timeout, Timeout},
+                                       {recv_timeout, Timeout},
+                                       {pool, Profile}]) of
+            {ok, ResponseStatusCode, ResponseHeaders, Response} ->
+                if
+                    ResponseStatusCode == StatusCode ->
+                        ok;
+                    true ->
+                        {error,
+                         {https_response_mismatch,
+                          ResponseStatusCode, ResponseHeaders, Response}}
+                end;
+            {error, _} = Error ->
+                Error
+        end
+    end.
+
+%%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
@@ -318,6 +425,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         Debug =:= true ->
             DebugLevel
     end,
+    ok = cloudi_service:subscribe(Dispatcher, "hosts.erl"),
     ok = cloudi_service:subscribe(Dispatcher, "hosts.erl/get"),
     ok = cloudi_service:subscribe(Dispatcher, "hosts.json/get"),
     ok = cloudi_service:subscribe(Dispatcher,
@@ -366,6 +474,11 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
     {Last,
      HostsInfo,
      TextFormatValue} = case cloudi_service_name:suffix(Prefix, Name) of
+        "hosts.erl" ->
+            % request from an internal service
+            {ProcessIndexLast == ProcessIndex,
+             hosts_list(Hosts, DurationsDown),
+             <<"none">>};
         "hosts.erl/get" ->
             {ProcessIndexLast == ProcessIndex,
              hosts_list(Hosts, DurationsDown),
@@ -383,6 +496,8 @@ cloudi_service_handle_request(_RequestType, Name, _Pattern,
     if
         Last =:= true ->
             Response = if
+                TextFormatValue == <<"none">> ->
+                    HostsInfo;
                 TextFormatValue == <<"erl">> ->
                     convert_term_to_erlang(HostsInfo);
                 TextFormatValue == <<"json">> ->
@@ -471,7 +586,7 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
     TCPRestoredN = cloudi_args_type:
                    function_optional(TCPRestored0, 5),
     TCPTestN = cloudi_args_type:
-               function_optional(TCPTest0, 2),
+               function_optional_pick_any(TCPTest0, [2, 4]),
     PingFailureN = cloudi_args_type:
                    function_optional(PingFailure0, 3),
     PingRestoredN = cloudi_args_type:
@@ -677,32 +792,10 @@ health_check_status_tcp(#host{ipv4 = IPv4,
 
 health_check_status_tcp_ips([], HostN, _, _, _, _) ->
     HostN;
-health_check_status_tcp_ips([IP | IPs],
-                            #host{port = Port,
-                                  tcp_test = TCPTest} = Host0,
-                            Family, Timeout,
+health_check_status_tcp_ips([IP | IPs], Host0, Family, Timeout,
                             ErrorLogLevel, DebugLogLevel) ->
-    HostN = case gen_tcp:connect(IP, Port, [Family], Timeout) of
-        {ok, Socket} ->
-            Host1 = if
-                TCPTest =:= undefined ->
-                    tcp_restored(Host0, IP, Port,
-                                 ErrorLogLevel, DebugLogLevel);
-                is_function(TCPTest) ->
-                    case TCPTest(Socket, Timeout) of
-                        ok ->
-                            tcp_restored(Host0, IP, Port,
-                                         ErrorLogLevel, DebugLogLevel);
-                        {error, Reason} when is_atom(Reason) ->
-                            tcp_failure(Host0, IP, Port,
-                                        Reason, Timeout, ErrorLogLevel)
-                    end
-            end,
-            ok = gen_tcp:close(Socket),
-            Host1;
-        {error, Reason} ->
-            tcp_failure(Host0, IP, Port, Reason, Timeout, ErrorLogLevel)
-    end,
+    HostN = tcp_test(Host0, IP, Family, Timeout,
+                     ErrorLogLevel, DebugLogLevel),
     health_check_status_tcp_ips(IPs, HostN, Family, Timeout,
                                 ErrorLogLevel, DebugLogLevel).
 
@@ -734,7 +827,7 @@ health_check_status_ping_ips([IP | IPs],
             end,
             Reason = cloudi_string:
                      format("ping exited with ~s (stdout/stderr below)~n~ts",
-                            [StatusStr, erlang:iolist_to_binary(Output)]),
+                            [StatusStr, unicode:characters_to_binary(Output)]),
             ping_failure(Host0, IP, Reason, ErrorLogLevel)
     end,
     health_check_status_ping_ips(IPs, HostN,
@@ -888,6 +981,46 @@ inet_getaddrs(Hostname, Family, Timeout) ->
             {error, nxdomain}
     end.
 
+tcp_test(#host{name = Hostname,
+               port = Port,
+               tcp_test = TCPTest} = HostN,
+         IP, _, Timeout,
+         ErrorLogLevel, DebugLogLevel)
+    when is_function(TCPTest, 4) ->
+    case TCPTest(Hostname, IP, Port, Timeout) of
+        ok ->
+            tcp_restored(HostN, IP, Port,
+                         ErrorLogLevel, DebugLogLevel);
+        {error, Reason} ->
+            tcp_failure(HostN, IP, Port,
+                        Reason, Timeout, ErrorLogLevel)
+    end;
+tcp_test(#host{port = Port,
+               tcp_test = TCPTest} = Host0,
+         IP, Family, Timeout,
+         ErrorLogLevel, DebugLogLevel) ->
+    case gen_tcp:connect(IP, Port, [Family], Timeout) of
+        {ok, Socket} ->
+            HostN = if
+                TCPTest =:= undefined ->
+                    tcp_restored(Host0, IP, Port,
+                                 ErrorLogLevel, DebugLogLevel);
+                is_function(TCPTest, 2) ->
+                    case TCPTest(Socket, Timeout) of
+                        ok ->
+                            tcp_restored(Host0, IP, Port,
+                                         ErrorLogLevel, DebugLogLevel);
+                        {error, Reason} ->
+                            tcp_failure(Host0, IP, Port,
+                                        Reason, Timeout, ErrorLogLevel)
+                    end
+            end,
+            ok = gen_tcp:close(Socket),
+            HostN;
+        {error, Reason} ->
+            tcp_failure(Host0, IP, Port, Reason, Timeout, ErrorLogLevel)
+    end.
+
 tcp_failure(#host{name = Hostname,
                   health_failed_count = HealthFailedCount,
                   health_failed_time = HealthFailedTime,
@@ -902,13 +1035,13 @@ tcp_failure(#host{name = Hostname,
             TimeFailure = cloudi_timestamp:native_monotonic(),
             ReasonInfo = if
                 Reason =:= timeout ->
-                    cloudi_string:format(" (after ~w milliseconds)",
+                    cloudi_string:format("~n (after ~w milliseconds)",
                                          [Timeout]);
                 true ->
                     ""
             end,
             ?LOG(ErrorLogLevel,
-                 "\"~s\" TCP failure: ~s port ~w failed: ~s~s",
+                 "\"~s\" TCP failure: ~s port ~w failed:~n ~tp~s",
                  [Hostname, inet:ntoa(IP), Port, Reason, ReasonInfo]),
             if
                 TCPFailure =:= undefined ->
@@ -1309,7 +1442,7 @@ convert_term_to_json_option([[{Key, _} | _] | _] = Value)
      || Options <- Value];
 convert_term_to_json_option([H | _] = Value)
     when is_integer(H), H > 0 ->
-    erlang:list_to_binary(Value);
+    unicode:characters_to_binary(Value);
 convert_term_to_json_option([[H | _] | _] = Value)
     when is_integer(H), H > 0 ->
     convert_term_to_json_strings(Value);
@@ -1335,7 +1468,7 @@ convert_term_to_json_options([{Key, Value} | Options]) ->
 convert_term_to_json_strings([]) ->
     [];
 convert_term_to_json_strings([S | L]) ->
-    [erlang:list_to_binary(S) |
+    [unicode:characters_to_binary(S) |
      convert_term_to_json_strings(L)].
 
 json_encode(Term) ->

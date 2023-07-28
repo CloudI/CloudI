@@ -100,8 +100,8 @@ Erlang `trie`
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
-- `commit 00cde3f5c72d835e1a23d328578bae250d4f85b1 (v2.0.6)`
-- `Wed Jun 21 20:05:07 UTC 2023`
+- `commit 120ce17c2949022c03c092d432803502d67b2a15`
+- `Fri Jul 28 21:17:17 UTC 2023`
 - `MIT`
 
 Erlang `uuid`

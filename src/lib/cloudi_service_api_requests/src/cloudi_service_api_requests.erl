@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -966,7 +966,7 @@ convert_term_to_json_option([[{Key, _} | _] | _] = Value)
      || Options <- Value];
 convert_term_to_json_option([H | _] = Value)
     when is_integer(H), H > 0 ->
-    erlang:list_to_binary(Value);
+    unicode:characters_to_binary(Value);
 convert_term_to_json_option([[H | _] | _] = Value)
     when is_integer(H), H > 0 ->
     convert_term_to_json_strings(Value);
@@ -1000,7 +1000,7 @@ convert_term_to_json_options([{Key, Value} | Options]) ->
 convert_term_to_json_strings([]) ->
     [];
 convert_term_to_json_strings([S | L]) ->
-    [erlang:list_to_binary(S) |
+    [unicode:characters_to_binary(S) |
      convert_term_to_json_strings(L)].
 
 convert_term_to_json_atoms([]) ->

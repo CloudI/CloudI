@@ -4986,7 +4986,8 @@ services_update_plan_module_state(undefined) ->
 services_update_plan_module_state(ModuleState)
     when is_function(ModuleState, 3) ->
     {ok, ModuleState};
-services_update_plan_module_state({M, F} = ModuleState) ->
+services_update_plan_module_state({M, F} = ModuleState)
+    when is_atom(M), is_atom(F) ->
     case erlang:function_exported(M, F, 3) of
         true ->
             {ok, fun M:F/3};
@@ -4994,10 +4995,27 @@ services_update_plan_module_state({M, F} = ModuleState) ->
             {error, {service_update_module_state_invalid,
                      ModuleState}}
     end;
-services_update_plan_module_state({{M, F}} = ModuleState) ->
+services_update_plan_module_state({{M, F}} = ModuleState)
+    when is_atom(M), is_atom(F) ->
     Function = case erlang:function_exported(M, F, 0) of
         true ->
             M:F();
+        false ->
+            undefined
+    end,
+    if
+        is_function(Function, 3) ->
+            {ok, Function};
+        true ->
+            {error, {service_update_module_state_invalid,
+                     ModuleState}}
+    end;
+services_update_plan_module_state({{M, F, A}} = ModuleState)
+    when is_atom(M), is_atom(F), is_list(A) ->
+    ArityF = length(A),
+    Function = case erlang:function_exported(M, F, ArityF) of
+        true ->
+            erlang:apply(M, F, A);
         false ->
             undefined
     end,
@@ -6262,6 +6280,49 @@ validate_aspects_f([{{M, F}} = Entry | AspectsOld], AspectsNew,
                             V = case erlang:function_exported(M, F, 0) of
                                 true ->
                                     {true, M:F()};
+                                false ->
+                                    {false, undefined}
+                            end,
+                            true = code:delete(M),
+                            false = code:purge(M),
+                            V;
+                        {error, _} ->
+                            {false, undefined}
+                    end;
+                AutomaticLoading =:= false ->
+                    {false, undefined}
+            end
+    end,
+    if
+        Exported =:= true, is_function(Function, Arity) ->
+            validate_aspects_f(AspectsOld, [Function | AspectsNew],
+                               Arity, AutomaticLoading);
+        true ->
+            {error, Entry}
+    end;
+validate_aspects_f([{{M, F, A}} = Entry | AspectsOld], AspectsNew,
+                   Arity, AutomaticLoading)
+    when is_atom(M), is_atom(F), is_list(A) ->
+    % check if a function is exported
+    % if the module is not currently loaded,
+    % only load the module to make a function
+    ArityF = length(A),
+    {Exported, Function} = case code:is_loaded(M) of
+        {file, _} ->
+            case erlang:function_exported(M, F, ArityF) of
+                true ->
+                    {true, erlang:apply(M, F, A)};
+                false ->
+                    {false, undefined}
+            end;
+        false ->
+            if
+                AutomaticLoading =:= true ->
+                    case code:load_file(M) of
+                        {module, _} ->
+                            V = case erlang:function_exported(M, F, ArityF) of
+                                true ->
+                                    {true, erlang:apply(M, F, A)};
                                 false ->
                                     {false, undefined}
                             end,

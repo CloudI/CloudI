@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2014-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_name).
@@ -116,9 +116,10 @@ parse_with_suffix(Name, Pattern) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Determine if a service name pattern contains wildcard characters.===
-%% If not, the service name pattern would only be used with a service name
-%% that is an exact match.
+%% ===Determine if a string is a service name pattern.===
+%% If false is returned, the string is valid as a service name.
+%% An exit exception occurs if the string is not valid as either
+%% a service name pattern or a service name.
 %% @end
 %%-------------------------------------------------------------------------
 

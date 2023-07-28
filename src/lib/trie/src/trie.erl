@@ -1596,7 +1596,7 @@ pattern2_fill_select(FillPatternIn, Parameters,
 %%-------------------------------------------------------------------------
 
 -spec pattern2_parse(Pattern :: string(),
-                    L :: string()) -> list(string()) | 'error'.
+                     L :: string()) -> list(string()) | 'error'.
 
 pattern2_parse(Pattern, L) ->
     pattern2_parse(Pattern, L, default).
@@ -1611,8 +1611,8 @@ pattern2_parse(Pattern, L) ->
 %%-------------------------------------------------------------------------
 
 -spec pattern2_parse(Pattern :: string(),
-                    L :: string(),
-                    Option :: default | with_suffix | expanded) ->
+                     L :: string(),
+                     Option :: default | with_suffix | expanded) ->
     list(string()) |                       % default
     {list(string()), string()} |           % with_suffix
     list(string() | {exact, string()}) |   % expanded
