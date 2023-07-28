@@ -25,6 +25,9 @@
         * Use 307/308 for http_redirect functionality by default
           instead of 302/301 unless the http_redirect_get
           argument is set to true
+        * Fix http_redirect responses with no-cache cache-control
+          for any redirect response
+        * Improve unicode support
     * Improve cloudi_service_api_requests unicode support
     * Update trie
 

@@ -587,7 +587,7 @@ http_redirect_pick(Parameters,
                                                  HttpRedirectHealth);
                 _ ->
                     {ok, HttpStatusCode,
-                     erlang:list_to_binary(HttpRedirectNew)}
+                     unicode:characters_to_binary(HttpRedirectNew)}
             end;
         {error, Reason} ->
             {error, Reason, HttpRedirect}
@@ -598,7 +598,7 @@ http_redirect_pick_secondary([], _, _,
                              _, _) ->
     % no secondary is healthy, so return the primary until something changes
     {ok, HttpStatusCodeDefault,
-     erlang:list_to_binary(HttpRedirectDefault)};
+     unicode:characters_to_binary(HttpRedirectDefault)};
 http_redirect_pick_secondary([HttpRedirect | HttpRedirectL], Parameters,
                              HttpRedirectGet,
                              HttpStatusCodeDefault, HttpRedirectDefault,
@@ -615,7 +615,7 @@ http_redirect_pick_secondary([HttpRedirect | HttpRedirectL], Parameters,
                             <<"307">>
                     end,
                     {ok, HttpStatusCode,
-                     erlang:list_to_binary(HttpRedirectNew)};
+                     unicode:characters_to_binary(HttpRedirectNew)};
                 _ ->
                     http_redirect_pick_secondary(HttpRedirectL,
                                                  Parameters,
