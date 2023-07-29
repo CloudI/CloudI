@@ -306,7 +306,7 @@ tcp_test_http(Method, [_ | _] = Path, StatusCode)
     fun(Name, IP, Port, Timeout) ->
         URL = "http://" ++ inet:ntoa(IP) ++ ":" ++
               erlang:integer_to_list(Port) ++ Path,
-        RequestHeaders = [{<<"host">>, unicode:characters_to_binary(Name)}],
+        RequestHeaders = [{<<"host">>, erlang:list_to_binary(Name)}],
         case cloudi_x_hackney:request(Method, URL, RequestHeaders, <<>>,
                                       [with_body,
                                        {connect_timeout, Timeout},
@@ -350,7 +350,7 @@ tcp_test_https(Method, [_ | _] = Path, StatusCode)
     fun(Name, IP, Port, Timeout) ->
         URL = "https://" ++ inet:ntoa(IP) ++ ":" ++
               erlang:integer_to_list(Port) ++ Path,
-        RequestHeaders = [{<<"host">>, unicode:characters_to_binary(Name)}],
+        RequestHeaders = [{<<"host">>, erlang:list_to_binary(Name)}],
         SSLOptions = [{server_name_indication, Name}] ++
                      cloudi_x_hackney_ssl:check_hostname_opts(Name) ++
                      cloudi_x_hackney_ssl:cipher_opts(),
@@ -541,7 +541,8 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
            ProcessIndex, ProcessIndex, ProcessCount, Service,
            IntervalDefault, IPv4Allowed, IPv6Allowed, Environment) ->
     true = is_list(HostnameRaw),
-    Hostname = cloudi_environment:transform(HostnameRaw, Environment),
+    Hostname = hostname_to_ascii(cloudi_environment:transform(HostnameRaw,
+                                                              Environment)),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     Defaults = [
         {health,                   ?DEFAULT_HEALTH},
@@ -1416,6 +1417,15 @@ hosts_list_health_failed_time_ips(HealthFailedTimeIP, TimeOffset) ->
            cloudi_timestamp:
            microseconds_epoch_to_string(MicroSeconds)}] | L]
     end, [], HealthFailedTimeIP).
+
+hostname_to_ascii(Name) ->
+    case lists:all(fun cloudi_x_idna_ucs:is_ascii/1, Name) of
+        true ->
+            Name;
+        false ->
+            cloudi_x_idna:utf8_to_ascii(
+                erlang:binary_to_list(unicode:characters_to_binary(Name)))
+    end.
 
 convert_term_to_erlang(Result) ->
     convert_term_to_erlang_string(Result).
