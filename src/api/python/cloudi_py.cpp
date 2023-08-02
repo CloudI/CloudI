@@ -54,6 +54,7 @@
 #endif
 #include "cloudi.hpp"
 #include <limits>
+#include <utility>
 #include <string>
 #include <cstring>
 #include <vector>
@@ -69,6 +70,35 @@
     }
 #define PY_ASSERT(X)        PY_ASSERT_RETURN(X, NULL)
 #define PY_ASSERT_VOID(X)   PY_ASSERT_RETURN(X, )
+
+#if __cplusplus >= 202002L
+#define CXX20
+#endif
+
+namespace
+{
+#ifdef CXX20
+    constexpr bool in_range_uint32(Py_ssize_t const value) noexcept
+    {
+        return std::in_range<uint32_t>(value);
+    }
+    constexpr bool in_range_uint32(unsigned int const value) noexcept
+    {
+        return std::in_range<uint32_t>(value);
+    }
+#else
+    bool in_range_uint32(Py_ssize_t const value)
+    {
+        return (value >= 0 ||
+                static_cast<size_t>(value) <=
+                std::numeric_limits<uint32_t>::max());
+    }
+    bool in_range_uint32(unsigned int const value)
+    {
+        return (value <= std::numeric_limits<uint32_t>::max());
+    }
+#endif // CXX20
+}
 
 typedef struct {
     PyObject_HEAD
@@ -771,12 +801,8 @@ class callback : public CloudI::API::function_object_c
                         PyErr_Print();
                         result_invalid = true;
                     }
-                    else if (response_info_size_tmp < 0 ||
-                             static_cast<size_t>(response_info_size_tmp) >
-                             std::numeric_limits<uint32_t>::max() ||
-                             response_size_tmp < 0 ||
-                             static_cast<size_t>(response_size_tmp) >
-                             std::numeric_limits<uint32_t>::max())
+                    else if (! in_range_uint32(response_info_size_tmp) ||
+                             ! in_range_uint32(response_size_tmp))
                     {
                         result_invalid = true;
                     }
@@ -798,9 +824,7 @@ class callback : public CloudI::API::function_object_c
                         PyErr_Print();
                         result_invalid = true;
                     }
-                    else if (response_size_tmp < 0 ||
-                             static_cast<size_t>(response_size_tmp) >
-                             std::numeric_limits<uint32_t>::max())
+                    else if (! in_range_uint32(response_size_tmp))
                     {
                         result_invalid = true;
                     }
@@ -837,9 +861,7 @@ class callback : public CloudI::API::function_object_c
                             const_cast<char *>(PyUnicode_AS_DATA(result_new));
                     }
 #endif
-                    if (response_size_tmp < 0 ||
-                        static_cast<size_t>(response_size_tmp) >
-                        std::numeric_limits<uint32_t>::max())
+                    if (! in_range_uint32(response_size_tmp))
                     {
                         result_invalid = true;
                     }
@@ -1140,20 +1162,16 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
         PyErr_Print();
         return NULL;
     }
-    timeout = timeout_tmp;
-    if (request_info_size_tmp < 0 ||
-        static_cast<size_t>(request_info_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        request_size_tmp < 0 ||
-        static_cast<size_t>(request_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        timeout != timeout_tmp)
+    if (! in_range_uint32(request_info_size_tmp) ||
+        ! in_range_uint32(request_size_tmp) ||
+        ! in_range_uint32(timeout_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTupleAndKeywords");
         return NULL;
     }
     request_info_size = static_cast<uint32_t>(request_info_size_tmp);
     request_size = static_cast<uint32_t>(request_size_tmp);
+    timeout = timeout_tmp;
     int result = 0;
     THREADS_BEGIN;
     result = api->send_async(name, request_info, request_info_size,
@@ -1201,20 +1219,16 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
         PyErr_Print();
         return NULL;
     }
-    timeout = timeout_tmp;
-    if (request_info_size_tmp < 0 ||
-        static_cast<size_t>(request_info_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        request_size_tmp < 0 ||
-        static_cast<size_t>(request_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        timeout != timeout_tmp)
+    if (! in_range_uint32(request_info_size_tmp) ||
+        ! in_range_uint32(request_size_tmp) ||
+        ! in_range_uint32(timeout_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTupleAndKeywords");
         return NULL;
     }
     request_info_size = static_cast<uint32_t>(request_info_size_tmp);
     request_size = static_cast<uint32_t>(request_size_tmp);
+    timeout = timeout_tmp;
     int result = 0;
     THREADS_BEGIN;
     result = api->send_sync(name, request_info, request_info_size,
@@ -1272,20 +1286,16 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
         PyErr_Print();
         return NULL;
     }
-    timeout = timeout_tmp;
-    if (request_info_size_tmp < 0 ||
-        static_cast<size_t>(request_info_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        request_size_tmp < 0 ||
-        static_cast<size_t>(request_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        timeout != timeout_tmp)
+    if (! in_range_uint32(request_info_size_tmp) ||
+        ! in_range_uint32(request_size_tmp) ||
+        ! in_range_uint32(timeout_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTupleAndKeywords");
         return NULL;
     }
     request_info_size = static_cast<uint32_t>(request_info_size_tmp);
     request_size = static_cast<uint32_t>(request_size_tmp);
+    timeout = timeout_tmp;
     int result = 0;
     THREADS_BEGIN;
     result = api->mcast_async(name, request_info, request_info_size,
@@ -1335,23 +1345,17 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    timeout = timeout_tmp;
-    if (request_info_size_tmp < 0 ||
-        static_cast<size_t>(request_info_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        request_size_tmp < 0 ||
-        static_cast<size_t>(request_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        timeout != timeout_tmp ||
-        source_size_tmp < 0 ||
-        static_cast<size_t>(source_size_tmp) >
-        std::numeric_limits<uint32_t>::max())
+    if (! in_range_uint32(request_info_size_tmp) ||
+        ! in_range_uint32(request_size_tmp) ||
+        ! in_range_uint32(timeout_tmp) ||
+        ! in_range_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
     }
     request_info_size = static_cast<uint32_t>(request_info_size_tmp);
     request_size = static_cast<uint32_t>(request_size_tmp);
+    timeout = timeout_tmp;
     source_size = static_cast<uint32_t>(source_size_tmp);
     PY_ASSERT(trans_id_size_tmp == 16);
     int result = 0;
@@ -1410,23 +1414,17 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    timeout = timeout_tmp;
-    if (request_info_size_tmp < 0 ||
-        static_cast<size_t>(request_info_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        request_size_tmp < 0 ||
-        static_cast<size_t>(request_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        timeout != timeout_tmp ||
-        source_size_tmp < 0 ||
-        static_cast<size_t>(source_size_tmp) >
-        std::numeric_limits<uint32_t>::max())
+    if (! in_range_uint32(request_info_size_tmp) ||
+        ! in_range_uint32(request_size_tmp) ||
+        ! in_range_uint32(timeout_tmp) ||
+        ! in_range_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
     }
     request_info_size = static_cast<uint32_t>(request_info_size_tmp);
     request_size = static_cast<uint32_t>(request_size_tmp);
+    timeout = timeout_tmp;
     source_size = static_cast<uint32_t>(source_size_tmp);
     PY_ASSERT(trans_id_size_tmp == 16);
     int result = 0;
@@ -1485,23 +1483,17 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    timeout = timeout_tmp;
-    if (response_info_size_tmp < 0 ||
-        static_cast<size_t>(response_info_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        response_size_tmp < 0 ||
-        static_cast<size_t>(response_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        timeout != timeout_tmp ||
-        source_size_tmp < 0 ||
-        static_cast<size_t>(source_size_tmp) >
-        std::numeric_limits<uint32_t>::max())
+    if (! in_range_uint32(response_info_size_tmp) ||
+        ! in_range_uint32(response_size_tmp) ||
+        ! in_range_uint32(timeout_tmp) ||
+        ! in_range_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
     }
     response_info_size = static_cast<uint32_t>(response_info_size_tmp);
     response_size = static_cast<uint32_t>(response_size_tmp);
+    timeout = timeout_tmp;
     source_size = static_cast<uint32_t>(source_size_tmp);
     PY_ASSERT(trans_id_size_tmp == 16);
     int result = 0;
@@ -1559,23 +1551,17 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    timeout = timeout_tmp;
-    if (response_info_size_tmp < 0 ||
-        static_cast<size_t>(response_info_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        response_size_tmp < 0 ||
-        static_cast<size_t>(response_size_tmp) >
-        std::numeric_limits<uint32_t>::max() ||
-        timeout != timeout_tmp ||
-        source_size_tmp < 0 ||
-        static_cast<size_t>(source_size_tmp) >
-        std::numeric_limits<uint32_t>::max())
+    if (! in_range_uint32(response_info_size_tmp) ||
+        ! in_range_uint32(response_size_tmp) ||
+        ! in_range_uint32(timeout_tmp) ||
+        ! in_range_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
     }
     response_info_size = static_cast<uint32_t>(response_info_size_tmp);
     response_size = static_cast<uint32_t>(response_size_tmp);
+    timeout = timeout_tmp;
     source_size = static_cast<uint32_t>(source_size_tmp);
     PY_ASSERT(trans_id_size_tmp == 16);
     int result = 0;
