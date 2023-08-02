@@ -89,7 +89,7 @@ namespace
 #else
     bool in_range_uint32(Py_ssize_t const value)
     {
-        return (value >= 0 ||
+        return (value >= 0 &&
                 static_cast<size_t>(value) <=
                 std::numeric_limits<uint32_t>::max());
     }
