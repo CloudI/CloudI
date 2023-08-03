@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-08-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix 0.0 =/= -0.0 match Erlang/OTP 27.0 errors
+    * Improve Python/C CloudI API type checking
+
 2023-08-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Simplify Python/C CloudI API type checking

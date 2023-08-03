@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2022-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2022-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_math).
@@ -73,7 +73,8 @@ erfcinv(X)
 -spec erfinv(X :: float()) ->
     float().
 
-erfinv(0.0) ->
+erfinv(X)
+    when X == 0.0 ->
     0.0;
 erfinv(X)
     when X > -1.0, X < 1.0 ->

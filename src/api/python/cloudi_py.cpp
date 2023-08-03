@@ -78,24 +78,24 @@
 namespace
 {
 #ifdef CXX20
-    constexpr bool in_range_uint32(Py_ssize_t const value) noexcept
+    constexpr bool overflow_uint32(Py_ssize_t const value) noexcept
     {
-        return std::in_range<uint32_t>(value);
+        return (std::in_range<uint32_t>(value) == false);
     }
-    constexpr bool in_range_uint32(unsigned int const value) noexcept
+    constexpr bool overflow_uint32(unsigned int const value) noexcept
     {
-        return std::in_range<uint32_t>(value);
+        return (std::in_range<uint32_t>(value) == false);
     }
 #else
-    bool in_range_uint32(Py_ssize_t const value)
+    bool overflow_uint32(Py_ssize_t const value)
     {
-        return (value >= 0 &&
-                static_cast<size_t>(value) <=
+        return (value < 0 ||
+                static_cast<size_t>(value) >
                 std::numeric_limits<uint32_t>::max());
     }
-    bool in_range_uint32(unsigned int const value)
+    bool overflow_uint32(unsigned int const value)
     {
-        return (value <= std::numeric_limits<uint32_t>::max());
+        return (value > std::numeric_limits<uint32_t>::max());
     }
 #endif // CXX20
 }
@@ -801,8 +801,8 @@ class callback : public CloudI::API::function_object_c
                         PyErr_Print();
                         result_invalid = true;
                     }
-                    else if (! in_range_uint32(response_info_size_tmp) ||
-                             ! in_range_uint32(response_size_tmp))
+                    else if (overflow_uint32(response_info_size_tmp) ||
+                             overflow_uint32(response_size_tmp))
                     {
                         result_invalid = true;
                     }
@@ -824,7 +824,7 @@ class callback : public CloudI::API::function_object_c
                         PyErr_Print();
                         result_invalid = true;
                     }
-                    else if (! in_range_uint32(response_size_tmp))
+                    else if (overflow_uint32(response_size_tmp))
                     {
                         result_invalid = true;
                     }
@@ -861,7 +861,7 @@ class callback : public CloudI::API::function_object_c
                             const_cast<char *>(PyUnicode_AS_DATA(result_new));
                     }
 #endif
-                    if (! in_range_uint32(response_size_tmp))
+                    if (overflow_uint32(response_size_tmp))
                     {
                         result_invalid = true;
                     }
@@ -1162,9 +1162,9 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
         PyErr_Print();
         return NULL;
     }
-    if (! in_range_uint32(request_info_size_tmp) ||
-        ! in_range_uint32(request_size_tmp) ||
-        ! in_range_uint32(timeout_tmp))
+    if (overflow_uint32(request_info_size_tmp) ||
+        overflow_uint32(request_size_tmp) ||
+        overflow_uint32(timeout_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTupleAndKeywords");
         return NULL;
@@ -1219,9 +1219,9 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
         PyErr_Print();
         return NULL;
     }
-    if (! in_range_uint32(request_info_size_tmp) ||
-        ! in_range_uint32(request_size_tmp) ||
-        ! in_range_uint32(timeout_tmp))
+    if (overflow_uint32(request_info_size_tmp) ||
+        overflow_uint32(request_size_tmp) ||
+        overflow_uint32(timeout_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTupleAndKeywords");
         return NULL;
@@ -1286,9 +1286,9 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
         PyErr_Print();
         return NULL;
     }
-    if (! in_range_uint32(request_info_size_tmp) ||
-        ! in_range_uint32(request_size_tmp) ||
-        ! in_range_uint32(timeout_tmp))
+    if (overflow_uint32(request_info_size_tmp) ||
+        overflow_uint32(request_size_tmp) ||
+        overflow_uint32(timeout_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTupleAndKeywords");
         return NULL;
@@ -1345,10 +1345,10 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    if (! in_range_uint32(request_info_size_tmp) ||
-        ! in_range_uint32(request_size_tmp) ||
-        ! in_range_uint32(timeout_tmp) ||
-        ! in_range_uint32(source_size_tmp))
+    if (overflow_uint32(request_info_size_tmp) ||
+        overflow_uint32(request_size_tmp) ||
+        overflow_uint32(timeout_tmp) ||
+        overflow_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
@@ -1414,10 +1414,10 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    if (! in_range_uint32(request_info_size_tmp) ||
-        ! in_range_uint32(request_size_tmp) ||
-        ! in_range_uint32(timeout_tmp) ||
-        ! in_range_uint32(source_size_tmp))
+    if (overflow_uint32(request_info_size_tmp) ||
+        overflow_uint32(request_size_tmp) ||
+        overflow_uint32(timeout_tmp) ||
+        overflow_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
@@ -1483,10 +1483,10 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    if (! in_range_uint32(response_info_size_tmp) ||
-        ! in_range_uint32(response_size_tmp) ||
-        ! in_range_uint32(timeout_tmp) ||
-        ! in_range_uint32(source_size_tmp))
+    if (overflow_uint32(response_info_size_tmp) ||
+        overflow_uint32(response_size_tmp) ||
+        overflow_uint32(timeout_tmp) ||
+        overflow_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
@@ -1551,10 +1551,10 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
         PyErr_Print();
         return NULL;
     }
-    if (! in_range_uint32(response_info_size_tmp) ||
-        ! in_range_uint32(response_size_tmp) ||
-        ! in_range_uint32(timeout_tmp) ||
-        ! in_range_uint32(source_size_tmp))
+    if (overflow_uint32(response_info_size_tmp) ||
+        overflow_uint32(response_size_tmp) ||
+        overflow_uint32(timeout_tmp) ||
+        overflow_uint32(source_size_tmp))
     {
         PyErr_SetString(PyExc_OverflowError, "PyArg_ParseTuple");
         return NULL;
