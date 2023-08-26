@@ -1244,7 +1244,23 @@
        {hosts,
         [{"cloudi.org",
           [{interval, 5}, % seconds
-           {port, 80}]}]}]}],
+           {port, 80},
+           {tcp_test,
+            {{cloudi_service_health_check, tcp_test_http,
+              [get, "/", 200]}}}]},
+         {"sourceforge.net",
+          [{interval, 10}, % seconds
+           {port, 443},
+           {tcp_test,
+            {{cloudi_service_health_check, tcp_test_https,
+              [get, "/projects/cloudi/files/2.0.6/cloudi-2.0.6.tar.gz/download",
+               302]}}}]}
+           ]}]},
+     {count_process, 2},
+     {options,
+      [{info_pid_uses, 1},
+       {hibernate, true},
+       {restart_all, true}]}],
     [{module, cloudi_service_validate_config},
      {max_r, 0}]
 ]}.

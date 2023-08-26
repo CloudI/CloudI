@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-08-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_api_batch functions queue_suspend and
+      queue_resume for suspend/resume of the currently running service
+    * Fix IPv6 use of cloudi_service_health_check
+      functions tcp_test_http and tcp_test_https
+
 2023-08-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_logger_kernel:filter_out_supervisor_started/2

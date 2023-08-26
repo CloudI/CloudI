@@ -304,8 +304,13 @@ tcp_test_http(Method, [_ | _] = Path, StatusCode)
     when is_atom(Method), is_integer(StatusCode) ->
     Profile = default,
     fun(Name, IP, Port, Timeout) ->
-        URL = "http://" ++ inet:ntoa(IP) ++ ":" ++
-              erlang:integer_to_list(Port) ++ Path,
+        SocketAddress = case IP of
+            {_, _, _, _} ->
+                inet:ntoa(IP) ++ ":" ++ erlang:integer_to_list(Port);
+            {_, _, _, _, _, _, _, _} ->
+                "[" ++ inet:ntoa(IP) ++ "]:" ++ erlang:integer_to_list(Port)
+        end,
+        URL = "http://" ++ SocketAddress ++ Path,
         RequestHeaders = [{<<"host">>, erlang:list_to_binary(Name)}],
         case cloudi_x_hackney:request(Method, URL, RequestHeaders, <<>>,
                                       [with_body,
@@ -348,8 +353,13 @@ tcp_test_https(Method, [_ | _] = Path, StatusCode)
     when is_atom(Method), is_integer(StatusCode) ->
     Profile = default,
     fun(Name, IP, Port, Timeout) ->
-        URL = "https://" ++ inet:ntoa(IP) ++ ":" ++
-              erlang:integer_to_list(Port) ++ Path,
+        SocketAddress = case IP of
+            {_, _, _, _} ->
+                inet:ntoa(IP) ++ ":" ++ erlang:integer_to_list(Port);
+            {_, _, _, _, _, _, _, _} ->
+                "[" ++ inet:ntoa(IP) ++ "]:" ++ erlang:integer_to_list(Port)
+        end,
+        URL = "https://" ++ SocketAddress ++ Path,
         RequestHeaders = [{<<"host">>, erlang:list_to_binary(Name)}],
         SSLOptions = [{server_name_indication, Name}] ++
                      cloudi_x_hackney_ssl:check_hostname_opts(Name) ++

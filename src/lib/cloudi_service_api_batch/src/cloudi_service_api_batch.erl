@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2019-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_batch).
@@ -42,6 +42,10 @@
 %% external interface
 -export([queue_clear/3,
          queue_clear/4,
+         queue_suspend/3,
+         queue_suspend/4,
+         queue_resume/3,
+         queue_resume/4,
          services_add/4,
          services_add/5,
          services_remove/3,
@@ -174,6 +178,48 @@ queue_clear(Agent, Prefix, [I | _] = QueueName, Timeout)
     cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
                      {queue_clear, QueueName}, Timeout).
 
+-spec queue_suspend(Agent :: agent(),
+                    Prefix :: service_name(),
+                    QueueName :: nonempty_string()) ->
+    module_response(ok | {error, not_found}).
+
+queue_suspend(Agent, Prefix, [I | _] = QueueName)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {queue_suspend, QueueName}).
+
+-spec queue_suspend(Agent :: agent(),
+                    Prefix :: service_name(),
+                    QueueName :: nonempty_string(),
+                    Timeout :: timeout_period()) ->
+    module_response(ok | {error, not_found}).
+
+queue_suspend(Agent, Prefix, [I | _] = QueueName, Timeout)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {queue_suspend, QueueName}, Timeout).
+
+-spec queue_resume(Agent :: agent(),
+                   Prefix :: service_name(),
+                   QueueName :: nonempty_string()) ->
+    module_response(ok | {error, not_found}).
+
+queue_resume(Agent, Prefix, [I | _] = QueueName)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {queue_resume, QueueName}).
+
+-spec queue_resume(Agent :: agent(),
+                   Prefix :: service_name(),
+                   QueueName :: nonempty_string(),
+                   Timeout :: timeout_period()) ->
+    module_response(ok | {error, not_found}).
+
+queue_resume(Agent, Prefix, [I | _] = QueueName, Timeout)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {queue_resume, QueueName}, Timeout).
+
 -spec services_add(Agent :: agent(),
                    Prefix :: service_name(),
                    QueueName :: nonempty_string(),
@@ -284,6 +330,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             % (e.g., services_restart is a GET).
             cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
             Interface = [{"queue_clear", "/delete"},
+                         {"queue_suspend", "/get"},
+                         {"queue_resume", "/get"},
                          {"services_add", "/post"},
                          {"services_remove", "/delete"},
                          {"services_restart", "/get"}],
@@ -315,6 +363,10 @@ cloudi_service_handle_request(_RequestType, Name, Pattern,
             case Request of
                 {queue_clear, QueueName} ->
                     batch_queue_clear(QueueName, State);
+                {queue_suspend, QueueName} ->
+                    service_suspend(QueueName, State);
+                {queue_resume, QueueName} ->
+                    service_resume(QueueName, State);
                 {services_add, QueueName, Configs} ->
                     batch_queue_add(QueueName, Configs, State);
                 {services_remove, QueueName} ->
@@ -329,6 +381,12 @@ cloudi_service_handle_request(_RequestType, Name, Pattern,
                 "queue_clear" ->
                     external_format_to(Format, queue_clear,
                                        batch_queue_clear(QueueName, State));
+                "queue_suspend" ->
+                    external_format_to(Format, queue_suspend,
+                                       service_suspend(QueueName, State));
+                "queue_resume" ->
+                    external_format_to(Format, queue_resume,
+                                       service_resume(QueueName, State));
                 "services_add" ->
                     Configs = external_format_from(Format, services_add,
                                                    Request),
@@ -391,6 +449,36 @@ batch_queue_clear(QueueName,
                     batch_queue_erase(QueueName, State)
             end,
             {ok, StateNew};
+        error ->
+            {{error, not_found}, State}
+    end.
+
+service_suspend(QueueName,
+                #state{queues = Queues} = State) ->
+    case cloudi_x_trie:find(QueueName, Queues) of
+        {ok, #queue{service_id = ServiceId}} ->
+            _ = if
+                is_binary(ServiceId) ->
+                    cloudi_service_api:services_suspend([ServiceId], infinity);
+                ServiceId =:= undefined ->
+                    ok
+            end,
+            {ok, State};
+        error ->
+            {{error, not_found}, State}
+    end.
+
+service_resume(QueueName,
+               #state{queues = Queues} = State) ->
+    case cloudi_x_trie:find(QueueName, Queues) of
+        {ok, #queue{service_id = ServiceId}} ->
+            _ = if
+                is_binary(ServiceId) ->
+                    cloudi_service_api:services_resume([ServiceId], infinity);
+                ServiceId =:= undefined ->
+                    ok
+            end,
+            {ok, State};
         error ->
             {{error, not_found}, State}
     end.
