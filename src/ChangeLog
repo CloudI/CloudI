@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-08-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_logger_kernel:filter_out_supervisor_started/2
+      for filtering out Erlang kernel logger supervisor report
+      messages from noisy supervisors
+    * Fix CloudI configuration file use of the code section
+      to start applications that depend on cloudi_core
+    * Update reltool_util
+
 2023-08-02 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix 0.0 =/= -0.0 match Erlang/OTP 27.0 errors

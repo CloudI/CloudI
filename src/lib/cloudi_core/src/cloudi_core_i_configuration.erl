@@ -6486,7 +6486,8 @@ code_load_application([Application | _])
     when not is_atom(Application) ->
     {error, {code_applications_invalid, Application}};
 code_load_application([Application | Applications]) ->
-    case cloudi_x_reltool_util:application_start(Application, [], infinity) of
+    case cloudi_x_reltool_util:application_start(Application, [],
+                                                 [cloudi_core], infinity) of
         ok ->
             code_load_application(Applications);
         {error, Reason} ->

@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2013-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -42,6 +42,7 @@
          application_start/1,
          application_start/2,
          application_start/3,
+         application_start/4,
          application_stop/1,
          application_stop/2,
          application_remove/1,
@@ -141,7 +142,7 @@ application_env(Application)
 
 application_start(Application)
     when is_atom(Application) ->
-    application_start(Application, [], 5000).
+    application_start(Application, [], [], 5000).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -156,7 +157,7 @@ application_start(Application)
 
 application_start(Application, Env)
     when is_atom(Application), is_list(Env) ->
-    application_start(Application, Env, 5000).
+    application_start(Application, Env, [], 5000).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -172,13 +173,30 @@ application_start(Application, Env)
 
 application_start(Application, Env, Timeout)
     when is_atom(Application), is_list(Env) ->
+    application_start(Application, Env, [], Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start all the dependent applications manually with a specific configuration, excluded dependencies and timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_start(Application :: atom(),
+                        Env :: list({atom(), any()}),
+                        Excluded :: list(atom()),
+                        Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+application_start(Application, Env, Excluded, Timeout)
+    when is_atom(Application), is_list(Env), is_list(Excluded) ->
     case ensure_application_loaded(Application) of
         ok ->
             case application_start_set_env(Env, Application, Timeout) of
                 ok ->
                     case applications_dependencies(Application) of
                         {ok, As} ->
-                            case application_start_dependencies(As) of
+                            case application_start_dependencies(As, Excluded) of
                                 ok ->
                                     ensure_application_started(Application);
                                 {error, _} = Error ->
@@ -1151,6 +1169,9 @@ application_start_set_env([{K, V} | L], Application, Timeout) ->
     end;
 application_start_set_env(_, _, _) ->
     {error, invalid_application_env}.
+
+application_start_dependencies(As, Excluded) ->
+    application_start_dependencies(As -- Excluded).
 
 application_start_dependencies([]) ->
     ok;
