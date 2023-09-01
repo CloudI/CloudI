@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-08-31 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix CloudI configuration file use of the code section
+      to start applications that depend on cloudi_core
+
 2023-08-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_api_batch functions queue_suspend and

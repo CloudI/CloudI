@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -727,10 +727,11 @@ terminate(_Reason,
           #state{terminate_timeout = Timeout,
                  configuration = #config{code = ConfigCode}}) ->
     #config_code{modules = Modules,
-                 applications = Applications} = ConfigCode,
+                 applications = Applications,
+                 application_dependents = Dependents} = ConfigCode,
     _ = cloudi_x_reltool_util:modules_purged(Modules, Timeout),
-    _ = cloudi_x_reltool_util:applications_remove(Applications, Timeout,
-                                                  [cloudi_core]),
+    _ = cloudi_x_reltool_util:applications_remove(Applications ++ Dependents,
+                                                  Timeout, [cloudi_core]),
     ok.
 
 code_change(_, State, _) ->
@@ -741,13 +742,29 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 configure(#config{concurrency = Concurrency,
+                  code = #config_code{application_dependents = Dependents},
                   services = Services} = Config, Timeout) ->
-    case configure_service(Services, Concurrency, Timeout) of
-        {ok, ServicesNew, ConcurrencyNew} ->
-            {ok, Config#config{concurrency = ConcurrencyNew,
-                               services = ServicesNew}};
+    case configure_application_dependent(Dependents) of
+        ok ->
+            case configure_service(Services, Concurrency, Timeout) of
+                {ok, ServicesNew, ConcurrencyNew} ->
+                    {ok, Config#config{concurrency = ConcurrencyNew,
+                                       services = ServicesNew}};
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
+    end.
+
+configure_application_dependent([]) ->
+    ok;
+configure_application_dependent([Dependent | Dependents]) ->
+    case cloudi_x_reltool_util:ensure_application_started(Dependent) of
+        ok ->
+            configure_application_dependent(Dependents);
+        {error, Reason} ->
+            {error, {code_applications_invalid, {Reason, Dependent}}}
     end.
 
 configure_service([], Configured, Concurrency, _) ->

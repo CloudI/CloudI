@@ -37,6 +37,8 @@
             :: list(module()),
         applications = []
             :: list(atom()),
+        application_dependents = []
+            :: list(atom()),
         releases = []
             :: list(string())
     }).

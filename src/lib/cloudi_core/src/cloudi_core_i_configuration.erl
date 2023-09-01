@@ -6480,16 +6480,18 @@ code_load_modules(Modules, CodeConfig) ->
             Error
     end.
 
-code_load_application([]) ->
-    ok;
-code_load_application([Application | _])
+code_load_application([], Dependents) ->
+    {ok, Dependents};
+code_load_application([Application | _], _)
     when not is_atom(Application) ->
     {error, {code_applications_invalid, Application}};
-code_load_application([Application | Applications]) ->
+code_load_application([Application | Applications], Dependents) ->
     case cloudi_x_reltool_util:application_start(Application, [],
                                                  [cloudi_core], infinity) of
         ok ->
-            code_load_application(Applications);
+            code_load_application(Applications, Dependents);
+        {error, {not_started, cloudi_core}} ->
+            code_load_application(Applications, [Application | Dependents]);
         {error, Reason} ->
             {error, {code_applications_invalid, {Reason, Application}}}
     end.
@@ -6497,11 +6499,12 @@ code_load_application([Application | Applications]) ->
 code_load_applications([], #config_code{applications = []} = CodeConfig) ->
     {ok, CodeConfig};
 code_load_applications(Applications, CodeConfig) ->
-    case code_load_application(Applications) of
-        ok ->
+    case code_load_application(Applications, []) of
+        {ok, Dependents} ->
             error_logger:info_msg("code applications loaded~n  ~tp~n",
                                   [Applications]),
-            {ok, CodeConfig#config_code{applications = Applications}};
+            {ok, CodeConfig#config_code{applications = Applications,
+                                        application_dependents = Dependents}};
         {error, _} = Error ->
             Error
     end.
