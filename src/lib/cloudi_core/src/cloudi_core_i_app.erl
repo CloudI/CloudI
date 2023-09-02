@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2009-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_app).
@@ -43,6 +43,7 @@
 
 %% application callbacks
 -export([start/2,
+         start_phase/3,
          stop/1]).
 
 -include("cloudi_core_i_configuration.hrl").
@@ -101,6 +102,24 @@ start(_, _) ->
         {error, _} = Error ->
             Error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start phase of the CloudI application.===
+%% The init phase is after cloudi_core has started.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec start_phase(Phase :: atom(),
+                  StartType :: normal | {takeover, node()} | {failover, node()},
+                  PhaseArgs :: any()) ->
+    ok |
+    {error, Reason :: any()}.
+
+start_phase(init, _, _) ->
+    cloudi_core_i_configurator:cloudi_core_started();
+start_phase(Phase, _, PhaseArgs) ->
+    {error, {application_start_phase_invalid, Phase, PhaseArgs}}.
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -42,6 +42,7 @@
 %% external interface
 -export([start_link/2,
          configure/0,
+         cloudi_core_started/0,
          acl_add/2,
          acl_remove/2,
          acl/1,
@@ -163,6 +164,9 @@ start_link(TerminateTimeout, #config{} = Config) ->
 
 configure() ->
     gen_server:call(?MODULE, configure, infinity).
+
+cloudi_core_started() ->
+    gen_server:cast(?MODULE, cloudi_core_started).
 
 acl_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
@@ -429,8 +433,8 @@ init([TerminateTimeout, Config]) ->
                 configuration = Config}}.
 
 handle_call(configure, _, State) ->
-    % the application startup configuration must not block
-    % application startup (executing the cloudi.conf)
+    % the application startup configuration must not block application use
+    % (executing the cloudi.conf)
     self() ! configure,
     {reply, ok, State};
 
@@ -687,6 +691,16 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
 
+handle_cast(cloudi_core_started,
+            #state{configuration = Config} = State) ->
+    % additional application startup must not block application use
+    case cloudi_core_started(Config) of
+        ok ->
+            {noreply, State};
+        {error, _} = Error ->
+            {stop, Error, State}
+    end;
+
 handle_cast({service_terminated, ID},
             #state{configuration = Config} = State) ->
     #config{services = Services} = Config,
@@ -742,29 +756,13 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 configure(#config{concurrency = Concurrency,
-                  code = #config_code{application_dependents = Dependents},
                   services = Services} = Config, Timeout) ->
-    case configure_application_dependent(Dependents) of
-        ok ->
-            case configure_service(Services, Concurrency, Timeout) of
-                {ok, ServicesNew, ConcurrencyNew} ->
-                    {ok, Config#config{concurrency = ConcurrencyNew,
-                                       services = ServicesNew}};
-                {error, _} = Error ->
-                    Error
-            end;
+    case configure_service(Services, Concurrency, Timeout) of
+        {ok, ServicesNew, ConcurrencyNew} ->
+            {ok, Config#config{concurrency = ConcurrencyNew,
+                               services = ServicesNew}};
         {error, _} = Error ->
             Error
-    end.
-
-configure_application_dependent([]) ->
-    ok;
-configure_application_dependent([Dependent | Dependents]) ->
-    case cloudi_x_reltool_util:ensure_application_started(Dependent) of
-        ok ->
-            configure_application_dependent(Dependents);
-        {error, Reason} ->
-            {error, {code_applications_invalid, {Reason, Dependent}}}
     end.
 
 configure_service([], Configured, Concurrency, _) ->
@@ -1254,6 +1252,20 @@ service_start_external(Service, ThreadCount, ProcessCount,
                        Concurrency, Timeout) ->
     service_start_external(0, [], Service, ThreadCount, ProcessCount,
                            Concurrency, timeout_decr(Timeout)).
+
+cloudi_core_started(#config{code = ConfigCode}) ->
+    #config_code{application_dependents = Dependents} = ConfigCode,
+    application_dependent(Dependents).
+
+application_dependent([]) ->
+    ok;
+application_dependent([Dependent | Dependents]) ->
+    case cloudi_x_reltool_util:ensure_application_started(Dependent) of
+        ok ->
+            application_dependent(Dependents);
+        {error, Reason} ->
+            {error, {code_applications_invalid, {Reason, Dependent}}}
+    end.
 
 service_stop_internal(#config_service_internal{
                           module = Module,

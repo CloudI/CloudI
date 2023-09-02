@@ -95,5 +95,6 @@
         stdlib,
         kernel
         ]},
+   {start_phases, [{init, []}]},
    {mod, {cloudi_core_i_app,[]}}]}.
 
