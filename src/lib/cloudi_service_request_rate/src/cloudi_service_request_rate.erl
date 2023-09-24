@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2014-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_request_rate).
@@ -502,7 +502,7 @@ process_results_data([],
 process_results_data([{_ProcessIndex,
                        RequestFail,
                        0,
-                       0.0,
+                       RequestRateCompleteAvg,
                        undefined,
                        undefined,
                        RequestLatency,
@@ -513,7 +513,8 @@ process_results_data([{_ProcessIndex,
                      RequestRateCompleteMinSum,
                      RequestRateCompleteMaxSum,
                      RequestLatencyOld,
-                     RequestLatencyPercentileOld) ->
+                     RequestLatencyPercentileOld)
+    when RequestRateCompleteAvg == 0.0 ->
     process_results_data(Results,
                          RequestFailSum + RequestFail,
                          false,
