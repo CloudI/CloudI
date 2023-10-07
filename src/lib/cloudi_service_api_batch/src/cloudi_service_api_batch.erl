@@ -40,7 +40,9 @@
 -behaviour(cloudi_service).
 
 %% external interface
--export([queue_clear/3,
+-export([queue/3,
+         queue/4,
+         queue_clear/3,
          queue_clear/4,
          queue_suspend/3,
          queue_suspend/4,
@@ -148,14 +150,39 @@
 
 -type agent() :: cloudi:agent().
 -type service_name() :: cloudi:service_name().
+-type service_configuration() ::
+    cloudi_service_api:service_internal() |
+    cloudi_service_api:service_external() |
+    cloudi_service_api:service_proplist().
 -type service_configurations() ::
-    nonempty_list(cloudi_service_api:service_internal() |
-                  cloudi_service_api:service_external() |
-                  cloudi_service_api:service_proplist()).
+    nonempty_list(service_configuration()).
 -type timeout_period() :: cloudi:timeout_period().
 -type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
     {{error, cloudi:error_reason()}, NewAgent :: agent()}.
+
+-spec queue(Agent :: agent(),
+            Prefix :: service_name(),
+            QueueName :: nonempty_string()) ->
+    module_response({ok, list(service_configuration())} |
+                    {error, not_found}).
+
+queue(Agent, Prefix, [I | _] = QueueName)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {queue, QueueName}).
+
+-spec queue(Agent :: agent(),
+            Prefix :: service_name(),
+            QueueName :: nonempty_string(),
+            Timeout :: timeout_period()) ->
+    module_response({ok, list(service_configuration())} |
+                    {error, not_found}).
+
+queue(Agent, Prefix, [I | _] = QueueName, Timeout)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {queue, QueueName}, Timeout).
 
 -spec queue_clear(Agent :: agent(),
                   Prefix :: service_name(),
@@ -329,7 +356,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             % cloudi_service_api_batch logic
             % (e.g., services_restart is a GET).
             cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
-            Interface = [{"queue_clear", "/delete"},
+            Interface = [{"queue", "/get"},
+                         {"queue_clear", "/delete"},
                          {"queue_suspend", "/get"},
                          {"queue_resume", "/get"},
                          {"services_add", "/post"},
@@ -361,6 +389,8 @@ cloudi_service_handle_request(_RequestType, Name, Pattern,
      StateNew} = case cloudi_service_name:parse_with_suffix(Name, Pattern) of
         {[], _} ->
             case Request of
+                {queue, QueueName} ->
+                    batch_queue_list(QueueName, State);
                 {queue_clear, QueueName} ->
                     batch_queue_clear(QueueName, State);
                 {queue_suspend, QueueName} ->
@@ -378,6 +408,9 @@ cloudi_service_handle_request(_RequestType, Name, Pattern,
             MethodFormat = cloudi_string:beforel($/, MethodSuffix, input),
             {MethodName, Format} = cloudi_string:splitr($., MethodFormat),
             case MethodName of
+                "queue" ->
+                    external_format_to(Format, queue,
+                                       batch_queue_list(QueueName, State));
                 "queue_clear" ->
                     external_format_to(Format, queue_clear,
                                        batch_queue_clear(QueueName, State));
@@ -433,6 +466,15 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+batch_queue_list(QueueName,
+                 #state{queues = Queues} = State) ->
+    case cloudi_x_trie:find(QueueName, Queues) of
+        {ok, #queue{data = Data}} ->
+            {{ok, queue:to_list(Data)}, State};
+        error ->
+            {{error, not_found}, State}
+    end.
 
 batch_queue_clear(QueueName,
                   #state{queues = Queues} = State) ->
