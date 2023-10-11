@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-10-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_health_check dns_nameservers argument
+      for providing the DNS nameservers used explicitly
+    * Improve the Python/C CloudI API callback handling
+
 2023-10-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the Python/C CloudI API by adding per-interpreter GIL support

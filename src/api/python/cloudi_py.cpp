@@ -629,7 +629,10 @@ class callback : public CloudI::API::function_object_c
         virtual ~callback() throw()
         {
             callbacks_t * const callbacks = m_object->m_callbacks;
-            std::remove(callbacks->begin(), callbacks->end(), this);
+            callbacks_t::iterator itr = std::find(callbacks->begin(),
+                                                  callbacks->end(), this);
+            assert(itr != callbacks->end());
+            callbacks->erase(itr);
             if (m_f)
             {
                 Py_DECREF(m_f);

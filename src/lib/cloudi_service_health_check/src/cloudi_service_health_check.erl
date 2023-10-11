@@ -92,6 +92,11 @@
         % May be set for each host too.
 -define(DEFAULT_IPV6,                        true).
         % May be set for each host too.
+-define(DEFAULT_DNS_NAMESERVERS,        undefined).
+        % If set to undefined, use system calls for DNS requests.
+        % If set to a list of {inet:ip_address(), Port :: 1..65535}
+        % then use the specific nameservers for DNS requests.
+        % May be set for each host too.
 -define(DEFAULT_ERROR_LEVEL,                error).
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                debug).
@@ -218,6 +223,8 @@
             :: interval(),
         start_time
             :: cloudi_timestamp:native_monotonic(),
+        dns_nameservers
+            :: nonempty_list({inet:ip_address(), 1..65535}) | undefined,
         dns_disabled = false
             :: boolean(), % name is an IP address
         dns_failed = false
@@ -394,10 +401,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {interval,                 ?DEFAULT_INTERVAL},
         {ipv4,                     ?DEFAULT_IPV4},
         {ipv6,                     ?DEFAULT_IPV6},
+        {dns_nameservers,          ?DEFAULT_DNS_NAMESERVERS},
         {error_level,              ?DEFAULT_ERROR_LEVEL},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Hosts, IntervalDefault, IPv4Allowed, IPv6Allowed, ErrorLogLevel,
+    [Hosts, IntervalDefault, IPv4Allowed, IPv6Allowed, DNSNameservers,
+     ErrorLogLevel,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Hosts) andalso (Hosts /= []),
     true = is_integer(IntervalDefault) andalso
@@ -407,6 +416,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_boolean(IPv6Allowed),
     true = (IPv4Allowed /= false) orelse
            (IPv6Allowed /= false),
+    true = dns_nameservers(DNSNameservers),
     Service = cloudi_service:self(Dispatcher),
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     ProcessCount = cloudi_service:process_count(Dispatcher),
@@ -415,7 +425,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = (ProcessCountMin =:= ProcessCountMax) andalso
            (ProcessCountMin =:= ProcessCount),
     HostsLoaded = hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
-                             IntervalDefault, IPv4Allowed, IPv6Allowed),
+                             IntervalDefault, IPv4Allowed, IPv6Allowed,
+                             DNSNameservers),
     true = ((ErrorLogLevel =:= trace) orelse
             (ErrorLogLevel =:= debug) orelse
             (ErrorLogLevel =:= info) orelse
@@ -539,17 +550,18 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 hosts_load(Hosts, ProcessIndex, ProcessCount, Service,
-           IntervalDefault, IPv4Allowed, IPv6Allowed) ->
+           IntervalDefault, IPv4Allowed, IPv6Allowed, DNSNameservers) ->
     hosts_load(Hosts, cloudi_x_trie:new(),
                0, ProcessIndex, ProcessCount, Service,
-               IntervalDefault, IPv4Allowed, IPv6Allowed,
+               IntervalDefault, IPv4Allowed, IPv6Allowed, DNSNameservers,
                cloudi_environment:lookup()).
 
-hosts_load([], HostsLoaded, _, _, _, _, _, _, _, _) ->
+hosts_load([], HostsLoaded, _, _, _, _, _, _, _, _, _) ->
     HostsLoaded;
 hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
            ProcessIndex, ProcessIndex, ProcessCount, Service,
-           IntervalDefault, IPv4Allowed, IPv6Allowed, Environment) ->
+           IntervalDefault, IPv4Allowed, IPv6Allowed, DNSNameservers,
+           Environment) ->
     true = is_list(HostnameRaw),
     Hostname = hostname_to_ascii(cloudi_environment:transform(HostnameRaw,
                                                               Environment)),
@@ -560,6 +572,7 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
         {interval,                 IntervalDefault},
         {ipv4,                     IPv4Allowed},
         {ipv6,                     IPv6Allowed},
+        {dns_nameservers,          DNSNameservers},
         {dns_failure,              ?DEFAULT_DNS_FAILURE},
         {dns_restored,             ?DEFAULT_DNS_RESTORED},
         {dns_ip_added,             ?DEFAULT_DNS_IP_ADDED},
@@ -571,6 +584,7 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
         {ping_failure,             ?DEFAULT_PING_FAILURE},
         {ping_restored,            ?DEFAULT_PING_RESTORED}],
     [Health, Port, Interval, IPv4AllowedHost, IPv6AllowedHost,
+     DNSNameserversHost,
      DNSFailure0, DNSRestored0, DNSIPAdded0, DNSIPRemovedHealthy0,
      DNSIPRemovedFailed0, TCPFailure0, TCPRestored0, TCPTest0, PingFailure0,
      PingRestored0] = cloudi_proplists:take_values(Defaults, Args),
@@ -582,6 +596,7 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
     true = is_boolean(IPv6AllowedHost),
     true = (IPv4AllowedHost /= false) orelse
            (IPv6AllowedHost /= false),
+    true = dns_nameservers(DNSNameserversHost),
     DNSFailureN = cloudi_args_type:
                   function_optional(DNSFailure0, 2),
     DNSRestoredN = cloudi_args_type:
@@ -620,6 +635,7 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
                         port = Port,
                         interval = Interval,
                         start_time = TimeStart,
+                        dns_nameservers = DNSNameserversHost,
                         dns_failure = DNSFailureN,
                         dns_restored = DNSRestoredN,
                         dns_ip_added = DNSIPAddedN,
@@ -648,17 +664,20 @@ hosts_load([{HostnameRaw, Args} | Hosts], HostsLoaded,
     hosts_load(Hosts, cloudi_x_trie:store(Hostname, HostLoadedN, HostsLoaded),
                (ProcessIndex + 1) rem ProcessCount,
                ProcessIndex, ProcessCount, Service,
-               IntervalDefault, IPv4Allowed, IPv6Allowed, Environment);
+               IntervalDefault, IPv4Allowed, IPv6Allowed, DNSNameservers,
+               Environment);
 hosts_load([{HostnameRaw, _} | Hosts], HostsLoaded,
            Index, ProcessIndex, ProcessCount, Service,
-           IntervalDefault, IPv4Allowed, IPv6Allowed, Environment) ->
+           IntervalDefault, IPv4Allowed, IPv6Allowed, DNSNameservers,
+           Environment) ->
     true = is_list(HostnameRaw),
     Hostname = cloudi_environment:transform(HostnameRaw, Environment),
     false = cloudi_x_trie:is_key(Hostname, HostsLoaded),
     hosts_load(Hosts, HostsLoaded,
                (Index + 1) rem ProcessCount,
                ProcessIndex, ProcessCount, Service,
-               IntervalDefault, IPv4Allowed, IPv6Allowed, Environment).
+               IntervalDefault, IPv4Allowed, IPv6Allowed, DNSNameservers,
+               Environment).
 
 health_check(Hostname,
              #state{service = Service,
@@ -722,7 +741,8 @@ health_check_dns(Host0, TimeoutDNS, ErrorLogLevel) ->
 health_check_dns_ipv4(#host{ipv4_allowed = false} = Host, _) ->
     {ok, Host};
 health_check_dns_ipv4(#host{name = Hostname,
-                            ipv6_allowed = IPv6Allowed} = Host,
+                            ipv6_allowed = IPv6Allowed,
+                            dns_nameservers = undefined} = Host,
                       Timeout) ->
     case inet_getaddrs(Hostname, inet, Timeout) of
         {ok, IPv4} ->
@@ -731,12 +751,28 @@ health_check_dns_ipv4(#host{name = Hostname,
             {ok, Host#host{ipv4 = []}};
         {error, _} = Error ->
             Error
+    end;
+health_check_dns_ipv4(#host{name = Hostname,
+                            ipv6_allowed = IPv6Allowed,
+                            dns_nameservers = DNSNameservers} = Host,
+                      Timeout) ->
+    case inet_res:lookup(Hostname, in, a,
+                         [{nameservers, DNSNameservers},
+                          {alt_nameservers, []},
+                          {timeout, Timeout}], infinity) of
+        [] when IPv6Allowed =:= true ->
+            {ok, Host#host{ipv4 = []}};
+        [] ->
+            {error, nxdomain};
+        [_ | _] = IPv4 ->
+            {ok, Host#host{ipv4 = lists:usort(IPv4)}}
     end.
 
 health_check_dns_ipv6(#host{ipv6_allowed = false} = Host, _) ->
     {ok, Host};
 health_check_dns_ipv6(#host{name = Hostname,
-                            ipv4_allowed = IPv4Allowed} = Host,
+                            ipv4_allowed = IPv4Allowed,
+                            dns_nameservers = undefined} = Host,
                       Timeout) ->
     case inet_getaddrs(Hostname, inet6, Timeout) of
         {ok, IPv6} ->
@@ -745,6 +781,21 @@ health_check_dns_ipv6(#host{name = Hostname,
             {ok, Host#host{ipv6 = []}};
         {error, _} = Error ->
             Error
+    end;
+health_check_dns_ipv6(#host{name = Hostname,
+                            ipv4_allowed = IPv4Allowed,
+                            dns_nameservers = DNSNameservers} = Host,
+                      Timeout) ->
+    case inet_res:lookup(Hostname, in, aaaa,
+                         [{nameservers, DNSNameservers},
+                          {alt_nameservers, []},
+                          {timeout, Timeout}], infinity) of
+        [] when IPv4Allowed =:= true ->
+            {ok, Host#host{ipv6 = []}};
+        [] ->
+            {error, nxdomain};
+        [_ | _] = IPv6 ->
+            {ok, Host#host{ipv6 = lists:usort(IPv6)}}
     end.
 
 health_check_update_ips(#host{dns_failed = true} = HostN, _, _, _, _) ->
@@ -972,6 +1023,18 @@ dns_ip_removed_failed(#host{name = Hostname,
             ok = DNSIPRemovedFailed(Hostname, IP, TimeFailure, TimeRemoved)
     end,
     Host.
+
+dns_nameserver([]) ->
+    true;
+dns_nameserver([{IP, Port} | Nameservers])
+    when Port >= 1 andalso Port =< 65535 ->
+    true = inet:is_ip_address(IP),
+    dns_nameserver(Nameservers).
+
+dns_nameservers(undefined) ->
+    true;
+dns_nameservers([_ | _] = Nameservers) ->
+    dns_nameserver(Nameservers).
 
 inet_getaddrs(Hostname, Family, Timeout) ->
     % Erlang/OTP inet:getaddrs/3 is undocumented and fails to timeout
