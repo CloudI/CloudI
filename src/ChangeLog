@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-10-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add Erlang process descriptions in cloudi_core service processes
+    * Add C++ lambda use in the C++ messaging integration test
+
 2023-10-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_health_check dns_nameservers argument

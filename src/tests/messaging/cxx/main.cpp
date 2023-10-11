@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,6 +33,11 @@
 #include <sstream>
 #include <limits>
 #include "assert.hpp"
+
+#if __cplusplus >= 201103L
+// C++11 added basic lambda support
+#define CXX11
+#endif
 
 class thread_data : public thread_pool_thread_data
 {
@@ -147,8 +152,32 @@ class task : public thread_pool_input<thread_data, task_output_data>
             result = m_api.subscribe("f2", *this,
                                      &task::sequence3_f2);
             assert(result == CloudI::API::return_value::success);
+#ifndef CXX11
             result = m_api.subscribe("g1", *this,
                                      &task::sequence3_g1);
+#else
+            result = m_api.subscribe("g1",
+                [](CloudI::API const & api,
+                   int const request_type,
+                   std::string const & name,
+                   std::string const & pattern,
+                   void const * const /*request_info*/,
+                   uint32_t const /*request_info_size*/,
+                   void const * const request,
+                   uint32_t const /*request_size*/,
+                   uint32_t timeout,
+                   int8_t /*priority*/,
+                   char const * const trans_id,
+                   char const * const source,
+                   uint32_t const source_size)
+                {
+                    std::string s(reinterpret_cast<char const *>(request));
+                    s += "suffix";
+                    api.return_(request_type, name, pattern,
+                                "", 0, s.c_str(), s.size() + 1,
+                                timeout, trans_id, source, source_size);
+                });
+#endif
             assert(result == CloudI::API::return_value::success);
             result = m_api.subscribe("sequence3", *this,
                                      &task::sequence3);
@@ -966,6 +995,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                          timeout, priority, trans_id, source, source_size);
         }
 
+#ifndef CXX11
         void sequence3_g1(CloudI::API const & api,
                           int const request_type,
                           std::string const & name,
@@ -986,6 +1016,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                         "", 0, s.c_str(), s.size() + 1,
                         timeout, trans_id, source, source_size);
         }
+#endif
 
         void sequence3(CloudI::API const & api,
                        int const request_type,

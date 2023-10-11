@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -310,10 +310,16 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
     ConfigOptionsNew = check_init_send(ConfigOptions),
     DuoModePid = if
         DuoMode =:= true ->
+            erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+                       process_description("dispatcher (sender)",
+                                           ProcessIndex)),
             spawn_opt_proc_lib(fun() ->
                 erlang:put(?SERVICE_ID_PDICT_KEY, ID),
                 erlang:put(?SERVICE_UPTIME_PDICT_KEY, Uptime),
                 erlang:put(?SERVICE_FILE_PDICT_KEY, Module),
+                erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+                           process_description("duo_mode info_pid (receiver)",
+                                               ProcessIndex)),
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
                                               queued_word_size = WordSize,
                                               module = Module,
@@ -322,6 +328,9 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                               options = ConfigOptionsNew})
             end, InfoPidOptions);
         DuoMode =:= false ->
+            erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+                       process_description("dispatcher (sender/receiver)",
+                                           ProcessIndex)),
             undefined
     end,
     ReceiverPid = if
@@ -3175,12 +3184,18 @@ handle_module_request_loop_pid(RequestPidOld, ModuleRequest,
                  hibernate_check(Hibernate) of
                 false ->
                     spawn_opt_erlang(fun() ->
+                        erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+                                   process_description("request_pid "
+                                                       "(without hibernate)")),
                         handle_module_request_loop_normal(RequestPidUses,
                                                           ModuleRequest,
                                                           ResultPid)
                     end, RequestPidOptions);
                 true ->
                     spawn_opt_erlang(fun() ->
+                        erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+                                   process_description("request_pid "
+                                                       "(with hibernate)")),
                         handle_module_request_loop_hibernate(RequestPidUses,
                                                              ModuleRequest,
                                                              ResultPid)
@@ -3305,12 +3320,18 @@ handle_module_info_loop_pid(InfoPidOld, ModuleInfo,
                  hibernate_check(Hibernate) of
                 false ->
                     spawn_opt_erlang(fun() ->
+                        erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+                                   process_description("info_pid "
+                                                       "(without hibernate)")),
                         handle_module_info_loop_normal(InfoPidUses,
                                                        ModuleInfo,
                                                        ResultPid)
                     end, InfoPidOptions);
                 true ->
                     spawn_opt_erlang(fun() ->
+                        erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+                                   process_description("info_pid "
+                                                       "(with hibernate)")),
                         handle_module_info_loop_hibernate(InfoPidUses,
                                                           ModuleInfo,
                                                           ResultPid)
@@ -4362,6 +4383,13 @@ spawn_opt_pid(M, F, Options) ->
         spawn_opt_options_after(Options),
         F()
     end, spawn_opt_options_before(Options)).
+
+process_description([_ | _] = ProcessName) ->
+    "cloudi_core internal service " ++ ProcessName.
+
+process_description([_ | _] = ProcessName, ProcessIndex) ->
+    "cloudi_core internal service " ++ ProcessName ++ " process index " ++
+    erlang:integer_to_list(ProcessIndex).
 
 update(_, _, #config_service_update{type = Type})
     when Type =/= internal ->

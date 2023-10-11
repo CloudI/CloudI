@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -337,6 +337,9 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
     erlang:put(?SERVICE_UPTIME_PDICT_KEY, Uptime),
     erlang:put(?SERVICE_FILE_PDICT_KEY, hd(CommandLine)),
+    erlang:put(?PROCESS_DESCRIPTION_PDICT_KEY,
+               process_description("dispatcher (sender/receiver)",
+                                   ProcessIndex)),
     Dispatcher = self(),
     InitTimer = erlang:send_after(Timeout, Dispatcher,
                                   'cloudi_service_init_timeout'),
@@ -2685,6 +2688,10 @@ aspects_request_after([F | L],
                        [F, ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}, ServiceState}
     end.
+
+process_description([_ | _] = ProcessName, ProcessIndex) ->
+    "cloudi_core external service " ++ ProcessName ++ " process index " ++
+    erlang:integer_to_list(ProcessIndex).
 
 update(_, #config_service_update{type = Type})
     when Type =/= external ->
