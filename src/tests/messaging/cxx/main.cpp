@@ -172,7 +172,7 @@ class task : public thread_pool_input<thread_data, task_output_data>
                    uint32_t const source_size)
                 {
                     std::string s(reinterpret_cast<char const *>(request));
-                    s += "suffix";
+                    s += "lambda_suffix";
                     api.return_(request_type, name, pattern,
                                 "", 0, s.c_str(), s.size() + 1,
                                 timeout, trans_id, source, source_size);
@@ -1049,8 +1049,15 @@ class task : public thread_pool_input<thread_data, task_output_data>
             result = api.send_sync(std::string(api.prefix()) + "g1",
                                    "prefix_", 8);
             assert(result == CloudI::API::return_value::success);
+#ifndef CXX11
             assert(api.get_response_size() == 14);
-            assert(::memcmp(api.get_response(), "prefix_suffix", 14) == 0);
+            assert(::memcmp(api.get_response(),
+                            "prefix_suffix", 14) == 0);
+#else
+            assert(api.get_response_size() == 21);
+            assert(::memcmp(api.get_response(),
+                            "prefix_lambda_suffix", 21) == 0);
+#endif
             std::cout << "messaging sequence3 end c++ (" <<
                 std::string(reinterpret_cast<char const *>(request),
                             request_size - 1) << ")" << std::endl;
