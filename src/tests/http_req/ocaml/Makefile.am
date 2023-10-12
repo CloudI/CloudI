@@ -14,7 +14,7 @@ http_req_ocaml: main.mli main.ml
 	$(OCAMLC) $(OCAMLFLAGS) -o main.cmi -c $(srcdir)/main.mli
 	$(OCAMLOPT) $(OCAMLFLAGS) -o main.cmx -c \
                 -I $(top_builddir)/api/ocaml/ -thread $(srcdir)/main.ml
-	$(OCAMLOPT) -o http_req_ocaml $(OCAMLDEPS) main.cmx
+	$(OCAMLOPT) $(OCAMLFLAGS) -o http_req_ocaml $(OCAMLDEPS) main.cmx
 
 install-exec-hook: http_req_ocaml
 	$(MKDIR_P) $(instdir)

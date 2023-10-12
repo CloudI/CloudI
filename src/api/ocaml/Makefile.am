@@ -11,7 +11,7 @@ native_DATA = erlang.cmi \
               cloudi.cmx \
               cloudi.cma \
               cloudi.cmxa \
-			  cloudi.a
+              cloudi.a
 CLEANFILES = $(native_DATA) \
              erlang.cmo \
              erlang.o \

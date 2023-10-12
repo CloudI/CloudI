@@ -15,13 +15,13 @@
 0-1
  = -1
 max_int
- = 4611686018427387903
+ = 1073741823
 min_int
- = -4611686018427387904
+ = -1073741824
 -max_int
- = -4611686018427387903
+ = -1073741823
 -min_int
- = 4611686018427387904
+ = 1073741824
 2^300
  = 2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376
 2^120
@@ -99,13 +99,13 @@ min_int
 (-1)-(-(2^300))
  = 2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397375
 max_int+1
- = 4611686018427387904
+ = 1073741824
 min_int-1
- = -4611686018427387905
+ = -1073741825
 -max_int-1
- = -4611686018427387904
+ = -1073741824
 -min_int-1
- = 4611686018427387903
+ = 1073741823
 5! = 120
 12! = 479001600
 15! = 1307674368000
@@ -183,13 +183,13 @@ min_int-1
 -(2^300)-1
  = -2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397377
 max_int+1
- = 4611686018427387904
+ = 1073741824
 min_int-1
- = -4611686018427387905
+ = -1073741825
 -max_int-1
- = -4611686018427387904
+ = -1073741824
 -min_int-1
- = 4611686018427387903
+ = 1073741823
 abs(0)
  = 0
 abs(1)
@@ -197,89 +197,145 @@ abs(1)
 abs(-1)
  = 1
 abs(min_int)
- = 4611686018427387904
+ = 1073741824
 abs(2^300)
  = 2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376
 abs(-(2^300))
  = 2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376
-max_natint
- = 9223372036854775807
+max_nativeint
+ = 2147483647
 max_int32
  = 2147483647
 max_int64
  = 9223372036854775807
 to_int 1
- = 1
+ = true,1
 to_int max_int
- = 4611686018427387903
-to_int max_natint
- = ovf
+ = true,1073741823
+to_int max_nativeint
+ = false,ovf
 to_int max_int32
- = 2147483647
+ = false,ovf
 to_int max_int64
- = ovf
+ = false,ovf
 to_int32 1
- = 1
+ = true,1
 to_int32 max_int
- = ovf
-to_int32 max_natint
- = ovf
+ = true,1073741823
+to_int32 max_nativeint
+ = true,2147483647
 to_int32 max_int32
- = 2147483647
+ = true,2147483647
 to_int32 max_int64
- = ovf
+ = false,ovf
 to_int64 1
- = 1
+ = true,1
 to_int64 max_int
- = 4611686018427387903
-to_int64 max_natint
- = 9223372036854775807
+ = true,1073741823
+to_int64 max_nativeint
+ = true,2147483647
 to_int64 max_int32
- = 2147483647
+ = true,2147483647
 to_int64 max_int64
- = 9223372036854775807
-to_natint 1
- = 1
-to_natint max_int
- = 4611686018427387903
-to_natint max_natint
- = 9223372036854775807
-to_natint max_int32
- = 2147483647
-to_natint max_int64
- = 9223372036854775807
+ = true,9223372036854775807
+to_nativeint 1
+ = true,1
+to_nativeint max_int
+ = true,1073741823
+to_nativeint max_nativeint
+ = true,2147483647
+to_nativeint max_int32
+ = true,2147483647
+to_nativeint max_int64
+ = false,ovf
 to_int -min_int
- = ovf
-to_int -min_natint
- = ovf
+ = false,ovf
+to_int -min_nativeint
+ = false,ovf
 to_int -min_int32
- = 2147483648
+ = false,ovf
 to_int -min_int64
- = ovf
+ = false,ovf
 to_int32 -min_int
- = ovf
-to_int32 -min_natint
- = ovf
+ = true,1073741824
+to_int32 -min_nativeint
+ = false,ovf
 to_int32 -min_int32
- = ovf
+ = false,ovf
 to_int32 -min_int64
- = ovf
+ = false,ovf
 to_int64 -min_int
- = 4611686018427387904
-to_int64 -min_natint
- = ovf
+ = true,1073741824
+to_int64 -min_nativeint
+ = true,2147483648
 to_int64 -min_int32
- = 2147483648
+ = true,2147483648
 to_int64 -min_int64
- = ovf
-to_natint -min_int
- = 4611686018427387904
-to_natint -min_natint
- = ovf
-to_natint -min_int32
- = 2147483648
-to_natint -min_int64
- = ovf
+ = false,ovf
+to_nativeint -min_int
+ = true,1073741824
+to_nativeint -min_nativeint
+ = false,ovf
+to_nativeint -min_int32
+ = false,ovf
+to_nativeint -min_int64
+ = false,ovf
+to_int32_unsigned 1
+ = true,1
+to_int32_unsigned -1
+ = false,ovf
+to_int32_unsigned max_int
+ = true,1073741823
+to_int32_unsigned max_nativeint
+ = true,2147483647
+to_int32_unsigned max_int32
+ = true,2147483647
+to_int32_unsigned 2max_int32
+ = true,-2
+to_int32_unsigned 3max_int32
+ = false,ovf
+to_int32_unsigned max_int64
+ = false,ovf
+to_int64_unsigned 1
+ = true,1
+to_int64_unsigned -1
+ = false,ovf
+to_int64_unsigned max_int
+ = true,1073741823
+to_int64_unsigned max_nativeint
+ = true,2147483647
+to_int64_unsigned max_int32
+ = true,2147483647
+to_int64_unsigned max_int64
+ = true,9223372036854775807
+to_int64_unsigned 2max_int64
+ = true,-2
+to_int64_unsigned 3max_int64
+ = false,ovf
+to_nativeint_unsigned 1
+ = true,1
+to_nativeint_unsigned -1
+ = false,ovf
+to_nativeint_unsigned max_int
+ = true,1073741823
+to_nativeint_unsigned max_nativeint
+ = true,2147483647
+to_nativeint_unsigned 2max_nativeint
+ = true,-2
+to_nativeint_unsigned max_int32
+ = true,2147483647
+to_nativeint_unsigned max_int64
+ = false,ovf
+to_nativeint_unsigned 2max_int64
+ = false,ovf
+to_nativeint_unsigned 3max_int64
+ = false,ovf
+of_int32_unsigned -1
+ = 4294967295
+of_int64_unsigned -1
+ = 18446744073709551615
+of_nativeint_unsigned -1
+ = 4294967295
 of_float 1.
  = 1
 of_float -1.
@@ -391,7 +447,7 @@ of_string 000123456789012345678901234567890
 2^120 / 2^300 (trunc)
  = 0
 max_int / 2 (trunc)
- = 2305843009213693951
+ = 536870911
 (2^300+1) / 2^120 (trunc)
  = 1532495540865888858358347027150309183618739122183602176
 (-(2^300+1)) / 2^120 (trunc)
@@ -403,7 +459,7 @@ max_int / 2 (trunc)
 2^120 / 2^300 (ceil)
  = 1
 max_int / 2 (ceil)
- = 2305843009213693952
+ = 536870912
 (2^300+1) / 2^120 (ceil)
  = 1532495540865888858358347027150309183618739122183602177
 (-(2^300+1)) / 2^120 (ceil)
@@ -415,7 +471,7 @@ max_int / 2 (ceil)
 2^120 / 2^300 (floor)
  = 0
 max_int / 2 (floor)
- = 2305843009213693951
+ = 536870911
 (2^300+1) / 2^120 (floor)
  = 1532495540865888858358347027150309183618739122183602176
 (-(2^300+1)) / 2^120 (floor)
@@ -439,7 +495,7 @@ max_int % 2
 2^120 /,% 2^300
  = 0, 1329227995784915872903807060280344576
 max_int /,% 2
- = 2305843009213693951, 1
+ = 536870911, 1
 (2^300+1) /,% 2^120
  = 1532495540865888858358347027150309183618739122183602176, 1
 (-(2^300+1)) /,% 2^120
@@ -1036,19 +1092,19 @@ to_bits 0
 marshal round trip 0
  = OK
 to_bits 2
- = 02 00 00 00 00 00 00 00
+ = 02 00 00 00
 marshal round trip 2
  = OK
 to_bits -2
- = 02 00 00 00 00 00 00 00
+ = 02 00 00 00
 marshal round trip -2
  = OK
 to_bits 1073741824
- = 00 00 00 40 00 00 00 00
+ = 00 00 00 40
 marshal round trip 1073741824
  = OK
 to_bits -1073741824
- = 00 00 00 40 00 00 00 00
+ = 00 00 00 40
 marshal round trip -1073741824
  = OK
 to_bits 4611686018427387904
@@ -1071,20 +1127,20 @@ to_bits 2658455991569831745807614120560689152
  = 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02
 marshal round trip 2658455991569831745807614120560689152
  = OK
-to_bits 4611686018427387903
- = ff ff ff ff ff ff ff 3f
-marshal round trip 4611686018427387903
+to_bits 1073741823
+ = ff ff ff 3f
+marshal round trip 1073741823
  = OK
-to_bits -4611686018427387904
- = 00 00 00 00 00 00 00 40
-marshal round trip -4611686018427387904
+to_bits -1073741824
+ = 00 00 00 40
+marshal round trip -1073741824
  = OK
 to_bits 2147483647
- = ff ff ff 7f 00 00 00 00
+ = ff ff ff 7f
 marshal round trip 2147483647
  = OK
 to_bits -2147483648
- = 00 00 00 80 00 00 00 00
+ = 00 00 00 80
 marshal round trip -2147483648
  = OK
 to_bits 9223372036854775807
@@ -1095,13 +1151,13 @@ to_bits -9223372036854775808
  = 00 00 00 00 00 00 00 80
 marshal round trip -9223372036854775808
  = OK
-to_bits 9223372036854775807
- = ff ff ff ff ff ff ff 7f
-marshal round trip 9223372036854775807
+to_bits 2147483647
+ = ff ff ff 7f
+marshal round trip 2147483647
  = OK
-to_bits -9223372036854775808
- = 00 00 00 00 00 00 00 80
-marshal round trip -9223372036854775808
+to_bits -2147483648
+ = 00 00 00 80
+marshal round trip -2147483648
  = OK
 testbit 0 (passed)
 testbit 1 (passed)
@@ -1113,6 +1169,11 @@ numbits / trailing_zeros 1 (passed)
 numbits / trailing_zeros -42 (passed)
 numbits / trailing_zeros 1511006158790834639735881728 (passed)
 numbits / trailing_zeros -2277361236363886404304896 (passed)
+random_bits 45 = 25076743995969
+random_bits 45 = 33510880286625
+random_bits 12 = 1263
+random_int 123456 = 103797
+random_int 9999999 = 1089068
 - 0 = 0
 - 1 = -1
 - -1 = 1

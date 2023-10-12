@@ -1,10 +1,22 @@
+Release 1.13 (2023-07-19)
+- #113: add conversions to/from small unsigned integers `(to|fits)_(int32|int64|nativeint)_unsigned` [Antoine Miné]
+- #128: add functions to pseudo-randomly generate integers [Xavier Leroy]
+- #105: add `Big_int.big_int_of_float` [Yishuai Li]
+- #90: add fast path to `Z.extract` when extraction leads to a small integer [Frédéric Recoules]
+- #137: more precise bounds for of_float conversion to small ints [Antoine Miné]
+- #118: fix Z_mlgmpidl interface for mlgmpidl >= 1.2 [Simmo Saan]
+- #109: fix typo in `ml_z_mul` function [Bernhard Schommer]
+- #108: fix dependency on C evaluation order in `ml_z_remove` [Xavier Clerc]
+- #117 #120 #129 #132 #135 #139 #141: configure & build simplifications and fixes [various authors]
+- #134: CI testing: add Windows, test both 4.14 and 5.0 [Hugo Heuzard]
+
 Release 1.12 (2021-03-03)
 - PR #79: fast path in OCaml (instead of assembly language) [Xavier Leroy]
 - PR #94: remove source preprocessing and simplify configuration [Xavier Leroy]
 - PR #93: fix parallel build [Guillaume Melquiond]
 - PR #92: fix benchmark for subtraction [Guillaume Melquiond]
-- require OCaml 4.04 or later [Xavier Leroy]
-- add CI testing on macOS  [Xavier Leroy]
+- Require OCaml 4.04 or later [Xavier Leroy]
+- Add CI testing on macOS  [Xavier Leroy]
 
 Release 1.11 (2020-11-09)
 - Fixes #72, #75, #78: multiple fixes for of_string, support for underscores [hhugo]

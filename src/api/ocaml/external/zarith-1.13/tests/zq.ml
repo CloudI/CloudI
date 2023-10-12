@@ -68,12 +68,43 @@ let pow a b =
   in
   doit b
 
-let cvt_int x = try string_of_int (I.to_int x) with I.Overflow -> "ovf"
-let cvt_int32 x = try Int32.to_string (I.to_int32 x) with I.Overflow -> "ovf"
-let cvt_int64 x = try Int64.to_string (I.to_int64 x) with I.Overflow -> "ovf"
-let cvt_nativeint x = try Nativeint.to_string (I.to_nativeint x) with I.Overflow -> "ovf"
+let cvt_int x =
+  (string_of_bool (I.fits_int x))
+  ^","^
+  (try string_of_int (I.to_int x) with I.Overflow -> "ovf")
+
+let cvt_int32 x =
+  (string_of_bool (I.fits_int32 x))
+  ^","^
+  (try Int32.to_string (I.to_int32 x) with I.Overflow -> "ovf")
+
+let cvt_int64 x =
+  (string_of_bool (I.fits_int64 x))
+  ^","^
+  (try Int64.to_string (I.to_int64 x) with I.Overflow -> "ovf")
+
+let cvt_nativeint x =
+  (string_of_bool (I.fits_nativeint x))
+  ^","^
+  (try Nativeint.to_string (I.to_nativeint x) with I.Overflow -> "ovf")
+
+let cvt_int32_unsigned x =
+  (string_of_bool (I.fits_int32_unsigned x))
+  ^","^
+  (try Int32.to_string (I.to_int32_unsigned x) with I.Overflow -> "ovf")
+
+let cvt_int64_unsigned x =
+  (string_of_bool (I.fits_int64_unsigned x))
+  ^","^
+  (try Int64.to_string (I.to_int64_unsigned x) with I.Overflow -> "ovf")
+
+let cvt_nativeint_unsigned x =
+  (string_of_bool (I.fits_nativeint_unsigned x))
+  ^","^
+  (try Nativeint.to_string (I.to_nativeint_unsigned x) with I.Overflow -> "ovf")
 
 let p2 = I.of_int 2
+let p3 = I.of_int 3
 let p30 = pow2 30
 let p62 = pow2 62
 let p300 = pow2 300
@@ -149,6 +180,17 @@ let chk_testbit x =
   if !ok
   then Printf.printf "(passed)\n"
   else Printf.printf "(FAILED)\n"
+
+let pr_byte =
+  let state = ref 0 in
+  fun () ->
+    state := (!state * 65793 + 4282663) land 0xFF_FF_FF;
+    !state lsr 16
+
+let pr_bytes buf pos len =
+  for i = pos to pos + len - 1 do
+    Bytes.set_uint8 buf i (pr_byte ())
+  done
 
 let test_Z() =
   Printf.printf "0\n = %a\n" pr I.zero;
@@ -256,45 +298,74 @@ let test_Z() =
   Printf.printf "abs(min_int)\n = %a\n" pr (I.abs mini);
   Printf.printf "abs(2^300)\n = %a\n" pr (I.abs p300);
   Printf.printf "abs(-(2^300))\n = %a\n" pr (I.abs (I.neg p300));
-  Printf.printf "max_natint\n = %a\n" pr maxni;
+  Printf.printf "max_nativeint\n = %a\n" pr maxni;
   Printf.printf "max_int32\n = %a\n" pr maxi32;
   Printf.printf "max_int64\n = %a\n" pr maxi64;
   Printf.printf "to_int 1\n = %s\n" (cvt_int I.one);
   Printf.printf "to_int max_int\n = %s\n" (cvt_int maxi);
-  Printf.printf "to_int max_natint\n = %s\n" (cvt_int maxni);
+  Printf.printf "to_int max_nativeint\n = %s\n" (cvt_int maxni);
   Printf.printf "to_int max_int32\n = %s\n" (cvt_int maxi32);
   Printf.printf "to_int max_int64\n = %s\n" (cvt_int maxi64);
   Printf.printf "to_int32 1\n = %s\n" (cvt_int32 I.one);
   Printf.printf "to_int32 max_int\n = %s\n" (cvt_int32 maxi);
-  Printf.printf "to_int32 max_natint\n = %s\n" (cvt_int32 maxni);
+  Printf.printf "to_int32 max_nativeint\n = %s\n" (cvt_int32 maxni);
   Printf.printf "to_int32 max_int32\n = %s\n" (cvt_int32 maxi32);
   Printf.printf "to_int32 max_int64\n = %s\n" (cvt_int32 maxi64);
   Printf.printf "to_int64 1\n = %s\n" (cvt_int64 I.one);
   Printf.printf "to_int64 max_int\n = %s\n" (cvt_int64 maxi);
-  Printf.printf "to_int64 max_natint\n = %s\n" (cvt_int64 maxni);
+  Printf.printf "to_int64 max_nativeint\n = %s\n" (cvt_int64 maxni);
   Printf.printf "to_int64 max_int32\n = %s\n" (cvt_int64 maxi32);
   Printf.printf "to_int64 max_int64\n = %s\n" (cvt_int64 maxi64);
-  Printf.printf "to_natint 1\n = %s\n" (cvt_nativeint I.one);
-  Printf.printf "to_natint max_int\n = %s\n" (cvt_nativeint maxi);
-  Printf.printf "to_natint max_natint\n = %s\n" (cvt_nativeint maxni);
-  Printf.printf "to_natint max_int32\n = %s\n" (cvt_nativeint maxi32);
-  Printf.printf "to_natint max_int64\n = %s\n" (cvt_nativeint maxi64);
+  Printf.printf "to_nativeint 1\n = %s\n" (cvt_nativeint I.one);
+  Printf.printf "to_nativeint max_int\n = %s\n" (cvt_nativeint maxi);
+  Printf.printf "to_nativeint max_nativeint\n = %s\n" (cvt_nativeint maxni);
+  Printf.printf "to_nativeint max_int32\n = %s\n" (cvt_nativeint maxi32);
+  Printf.printf "to_nativeint max_int64\n = %s\n" (cvt_nativeint maxi64);
   Printf.printf "to_int -min_int\n = %s\n" (cvt_int (I.neg mini));
-  Printf.printf "to_int -min_natint\n = %s\n" (cvt_int (I.neg minni));
+  Printf.printf "to_int -min_nativeint\n = %s\n" (cvt_int (I.neg minni));
   Printf.printf "to_int -min_int32\n = %s\n" (cvt_int (I.neg mini32));
   Printf.printf "to_int -min_int64\n = %s\n" (cvt_int (I.neg mini64));
   Printf.printf "to_int32 -min_int\n = %s\n" (cvt_int32 (I.neg mini));
-  Printf.printf "to_int32 -min_natint\n = %s\n" (cvt_int32 (I.neg minni));
+  Printf.printf "to_int32 -min_nativeint\n = %s\n" (cvt_int32 (I.neg minni));
   Printf.printf "to_int32 -min_int32\n = %s\n" (cvt_int32 (I.neg mini32));
   Printf.printf "to_int32 -min_int64\n = %s\n" (cvt_int32(I.neg  mini64));
   Printf.printf "to_int64 -min_int\n = %s\n" (cvt_int64 (I.neg mini));
-  Printf.printf "to_int64 -min_natint\n = %s\n" (cvt_int64 (I.neg minni));
+  Printf.printf "to_int64 -min_nativeint\n = %s\n" (cvt_int64 (I.neg minni));
   Printf.printf "to_int64 -min_int32\n = %s\n" (cvt_int64 (I.neg mini32));
   Printf.printf "to_int64 -min_int64\n = %s\n" (cvt_int64 (I.neg mini64));
-  Printf.printf "to_natint -min_int\n = %s\n" (cvt_nativeint (I.neg mini));
-  Printf.printf "to_natint -min_natint\n = %s\n" (cvt_nativeint (I.neg minni));
-  Printf.printf "to_natint -min_int32\n = %s\n" (cvt_nativeint (I.neg mini32));
-  Printf.printf "to_natint -min_int64\n = %s\n" (cvt_nativeint (I.neg mini64));
+  Printf.printf "to_nativeint -min_int\n = %s\n" (cvt_nativeint (I.neg mini));
+  Printf.printf "to_nativeint -min_nativeint\n = %s\n" (cvt_nativeint (I.neg minni));
+  Printf.printf "to_nativeint -min_int32\n = %s\n" (cvt_nativeint (I.neg mini32));
+  Printf.printf "to_nativeint -min_int64\n = %s\n" (cvt_nativeint (I.neg mini64));
+  Printf.printf "to_int32_unsigned 1\n = %s\n" (cvt_int32_unsigned I.one);
+  Printf.printf "to_int32_unsigned -1\n = %s\n" (cvt_int32_unsigned I.minus_one);
+  Printf.printf "to_int32_unsigned max_int\n = %s\n" (cvt_int32_unsigned maxi);
+  Printf.printf "to_int32_unsigned max_nativeint\n = %s\n" (cvt_int32_unsigned maxni);
+  Printf.printf "to_int32_unsigned max_int32\n = %s\n" (cvt_int32_unsigned maxi32);
+  Printf.printf "to_int32_unsigned 2max_int32\n = %s\n" (cvt_int32_unsigned (I.mul p2 maxi32));
+  Printf.printf "to_int32_unsigned 3max_int32\n = %s\n" (cvt_int32_unsigned (I.mul p3 maxi32));
+  Printf.printf "to_int32_unsigned max_int64\n = %s\n" (cvt_int32_unsigned maxi64);
+  Printf.printf "to_int64_unsigned 1\n = %s\n" (cvt_int64_unsigned I.one);
+  Printf.printf "to_int64_unsigned -1\n = %s\n" (cvt_int64_unsigned I.minus_one);
+  Printf.printf "to_int64_unsigned max_int\n = %s\n" (cvt_int64_unsigned maxi);
+  Printf.printf "to_int64_unsigned max_nativeint\n = %s\n" (cvt_int64_unsigned maxni);
+  Printf.printf "to_int64_unsigned max_int32\n = %s\n" (cvt_int64_unsigned maxi32);
+  Printf.printf "to_int64_unsigned max_int64\n = %s\n" (cvt_int64_unsigned maxi64);
+  Printf.printf "to_int64_unsigned 2max_int64\n = %s\n" (cvt_int64_unsigned (I.mul p2 maxi64));
+  Printf.printf "to_int64_unsigned 3max_int64\n = %s\n" (cvt_int64_unsigned (I.mul p3 maxi64));
+  Printf.printf "to_nativeint_unsigned 1\n = %s\n" (cvt_nativeint_unsigned I.one);
+  Printf.printf "to_nativeint_unsigned -1\n = %s\n" (cvt_nativeint_unsigned I.minus_one);
+  Printf.printf "to_nativeint_unsigned max_int\n = %s\n" (cvt_nativeint_unsigned maxi);
+  Printf.printf "to_nativeint_unsigned max_nativeint\n = %s\n" (cvt_nativeint_unsigned maxni);
+  Printf.printf "to_nativeint_unsigned 2max_nativeint\n = %s\n" (cvt_nativeint_unsigned (I.mul p2 maxni));
+  Printf.printf "to_nativeint_unsigned max_int32\n = %s\n" (cvt_nativeint_unsigned maxi32);
+  Printf.printf "to_nativeint_unsigned max_int64\n = %s\n" (cvt_nativeint_unsigned maxi64);
+  Printf.printf "to_nativeint_unsigned 2max_int64\n = %s\n" (cvt_nativeint_unsigned (I.mul p2 maxi64));
+  Printf.printf "to_nativeint_unsigned 3max_int64\n = %s\n" (cvt_nativeint_unsigned (I.mul p3 maxi64));
+  Printf.printf "of_int32_unsigned -1\n = %a\n" pr (I.of_int32_unsigned (-1l));
+  Printf.printf "of_int64_unsigned -1\n = %a\n" pr (I.of_int64_unsigned (-1L));
+  Printf.printf "of_nativeint_unsigned -1\n = %a\n" pr (I.of_nativeint_unsigned (-1n));
+
   Printf.printf "of_float 1.\n = %a\n" pr (I.of_float 1.);
   Printf.printf "of_float -1.\n = %a\n" pr (I.of_float (-. 1.));
   Printf.printf "of_float pi\n = %a\n" pr (I.of_float (2. *. acos 0.));
@@ -746,6 +817,18 @@ let test_Z() =
     I.shift_left (I.of_int 9999) 77;
     I.neg (I.shift_left (I.of_int 123456) 64);
   ];
+
+  Printf.printf "random_bits 45 = %a\n"
+    pr (I.random_bits_gen ~fill:pr_bytes 45);
+  Printf.printf "random_bits 45 = %a\n"
+    pr (I.random_bits_gen ~fill:pr_bytes 45);
+  Printf.printf "random_bits 12 = %a\n"
+    pr (I.random_bits_gen ~fill:pr_bytes 12);
+  Printf.printf "random_int 123456 = %a\n"
+    pr (I.random_int_gen ~fill:pr_bytes (I.of_int 123456));
+  Printf.printf "random_int 9999999 = %a\n"
+    pr (I.random_int_gen ~fill:pr_bytes (I.of_int 9999999));
+
   ()
 
 

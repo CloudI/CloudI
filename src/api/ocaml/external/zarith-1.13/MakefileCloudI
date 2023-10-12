@@ -1,4 +1,4 @@
-# num-1.1 makefile adapted for zarith-1.12
+# num-1.1 makefile adapted for zarith
 OCAMLC ?= ocamlc
 OCAMLOPT ?= ocamlopt
 OCAMLDEP ?= ocamldep
@@ -12,7 +12,7 @@ include $(STDLIBDIR)/Makefile.config
 CFLAGS=-I$(STDLIBDIR) $(GMP_H_CFLAGS) -DHAS_GMP -O3 -Wall -Wextra
 LIBS=$(GMP_LIB)
 
-CAMLCFLAGS=-w +a-4-6-58-70 -warn-error A -I +compiler-libs -bin-annot -g
+CAMLCFLAGS=-w +a-4-6-32-39-58-70 -warn-error A -I +compiler-libs -bin-annot -g
 CAMLOPTFLAGS=$(CAMLCFLAGS)
 
 CMIS=z.cmi q.cmi big_int_Z.cmi

@@ -1,0 +1,12 @@
+*.a
+*.cm?
+*.cmxa
+*.cmxs
+*.cmti
+*.exe
+*.byt
+*.o
+*.so
+Makefile
+depend
+zarith_version.ml

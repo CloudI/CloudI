@@ -28,10 +28,10 @@ let mpz_of_z x =
   r
 
 let z_of_mpzf x =
-  z_of_mpz (Mpzf.mpz x)
+  z_of_mpz (Mpzf._mpz x)
 
 let mpzf_of_z x =
-  Mpzf.mpzf (mpz_of_z x)
+  Mpzf._mpzf (mpz_of_z x)
 
 let q_of_mpq x =
   let n,d = Mpz.init (), Mpz.init () in
@@ -43,7 +43,7 @@ let mpq_of_q x =
   Mpq.of_mpz2 (mpz_of_z x.Q.num) (mpz_of_z x.Q.den)
 
 let q_of_mpqf x =
-  q_of_mpq (Mpqf.mpq x)
+  q_of_mpq (Mpqf._mpq x)
 
 let mpqf_of_q x =
-  Mpqf.mpqf (mpq_of_q x)
+  Mpqf._mpqf (mpq_of_q x)

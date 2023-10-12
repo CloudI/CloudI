@@ -7,7 +7,7 @@ arbitrary-precision integers.
 
 The module is simply named `Z`.  Its interface is similar to that of
 the `Int32`, `Int64` and `Nativeint` modules from the OCaml standard
-library, with some additional functions.  See the file `z.mlip` for
+library, with some additional functions.  See the file `z.mli` for
 documentation.
 
 The implementation uses GMP (the GNU Multiple Precision arithmetic

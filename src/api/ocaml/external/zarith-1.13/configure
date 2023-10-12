@@ -18,7 +18,6 @@
 # options
 installdir='auto'
 ocamllibdir='auto'
-host='auto'
 gmp='auto'
 perf='no'
 
@@ -29,7 +28,8 @@ ocamlmklib='ocamlmklib'
 ocamldep='ocamldep'
 ocamldoc='ocamldoc'
 ccinc="$CPPFLAGS"
-cclib="$LDFLAGS"
+ldflags="$LDFLAGS"
+cclib=''
 ccdef=''
 mlflags="$OCAMLFLAGS"
 mloptflags="$OCAMLOPTFLAGS"
@@ -58,7 +58,6 @@ where options include:
   -prefixnonocaml      add for non ocaml tool, e.g. -prefixnonocaml x86_64-w64-mingw32-
 
 Environment variables that affect configuration:
-  CC                   C compiler to use (default: try gcc, then cc)
   CFLAGS               extra flags to pass to the C compiler
   CPPFLAGS             extra includes, e.g. -I/path/to/gmp/include
   LDFLAGS              extra link flags, e.g. -L/path/to/gmp/lib
@@ -116,7 +115,7 @@ searchbin()
     echo_n "binary $1: "
     case "$1" in
       /*|./*|../*)
-        if test -f "$1" -a -x "$1"
+        if test -f "$1" && test -x "$1"
         then echo "found"; return 1
         else echo "not found"; return 0
         fi;;
@@ -125,7 +124,7 @@ searchbin()
     for i in $PATH
     do
         if test -z "$i"; then i='.'; fi
-        if test -f $i/$1 -a -x $i/$1; then echo "found in $i"; unset IFS; return 1; fi
+        if test -f $i/$1 && test -x $i/$1; then echo "found in $i"; unset IFS; return 1; fi
     done
     echo "not found"
     unset IFS
@@ -148,7 +147,7 @@ checkinc()
     echo "#include <$1>" > tmp.c
     echo "int main() { return 1; }" >> tmp.c
     r=1
-    $cc $ccopt $ccinc -c tmp.c -o tmp.o >/dev/null 2>/dev/null || r=0
+    $ocamlc -ccopt "$ccopt $ccinc" -c tmp.c -o tmp.o >/dev/null 2>/dev/null || r=0
     if test ! -f tmp.o; then r=0; fi
     rm -f tmp.c tmp.o
     if test $r -eq 0; then echo "not found"; else echo "found"; fi
@@ -158,25 +157,26 @@ checkinc()
 checklib()
 {
     echo_n "library $1: "
-    rm -f tmp.c tmp.out
-    echo "int main() { return 1; }" >> tmp.c
+    rm -f tmp.ml tmp.out
+    echo "" > tmp.ml
     r=1
-    $cc $ccopt $cclib tmp.c -l$1 -o tmp.out >/dev/null 2>/dev/null || r=0
+    $ocamlc -custom -ccopt "$ldflags $cclib" tmp.ml -cclib -l$1 -o tmp.out >/dev/null 2>/dev/null || r=0
     if test ! -x tmp.out; then r=0; fi
-    rm -f tmp.c tmp.o tmp.out
+    rm -f tmp.out tmp.ml tmp.cmi tmp.cmo
     if test $r -eq 0; then echo "not found"; else echo "found"; fi
     return $r
 }
 
 checkcc()
 {
-    echo_n "checking compilation with $cc $ccopt: "
+    echo_n "checking compilation with $ocamlc $ccopt: "
     rm -f tmp.c tmp.out
     echo "int main() { return 1; }" >> tmp.c
+    echo "" > tmpml.ml
     r=1
-    $cc $ccopt tmp.c -o tmp.out >/dev/null 2>/dev/null || r=0
+    $ocamlc -ccopt "$ccopt" tmp.c tmpml.ml -o tmp.out >/dev/null 2>/dev/null || r=0
     if test ! -x tmp.out; then r=0; fi
-    rm -f tmp.c tmp.o tmp.out
+    rm -f tmp.c tmp.o tmp.out tmpml.ml tmpml.cm*
     if test $r -eq 0; then echo "not working"; else echo "working"; fi
     return $r
 }
@@ -198,24 +198,14 @@ searchbinreq $ocaml
 searchbinreq $ocamlc
 searchbinreq $ocamldep
 searchbinreq $ocamlmklib
-searchbinreq $ocamldoc
+if searchbin $ocamldoc; then
+  ocamldoc=''
+fi
 
 if test -n "$CC"; then
   searchbinreq "$CC"
-  cc="$CC"
   ccopt="$CFLAGS"
-elif ! searchbin 'gcc'; then
-  cc='gcc'
-  ccopt="-O3 -Wall -Wextra $CFLAGS"
-elif ! searchbin $prefixnonocaml'gcc'; then
-  cc=$prefixnonocaml'gcc'
-  ccopt="-O3 -Wall -Wextra $CFLAGS"
-elif ! searchbin 'cc'; then
-  cc='cc'
-  ccopt="-O3 -Wall -Wextra $CFLAGS"
 else
-  searchbinreq $prefixnonocaml'cc'
-  cc=$prefixnonocaml'cc'
   ccopt="-O3 -Wall -Wextra $CFLAGS"
 fi
 
@@ -265,7 +255,7 @@ fi
 # installation method
 
 searchbin ocamlfind
-if test $? -eq 1 -a $ocamlfind != "no"; then 
+if test $? -eq 1 && test $ocamlfind != "no"; then 
     instmeth='findlib'
     if test "$installdir" = "auto"
     then installdir=`ocamlfind printconf destdir`; fi
@@ -285,29 +275,28 @@ echo "OCaml's word size is $wordsize"
 rm -f tmp.ml
 
 
-# auto-detect host
-
-if test "x$host" = 'xauto'; then 
-    searchbin uname
-    if test $? -eq 0; then host='none'
-    else host=`. ./config.guess`
-    fi
-fi
-
 # check GMP, MPIR
 
-if test "$gmp" = 'gmp' -o "$gmp" = 'auto'; then
-    checkinc gmp.h
-    if test $? -eq 1; then
-        checklib gmp
-        if test $? -eq 1; then 
-            gmp='OK'
-            cclib="$cclib -lgmp"
-            ccdef="-DHAS_GMP $ccdef"
+if test "$gmp" = 'gmp' || test "$gmp" = 'auto'; then
+    if pkg-config gmp 2>/dev/null; then
+        echo 'package gmp: found'
+        gmp='OK'
+        cclib="$cclib $(pkg-config --libs gmp)"
+        ccinc="$ccinc $(pkg-config --cflags gmp)"
+        ccdef="-DHAS_GMP $ccdef"
+    else
+        checkinc gmp.h
+        if test $? -eq 1; then
+            checklib gmp
+            if test $? -eq 1; then 
+                gmp='OK'
+                cclib="$cclib -lgmp"
+                ccdef="-DHAS_GMP $ccdef"
+            fi
         fi
     fi
 fi
-if test "$gmp" = 'mpir' -o "$gmp" = 'auto'; then
+if test "$gmp" = 'mpir' || test "$gmp" = 'auto'; then
     checkinc mpir.h
     if test $? -eq 1; then
         checklib mpir
@@ -354,7 +343,6 @@ esac
 cat > Makefile <<EOF
 # generated by ./configure
 
-CC=$cc
 OCAMLC=$ocamlc
 OCAMLOPT=$ocamlopt
 OCAMLDEP=$ocamldep
@@ -365,6 +353,7 @@ OCAMLOPTFLAGS=$mloptflags
 OCAMLINC=$mlinc
 CFLAGS=$ccinc $ccdef $ccopt
 LIBS=$cclib
+LDFLAGS=$ldflags
 INSTALLDIR=$installdir
 INSTALL=install
 OCAMLFIND=ocamlfind
@@ -387,7 +376,9 @@ detected configuration:
   native-code:          $hasocamlopt
   dynamic linking:      $hasdynlink
   defines:              $ccdef
+  includes:             $ccinc
   libraries:            $cclib
+  linker options:       $ldflags
   C options:            $ccopt
   installation path:    $installdir
   installation method   $instmeth

@@ -69,13 +69,28 @@ external of_int: int -> t = "%identity"
 (** Converts from a base integer. *)
 
 external of_int32: int32 -> t = "ml_z_of_int32"
-(** Converts from a 32-bit integer. *)
+(** Converts from a 32-bit (signed) integer. *)
 
 external of_int64: int64 -> t = "ml_z_of_int64"
-(** Converts from a 64-bit integer. *)
+(** Converts from a 64-bit (signed) integer. *)
 
 external of_nativeint: nativeint -> t = "ml_z_of_nativeint"
-(** Converts from a native integer. *)
+(** Converts from a native (signed) integer. *)
+
+val of_int32_unsigned: int32 -> t
+(** Converts from a 32-bit integer, interpreted as an unsigned integer.
+    @since 1.13
+ *)
+
+val of_int64_unsigned: int64 -> t
+(** Converts from a 64-bit integer, interpreted as an unsigned integer.
+    @since 1.13
+ *)
+
+val of_nativeint_unsigned: nativeint -> t
+(** Converts from a native integer, interpreted as an unsigned integer..
+     @since 1.13
+ *)
 
 external of_float: float -> t = "ml_z_of_float"
 (** Converts from a floating-point value.
@@ -99,7 +114,8 @@ val of_string: string -> t
 val of_substring : string -> pos:int -> len:int -> t
 (** [of_substring s ~pos ~len] is the same as [of_string (String.sub s
     pos len)]
- *)
+    @since 1.4
+*)
 
 val of_string_base: int -> string -> t
 (** Parses a number represented as a string in the specified base,
@@ -112,6 +128,7 @@ external of_substring_base
   = "ml_z_of_substring_base"
 (** [of_substring_base base s ~pos ~len] is the same as [of_string_base
     base (String.sub s pos len)]
+    @since 1.4
 *)
 
 
@@ -196,12 +213,14 @@ external divisible: t -> t -> bool = "ml_z_divisible"
 (** [divisible a b] returns [true] if [a] is exactly divisible by [b].
     Unlike the other division functions, [b = 0] is accepted 
     (only 0 is considered divisible by 0).
+    @since 1.10
 *)
 
 external congruent: t -> t -> t -> bool = "ml_z_congruent"
 (** [congruent a b c] returns [true] if [a] is congruent to [b] modulo [c].
     Unlike the other division functions, [c = 0] is accepted 
     (only equal numbers are considered equal congruent 0).
+    @since 1.10
 *)
 
 
@@ -252,7 +271,9 @@ external numbits: t -> int = "ml_z_numbits" [@@noalloc]
     If [x] is zero, [numbits x] returns 0.  Otherwise,
     [numbits x] returns a positive integer [n] such that
     [2^{n-1} <= |x| < 2^n].  Note that [numbits] is defined
-    for negative arguments, and that [numbits (-x) = numbits x]. *)
+    for negative arguments, and that [numbits (-x) = numbits x].
+    @since 1.4
+*)
 
 external trailing_zeros: t -> int = "ml_z_trailing_zeros" [@@noalloc]
 (** Returns the number of trailing 0 bits in the given number.
@@ -260,13 +281,17 @@ external trailing_zeros: t -> int = "ml_z_trailing_zeros" [@@noalloc]
     Otherwise, [trailing_zeros x] returns a nonnegative integer [n]
     which is the largest [n] such that [2^n] divides [x] evenly.
     Note that [trailing_zeros] is defined for negative arguments,
-    and that [trailing_zeros (-x) = trailing_zeros x]. *)
+    and that [trailing_zeros (-x) = trailing_zeros x].
+    @since 1.4
+*)
 
 val testbit: t -> int -> bool
 (** [testbit x n] return the value of bit number [n] in [x]:
     [true] if the bit is 1, [false] if the bit is 0.
     Bits are numbered from 0.  Raise [Invalid_argument] if [n]
-    is negative. *)
+    is negative.
+    @since 1.4
+*)
 
 external popcount: t -> int = "ml_z_popcount"
 (** Counts the number of bits set.
@@ -287,16 +312,44 @@ external hamdist: t -> t -> int = "ml_z_hamdist"
  *)
 
 val to_int: t -> int
-(** Converts to a base integer. May raise an [Overflow]. *)
+(** Converts to a signed OCaml [int].
+    Raises an [Overflow] if the value does not fit in a signed OCaml [int]. *)
 
 external to_int32: t -> int32 = "ml_z_to_int32"
-(** Converts to a 32-bit integer. May raise [Overflow]. *)
+(** Converts to a signed 32-bit integer [int32].
+    Raises an [Overflow] if the value does not fit in a signed [int32]. *)
 
 external to_int64: t -> int64 = "ml_z_to_int64"
-(** Converts to a 64-bit integer. May raise [Overflow]. *)
+(** Converts to a signed 64-bit integer [int64].
+    Raises an [Overflow] if the value does not fit in a signed [int64]. *)
 
 external to_nativeint: t -> nativeint = "ml_z_to_nativeint"
-(** Converts to a native integer. May raise [Overflow]. *)
+(** Converts to a native signed integer [nativeint].
+    Raises an [Overflow] if the value does not fit in a signed [nativeint]. *)
+
+external to_int32_unsigned: t -> int32 = "ml_z_to_int32_unsigned"
+(** Converts to an unsigned 32-bit integer.
+    The result is stored into an OCaml [int32].
+    Beware that most [Int32] operations consider [int32] to a signed type, not unsigned.
+    Raises an [Overflow] if the value is negative or does not fit in an unsigned 32-bit integer.
+    @since 1.13
+*)
+
+external to_int64_unsigned: t -> int64 = "ml_z_to_int64_unsigned"
+(** Converts to an unsigned 64-bit integer.
+    The result is stored into an OCaml [int64].
+    Beware that most [Int64] operations consider [int64] to a signed type, not unsigned.
+    Raises an [Overflow] if the value is negative or does not fit in an unsigned 64-bit integer.
+    @since 1.13
+ *)
+
+external to_nativeint_unsigned: t -> nativeint = "ml_z_to_nativeint_unsigned"
+(** Converts to a native unsigned integer.
+    The result is stored into an OCaml [nativeint].
+    Beware that most [Nativeint] operations consider [nativeint] to a signed type, not unsigned.
+    Raises an [Overflow] if the value is negative or does not fit in an unsigned native integer.
+    @since 1.13
+ *)
 
 val to_float: t -> float
 (** Converts to a floating-point value.
@@ -337,16 +390,31 @@ external format: string -> t -> string = "ml_z_format"
  *)
 
 external fits_int: t -> bool = "ml_z_fits_int" [@@noalloc]
-(** Whether the argument fits in a regular [int]. *)
+(** Whether the argument fits in an OCaml signed [int]. *)
 
 external fits_int32: t -> bool = "ml_z_fits_int32" [@@noalloc]
-(** Whether the argument fits in an [int32]. *)
+(** Whether the argument fits in a signed [int32]. *)
 
 external fits_int64: t -> bool = "ml_z_fits_int64" [@@noalloc]
-(** Whether the argument fits in an [int64]. *)
+(** Whether the argument fits in a signed [int64]. *)
 
 external fits_nativeint: t -> bool = "ml_z_fits_nativeint" [@@noalloc]
-(** Whether the argument fits in a [nativeint]. *)
+(** Whether the argument fits in a signed [nativeint]. *)
+
+external fits_int32_unsigned: t -> bool = "ml_z_fits_int32_unsigned" [@@noalloc]
+(** Whether the argument is non-negative and fits in an unsigned [int32].
+    @since 1.13
+ *)
+
+external fits_int64_unsigned: t -> bool = "ml_z_fits_int64_unsigned" [@@noalloc]
+(** Whether the argument is non-negative and fits in an unsigned [int64].
+    @since 1.13
+*)
+
+external fits_nativeint_unsigned: t -> bool = "ml_z_fits_nativeint_unsigned" [@@noalloc]
+(** Whether the argument is non-negative fits in an unsigned [nativeint].
+    @since 1.13
+ *)
 
 
 (** {1 Printing} *)
@@ -409,10 +477,14 @@ val max: t -> t -> t
 (** Returns the maximum of its arguments. *)
 
 val is_even: t -> bool
-(** Returns true if the argument is even (divisible by 2), false if odd. *)
+(** Returns true if the argument is even (divisible by 2), false if odd.
+    @since 1.4
+*)
 
 val is_odd: t -> bool
-(** Returns true if the argument is odd, false if even. *)
+(** Returns true if the argument is odd, false if even.
+    @since 1.4
+*)
 
 external hash: t -> int = "ml_z_hash" [@@noalloc]
 (** Hashes a number, producing a small integer.
@@ -460,7 +532,9 @@ external powm_sec: t -> t -> t -> t = "ml_z_powm_sec"
     arguments.  Used in cryptographic applications, it provides better
     resistance to side-channel attacks than [Z.powm].
     The exponent [exp] must be positive, and the modulus [mod]
-    must be odd.  Otherwise, [Invalid_arg] is raised. *)
+    must be odd. Otherwise, [Invalid_arg] is raised.
+    @since 1.4
+*)
 
 external invert: t -> t -> t = "ml_z_invert"
 (** [invert base mod] returns the inverse of [base] modulo [mod].
@@ -480,55 +554,58 @@ external nextprime: t -> t = "ml_z_nextprime"
  *)
 
 external jacobi: t -> t -> int = "ml_z_jacobi"
-(** [jacobi a b] returns the Jacobi symbol [(a/b)]. *)
+(** [jacobi a b] returns the Jacobi symbol [(a/b)].
+    @since 1.10 *)
 
 external legendre: t -> t -> int = "ml_z_legendre"
-(** [legendre a b] returns the Legendre symbol [(a/b)]. *)
+(** [legendre a b] returns the Legendre symbol [(a/b)].
+    @since 1.10 *)
 
 external kronecker: t -> t -> int = "ml_z_kronecker"
-(** [kronecker a b] returns the Kronecker symbol [(a/b)]. *)
+(** [kronecker a b] returns the Kronecker symbol [(a/b)].
+    @since 1.10 *)
 
 external remove: t -> t -> t * int = "ml_z_remove"
 (** [remove a b] returns [a] after removing all the occurences of the
     factor [b]. 
     Also returns how many occurrences were removed.
- *)
+    @since 1.10 *)
 
 external fac: int -> t = "ml_z_fac"
 (** [fac n] returns the factorial of [n] ([n!]).
     Raises an [Invaid_argument] if [n] is non-positive.
-*)
+    @since 1.10 *)
   
 external fac2: int -> t = "ml_z_fac2"
 (** [fac2 n] returns the double factorial of [n] ([n!!]).
     Raises an [Invaid_argument] if [n] is non-positive.
-*)
+    @since 1.10 *)
   
  external facM: int -> int -> t = "ml_z_facM"
 (** [facM n m] returns the [m]-th factorial of [n].
     Raises an [Invaid_argument] if [n] or [m] is non-positive.
-*)
+    @since 1.10 *)
 
 external primorial: int -> t = "ml_z_primorial"
 (** [primorial n] returns the product of all positive prime numbers less
     than or equal to [n].
     Raises an [Invaid_argument] if [n] is non-positive.
-*)
+    @since 1.10 *)
 
 external bin: t -> int -> t = "ml_z_bin"
 (** [bin n k] returns the binomial coefficient [n] over [k].
     Raises an [Invaid_argument] if [k] is non-positive.
-*)
+    @since 1.10 *)
 
 external fib: int -> t = "ml_z_fib"
 (** [fib n] returns the [n]-th Fibonacci number.
     Raises an [Invaid_argument] if [n] is non-positive.
-*)
+    @since 1.10 *)
 
 external lucnum: int -> t = "ml_z_lucnum"
 (** [lucnum n] returns the [n]-th Lucas number.
     Raises an [Invaid_argument] if [n] is non-positive.
-*)
+    @since 1.10 *)
 
 
 (** {1 Powers} *)
@@ -563,7 +640,7 @@ external rootrem: t -> int -> t * t = "ml_z_rootrem"
     [x-root**n].
     [n] must be positive and, if [n] is even, then [x] must be nonnegative.
     Otherwise, an [Invalid_argument] is raised.
- *)
+    @since 1.10 *)
 
 external perfect_power: t -> bool = "ml_z_perfect_power"
 (** True if the argument has the form [a^b], with [b>1] *)
@@ -575,24 +652,29 @@ val log2: t -> int
 (** Returns the base-2 logarithm of its argument, rounded down to
     an integer.  If [x] is positive, [log2 x] returns the largest [n]
     such that [2^n <= x].  If [x] is negative or zero, [log2 x] raise
-    the [Invalid_argument] exception. *)
+    the [Invalid_argument] exception.
+    @since 1.4
+*)
 
 val log2up: t -> int
 (** Returns the base-2 logarithm of its argument, rounded up to
     an integer.  If [x] is positive, [log2up x] returns the smallest [n]
     such that [x <= 2^n].  If [x] is negative or zero, [log2up x] raise
-    the [Invalid_argument] exception. *)
+    the [Invalid_argument] exception.
+    @since 1.4
+*)
 
 (** {1 Representation} *)
 
 external size: t -> int = "ml_z_size" [@@noalloc]
 (** Returns the number of machine words used to represent the number. *)
 
-external extract: t -> int -> int -> t = "ml_z_extract"
+val extract: t -> int -> int -> t
 (** [extract a off len] returns a nonnegative number corresponding to bits
-    [off] to [off]+[len]-1 of [b].
+    [off] to [off]+[len]-1 of [a].
     Negative [a] are considered in infinite-length 2's complement
     representation.
+    Raises an [Invalid_argument] if [off] is strictly negative, or if [len] is negative or null.
  *)
 
 val signed_extract: t -> int -> int -> t
@@ -601,6 +683,7 @@ val signed_extract: t -> int -> int -> t
     (that is, bit [off + len - 1] of [a]).  The result is between
     [- 2{^[len]-1}] (included) and [2{^[len]-1}] (excluded),
     and equal to [extract a off len] modulo [2{^len}].
+    Raises an [Invalid_argument] if [off] is strictly negative, or if [len] is negative or null.
  *)
 
 external to_bits: t -> string = "ml_z_to_bits"
@@ -620,6 +703,63 @@ external of_bits: string -> t = "ml_z_of_bits"
     trailing zeros in s.
  *)
 
+(** {1 Pseudo-random number generation} *)
+
+val random_int: ?rng: Random.State.t -> t -> t
+(** [random_int bound] returns a random integer between 0 (inclusive)
+    and [bound] (exclusive).  [bound] must be greater than 0.
+
+    The source of randomness is the {!Random} module from the OCaml
+    standard library.  The optional [rng] argument specifies which
+    random state to use.  If omitted, the default random state for the
+    {!Random} module is used.
+
+    Random numbers produced by this function are not cryptographically
+    strong and must not be used in cryptographic or high-security
+    contexts.  See {!Z.random_int_gen} for an alternative.
+*)
+
+val random_bits: ?rng: Random.State.t -> int -> t
+(** [random_bits nbits] returns a random integer between 0 (inclusive)
+    and [2{^nbits}] (exclusive).  [nbits] must be nonnegative.
+    This is a more efficient special case of {!Z.random_int} when the
+    bound is a power of two.
+
+    The source of randomness and the [rng] optional argument are as
+    described in {!Z.random_int}.
+
+    Random numbers produced by this function are not cryptographically
+    strong and must not be used in cryptographic or high-security
+    contexts.  See {!Z.random_bits_gen} for an alternative.
+*)
+
+val random_int_gen: fill: (bytes -> int -> int -> unit) -> t -> t
+(** [random_int_gen ~fill bound] returns a random integer between 0 (inclusive)
+    and [bound] (exclusive).  [bound] must be greater than 0.
+
+    The [fill] parameter is the source of randomness.  It is called
+    as [fill buf pos len], and is responsible for drawing [len] random
+    bytes and writing them to offsets [pos] to [pos + len - 1] of
+    the byte array [buf].
+
+    Example of use where [/dev/random] provides the random bytes:
+<<
+    In_channel.with_open_bin "/dev/random"
+      (fun ic -> Z.random_int_gen ~fill:(really_input ic) bound)
+>>
+    Example of use where the Cryptokit library provides the random bytes:
+<<
+    Z.random_int_gen ~fill:Cryptokit.Random.secure_rng#bytes bound
+>>
+*)
+
+val random_bits_gen: fill: (bytes -> int -> int -> unit) -> int -> t
+(** [random_bits_gen ~fill nbits] returns a random integer between 0 (inclusive)
+    and [2{^nbits}] (exclusive).  [nbits] must be nonnegative.
+    This is a more efficient special case of {!Z.random_int_gen} when the
+    bound is a power of two.  The [fill] parameter is as described in
+    {!Z.random_int_gen}.
+*)
 
 (** {1 Prefix and infix operators} *)
 
@@ -712,7 +852,9 @@ end
 (** {1 Miscellaneous} *)
 
 val version: string
-(** Library version. *)
+(** Library version.
+    @since 1.1
+*)
 
 (**/**)
 

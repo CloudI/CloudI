@@ -14,7 +14,7 @@ messaging_ocaml: main.mli main.ml
 	$(OCAMLC) $(OCAMLFLAGS) -o main.cmi -c $(srcdir)/main.mli
 	$(OCAMLOPT) $(OCAMLFLAGS) -o main.cmx -c \
                 -I $(top_builddir)/api/ocaml/ -thread $(srcdir)/main.ml
-	$(OCAMLOPT) -o messaging_ocaml $(OCAMLDEPS) main.cmx
+	$(OCAMLOPT) $(OCAMLFLAGS) -o messaging_ocaml $(OCAMLDEPS) main.cmx
 
 install-exec-hook: messaging_ocaml
 	$(MKDIR_P) $(instdir)

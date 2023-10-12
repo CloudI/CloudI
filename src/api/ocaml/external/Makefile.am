@@ -1,6 +1,7 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
+OCAMLDEPS_ZARITH_VERSION = 1.13
 OCAMLDEPS_ZARITH_BYTE_CODE = \
     big_int_Z.cmi \
     libzarith.a \
@@ -26,7 +27,7 @@ CLEANFILES = $(OCAMLDEPS_ZARITH)
 OCAML_ZARITH_MAKEFILE = MakefileCloudI
 
 zarith.cmxa:
-	cd $(srcdir)/zarith-1.12 && \
+	cd $(srcdir)/zarith-$(OCAMLDEPS_ZARITH_VERSION) && \
     $(MAKE) -f ./$(OCAML_ZARITH_MAKEFILE) \
             OCAMLC="$(OCAMLC)" \
             OCAMLOPT="$(OCAMLOPT)" \
@@ -40,6 +41,6 @@ zarith.cmxa:
 all-local: zarith.cmxa
 
 clean-local:
-	cd $(srcdir)/zarith-1.12 && \
+	cd $(srcdir)/zarith-$(OCAMLDEPS_ZARITH_VERSION) && \
     $(MAKE) -f ./$(OCAML_ZARITH_MAKEFILE) clean
 

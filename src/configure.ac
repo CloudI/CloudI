@@ -692,7 +692,7 @@ fi
 if test "x$OCAMLMKLIB" = "x"; then
     AC_MSG_ERROR([ocamlmklib not found])
 fi
-AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A"])
+AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A -I +str -I +unix"])
 AC_SUBST(CONFIG_TESTS_OCAML_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_ocaml\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
 AC_SUBST(CONFIG_TESTS_OCAML_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_ocaml\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
 AC_SUBST(CONFIG_TESTS_OCAML_MESSAGING, ["[[{prefix, \"/tests/messaging/ocaml/\"}, {file_path, \"$cloudi_prefix/tests/messaging/messaging_ocaml\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{dispatcher_pid_options, [{priority, low}]}, {nice, 15}, {scope, cloudi_service_test_messaging_ocaml}]}]],"])

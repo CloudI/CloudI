@@ -68,6 +68,7 @@ val int32_of_big_int : Z.t -> int32
 val nativeint_of_big_int : Z.t -> nativeint
 val int64_of_big_int : Z.t -> int64
 val float_of_big_int : Z.t -> float
+val big_int_of_float : float -> Z.t
 val and_big_int : Z.t -> Z.t -> Z.t
 val or_big_int : Z.t -> Z.t -> Z.t
 val xor_big_int : Z.t -> Z.t -> Z.t

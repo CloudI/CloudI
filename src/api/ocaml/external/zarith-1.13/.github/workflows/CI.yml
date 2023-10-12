@@ -1,0 +1,32 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install packages
+      run: sudo apt-get install ocaml-nox libgmp-dev
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: configure tree
+      run: ./configure
+    - name: Build
+      run: make
+    - name: Run the testsuite
+      run: make -C tests test
+
+  MacOS:
+    runs-on: macos-latest
+    steps:
+    - name: Install packages
+      run: brew install ocaml ocaml-findlib gmp
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: configure tree
+      run: ./configure
+    - name: Build
+      run: make
+    - name: Run the testsuite
+      run: make -C tests test

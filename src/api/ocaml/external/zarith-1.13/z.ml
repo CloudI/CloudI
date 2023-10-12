@@ -206,6 +206,15 @@ external of_int64: int64 -> t = "ml_z_of_int64"
 external of_nativeint: nativeint -> t = "ml_z_of_nativeint"
 external of_float: float -> t = "ml_z_of_float"
 
+let uint32_mask = pred (shift_left (of_int 1) 32)
+let of_int32_unsigned x = logand (of_int32 x) uint32_mask
+
+let uint64_mask = pred (shift_left (of_int 1) 64)
+let of_int64_unsigned x = logand (of_int64 x) uint64_mask
+
+let uintnat_mask = pred (shift_left (of_int 1) Nativeint.size)
+let of_nativeint_unsigned x = logand (of_nativeint x) uintnat_mask
+
 external c_to_int: t -> int = "ml_z_to_int"
 
 let to_int x =
@@ -214,6 +223,9 @@ let to_int x =
 external to_int32: t -> int32 = "ml_z_to_int32"
 external to_int64: t -> int64 = "ml_z_to_int64"
 external to_nativeint: t -> nativeint = "ml_z_to_nativeint"
+external to_int32_unsigned: t -> int32 = "ml_z_to_int32_unsigned"
+external to_int64_unsigned: t -> int64 = "ml_z_to_int64_unsigned"
+external to_nativeint_unsigned: t -> nativeint = "ml_z_to_nativeint_unsigned"
 external format: string -> t -> string = "ml_z_format"
 external of_substring_base: int -> string -> pos:int -> len:int -> t = "ml_z_of_substring_base"
 external compare: t -> t -> int = "ml_z_compare" [@@noalloc]
@@ -232,6 +244,9 @@ external fits_int: t -> bool = "ml_z_fits_int" [@@noalloc]
 external fits_int32: t -> bool = "ml_z_fits_int32" [@@noalloc]
 external fits_int64: t -> bool = "ml_z_fits_int64" [@@noalloc]
 external fits_nativeint: t -> bool = "ml_z_fits_nativeint" [@@noalloc]
+external fits_int32_unsigned: t -> bool = "ml_z_fits_int32_unsigned" [@@noalloc]
+external fits_int64_unsigned: t -> bool = "ml_z_fits_int64_unsigned" [@@noalloc]
+external fits_nativeint_unsigned: t -> bool = "ml_z_fits_nativeint_unsigned" [@@noalloc]
 external extract: t -> int -> int -> t = "ml_z_extract"
 external powm: t -> t -> t -> t = "ml_z_powm"
 external pow: t -> int -> t = "ml_z_pow"
@@ -323,6 +338,36 @@ let testbit x n =
 let is_odd x = testbit_internal x 0
 let is_even x  = not (testbit_internal x 0)
 
+external c_extract_small: t -> int -> int -> t
+  = "ml_z_extract_small" [@@noalloc]
+external c_extract: t -> int -> int -> t = "ml_z_extract"
+
+let extract_internal x o l =
+  if is_small_int x then
+    (* Fast path *)
+    let o = if o >= Sys.int_size then Sys.int_size - 1 else o in
+    (* Shift away low "o" bits.  If "o" too big, just replicate sign bit. *)
+    let z = unsafe_to_int x asr o in
+    if l < Sys.int_size then
+      (* Extract "l" low bits, if "l" is small enough *)
+      of_int (z land ((1 lsl l) - 1))
+    else if z >= 0 then
+      (* If x >= 0, the extraction of "l" low bits keeps x unchanged. *)
+      of_int z
+    else
+      (* If x < 0, fall through slow path *)
+      c_extract x o l
+  else if l < Sys.int_size then
+    (* Alternative fast path since no allocation is required *)
+    c_extract_small x o l
+  else
+    c_extract x o l
+
+let extract x o l =
+  if o < 0 then invalid_arg "Z.extract: negative bit offset";
+  if l < 1 then invalid_arg "Z.extract: nonpositive bit length";
+  extract_internal x o l
+
 let signed_extract x o l =
   if o < 0 then invalid_arg "Z.signed_extract: negative bit offset";
   if l < 1 then invalid_arg "Z.signed_extract: nonpositive bit length";
@@ -373,11 +418,90 @@ let to_float x =
     end
   end
 
+(* Formatting *)
+
 let print x = print_string (to_string x)
 let output chan x = output_string chan (to_string x)
 let sprint () x = to_string x
 let bprint b x = Buffer.add_string b (to_string x)
 let pp_print f x = Format.pp_print_string f (to_string x)
+
+(* Pseudo-random generation *)
+
+let rec raw_bits_random ?(rng: Random.State.t option) nbits =
+  let rec raw_bits accu n =
+    if n >= nbits then (accu, n) else begin
+      let i =
+        match rng with
+        | None -> Random.bits ()
+        | Some r -> Random.State.bits r in
+      raw_bits (logxor (shift_left accu 30) (of_int i)) (n + 30)
+    end in
+  raw_bits zero 0
+
+let raw_bits_from_bytes ~(fill: bytes -> int -> int -> unit) nbits =
+  let nbytes = (nbits + 7) / 8 in
+  let buf = Bytes.create nbytes in
+  fill buf 0 nbytes;
+  (of_bits (Bytes.to_string buf), nbytes * 8)
+
+let random_bits_aux (f: int -> t * int) nbits =
+  if nbits < 0 then invalid_arg "random_bits: number of bits must be >= 0";
+  let (x, _) = f nbits in
+  extract x 0 nbits
+
+let random_int_aux (f: int -> t * int) bound =
+  if sign bound <= 0 then invalid_arg "random_int: bound must be > 0";
+  let nbits1 = log2up bound in
+  let rec draw () =
+    (* The minimal number of random bits we need to draw is nbits1.
+       However, in the worst case, rejection (as described below)
+       will occur with probability almost 1/2.  So, we draw more bits
+       than strictly necessary to make rejection much less likely.
+       With 4 extra bits, the probability of rejection is less than
+       1/32. *)
+    let (x, nbits) = f (nbits1 + 4) in
+    let y = rem x bound in
+    (* We divide the range of x, namely [0 .. 2^nbits), into
+         - k intervals of width bound :
+             [0 .. bound) [bound.. 2*bound) .. [(k-1) * bound.. k * bound)
+         - the remaining numbers: [k * bound .. 2^nbits)
+
+       k is chosen as large as possible: k = floor (2^nbits / bound).
+
+       If x falls within the k intervals of width bound,
+       y = x mod bound is evenly distributed in [0 .. bound)
+       and we can use it as the pseudo-random number.
+       If x falls within the [k * bound .. 2^nbits) interval,
+       y = x mod bound may not be evenly distributed;
+       we reject and draw again.
+
+       We can decide efficiently whether to reject, as follows.
+       Write 2^nbits = k * bound + r and x = q * bound + y,
+       with r and y in [0 .. bound).
+       If x - y <= 2^nbits - bound, then
+         q * bound = x - y <= 2^nbits - bound < 2^nbits - r = k * bound,
+       hence q < k and we can accept x.
+       Otherwise, 
+         q * bound = x - y > 2^nbits - bound = (k - 1) * bound + r
+       hence q >= k and we must reject x.
+    *)
+    if leq (sub x y) (sub (shift_left one nbits) bound)
+    then y
+    else draw () in
+  draw ()
+
+let random_int ?rng bound =
+  random_int_aux (raw_bits_random ?rng) bound
+let random_bits ?rng nbits =
+  random_bits_aux (raw_bits_random ?rng) nbits
+
+let random_int_gen ~fill bound =
+  random_int_aux (raw_bits_from_bytes ~fill) bound
+let random_bits_gen ~fill nbits =
+  random_bits_aux (raw_bits_from_bytes ~fill) nbits
+
+(* Infix notations *)
 
 let (~-) = neg
 let (~+) x = x

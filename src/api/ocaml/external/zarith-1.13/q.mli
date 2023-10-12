@@ -136,10 +136,10 @@ val max: t -> t -> t
 (** Returns the largest of its arguments. *)
 
 val leq: t -> t -> bool
-(** Less than or equal. [leq undef undef] resturns false. *)
+(** Less than or equal. [leq undef undef] returns false. *)
 
 val geq: t -> t -> bool
-(** Greater than or equal. [leq undef undef] resturns false. *)
+(** Greater than or equal. [leq undef undef] returns false. *)
 
 val lt: t -> t -> bool
 (** Less than (not equal). *)
@@ -274,19 +274,25 @@ val (///): Z.t -> Z.t -> t
 (** Creates a rational from two [Z.t]. *)
 
 val (=): t -> t -> bool
-(** Same as [equal]. *)
+(** Same as [equal].
+    @since 1.8 *)
 
 val (<): t -> t -> bool
-(** Same as [lt]. *)
+(** Same as [lt].
+    @since 1.8 *)
 
 val (>): t -> t -> bool
-(** Same as [gt]. *)
+(** Same as [gt].
+    @since 1.8 *)
 
 val (<=): t -> t -> bool
-(** Same as [leq]. *)
+(** Same as [leq].
+    @since 1.8 *)
 
 val (>=): t -> t -> bool
-(** Same as [geq]. *)
+(** Same as [geq].
+    @since 1.8 *)
 
 val (<>): t -> t -> bool
-(** [a <> b] is equivalent to [not (equal a b)]. *)
+(** [a <> b] is equivalent to [not (equal a b)].
+    @since 1.8 *)

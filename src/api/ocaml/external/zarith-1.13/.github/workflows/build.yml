@@ -1,0 +1,71 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  schedule:
+    # Prime the caches every Monday
+    - cron: 0 1 * * MON
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        ocaml-compiler:
+          - 4.14.x
+        include:
+          - os: ubuntu-latest
+            ocaml-compiler: 5.0.x
+          - os: macos-latest
+            ocaml-compiler: 5.0.x
+          - os: windows-latest
+            ocaml-compiler: ocaml.5.0.0,ocaml-option-mingw
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        if: runner.os != 'Windows'
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          dune-cache: true
+          opam-depext: true
+          opam-depext-flags: --with-test
+
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        if: runner.os == 'Windows'
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          opam-repositories: |
+            dra27: https://github.com/dra27/opam-repository.git#windows-5.0
+            default: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
+            opam: https://github.com/ocaml/opam-repository.git
+          dune-cache: true
+          opam-depext: true
+          opam-depext-flags: --with-test
+
+      - name: configure tree
+        run: opam exec -- ./configure
+
+      - name: Build
+        run: opam exec -- make
+
+      - name: Run the testsuite
+        run: opam exec -- make -C tests test
+
+      - run: opam install . --with-test
+
+      - run: opam exec -- git diff --exit-code
+        if: ${{ !matrix.skip-test }}

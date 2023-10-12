@@ -124,6 +124,8 @@ let int64_of_big_int x =
 
 let float_of_big_int = Z.to_float
 
+let big_int_of_float = Z.of_float
+
 let and_big_int = Z.logand
 
 let or_big_int = Z.logor

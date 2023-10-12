@@ -455,7 +455,7 @@ OCaml `zarith`
 
 - `https://github.com/ocaml/Zarith/`
 - `repository location: src/api/ocaml/external/`
-- `Thu Mar 16 19:46:58 UTC 2023`
+- `Thu Oct 12 18:57:52 UTC 2023`
 - `LGPL 2 w/link-exception`
 
 Python `jsonrpclib`

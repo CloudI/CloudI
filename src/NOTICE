@@ -999,7 +999,7 @@
  warranty.
 
 --------------------------------------------------------------------------- LGPL
-(OCaml) src/api/ocaml/external/zarith-1.12
+(OCaml) src/api/ocaml/external/zarith-1.13
 
  This Library is distributed under the terms of the GNU Library General
  Public License version 2, with a special exception allowing unconstrained
@@ -1453,7 +1453,7 @@ Exhibit B - “Incompatible With Secondary Licenses” Notice
       the Mozilla Public License, v. 2.0.
 
 --------------------------------------------------------------------------- LGPL
-(as referenced by (OCaml) api/ocaml/external/zarith-1.12)
+(as referenced by (OCaml) api/ocaml/external/zarith-1.13)
 
 This Library is distributed under the terms of the GNU Library General
 Public License version 2 (included below).

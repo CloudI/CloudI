@@ -38,7 +38,7 @@ MLISRC = z.mli q.mli big_int_Z.mli
 AUTOGEN = zarith_version.ml
 
 CMIOBJ = $(MLISRC:%.mli=%.cmi)
-CMXOBJ = $(MLISRC:%.mli=%.cmx)
+CMXOBJ = $(MLSRC:%.ml=%.cmx)
 CMIDOC = $(MLISRC:%.mli=%.cmti)
 
 TOBUILD = zarith.cma libzarith.$(LIBSUFFIX) $(CMIOBJ) zarith_top.cma z.mli
@@ -49,9 +49,9 @@ ifeq ($(HASOCAMLOPT),yes)
 TOBUILD += zarith.cmxa $(CMXOBJ)
 TOINSTALL += zarith.$(LIBSUFFIX)
 endif
-
-OCAMLFLAGS = -I +compiler-libs
-OCAMLOPTFLAGS = -I +compiler-libs
+DEBUG = -g
+OCAMLFLAGS += $(DEBUG) -I +compiler-libs
+OCAMLOPTFLAGS += $(DEBUG) -I +compiler-libs
 
 ifeq ($(HASDYNLINK),yes)
 TOBUILD += zarith.cmxs
@@ -71,23 +71,27 @@ tests:
 	make -C tests test
 
 zarith.cma: $(MLSRC:%.ml=%.cmo)
-	$(OCAMLMKLIB) -failsafe -o zarith $+ $(LIBS)
+	$(OCAMLMKLIB) $(DEBUG) -failsafe -o zarith $+ $(LIBS) $(LDFLAGS)
 
 zarith.cmxa: $(MLSRC:%.ml=%.cmx)
-	$(OCAMLMKLIB) -failsafe -o zarith $+ $(LIBS)
+	$(OCAMLMKLIB) $(DEBUG) -failsafe -o zarith $+ $(LIBS) $(LDFLAGS)
 
 zarith.cmxs: zarith.cmxa libzarith.$(LIBSUFFIX)
 	$(OCAMLOPT) -shared -o $@ -I . zarith.cmxa -linkall
 
 libzarith.$(LIBSUFFIX): $(CSRC:%.c=%.$(OBJSUFFIX))
-	$(OCAMLMKLIB) -failsafe -o zarith $+ $(LIBS)
+	$(OCAMLMKLIB) $(DEBUG) -failsafe -o zarith $+ $(LIBS) $(LDFLAGS)
 
 zarith_top.cma: zarith_top.cmo
-	$(OCAMLC) -o $@ -a $<
+	$(OCAMLC) $(DEBUG) -o $@ -a $<
 
 doc: $(MLISRC)
+ifneq ($(OCAMLDOC),)
 	mkdir -p html
 	$(OCAMLDOC) -html -d html -charset utf8 $+
+else
+	$(error ocamldoc is required to build the documentation)
+endif
 
 zarith_version.ml: META
 	(echo "let"; grep "version" META | head -1) > zarith_version.ml
@@ -145,7 +149,7 @@ clean:
 	make -C tests clean
 
 depend: $(AUTOGEN)
-	$(OCAMLDEP) -native $(OCAMLINC) $(MLSRC) $(MLISRC) > depend
+	$(OCAMLDEP) $(OCAMLINC) $(MLSRC) $(MLISRC) > depend
 
 include depend
 
