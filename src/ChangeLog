@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-10-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the cloudi_service_router http_redirect_secondaries argument
+      by allowing arguments specific to the secondary
+
 2023-10-12 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update OCaml zarith to 1.13 for big-integer support

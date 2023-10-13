@@ -129,14 +129,17 @@
         % The destination URL string will be provided as the
         % "Location" HTTP header value.  If http_redirect is used,
         % remote, mode and service_names are not used.
+% DEFAULT_HTTP_REDIRECT_GET is set based on
+% DEFAULT_HTTP_REDIRECT_GET_DEFAULT
 -define(DEFAULT_HTTP_REDIRECT_SECONDARIES,            []).
         % A list of alternative HTTP redirect URL strings can be provided
         % for use if http_redirect_health was set.
         % A temporary redirect occurs for failover with the URL strings
         % provided while the primary (permanent) redirect is unhealthy
         % based on the data provided from cloudi_service_health_check.
-% DEFAULT_HTTP_REDIRECT_GET is set based on
-% DEFAULT_HTTP_REDIRECT_GET_DEFAULT
+        % When set to {nonempty_bytestring(), Arguments :: list()} the
+        % same destination arguments can be provided
+        % (e.g., if parameters_selected needs to be different for a secondary).
 -define(DEFAULT_SERVICE_NAMES,                        []).
         % The destination service names to be used for forwarding
         % service requests.  If * or ? wildcard characters are used
@@ -180,10 +183,10 @@
             :: list(pos_integer()),
         http_redirect
             :: cloudi:nonempty_bytestring(),
-        http_redirect_secondaries
-            :: list(cloudi:nonempty_bytestring()),
         http_redirect_get
-            :: boolean()
+            :: boolean(),
+        http_redirect_secondaries = []
+            :: list(#destination_return{})
     }).
 
 -record(state,
@@ -287,8 +290,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {parameters_strict_matching,    ParametersStrictMatchingDefault},
         {parameters_selected,           ?DEFAULT_PARAMETERS_SELECTED},
         {http_redirect,                 ?DEFAULT_HTTP_REDIRECT},
-        {http_redirect_secondaries,     ?DEFAULT_HTTP_REDIRECT_SECONDARIES},
         {http_redirect_get,             HttpRedirectGetDefault},
+        {http_redirect_secondaries,     ?DEFAULT_HTTP_REDIRECT_SECONDARIES},
         {service_names,                 ?DEFAULT_SERVICE_NAMES}],
     Destinations = lists:foldl(fun({PatternSuffix, L}, D) ->
         true = is_tuple(hd(L)),
@@ -299,8 +302,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
          ParametersStrictMatching,
          ParametersSelected,
          HttpRedirect,
-         HttpRedirectSecondaries,
          HttpRedirectGet,
+         HttpRedirectSecondaries,
          Names0] = cloudi_proplists:take_values(ConfigDefaults, L),
         Remote = cloudi_service_router_client:new(RemoteOptions,
                                                   Environment,
@@ -345,24 +348,22 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 undefined = Remote,
                 true = (Length == 0),
                 true = cloudi_x_trie:is_bytestring_nonempty(HttpRedirect),
-                case HttpRedirectSecondaries of
-                    [] ->
-                        true;
-                    [_ | _] ->
-                        true = HttpRedirectHealth /= undefined,
-                        true = lists:all(fun cloudi_x_trie:
-                                             is_bytestring_nonempty/1,
-                                         HttpRedirectSecondaries)
-                end,
+                HttpRedirectSecondariesNew =
+                    http_redirect_secondaries(HttpRedirectSecondaries, [],
+                                              ParametersAllowed,
+                                              ParametersStrictMatching,
+                                              ParametersSelected,
+                                              HttpRedirectGet,
+                                              HttpRedirectHealth),
                 #destination_return{parameters_allowed = ParametersAllowed,
                                     parameters_strict_matching =
                                         ParametersStrictMatching,
                                     parameters_selected =
                                         ParametersSelected,
                                     http_redirect = HttpRedirect,
+                                    http_redirect_get = HttpRedirectGet,
                                     http_redirect_secondaries =
-                                        HttpRedirectSecondaries,
-                                    http_redirect_get = HttpRedirectGet}
+                                        HttpRedirectSecondariesNew}
         end,
         cloudi_x_trie:store(Prefix ++ PatternSuffix, Destination, D)
     end, cloudi_x_trie:new(), DestinationsL),
@@ -564,8 +565,9 @@ forward(RequestType, Name, Pattern, NameNew, RequestInfo, Request,
 http_redirect_pick(Parameters,
                    #destination_return{
                        http_redirect = HttpRedirect,
-                       http_redirect_secondaries = HttpRedirectSecondaries,
-                       http_redirect_get = HttpRedirectGet} = Destination,
+                       http_redirect_get = HttpRedirectGet,
+                       http_redirect_secondaries =
+                           HttpRedirectSecondaries} = Destination,
                    HttpRedirectHealth) ->
     case name_parameters(HttpRedirect, Parameters, Destination) of
         {ok, HttpRedirectNew} ->
@@ -580,10 +582,8 @@ http_redirect_pick(Parameters,
                 {ok, false} ->
                     http_redirect_pick_secondary(HttpRedirectSecondaries,
                                                  Parameters,
-                                                 HttpRedirectGet,
                                                  HttpStatusCode,
                                                  HttpRedirectNew,
-                                                 Destination,
                                                  HttpRedirectHealth);
                 _ ->
                     {ok, HttpStatusCode,
@@ -593,16 +593,16 @@ http_redirect_pick(Parameters,
             {error, Reason, HttpRedirect}
     end.
 
-http_redirect_pick_secondary([], _, _,
-                             HttpStatusCodeDefault, HttpRedirectDefault,
-                             _, _) ->
+http_redirect_pick_secondary([], _,
+                             HttpStatusCodeDefault, HttpRedirectDefault, _) ->
     % no secondary is healthy, so return the primary until something changes
     {ok, HttpStatusCodeDefault,
      erlang:list_to_binary(HttpRedirectDefault)};
-http_redirect_pick_secondary([HttpRedirect | HttpRedirectL], Parameters,
-                             HttpRedirectGet,
+http_redirect_pick_secondary([Destination | Destinations], Parameters,
                              HttpStatusCodeDefault, HttpRedirectDefault,
-                             Destination, HttpRedirectHealth) ->
+                             HttpRedirectHealth) ->
+    #destination_return{http_redirect = HttpRedirect,
+                        http_redirect_get = HttpRedirectGet} = Destination,
     case name_parameters(HttpRedirect, Parameters, Destination) of
         {ok, HttpRedirectNew} ->
             case cloudi_x_trie:find(http_redirect_hostname(HttpRedirectNew),
@@ -617,12 +617,10 @@ http_redirect_pick_secondary([HttpRedirect | HttpRedirectL], Parameters,
                     {ok, HttpStatusCode,
                      erlang:list_to_binary(HttpRedirectNew)};
                 _ ->
-                    http_redirect_pick_secondary(HttpRedirectL,
+                    http_redirect_pick_secondary(Destinations,
                                                  Parameters,
-                                                 HttpRedirectGet,
                                                  HttpStatusCodeDefault,
                                                  HttpRedirectDefault,
-                                                 Destination,
                                                  HttpRedirectHealth)
             end;
         {error, Reason} ->
@@ -642,6 +640,84 @@ http_redirect_health([{Hostname, Info} | HostsInfo], HttpRedirectHealth) ->
     http_redirect_health(HostsInfo,
                          cloudi_x_trie:store(Hostname, not HealthFailed,
                                              HttpRedirectHealth)).
+
+http_redirect_secondaries([_ | _] = HttpRedirectSecondariesOld,
+                          HttpRedirectSecondaries,
+                          ParametersAllowedDefault,
+                          ParametersStrictMatchingDefault,
+                          ParametersSelectedDefault,
+                          HttpRedirectGetDefault,
+                          HttpRedirectHealth) ->
+    true = HttpRedirectHealth /= undefined,
+    http_redirect_secondaries(HttpRedirectSecondariesOld,
+                              HttpRedirectSecondaries,
+                              ParametersAllowedDefault,
+                              ParametersStrictMatchingDefault,
+                              ParametersSelectedDefault,
+                              HttpRedirectGetDefault);
+http_redirect_secondaries([], _, _, _, _, _, _) ->
+    [].
+
+http_redirect_secondaries([], HttpRedirectSecondaries, _, _, _, _) ->
+    lists:reverse(HttpRedirectSecondaries);
+http_redirect_secondaries([{HttpRedirectSecondary, L} |
+                           HttpRedirectSecondariesOld],
+                          HttpRedirectSecondaries,
+                          ParametersAllowedDefault,
+                          ParametersStrictMatchingDefault,
+                          ParametersSelectedDefault,
+                          HttpRedirectGetDefault) ->
+    true = cloudi_x_trie:is_bytestring_nonempty(HttpRedirectSecondary),
+    ConfigDefaults = [
+        {parameters_allowed,            ParametersAllowedDefault},
+        {parameters_strict_matching,    ParametersStrictMatchingDefault},
+        {parameters_selected,           ParametersSelectedDefault},
+        {http_redirect_get,             HttpRedirectGetDefault}],
+    [ParametersAllowed,
+     ParametersStrictMatching,
+     ParametersSelected,
+     HttpRedirectGet] = cloudi_proplists:take_values(ConfigDefaults, L),
+    true = is_boolean(ParametersAllowed),
+    true = is_boolean(ParametersStrictMatching),
+    true = is_list(ParametersSelected),
+    true = ((ParametersSelected == []) orelse
+            ((ParametersSelected /= []) andalso
+             (ParametersAllowed =:= true))),
+    true = lists:all(fun(I) -> is_integer(I) andalso I > 0 end,
+                     ParametersSelected),
+    true = is_boolean(HttpRedirectGet),
+    Destination = #destination_return{
+                      parameters_allowed = ParametersAllowed,
+                      parameters_strict_matching = ParametersStrictMatching,
+                      parameters_selected = ParametersSelected,
+                      http_redirect = HttpRedirectSecondary,
+                      http_redirect_get = HttpRedirectGet},
+    http_redirect_secondaries(HttpRedirectSecondariesOld,
+                              [Destination | HttpRedirectSecondaries],
+                              ParametersAllowedDefault,
+                              ParametersStrictMatchingDefault,
+                              ParametersSelectedDefault,
+                              HttpRedirectGetDefault);
+http_redirect_secondaries([HttpRedirectSecondary |
+                           HttpRedirectSecondariesOld],
+                          HttpRedirectSecondaries,
+                          ParametersAllowed,
+                          ParametersStrictMatching,
+                          ParametersSelected,
+                          HttpRedirectGet) ->
+    true = cloudi_x_trie:is_bytestring_nonempty(HttpRedirectSecondary),
+    Destination = #destination_return{
+                      parameters_allowed = ParametersAllowed,
+                      parameters_strict_matching = ParametersStrictMatching,
+                      parameters_selected = ParametersSelected,
+                      http_redirect = HttpRedirectSecondary,
+                      http_redirect_get = HttpRedirectGet},
+    http_redirect_secondaries(HttpRedirectSecondariesOld,
+                              [Destination | HttpRedirectSecondaries],
+                              ParametersAllowed,
+                              ParametersStrictMatching,
+                              ParametersSelected,
+                              HttpRedirectGet).
 
 validate_f_return(Value) when is_boolean(Value) ->
     Value.
