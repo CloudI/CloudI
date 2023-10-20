@@ -88,7 +88,7 @@ library
 
   build-depends:
     base >= 4.9 && < 5,
-    bytestring >= 0.10 && < 0.12,
+    bytestring >= 0.10,
     deepseq,
     directory
 

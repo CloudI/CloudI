@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -46,7 +46,9 @@ request_ :: RequestType -> ByteString -> ByteString ->
 request_ requestType name pattern _ request timeout _ transId source state api =
     let httpQs = CloudI.infoKeyValueParse request 
         value = Map.lookup (Char8.pack "value") httpQs >>=
-            (\l -> Just (read (Char8.unpack $ head l) :: Integer))
+            (\l -> case l of
+                [] -> Nothing
+                v:_ -> Just (read (Char8.unpack v) :: Integer))
         response = Char8.pack $ case value of
             Nothing ->
                 "<http_test><error>no value specified</error></http_test>"
