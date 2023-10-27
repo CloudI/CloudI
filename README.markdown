@@ -79,7 +79,6 @@ Optional (default="yes"):
         * (`libdw-dev /Ubuntu`, `elfutils-dev /Alpine`)
         * `libdwarf version < 20210528` (`libdwarf-dev libelf-dev /Ubuntu`, `libdwarf libdwarf-dev elfutils-dev /Alpine`)
       * `backtrace data options:`
-        * (`libunwind-dev /Ubuntu`, `libunwind-dev /Alpine`)
         * `compiler unwind.h`
         * (`libexecinfo-dev /Alpine`)
     * `backtrace with boost::stacktrace (boost >= 1.71)`
