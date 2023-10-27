@@ -15,16 +15,16 @@
 
 ### Install
 
-1.  Get wget and curl if you don't already have them
+1.  Get curl if you don't already have it
 
-    * **(Ubuntu)** `sudo apt-get install wget curl`
-    * **(OSX)**    `sudo port install wget curl`
+    * **(Ubuntu)** `sudo apt-get install curl`
+    * **(OSX)**    `sudo port install curl`
 
 1.  Get CloudI running (need [./configure help?](https://cloudi.org/faq.html#3_Options)):
 
-        wget https://osdn.net/dl/cloudi/cloudi-2.0.6.tar.gz
-        tar zxvf cloudi-2.0.6.tar.gz
-        cd cloudi-2.0.6/src
+        curl -LOJ https://cloudi.org/download/cloudi-2.0.7.tar.gz
+        tar zxvf cloudi-2.0.7.tar.gz
+        cd cloudi-2.0.7/src
         ./configure
         make
         sudo make install
@@ -88,8 +88,8 @@
 
 1.  Compile the CloudI service executable:
 
-        gcc -I/usr/local/lib/cloudi-2.0.6/api/c \
-            -L/usr/local/lib/cloudi-2.0.6/api/c \
+        gcc -I/usr/local/lib/cloudi-2.0.7/api/c \
+            -L/usr/local/lib/cloudi-2.0.7/api/c \
             -g -O0 -fexceptions hello_world.c -o hello_world_c -lcloudi
 
 1.  Now it is necessary to create the CloudI service configuration that
@@ -102,9 +102,9 @@
         [[{prefix, "/quickstart/c/"},
           {file_path, "$PWD/hello_world_c"},
           {env, [{"LD_LIBRARY_PATH",
-                  "/usr/local/lib/cloudi-2.0.6/api/c/"},
+                  "/usr/local/lib/cloudi-2.0.7/api/c/"},
                  {"DYLD_LIBRARY_PATH",
-                  "/usr/local/lib/cloudi-2.0.6/api/c/"}]}]]
+                  "/usr/local/lib/cloudi-2.0.7/api/c/"}]}]]
         EOF
 
 1.  To dynamically add the CloudI service configuration that
@@ -188,8 +188,8 @@
 
 1.  Compile the CloudI service executable:
 
-        g++ -I/usr/local/lib/cloudi-2.0.6/api/c \
-            -L/usr/local/lib/cloudi-2.0.6/api/c \
+        g++ -I/usr/local/lib/cloudi-2.0.7/api/c \
+            -L/usr/local/lib/cloudi-2.0.7/api/c \
             -g -O0 hello_world.cpp -o hello_world_cxx -lcloudi
 
 1.  Now it is necessary to create the CloudI service configuration that
@@ -202,9 +202,9 @@
         [[{prefix, "/quickstart/cxx/"},
           {file_path, "$PWD/hello_world_cxx"},
           {env, [{"LD_LIBRARY_PATH",
-                  "/usr/local/lib/cloudi-2.0.6/api/c/"},
+                  "/usr/local/lib/cloudi-2.0.7/api/c/"},
                  {"DYLD_LIBRARY_PATH",
-                  "/usr/local/lib/cloudi-2.0.6/api/c/"}]}]]
+                  "/usr/local/lib/cloudi-2.0.7/api/c/"}]}]]
         EOF
 
 1.  To dynamically add the CloudI service configuration that
@@ -272,7 +272,7 @@
         
             def project do
                 [app: :Elixir.HelloWorld,
-                 version: "2.0.6",
+                 version: "2.0.7",
                  elixirc_paths: ["lib/"],
                  deps: []]
             end
@@ -385,7 +385,7 @@
     file would be added with the same filename
     (see the examples [for more details](https://github.com/CloudI/CloudI/tree/develop/examples/hello_world1#readme)).
 
-        erlc -pz /usr/local/lib/cloudi-2.0.6/lib/cloudi_core-2.0.6/ebin \
+        erlc -pz /usr/local/lib/cloudi-2.0.7/lib/cloudi_core-2.0.7/ebin \
             hello_world.erl
 
 1.  You now have a CloudI service contained within a single Erlang module
@@ -448,8 +448,8 @@
         module hello_world_go
         
         replace (
-            github.com/CloudI/cloudi_api_go/v2/cloudi => /usr/local/lib/cloudi-2.0.6/api/go/cloudi
-            github.com/okeuday/erlang_go/v2/erlang => /usr/local/lib/cloudi-2.0.6/api/go/erlang
+            github.com/CloudI/cloudi_api_go/v2/cloudi => /usr/local/lib/cloudi-2.0.7/api/go/cloudi
+            github.com/okeuday/erlang_go/v2/erlang => /usr/local/lib/cloudi-2.0.7/api/go/erlang
         )
         
         require (
@@ -632,14 +632,14 @@
         EOF
         cat << EOF > manifest.txt
         Main-Class: org.cloudi.tests.hello_world.Main
-        Class-Path: /usr/local/lib/cloudi-2.0.6/api/java/cloudi.jar
+        Class-Path: /usr/local/lib/cloudi-2.0.7/api/java/cloudi.jar
         
         EOF
 
 1.  Compile the CloudI service jar:
 
         cd org/cloudi/tests/hello_world/
-        CLASSPATH=/usr/local/lib/cloudi-2.0.6\
+        CLASSPATH=/usr/local/lib/cloudi-2.0.7\
         /api/java/cloudi.jar:${CLASSPATH} javac Task.java Main.java
         cd ../../../../
         jar cvfm hello_world.jar manifest.txt org
@@ -654,7 +654,7 @@
         cat << EOF > hello_world.conf
         [[{prefix, "/quickstart/java/"},
           {file_path, "$JAVA"},
-          {args, "-cp /usr/local/lib/cloudi-2.0.6/api/java/ "
+          {args, "-cp /usr/local/lib/cloudi-2.0.7/api/java/ "
                  "-ea:org.cloudi... -jar $PWD/hello_world.jar"}]]
         EOF
 
@@ -689,7 +689,7 @@
     created by executing the following inside your shell:
 
         cat << EOF > hello_world.js
-        var CloudI = require('/usr/local/lib/cloudi-2.0.6/' +
+        var CloudI = require('/usr/local/lib/cloudi-2.0.7/' +
                              'api/javascript/CloudI.js').CloudI;
         var assert = require('assert');
         
@@ -825,7 +825,7 @@
         [[{prefix, "/quickstart/perl/"},
           {file_path, "$PERL"},
           {args, "$PWD/hello_world.pl"},
-          {env, [{"PERL5LIB", "/usr/local/lib/cloudi-2.0.6/api/perl"}]}]]
+          {env, [{"PERL5LIB", "/usr/local/lib/cloudi-2.0.7/api/perl"}]}]]
         EOF
 
 1.  To dynamically add the CloudI service configuration that
@@ -861,7 +861,7 @@
         cat << EOF > hello_world.php
         <?php
         
-        require '/usr/local/lib/cloudi-2.0.6/api/php/CloudI.php';
+        require '/usr/local/lib/cloudi-2.0.7/api/php/CloudI.php';
         
         class Task
         {
@@ -951,7 +951,7 @@
 
         cat << EOF > hello_world.py
         import sys
-        sys.path.append('/usr/local/lib/cloudi-2.0.6/api/python/')
+        sys.path.append('/usr/local/lib/cloudi-2.0.7/api/python/')
         import traceback
         from cloudi import API, terminate_exception
         
@@ -1025,7 +1025,7 @@
     created by executing the following inside your shell:
 
         cat << EOF > hello_world.rb
-        \$:.unshift '/usr/local/lib/cloudi-2.0.6/api/ruby'
+        \$:.unshift '/usr/local/lib/cloudi-2.0.7/api/ruby'
         
         \$DEBUG = false
         

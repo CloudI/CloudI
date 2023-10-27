@@ -1,4 +1,4 @@
-# [CloudI 2.0.6](https://cloudi.org)
+# [CloudI 2.0.7](https://cloudi.org)
 
 [![Build Status](https://app.travis-ci.com/CloudI/CloudI.svg?branch=develop)](https://app.travis-ci.com/CloudI/CloudI) [![Project Status](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI) [![RSS](https://raw.githubusercontent.com/CloudI/CloudI/develop/.badge_rss_releases.png)](https://sourceforge.net/p/cloudi/activity/feed.rss) [![Twitter](https://img.shields.io/twitter/follow/CloudI_org?style=social)](https://twitter.com/intent/follow?screen_name=CloudI_org) [![IRC](https://raw.githubusercontent.com/CloudI/CloudI/develop/.badge_irc_cloudi.png)](https://webchat.oftc.net/?randomnick=1&channels=cloudi) [![Email](https://raw.githubusercontent.com/CloudI/CloudI/develop/.badge_email_questions.png)](https://sourceforge.net/p/cloudi/mailman/cloudi-questions)
 
@@ -184,7 +184,7 @@ Dynamic Configuration and Monitoring:
 * Service Request Sending with [`cloudi_service_send`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_send/src/cloudi_service_send.erl)
 * Monitoring to Graphite, OpenTSDB, SNMP, InfluxDB or StatsD with [`cloudi_service_monitoring`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl)
 * Remote Host Health Checks with [`cloudi_service_health_check`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_health_check/src/cloudi_service_health_check.erl)
-* CloudI Configuration Validation with [`cloudi_service_validate_config`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_validate_config/src/cloudi_service_validate_config.erl)
+* CloudI Configuration Validation with [`cloudi_service_validate_config`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_validate_config/src/cloudi_service_validate_config.erl)
 
 Routing:
 

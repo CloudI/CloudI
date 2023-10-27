@@ -33,7 +33,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-2.0.6.tar.gz" rel="noopener" target="_blank">Download</a></li>
+    <li><a href="https://cloudi.org/download" rel="noopener" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -41,8 +41,8 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <h3 style="text-align:center">version 2.0.6<br />
-  last updated on June 21<sup>st</sup> 2023</h3>
+  <h3 style="text-align:center">version 2.0.7<br />
+  last updated on October 26<sup>th</sup> 2023</h3>
 
   <h2 id="1_contents">1 - Introduction to CloudI</h2>
   <ul class="faq">
@@ -819,11 +819,26 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   </td></tr><tr><td>
   Releases:
   </td><td>
-  <a href="https://osdn.net/pkg/cloudi/cloudi" rel="noopener" target="_blank">https://osdn.net/pkg/cloudi/cloudi</a>
+  <a href="https://sourceforge.net/p/cloudi/activity" rel="noopener" target="_blank">https://sourceforge.net/p/cloudi/activity</a>&nbsp;<a href="https://github.com/CloudI/CloudI/tags" rel="noopener" target="_blank">(tags)</a>
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
   <h3 id="2_MailingList">2.2 - Mailing List</h3>
+  <h4>New Mailing List</h3>
+  <table><tr><td>
+  Email Address:
+  </td><td>
+  <a href="mailto:cloudi-questions@lists.sourceforge.net" target="_blank">cloudi-questions@lists.sourceforge.net</a>
+  </td></tr><tr><td>
+  Subscribe:
+  </td><td>
+  <a href="https://sourceforge.net/projects/cloudi/lists/cloudi-questions" rel="noopener" target="_blank">https://sourceforge.net/projects/cloudi/lists/cloudi-questions</a>
+  </td></tr><tr><td>
+  Archive:
+  </td><td>
+  <a href="https://sourceforge.net/p/cloudi/mailman/cloudi-questions" rel="noopener" target="_blank">https://sourceforge.net/p/cloudi/mailman/cloudi-questions</a>
+  </td></tr></table>
+  <h4>Old Mailing List (version &le; 2.0.6)</h3>
   <table><tr><td>
   Email Address:
   </td><td>
@@ -859,7 +874,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   </td></tr><tr><td>
   Releases:
   </td><td>
-  <a href="https://osdn.net/projects/cloudi/releases/rss" rel="noopener" target="_blank">https://osdn.net/projects/cloudi/releases/rss</a>
+  <a href="https://sourceforge.net/p/cloudi/activity/feed.rss" rel="noopener" target="_blank">https://sourceforge.net/p/cloudi/activity/feed.rss</a>&nbsp;<a href="https://github.com/CloudI/CloudI/tags.atom" rel="noopener" target="_blank">(tags)</a>
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -928,7 +943,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   </td></tr><tr><td>
   <a href="#2_MailingList">Mailing List:</a>
   </td><td>
-  <a href="mailto:cloudi-questions@lists.osdn.me" target="_blank">cloudi-questions@lists.osdn.me</a>
+  <a href="mailto:cloudi-questions@lists.sourceforge.net" target="_blank">cloudi-questions@lists.sourceforge.net</a>&nbsp;<a href="https://sourceforge.net/projects/cloudi/lists/cloudi-questions" rel="noopener" target="_blank">(Subscribe)</a>
   </td></tr></table>
   <p class="paragraph">
     If you are unsure whether you have found a bug, please send an email to the
@@ -936,7 +951,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     Otherwise, you can easily enter a bug report for the problem by using the
     <a href="https://github.com/CloudI/CloudI/issues/new" rel="noopener" target="_blank">online form</a>.
     If you are unable to provide information about the problem publicly,
-    specify the information is private in an email to
+    specify the information privately in an email to
     <a href="mailto:mjtruog(at)protonmail;dot;com">Michael Truog</a>.
   </p>
   <div class="top"><a href="#2_contents">Top</a></div>
@@ -1078,10 +1093,10 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
     <li>g++</li>
     <li>libboost-system-dev</li>
     <li>libboost-dev</li>
-    <li>libdw-dev (optional)</li>
+    <li>libbfd-dev (optional)</li>
     <li>libseccomp-dev (optional)</li>
     <li>golang (optional)</li>
-    <li>ghc cabal-install (optional)</li>
+    <li>ghc (optional)</li>
     <li>default-jdk (optional)</li>
     <li>nodejs (optional)</li>
     <li>perl (optional)</li>
@@ -1181,8 +1196,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   --enable-haskell-support
   </td><td>
   Enable the Haskell CloudI API,<br />
-  requires GHC&nbsp;&ge;&nbsp;7.10.3 and
-  cabal&#8209;install&nbsp;&ge;&nbsp;1.22<br />(default="no")
+  requires GHC&nbsp;&ge;&nbsp;8.6.0<br />(default="no")
   </td></tr><tr><td style="white-space:nowrap">
   --disable-java-support
   </td><td>
@@ -1197,7 +1211,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   --enable-ocaml-support
   </td><td>
   Enable the OCaml CloudI API,<br />
-  requires OCaml&nbsp;&ge;&nbsp;4.03.0<br />(default="no")
+  requires OCaml&nbsp;&ge;&nbsp;4.08.0<br />(default="no")
   </td></tr><tr><td style="white-space:nowrap">
   --disable-perl-support
   </td><td>
@@ -1207,7 +1221,7 @@ Cloud<span style="font-family:serif">I</span><img alt="Active Cloud" width="156"
   --disable-php-support
   </td><td>
   Disable the PHP CloudI API,<br />
-  requires PHP&nbsp;&ge;&nbsp;5.3.6<br />(default="no")
+  requires PHP&nbsp;&ge;&nbsp;7.0<br />(default="no")
   </td></tr><tr><td style="white-space:nowrap">
   --disable-python-support
   </td><td>
@@ -2142,6 +2156,7 @@ sudo cloudi stop
      service request timeout period without any errors or timeouts):
   </p>
   <ul>
+    <li><a href="https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_request_rate/results/results_v2_0_6#readme" rel="noopener" target="_blank">2.0.6 results</a></li>
     <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_request_rate/results/results_v2_0_4#readme" rel="noopener" target="_blank">2.0.5 (prerelease) results (all CloudI API implementations)</a></li>
     <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_request_rate/results/results_v1_7_1#readme" rel="noopener" target="_blank">1.7.1 results (all CloudI API implementations)</a></li>
     <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_request_rate/results/results_v1_5_4#readme" rel="noopener" target="_blank">1.5.4 results (including cloudi_service_queue)</a></li>
@@ -3006,11 +3021,22 @@ L1,13t0-1c0p0N1:L3,15t2-3c1p0N1:L5,17t4-5c2p0N1:L7,19t6-7c3p0N1:L9,21t8-9c4p0N1:
     per core, so the CPU topology ordering allows the scheduler threads to be
     bound to only the second physical CPU.
   </p>
+  <p class="paragraph">
+    CloudI services require separate configuration to control their
+    CPU use.  The <a href="api.html#2_services_add_config_opts_bind">bind</a>
+    service configuration option ensures the service execution uses
+    specific logical processors.  If <a href="api.html#2_services_add_config_opts_bind">bind</a>
+    is set to 'true' or a string value, all the CloudI service processes
+    and threads will have specific logical processors assigned which
+    limits how the OS kernel scheduler will schedule execution.
+  </p>
   <h4>External Services</h4>
   <p class="paragraph">
-    External CloudI services require separate configuration to control their
-    CPU use.  On Linux it is best to use the <a href="api.html#2_services_add_config_opts_cgroup">cgroup</a>
-    service configuration option (instead of the taskset executable).
+    On Linux, the <a href="api.html#2_services_add_config_opts_cgroup">cgroup</a>
+    service configuration option could be used instead of <a href="api.html#2_services_add_config_opts_bind">bind</a>
+    (or the taskset executable) though it would not provide
+    thread-specific assignments, it would require root execution of CloudI
+    and it wouldn't be a cross-platform configuration.
     The cgroup configuration example below would ensure an external service
     only uses the second physical CPU described above:
   </p>
@@ -3021,13 +3047,10 @@ L1,13t0-1c0p0N1:L3,15t2-3c1p0N1:L5,17t4-5c2p0N1:L7,19t6-7c3p0N1:L9,21t8-9c4p0N1:
    [{"cpuset.cpus", "1,13,3,15,5,17,7,19,9,21,11,23"}]}]}
 </pre>
   <p class="paragraph">
-    With the develop branch CloudI source code it is possible to use the
-    <a href="api.html#2_services_add_config_opts_bind">bind</a> service
-    configuration option with the same string value
-    (i.e.,&nbsp;"1,13,3,15,5,17,7,19,9,21,11,23").  In the future,
-    <a href="api.html#2_services_add_config_opts_bind">bind</a> should be
-    preferred due to cross-platform support with less CloudI execution
-    user privileges required.
+    With the <a href="api.html#2_services_add_config_opts_bind">bind</a>
+    service configuration option, the same string value
+    (i.e.,&nbsp;"1,13,3,15,5,17,7,19,9,21,11,23") could be used for a
+    CloudI service that has 12 threads of execution.
   </p>
   <p class="paragraph">
     External CloudI services have additional service configuration options

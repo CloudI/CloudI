@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2012-2023 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -113,7 +113,7 @@
 %% Both algorithms used for the variables LCG and MCG provide
 %% fast low-quality pseudo-random number generation without using
 %% Erlang bignums.
-%%
+%% ```
 %% LCG:
 %%   35-bit classical Linear Congruential Generator
 %%   based on Erlang/OTP 25.0-rc3 rand:lcg35/1.
@@ -135,7 +135,7 @@
 %%
 %%   D makes M prime (M == 34359738337) so X0 is always coprime.
 %%   The period is M (i.e., 2^35 - 31).
-%%
+%% '''
 %% The LCG and MCG are combined with xor to produce a 32-bit random number.
 %% TestU01 SmallCrush/Crush/BigCrush have been used to test the 32-bit result
 %% (both with the bits forward and reversed)
@@ -147,7 +147,7 @@
 %% mwc59x_32/1 is slighly more efficient but provides slightly less randomness
 %% (same p-value statistics bounds but the separate sums of
 %%  (1e-8  .. 1e-4] and [1 - 1e-4 .. 1 - 1e-8) are less extreme
-%%  for lcg35x_32/1, i.e., the mwc59x_32/1 (1e-8  .. 1e-4] sum is 20.3% smaller
+%%  for lcg35x_32/1, i.e., the mwc59x_32/1 (1e-8  .. 1e-4] sum is 25.5% smaller
 %%  and the mwc59x_32/1 [1 - 1e-4 .. 1 - 1e-8) sum is 16.1% larger while
 %%  mwc59x_32/1 provides roughly a 1.08x speedup with Erlang/OTP 25.0).
 %%
@@ -196,7 +196,7 @@ lcg35x_32(N) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===59-bit state 32-bit value Marsaglia multiply-with-carry generator xor.===
-%%
+%% ```
 %% T = A * X0 + C0
 %% C1 = T bsr 32
 %% X1 = T band 16#ffffffff
@@ -205,7 +205,7 @@ lcg35x_32(N) ->
 %% Simulates a multiplicative LCG with prime modulus
 %% M = 16#7fa6501ffffffff (M = A * 2^32 - 1).
 %% The period is approximately 2^58.
-%%
+%% '''
 %% X1 and C1 are combined with xor to produce a 32-bit random number.
 %% TestU01 SmallCrush/Crush/BigCrush have been used to test the 32-bit result
 %% (both with the bits forward and reversed)
@@ -255,7 +255,7 @@ mwc59x_32(N) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===256-bit state Marsaglia multiply-with-carry generator.===
-%%
+%% ```
 %% T = A * X0 + C0
 %% X1 = Y0
 %% Y1 = Z0
@@ -266,7 +266,7 @@ mwc59x_32(N) ->
 %% Simulates a multiplicative LCG with prime modulus
 %% M = 16#ff377e26f82da749ffffffffffffffffffffffffffffffffffffffffffffffff .
 %% The period is approximately 2^255.
-%%
+%% '''
 %% Vigna, Sebastiano.
 %% https://prng.di.unimi.it/MWC256.c
 %% https://prng.di.unimi.it/#quality

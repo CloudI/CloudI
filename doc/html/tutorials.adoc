@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 2.0.6
-:revdate: 2023-06-21
+:revnumber: 2.0.7
+:revdate: 2023-10-26
 :lang: en
 :encoding: UTF-8
 :toc:
@@ -53,6 +53,7 @@ All Supported Programming Languages::
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count_c.py[Python/C]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.rb[Ruby]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/rust/main.rs[Rust]
   * Basic HTTP Request Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/ats/v2/main.dats[ATS]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c/main.c[C]
@@ -66,6 +67,7 @@ All Supported Programming Languages::
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req_c.py[Python/C]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb[Ruby]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/rust/main.rs[Rust]
   * Basic Message Size (Forwarding) Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/ats/v2/main.dats[ATS]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx/main.cpp[C++]
@@ -78,7 +80,7 @@ All Supported Programming Languages::
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.pl[Perl]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size_c.py[Python/C]
-  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.rb[Ruby]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/rust/main.rs[Rust]
   * Basic Messaging Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/ats/v2/main.dats[ATS]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx/main.cpp[C++]
@@ -92,6 +94,7 @@ All Supported Programming Languages::
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging_c.py[Python/C]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.rb[Ruby]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/rust/main.rs[Rust]
   * Basic Null Response Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/ats/v2/main.dats[ATS]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/c/main.c[C]
@@ -105,6 +108,7 @@ All Supported Programming Languages::
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null_c.py[Python/C]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.rb[Ruby]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/rust/main.rs[Rust]
 C::
   * link:https://github.com/okeuday/sillymud[MUD Game Server Using CloudI]
   * link:https://github.com/okeuday/odroid_display[LCD Display Service]

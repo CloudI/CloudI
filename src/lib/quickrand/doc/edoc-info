@@ -1,4 +1,4 @@
 %% encoding: UTF-8
 {application,quickrand}.
-{modules,[quickrand_cache,quickrand_cache_normal,quickrand_hash,
+{modules,[quickrand,quickrand_cache,quickrand_cache_normal,quickrand_hash,
           quickrand_normal,random_wh06_int,random_wh82]}.

@@ -1,5 +1,24 @@
 ------------------------------------------------------------------------        
 
+October 27, 2023
+  Version 2.0.7 released.
+  * Python/C CloudI API compilation and reliability was improved
+  * C/C++ CloudI API reliability was improved by removing use of
+    nongnu-libunwind for the C++ backtrace information
+  * Added the cloudi_service_health_check tcp_test argument functions
+    tcp_test_http and tcp_test_https to be provided as closure data:
+    {{cloudi_service_health_check, tcp_test_https, [get, "/", 200]}}
+  * Added the cloudi_service_router http_redirect_health argument for
+    using cloudi_service_health_check results to alter the HTTP
+    redirect response provided during a remote outage
+  * Erlang/OTP 26.1 support was added
+  * Haskell GHC 9.8.1 and 9.6.3 support was added
+  * Added the cloudi_service_validate_config service for service
+    configuration validation based on all configuration values
+    (for logging possible mistakes during dynamic use)
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 June 21, 2023
   Version 2.0.6 released.
   * Added the Rust CloudI API (rustc >= 1.66.1)

@@ -10,20 +10,88 @@
 <hr>
 
 <h1>Module quickrand</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Quick_Random_Number_Generation">Quick Random Number Generation</a></h3>.
-<p>Copyright © 2012-2022 Michael Truog</p>
+<p>Copyright © 2012-2023 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.5 Mar 25 2022 12:01:57
+<p><b>Version:</b> 2.0.7 Oct 26 2023 11:37:41
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
    <h3><a name="Quick_Random_Number_Generation">Quick Random Number Generation</a></h3>
 
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-algorithms">algorithms()</a></h3>
+<p><tt>algorithms() = lcg35x | mwc59x | mwc256 | rand | random_wh06_int | random_wh82</tt></p>
+
+
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#seed-0">seed/0</a></td><td>
-  <h4><a name="Seed_random_number_generation.">Seed random number generation.</a></h4>.</td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#lcg35x_32-1">lcg35x_32/1</a></td><td>
+  <h4><a name="35-bit_state_32-bit_value_Linear_Congruential_Generators_xor.">35-bit state 32-bit value Linear Congruential Generators xor.</a></h4>
+  Both algorithms used for the variables LCG and MCG provide
+  fast low-quality pseudo-random number generation without using
+  Erlang bignums.</td></tr>
+<tr><td valign="top"><a href="#mwc256-1">mwc256/1</a></td><td>
+  <h4><a name="256-bit_state_Marsaglia_multiply-with-carry_generator.">256-bit state Marsaglia multiply-with-carry generator.</a></h4>
+  <pre>  T = A * X0 + C0
+  X1 = Y0
+  Y1 = Z0
+  C1 = T bsr 64
+  Z1 = T band 16#ffffffffffffffff
+  A = 16#ff377e26f82da74a, 0 &lt; X0, 0 &lt; Y0, 0 &lt; Z0, 0 &lt; C0 &lt; A - 1
+ 
+  Simulates a multiplicative LCG with prime modulus
+  M = 16#ff377e26f82da749ffffffffffffffffffffffffffffffffffffffffffffffff .
+  The period is approximately 2^255.</pre><p>  
+Vigna, Sebastiano.  
+https://prng.di.unimi.it/MWC256.c  
+https://prng.di.unimi.it/#quality  
+TestU01 BigCrush passed (p-value statistics are in [0.001..0.999])  
+when starting from 100 equispaced points of the state space.</p>
+ 
+  Marsaglia, George.</td></tr>
+<tr><td valign="top"><a href="#mwc256_128-1">mwc256_128/1</a></td><td>
+  <h4><a name="256-bit_state_128-bit_value_Marsaglia_multiply-with-carry_generator.">256-bit state 128-bit value Marsaglia multiply-with-carry generator.</a></h4>
+  mwc256/1 limited to a 128-bit return value for less latency.</td></tr>
+<tr><td valign="top"><a href="#mwc256_64-1">mwc256_64/1</a></td><td>
+  <h4><a name="256-bit_state_64-bit_value_Marsaglia_multiply-with-carry_generator.">256-bit state 64-bit value Marsaglia multiply-with-carry generator.</a></h4>
+  mwc256/1 limited to a 64-bit return value for less latency.</td></tr>
+<tr><td valign="top"><a href="#mwc59x_32-1">mwc59x_32/1</a></td><td>
+  <h4><a name="59-bit_state_32-bit_value_Marsaglia_multiply-with-carry_generator_xor.">59-bit state 32-bit value Marsaglia multiply-with-carry generator xor.</a></h4>
+  <pre>  T = A * X0 + C0
+  C1 = T bsr 32
+  X1 = T band 16#ffffffff
+  A = 16#7fa6502, 0 &lt; X0, 0 &lt; C0 &lt; A - 1
+ 
+  Simulates a multiplicative LCG with prime modulus
+  M = 16#7fa6501ffffffff (M = A * 2^32 - 1).
+  The period is approximately 2^58.</pre><p>  
+X1 and C1 are combined with xor to produce a 32-bit random number.  
+TestU01 SmallCrush/Crush/BigCrush have been used to test the 32-bit result  
+(both with the bits forward and reversed)  
+and the p-value statistics are in [0.0000001..0.9999999]  
+(when starting from 100 equispaced points of the state space).  
+The wider bounds (i.e., wider than [0.001..0.999]) are due to the  
+shorter period.</p>.</td></tr>
+<tr><td valign="top"><a href="#seed-0">seed/0</a></td><td>
+  <h4><a name="Randomized_seeding_of_random_number_generators.">Randomized seeding of random number generators.</a></h4><p>  
+Backwards-compatible seeding of random number generators for this  
+module's uniform prefix functions and the external modules used  
+(rand, random_wh06_int and random_wh82).  
+Use seed/1 to seed specific random number generators.</p>
+ 
+  Instead of using this function, it is better to use a jump function
+  for obtaining non-overlapping sequences, if a jump function is available
+  and the number of Erlang processes used is limited
+  (to ensure concurrent usage of the same algorithm has no collisions).</td></tr>
+<tr><td valign="top"><a href="#seed-1">seed/1</a></td><td>
+  <h4><a name="Randomized_seeding_of_specific_random_number_generators.">Randomized seeding of specific random number generators.</a></h4>
+  Instead of using this function, it is better to use a jump function
+  for obtaining non-overlapping sequences, if a jump function is available
+  and the number of Erlang processes used is limited
+  (to ensure concurrent usage of the same algorithm has no collisions).</td></tr>
 <tr><td valign="top"><a href="#strong_float-0">strong_float/0</a></td><td>
   <h4><a name="Return_an_Erlang_double-precision_random_number_with_the_range_[0.0_.._1.0].">Return an Erlang double-precision random number with the range [0.0 .. 1.0].</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#strong_floatL-0">strong_floatL/0</a></td><td>
@@ -42,26 +110,180 @@
 <tr><td valign="top"><a href="#uniform-1">uniform/1</a></td><td>
   <h4><a name="Quick_uniform_random_number_generation.">Quick uniform random number generation.</a></h4>
   Not meant for cryptographic purposes.</td></tr>
-<tr><td valign="top"><a href="#uniform-1">uniform/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#uniform_cache-1">uniform_cache/1</a></td><td>
   <h4><a name="Quick_uniform_random_number_generation_with_cached_data.">Quick uniform random number generation with cached data.</a></h4>
   Not meant for cryptographic purposes.</td></tr>
-<tr><td valign="top"><a href="#uniform_cache-1">uniform_cache/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#uniform_cache-2">uniform_cache/2</a></td><td>
   <h4><a name="Quick_uniform_random_number_generation_with_cached_data.">Quick uniform random number generation with cached data.</a></h4>
   Not meant for cryptographic purposes.</td></tr>
-<tr><td valign="top"><a href="#uniform_cache-2">uniform_cache/2</a></td><td></td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="lcg35x_32-1">lcg35x_32/1</a></h3>
+<div class="spec">
+<p><tt>lcg35x_32(N::1..4294967296) -&gt; 1..4294967296</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="35-bit_state_32-bit_value_Linear_Congruential_Generators_xor.">35-bit state 32-bit value Linear Congruential Generators xor.</a></h4>
+  Both algorithms used for the variables LCG and MCG provide
+  fast low-quality pseudo-random number generation without using
+  Erlang bignums.
+  <pre>  LCG:
+    35-bit classical Linear Congruential Generator
+    based on Erlang/OTP 25.0-rc3 rand:lcg35/1.
+ 
+    X1 = (A * X0 + C) rem M
+    A = 15319397, C = 15366142135, M = 2^35
+ 
+    C is an odd value close to M / sqrt(5).
+    The period is M (i.e., 2^35).
+ 
+  MCG:
+    35-bit Multiplicative Congruential Generator
+    (i.e., Lehmer random number generator,
+     Park-Miller random number generator)
+    based on Erlang/OTP 25.0-rc3 rand:mcg35/1.
+ 
+    X1 = (A * X0) rem M
+    A = 185852, B = 35, D = 31, M = 2^B - D
+ 
+    D makes M prime (M == 34359738337) so X0 is always coprime.
+    The period is M (i.e., 2^35 - 31).</pre><p>  
+The LCG and MCG are combined with xor to produce a 32-bit random number.  
+TestU01 SmallCrush/Crush/BigCrush have been used to test the 32-bit result  
+(both with the bits forward and reversed)  
+and the p-value statistics are in [0.0000001..0.9999999]  
+(when starting from 100 equispaced points of the state space).  
+The wider bounds (i.e., wider than [0.001..0.999]) are due to the  
+shorter period.</p>
+ 
+  <p>mwc59x_32/1 is slighly more efficient but provides slightly less randomness  
+(same p-value statistics bounds but the separate sums of   
+(1e-8  .. 1e-4] and [1 - 1e-4 .. 1 - 1e-8) are less extreme   
+for lcg35x_32/1, i.e., the mwc59x_32/1 (1e-8  .. 1e-4] sum is 25.5% smaller   
+and the mwc59x_32/1 [1 - 1e-4 .. 1 - 1e-8) sum is 16.1% larger while   
+mwc59x_32/1 provides roughly a 1.08x speedup with Erlang/OTP 25.0).</p>
+ 
+  <p>Pierre L'Ecuyer, Richard Simard.  
+TestU01: A C Library for Empirical Testing of Random Number Generators.  
+ACM Transactions on Mathematical Software, vol. 33, iss. 4, article 22, 2007.  
+http://portal.acm.org/citation.cfm?doid=1268776.1268777  
+http://simul.iro.umontreal.ca/testu01/tu01.html</p>
+ 
+  (A is selected from)
+  L'Ecuyer, Pierre.  Tables of linear congruential generators of
+  different sizes and good lattice structure.
+  Mathematics of Computation, vol. 68, no. 225, pp. 249–260, 1999.
+  https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/
+  https://www.iro.umontreal.ca/~lecuyer/myftp/papers/latrules99Errata.pdf</p>
+
+<h3 class="function"><a name="mwc256-1">mwc256/1</a></h3>
+<div class="spec">
+<p><tt>mwc256(N::pos_integer()) -&gt; pos_integer()</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="256-bit_state_Marsaglia_multiply-with-carry_generator.">256-bit state Marsaglia multiply-with-carry generator.</a></h4>
+  <pre>  T = A * X0 + C0
+  X1 = Y0
+  Y1 = Z0
+  C1 = T bsr 64
+  Z1 = T band 16#ffffffffffffffff
+  A = 16#ff377e26f82da74a, 0 &lt; X0, 0 &lt; Y0, 0 &lt; Z0, 0 &lt; C0 &lt; A - 1
+ 
+  Simulates a multiplicative LCG with prime modulus
+  M = 16#ff377e26f82da749ffffffffffffffffffffffffffffffffffffffffffffffff .
+  The period is approximately 2^255.</pre><p>  
+Vigna, Sebastiano.  
+https://prng.di.unimi.it/MWC256.c  
+https://prng.di.unimi.it/#quality  
+TestU01 BigCrush passed (p-value statistics are in [0.001..0.999])  
+when starting from 100 equispaced points of the state space.</p>
+ 
+  Marsaglia, George.  Xorshift RNGs.
+  Journal of Statistical Software, vol. 8, no. 14, pp. 1–6, 2003-07.
+  https://doi.org/10.18637/jss.v008.i14</p>
+
+<h3 class="function"><a name="mwc256_128-1">mwc256_128/1</a></h3>
+<div class="spec">
+<p><tt>mwc256_128(N::1..340282366920938463463374607431768211456) -&gt; 1..340282366920938463463374607431768211456</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="256-bit_state_128-bit_value_Marsaglia_multiply-with-carry_generator.">256-bit state 128-bit value Marsaglia multiply-with-carry generator.</a></h4>
+  mwc256/1 limited to a 128-bit return value for less latency.</p>
+
+<h3 class="function"><a name="mwc256_64-1">mwc256_64/1</a></h3>
+<div class="spec">
+<p><tt>mwc256_64(N::1..18446744073709551616) -&gt; 1..18446744073709551616</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="256-bit_state_64-bit_value_Marsaglia_multiply-with-carry_generator.">256-bit state 64-bit value Marsaglia multiply-with-carry generator.</a></h4>
+  mwc256/1 limited to a 64-bit return value for less latency.</p>
+
+<h3 class="function"><a name="mwc59x_32-1">mwc59x_32/1</a></h3>
+<div class="spec">
+<p><tt>mwc59x_32(N::1..4294967296) -&gt; 1..4294967296</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="59-bit_state_32-bit_value_Marsaglia_multiply-with-carry_generator_xor.">59-bit state 32-bit value Marsaglia multiply-with-carry generator xor.</a></h4>
+  <pre>  T = A * X0 + C0
+  C1 = T bsr 32
+  X1 = T band 16#ffffffff
+  A = 16#7fa6502, 0 &lt; X0, 0 &lt; C0 &lt; A - 1
+ 
+  Simulates a multiplicative LCG with prime modulus
+  M = 16#7fa6501ffffffff (M = A * 2^32 - 1).
+  The period is approximately 2^58.</pre><p>  
+X1 and C1 are combined with xor to produce a 32-bit random number.  
+TestU01 SmallCrush/Crush/BigCrush have been used to test the 32-bit result  
+(both with the bits forward and reversed)  
+and the p-value statistics are in [0.0000001..0.9999999]  
+(when starting from 100 equispaced points of the state space).  
+The wider bounds (i.e., wider than [0.001..0.999]) are due to the  
+shorter period.</p>
+ 
+  <p>rand:mwc59/1 in Erlang/OTP 25.0 is similar.  However, usage of rand:mwc59/1  
+with rand:mwc59_value32/1 clearly fails the TestU01 Crush and BigCrush tests  
+(e.g., with X0 and C0 initially set to 1).  mwc59x_32/1 was created  
+to provide more statistically significant randomness than is possible when  
+using rand:mwc59/1 .</p>
+ 
+  <p>Pierre L'Ecuyer, Richard Simard.  
+TestU01: A C Library for Empirical Testing of Random Number Generators.  
+ACM Transactions on Mathematical Software, vol. 33, iss. 4, article 22, 2007.  
+http://portal.acm.org/citation.cfm?doid=1268776.1268777  
+http://simul.iro.umontreal.ca/testu01/tu01.html</p>
+ 
+  Marsaglia, George.  Xorshift RNGs.
+  Journal of Statistical Software, vol. 8, no. 14, pp. 1–6, 2003-07.
+  https://doi.org/10.18637/jss.v008.i14</p>
 
 <h3 class="function"><a name="seed-0">seed/0</a></h3>
 <div class="spec">
 <p><tt>seed() -&gt; ok</tt><br></p>
 <p> </p>
 </div><p>
-  <h4><a name="Seed_random_number_generation.">Seed random number generation.</a></h4>
-</p>
+  <h4><a name="Randomized_seeding_of_random_number_generators.">Randomized seeding of random number generators.</a></h4><p>  
+Backwards-compatible seeding of random number generators for this  
+module's uniform prefix functions and the external modules used  
+(rand, random_wh06_int and random_wh82).  
+Use seed/1 to seed specific random number generators.</p>
+ 
+  Instead of using this function, it is better to use a jump function
+  for obtaining non-overlapping sequences, if a jump function is available
+  and the number of Erlang processes used is limited
+  (to ensure concurrent usage of the same algorithm has no collisions).</p>
+
+<h3 class="function"><a name="seed-1">seed/1</a></h3>
+<div class="spec">
+<p><tt>seed(L::[all | quickrand | <a href="#type-algorithms">algorithms()</a>, ...]) -&gt; ok</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Randomized_seeding_of_specific_random_number_generators.">Randomized seeding of specific random number generators.</a></h4>
+  Instead of using this function, it is better to use a jump function
+  for obtaining non-overlapping sequences, if a jump function is available
+  and the number of Erlang processes used is limited
+  (to ensure concurrent usage of the same algorithm has no collisions).</p>
 
 <h3 class="function"><a name="strong_float-0">strong_float/0</a></h3>
 <div class="spec">
@@ -105,7 +327,7 @@
 
 <h3 class="function"><a name="strong_uniform_range-2">strong_uniform_range/2</a></h3>
 <div class="spec">
-<p><tt>strong_uniform_range(Min::non_neg_integer(), Max::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+<p><tt>strong_uniform_range(Min::integer(), Max::non_neg_integer()) -&gt; integer()</tt><br></p>
 <p> </p>
 </div><p>
   <h4><a name="Strong_uniform_random_number_generation_in_a_range.">Strong uniform random number generation in a range.</a></h4>
@@ -119,29 +341,9 @@
   <h4><a name="Quick_uniform_random_number_generation.">Quick uniform random number generation.</a></h4>
   Not meant for cryptographic purposes.</p>
 
-<h3 class="function"><a name="uniform-1">uniform/1</a></h3>
-<div class="spec">
-<p><tt>uniform(N::pos_integer()) -&gt; pos_integer()</tt><br></p>
-<p> </p>
-</div>
-
 <h3 class="function"><a name="uniform_cache-1">uniform_cache/1</a></h3>
 <div class="spec">
 <p><tt>uniform_cache(N::pos_integer()) -&gt; pos_integer()</tt><br></p>
-<p> </p>
-</div><p>
-  <h4><a name="Quick_uniform_random_number_generation_with_cached_data.">Quick uniform random number generation with cached data.</a></h4>
-  Not meant for cryptographic purposes.</p>
-
-<h3 class="function"><a name="uniform_cache-1">uniform_cache/1</a></h3>
-<div class="spec">
-<p><tt>uniform_cache(N::pos_integer()) -&gt; pos_integer()</tt><br></p>
-<p> </p>
-</div>
-
-<h3 class="function"><a name="uniform_cache-2">uniform_cache/2</a></h3>
-<div class="spec">
-<p><tt>uniform_cache(N::pos_integer(), State::<a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>) -&gt; {pos_integer(), <a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>}</tt><br></p>
 <p> </p>
 </div><p>
   <h4><a name="Quick_uniform_random_number_generation_with_cached_data.">Quick uniform random number generation with cached data.</a></h4>
@@ -151,7 +353,9 @@
 <div class="spec">
 <p><tt>uniform_cache(N::pos_integer(), State::<a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>) -&gt; {pos_integer(), <a href="doc/quickrand_cache.html#type-state">quickrand_cache:state()</a>}</tt><br></p>
 <p> </p>
-</div>
+</div><p>
+  <h4><a name="Quick_uniform_random_number_generation_with_cached_data.">Quick uniform random number generation with cached data.</a></h4>
+  Not meant for cryptographic purposes.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>

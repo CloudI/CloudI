@@ -14,9 +14,9 @@
    <h3><a name="reltool_Utility_Functions">reltool Utility Functions</a></h3>
    All the functions here are probably considered unorthodox, but
    are useful for runtime usage of applications and releases.
-<p>Copyright © 2013-2022 Michael Truog</p>
+<p>Copyright © 2013-2023 Michael Truog</p>
 
-<p><b>Version:</b> 2.0.5 Oct 11 2022 19:38:33
+<p><b>Version:</b> 2.0.7 Oct 26 2023 11:55:37
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -67,6 +67,8 @@
   <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration.">Start all the dependent applications manually with a specific configuration.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#application_start-3">application_start/3</a></td><td>
   <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration_and_timeout.">Start all the dependent applications manually with a specific configuration and timeout.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#application_start-4">application_start/4</a></td><td>
+  <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration,_excluded_dependencies_and_timeout.">Start all the dependent applications manually with a specific configuration, excluded dependencies and timeout.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#application_stop-1">application_stop/1</a></td><td>
   <h4><a name="Stop_an_application_and_its_dependencies.">Stop an application and its dependencies.</a></h4>
   Only stop dependencies that are not required for other applications.</td></tr>
@@ -278,6 +280,14 @@
 <p> </p>
 </div><p>
   <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration_and_timeout.">Start all the dependent applications manually with a specific configuration and timeout.</a></h4>
+</p>
+
+<h3 class="function"><a name="application_start-4">application_start/4</a></h3>
+<div class="spec">
+<p><tt>application_start(Application::atom(), Env::[{atom(), any()}], Excluded::[atom()], Timeout::pos_integer() | infinity) -&gt; ok | {error, any()}</tt><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Start_all_the_dependent_applications_manually_with_a_specific_configuration,_excluded_dependencies_and_timeout.">Start all the dependent applications manually with a specific configuration, excluded dependencies and timeout.</a></h4>
 </p>
 
 <h3 class="function"><a name="application_stop-1">application_stop/1</a></h3>
