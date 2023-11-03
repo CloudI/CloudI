@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-11-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_api_requests json representation of the
+      {{M :: atom(), F :: atom(), A :: list()}} closure
+      configuration argument format
+
 2023-10-27 Michael Truog   <mjtruog at protonmail dot com>
 
     * CloudI version 2.0.7 released

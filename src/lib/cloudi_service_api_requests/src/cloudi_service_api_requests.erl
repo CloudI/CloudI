@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -938,10 +938,18 @@ convert_term_to_json_logging_options([{Key, Value} | Options]) ->
 
 convert_term_to_json_option_aspects([]) ->
     [];
+convert_term_to_json_option_aspects([{{Module, Function, Args}} | Aspects])
+    when is_atom(Module), is_atom(Function), is_list(Args) ->
+    [[{<<"module">>, erlang:atom_to_binary(Module, utf8)},
+      {<<"function">>, erlang:atom_to_binary(Function, utf8)},
+      {<<"args">>, cloudi_string:term_to_binary_compact(Args)},
+      {<<"closure">>, true}] |
+     convert_term_to_json_option_aspects(Aspects)];
 convert_term_to_json_option_aspects([{{Module, Function}} | Aspects])
     when is_atom(Module), is_atom(Function) ->
     [[{<<"module">>, erlang:atom_to_binary(Module, utf8)},
       {<<"function">>, erlang:atom_to_binary(Function, utf8)},
+      {<<"args">>, <<"[]">>},
       {<<"closure">>, true}] |
      convert_term_to_json_option_aspects(Aspects)];
 convert_term_to_json_option_aspects([{Module, Function} | Aspects])
