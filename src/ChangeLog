@@ -6,6 +6,9 @@
     * Fix cloudi_service_api_requests json representation of the
       {{M :: atom(), F :: atom(), A :: list()}} closure
       configuration argument format
+    * Fix cloudi_service_api_batch queue erl/json requests to provide
+      the same data provided by cloudi_service_api_requests
+    * Fix C++ backtrace checks when -Werror is in CXXFLAGS
 
 2023-10-27 Michael Truog   <mjtruog at protonmail dot com>
 

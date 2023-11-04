@@ -42,6 +42,8 @@
 %% external interface
 -export([from_erl/2,
          from_json/2,
+         to_data_erl_services/1,
+         to_data_json_services/1,
          to_erl/2,
          to_erl/3,
          to_json/2,
@@ -81,6 +83,38 @@ from_erl(_Method, Request) ->
 
 from_json(Method, Request) ->
     convert_json_to_term(Method, Request).
+
+-spec to_data_erl_services(L :: list(cloudi_service_api:service() |
+                                     cloudi_service_api:service_proplist())) ->
+    list().
+
+to_data_erl_services(L) ->
+    lists:map(fun(Service) ->
+        case convert_service_configuration(Service) of
+            [] ->
+                % service configuration validation will fail
+                % with the Service input that was provided
+                [];
+            ServiceNew when is_tuple(ServiceNew) ->
+                convert_term_to_erlang_service(ServiceNew)
+        end
+    end, L).
+
+-spec to_data_json_services(L :: list(cloudi_service_api:service() |
+                                      cloudi_service_api:service_proplist())) ->
+    list().
+
+to_data_json_services(L) ->
+    lists:map(fun(Service) ->
+        case convert_service_configuration(Service) of
+            [] ->
+                % service configuration validation will fail
+                % with the Service input that was provided
+                [];
+            ServiceNew when is_tuple(ServiceNew) ->
+                convert_term_to_json_service(ServiceNew)
+        end
+    end, L).
 
 -spec to_erl(Method :: atom(),
              Result :: any()) ->
@@ -319,6 +353,154 @@ convert_api_data(services_update,
 convert_api_data(_Method, Result) ->
     Result.
 
+convert_service_configuration(#internal{} = Service) ->
+    Service;
+convert_service_configuration(#external{} = Service) ->
+    Service;
+convert_service_configuration([_ | _] = Service) ->
+    Type = case lists:keyfind(type, 1, Service) of
+        {type, TypeValue} ->
+            TypeValue;
+        false ->
+            case lists:keyfind(module, 1, Service) of
+                {module, _} ->
+                    internal;
+                false ->
+                    case lists:keyfind(file_path, 1, Service) of
+                        {file_path, _} ->
+                            external;
+                        false ->
+                            undefined
+                    end
+            end
+    end,
+    if
+        Type =:= internal ->
+            Internal = #internal{module = " "},
+            Defaults = [
+                {type, Type},
+                {prefix,
+                 Internal#internal.prefix},
+                {module,
+                 Internal#internal.module},
+                {args,
+                 Internal#internal.args},
+                {dest_refresh,
+                 Internal#internal.dest_refresh},
+                {timeout_init,
+                 Internal#internal.timeout_init},
+                {timeout_async,
+                 Internal#internal.timeout_async},
+                {timeout_sync,
+                 Internal#internal.timeout_sync},
+                {dest_list_deny,
+                 Internal#internal.dest_list_deny},
+                {dest_list_allow,
+                 Internal#internal.dest_list_allow},
+                {count_process,
+                 Internal#internal.count_process},
+                {max_r,
+                 Internal#internal.max_r},
+                {max_t,
+                 Internal#internal.max_t},
+                {options,
+                 Internal#internal.options}],
+            [Type, Prefix,
+             Module, Args, DestRefresh,
+             TimeoutInit, TimeoutAsync, TimeoutSync,
+             DestListDeny, DestListAllow, CountProcess,
+             MaxR, MaxT, Options | Invalid] =
+                cloudi_proplists:take_values(Defaults, Service),
+            if
+                Invalid == [], Module /= " " ->
+                    #internal{prefix = Prefix,
+                              module = Module,
+                              args = Args,
+                              dest_refresh = DestRefresh,
+                              timeout_init = TimeoutInit,
+                              timeout_async = TimeoutAsync,
+                              timeout_sync = TimeoutSync,
+                              dest_list_deny = DestListDeny,
+                              dest_list_allow = DestListAllow,
+                              count_process = CountProcess,
+                              max_r = MaxR,
+                              max_t = MaxT,
+                              options = Options};
+                true ->
+                    []
+            end;
+        Type =:= external ->
+            External = #external{file_path = " "},
+            Defaults = [
+                {type, Type},
+                {prefix,
+                 External#external.prefix},
+                {file_path,
+                 External#external.file_path},
+                {args,
+                 External#external.args},
+                {env,
+                 External#external.env},
+                {dest_refresh,
+                 External#external.dest_refresh},
+                {protocol,
+                 External#external.protocol},
+                {buffer_size,
+                 External#external.buffer_size},
+                {timeout_init,
+                 External#external.timeout_init},
+                {timeout_async,
+                 External#external.timeout_async},
+                {timeout_sync,
+                 External#external.timeout_sync},
+                {dest_list_deny,
+                 External#external.dest_list_deny},
+                {dest_list_allow,
+                 External#external.dest_list_allow},
+                {count_process,
+                 External#external.count_process},
+                {count_thread,
+                 External#external.count_thread},
+                {max_r,
+                 External#external.max_r},
+                {max_t,
+                 External#external.max_t},
+                {options,
+                 External#external.options}],
+            [Type, Prefix,
+             FilePath, Args, Env, DestRefresh, Protocol, BufferSize,
+             TimeoutInit, TimeoutAsync, TimeoutSync, DestListDeny,
+             DestListAllow, CountProcess, CountThread,
+             MaxR, MaxT, Options | Invalid] =
+                cloudi_proplists:take_values(Defaults, Service),
+            if
+                Invalid == [], FilePath /= " " ->
+                    #external{prefix = Prefix,
+                              file_path = FilePath,
+                              args = Args,
+                              env = Env,
+                              dest_refresh = DestRefresh,
+                              protocol = Protocol,
+                              buffer_size = BufferSize,
+                              timeout_init = TimeoutInit,
+                              timeout_async = TimeoutAsync,
+                              timeout_sync = TimeoutSync,
+                              dest_list_deny = DestListDeny,
+                              dest_list_allow = DestListAllow,
+                              count_process = CountProcess,
+                              count_thread = CountThread,
+                              max_r = MaxR,
+                              max_t = MaxT,
+                              options = Options};
+                true ->
+                    []
+            end;
+        true ->
+            []
+    end;
+convert_service_configuration(_) ->
+    [].
+
 convert_erlang_to_term(Request) ->
     try cloudi_string:binary_to_term(Request)
     catch
@@ -333,7 +515,7 @@ convert_term_to_erlang({ok, Result}, Method, Space) ->
     ResultNew = if
         Method =:= services;
         Method =:= services_search ->
-            [convert_term_to_erlang_service(Service, Id)
+            [{Id, convert_term_to_erlang_service(Service)}
              || {Id, Service} <- Result];
         Method =:= logging ->
             convert_term_to_erlang_logging_options(Result);
@@ -344,14 +526,10 @@ convert_term_to_erlang({ok, Result}, Method, Space) ->
 convert_term_to_erlang(Result, _, Space) ->
     convert_term_to_erlang_string(Result, Space).
 
-convert_term_to_erlang_service(#internal{options = Options} = Service0, Id) ->
-    ServiceN = Service0#internal{
-                   options = convert_term_to_erlang_service_options(Options)},
-    {Id, ServiceN};
-convert_term_to_erlang_service(#external{options = Options} = Service0, Id) ->
-    ServiceN = Service0#external{
-                   options = convert_term_to_erlang_service_options(Options)},
-    {Id, ServiceN}.
+convert_term_to_erlang_service(#internal{options = Options} = Service) ->
+    Service#internal{options = convert_term_to_erlang_service_options(Options)};
+convert_term_to_erlang_service(#external{options = Options} = Service) ->
+    Service#external{options = convert_term_to_erlang_service_options(Options)}.
 
 convert_term_to_erlang_service_options([]) ->
     [];
@@ -728,7 +906,8 @@ convert_term_to_json({ok, Services}, Method, Space)
          Method =:= services_search ->
     json_encode([{<<"success">>, true},
                  {erlang:atom_to_binary(Method, utf8),
-                  [convert_term_to_json_service(Service, Id)
+                  [[{<<"id">>, erlang:list_to_binary(Id)} |
+                    convert_term_to_json_service(Service)]
                    || {Id, Service} <- Services]}], Space);
 convert_term_to_json({ok, Statuses}, services_status = Method, Space) ->
     json_encode([{<<"success">>, true},
@@ -781,7 +960,7 @@ convert_term_to_json_service(#internal{prefix = Prefix,
                                        count_process = CountProcess,
                                        max_r = MaxR,
                                        max_t = MaxT,
-                                       options = Options}, Id) ->
+                                       options = Options}) ->
     Service0 = [{<<"count_process">>, CountProcess},
                 {<<"max_r">>, MaxR},
                 {<<"max_t">>, convert_term_to_json_period_seconds(MaxT)},
@@ -822,8 +1001,7 @@ convert_term_to_json_service(#internal{prefix = Prefix,
         is_list(Module) ->
             unicode:characters_to_binary(Module)
     end,
-    [{<<"id">>, erlang:list_to_binary(Id)},
-     {<<"type">>, <<"internal">>},
+    [{<<"type">>, <<"internal">>},
      {<<"prefix">>, cloudi_service_name:utf8(Prefix)},
      {<<"module">>, ModuleValue},
      {<<"args">>, cloudi_string:term_to_binary_compact(Args)} | ServiceN];
@@ -843,7 +1021,7 @@ convert_term_to_json_service(#external{prefix = Prefix,
                                        count_thread = CountThread,
                                        max_r = MaxR,
                                        max_t = MaxT,
-                                       options = Options}, Id) ->
+                                       options = Options}) ->
     Service0 = [{<<"count_process">>, CountProcess},
                 {<<"count_thread">>, CountThread},
                 {<<"max_r">>, MaxR},
@@ -881,8 +1059,7 @@ convert_term_to_json_service(#external{prefix = Prefix,
             [{<<"dest_refresh">>,
               erlang:atom_to_binary(DestRefresh, utf8)} | Service3]
     end,
-    [{<<"id">>, erlang:list_to_binary(Id)},
-     {<<"type">>, <<"external">>},
+    [{<<"type">>, <<"external">>},
      {<<"prefix">>, cloudi_service_name:utf8(Prefix)},
      {<<"file_path">>, unicode:characters_to_binary(FilePath)},
      {<<"args">>, unicode:characters_to_binary(Args)},

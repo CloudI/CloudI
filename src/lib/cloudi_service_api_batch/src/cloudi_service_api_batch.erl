@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2019-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_batch).
@@ -785,8 +785,8 @@ external_format_from(?FORMAT_ERLANG, Method, Request) ->
 external_format_from(?FORMAT_JSON, Method, Request) ->
     cloudi_service_api_requests:from_json(Method, Request).
 
-external_format_to(?FORMAT_ERLANG, _Method, {Response, State}) ->
-    {convert_term_to_erlang(Response), State};
+external_format_to(?FORMAT_ERLANG, Method, {Response, State}) ->
+    {convert_term_to_erlang(Response, Method), State};
 external_format_to(?FORMAT_JSON, Method, {Response, State}) ->
     {convert_term_to_json(Response, Method), State}.
 
@@ -1050,7 +1050,10 @@ add_option(Type, Option, Options, QueueName, Service) ->
             [{Option, [Aspect]} | Options]
     end.
 
-convert_term_to_erlang(Result) ->
+convert_term_to_erlang({ok, QueueList}, queue) ->
+    QueueListNew = cloudi_service_api_requests:to_data_erl_services(QueueList),
+    convert_term_to_erlang_string({ok, QueueListNew});
+convert_term_to_erlang(Result, _) ->
     convert_term_to_erlang_string(Result).
 
 convert_term_to_erlang_string(Result) ->
@@ -1062,6 +1065,12 @@ convert_term_to_json({error, Reason}, _) ->
     ReasonBinary = cloudi_string:term_to_binary_compact(Reason),
     json_encode([{<<"success">>, false},
                  {<<"error">>, ReasonBinary}]);
+convert_term_to_json({ok, QueueList}, Method)
+    when Method =:= queue ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  cloudi_service_api_requests:
+                  to_data_json_services(QueueList)}]);
 convert_term_to_json(Term, Method) ->
     json_encode([{<<"success">>, true},
                  {erlang:atom_to_binary(Method, utf8), Term}]).

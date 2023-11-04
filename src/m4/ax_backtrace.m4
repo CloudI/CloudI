@@ -62,7 +62,7 @@ abi::__cxa_demangle(0, 0, 0, 0);
         [AC_LANG_PROGRAM([[
 #include <dlfcn.h>
          ]], [[
-dladdr(0, 0);
+dladdr(0, (Dl_info *) 1);
          ]])],
         [has_dladdr="yes"])
 
@@ -117,7 +117,7 @@ _Unwind_GetIP(0);
             [AC_LANG_PROGRAM([[
 #include <execinfo.h>
              ]], [[
-backtrace(0, 0);
+backtrace((void **) 1, 1);
              ]])],
             [has_execinfo="yes"])
         AC_MSG_RESULT($has_execinfo)
@@ -127,7 +127,7 @@ backtrace(0, 0);
                 [AC_LANG_PROGRAM([[
 #include <execinfo.h>
                  ]], [[
-backtrace(0, 0);
+backtrace((void **) 1, 1);
                  ]])],
                 [has_execinfo="yes"])
         else
@@ -161,7 +161,7 @@ backtrace(0, 0);
 #include <libdwarf/libdwarf.h>
 #include <libdwarf/dwarf.h>
                  ]], [[
-dwarf_elf_init(0, 0, 0, 0, 0, 0);
+dwarf_elf_init((Elf *) 1, 0, 0, 0, 0, 0);
                  ]])],
                 [AX_CHECK_PRIVATE_LIB(elf, elf_version,
                     [AC_LANG_PROGRAM([[
