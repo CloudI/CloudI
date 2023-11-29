@@ -25,9 +25,9 @@ compiler:
   - clang
   - gcc
 otp_release:
-  - 24.2
-  - 23.3.1
-  - 22.3.4
+  - 26.1.1
+  - 25.3.2.6
+  - 24.3.1
 python:
   - "3.8"
 rvm:

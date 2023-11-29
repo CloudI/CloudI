@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-11-29 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix 0.0 =/= -0.0 match Erlang/OTP 26.1 warning in cloudi_math eunit test
+    * Add C++ std::ignore use
+
 2023-11-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_api_requests json representation of the

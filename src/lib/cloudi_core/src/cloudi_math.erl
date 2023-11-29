@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2022-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_math).
@@ -127,7 +127,7 @@ module_test_() ->
     ]}.
 
 t_erfinv() ->
-    true = erfinv(0.0) =:= 0.0,
+    true = erfinv(0.0) == 0.0,
     true = erfinv(0.1) =:= 0.08885599049425769,
     true = erfinv(0.2) =:= 0.1791434546212917,
     true = erfinv(0.3) =:= 0.2724627147267543,

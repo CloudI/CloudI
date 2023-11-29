@@ -271,13 +271,13 @@ Erlang `ranch1`
 - `Sun Dec  2 00:06:04 UTC 2018`
 - `MIT`
 
-Erlang `rebar`
---------------
+Erlang `rebar2`
+---------------
 `Erlang OTP-compliant build tool`
 
-- `https://github.com/rebar/rebar`
-- `commit ebb474b7593527969a8ce7d43b42f00e4498c391 (2.1.0-pre)`
-- `Tue Feb 12 12:32:53 PST 2013`
+- `https://github.com/okeuday/rebar2`
+- `commit 7d0b56a5d815d791e5a24e0ccb9032a671961a9e (CloudI)`
+- `Wed Nov 29 22:11:29 UTC 2023`
 - `Apache License 2.0`
 
 Erlang `setup`

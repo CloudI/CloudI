@@ -25,6 +25,12 @@
 //
 #include <ei.h>
 #include <vector>
+#if __cplusplus >= 201103L
+#include <tuple>
+#define UNCHECKED(RESULT) (std::ignore = RESULT)
+#else
+#define UNCHECKED(RESULT) ((void) (RESULT + 1))
+#endif
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
@@ -47,8 +53,6 @@
 #include "cloudi_os_owner.hpp"
 #include "cloudi_os_syscall_lock.hpp"
 #include "assert.hpp"
-
-#define UNCHECKED(RESULT) ((void) (RESULT + 1))
 
 namespace
 {
