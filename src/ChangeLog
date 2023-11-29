@@ -5,6 +5,7 @@
 
     * Fix 0.0 =/= -0.0 match Erlang/OTP 26.1 warning in cloudi_math eunit test
     * Add C++ std::ignore use
+    * Update erlang_term
 
 2023-11-03 Michael Truog   <mjtruog at protonmail dot com>
 

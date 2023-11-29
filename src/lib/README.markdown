@@ -28,8 +28,8 @@ Erlang `erlang_term`
 `Erlang Term Info`
 
 - `https://github.com/okeuday/erlang_term`
-- `commit 62525a1637bce0be017efe2dc006a1cfb1bc0335 (v2.0.7)`
-- `Fri Oct 27 06:13:06 UTC 2023`
+- `commit aa08fab733841ad9ee36dd0314481e156a8c7299`
+- `Wed Nov 29 22:11:29 UTC 2023`
 - `MIT`
 
 Erlang `key2value`
