@@ -1,26 +1,7 @@
 dist: bionic
 sudo: required
 language: erlang
-matrix:
-  include:
-    - os: linux
-      addons:
-        apt:
-          packages:
-            - g++-5
-      env:
-         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - llvm-toolchain-bionic-3.9
-          packages:
-            - clang-3.9
-      env:
-        - MATRIX_EVAL="CC=clang-3.9 && CXX=clang++-3.9"
 compiler:
-  - clang
   - gcc
 otp_release:
   - 25.3.2.6
