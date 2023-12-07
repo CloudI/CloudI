@@ -34,6 +34,16 @@
 #include <sstream>
 #include <string>
 
+#ifdef NODISCARD
+#define NODISCARD_EXTERNAL NODISCARD
+#undef NODISCARD
+#endif
+#if defined(__cplusplus) && (__cplusplus >= 201603L)
+#define NODISCARD [[nodiscard]]
+#else
+#define NODISCARD
+#endif
+
 #define CLOUDI_MAX_BUFFERSIZE 2147483648U /* 2GB */
 
 typedef struct cloudi_instance_t cloudi_instance_t;
@@ -145,201 +155,201 @@ class API
         API(unsigned int const thread_index,
             bool const terminate_return_value = true);
 
-        static unsigned int thread_count();
+        NODISCARD static unsigned int thread_count();
 
-        int subscribe(std::string const & pattern,
-                      function_object_cxx_const const & object) const;
+        NODISCARD int subscribe(std::string const & pattern,
+                                function_object_cxx_const const & object) const;
 
-        int subscribe(char const * const pattern,
-                      function_object_c_const const & object) const;
+        NODISCARD int subscribe(char const * const pattern,
+                                function_object_c_const const & object) const;
 
-        int subscribe(std::string const & pattern,
-                      function_object_cxx & object) const;
+        NODISCARD int subscribe(std::string const & pattern,
+                                function_object_cxx & object) const;
 
-        int subscribe(char const * const pattern,
-                      function_object_c & object) const;
+        NODISCARD int subscribe(char const * const pattern,
+                                function_object_c & object) const;
 
-        int subscribe(std::string const & pattern,
-                      function_object_cxx * object) const;
+        NODISCARD int subscribe(std::string const & pattern,
+                                function_object_cxx * object) const;
 
-        int subscribe(char const * const pattern,
-                      function_object_c * object) const;
+        NODISCARD int subscribe(char const * const pattern,
+                                function_object_c * object) const;
 
-        int subscribe(std::string const & pattern,
-                      void (*f) (API const &,
-                                 int const,
-                                 std::string const &,
-                                 std::string const &,
-                                 void const * const,
-                                 uint32_t const,
-                                 void const * const,
-                                 uint32_t const,
-                                 uint32_t,
-                                 int8_t,
-                                 char const * const,
-                                 char const * const,
-                                 uint32_t const)) const;
+        NODISCARD int subscribe(std::string const & pattern,
+                                void (*f) (API const &,
+                                           int const,
+                                           std::string const &,
+                                           std::string const &,
+                                           void const * const,
+                                           uint32_t const,
+                                           void const * const,
+                                           uint32_t const,
+                                           uint32_t,
+                                           int8_t,
+                                           char const * const,
+                                           char const * const,
+                                           uint32_t const)) const;
 
-        int subscribe(char const * const pattern,
-                      void (*f) (API const &,
-                                 int const,
-                                 std::string const &,
-                                 std::string const &,
-                                 void const * const,
-                                 uint32_t const,
-                                 void const * const,
-                                 uint32_t const,
-                                 uint32_t,
-                                 int8_t,
-                                 char const * const,
-                                 char const * const,
-                                 uint32_t const)) const;
+        NODISCARD int subscribe(char const * const pattern,
+                                void (*f) (API const &,
+                                           int const,
+                                           std::string const &,
+                                           std::string const &,
+                                           void const * const,
+                                           uint32_t const,
+                                           void const * const,
+                                           uint32_t const,
+                                           uint32_t,
+                                           int8_t,
+                                           char const * const,
+                                           char const * const,
+                                           uint32_t const)) const;
 
-        int subscribe(std::string const & pattern,
-                      void (*f) (API const &,
-                                 int const,
-                                 char const * const,
-                                 char const * const,
-                                 void const * const,
-                                 uint32_t const,
-                                 void const * const,
-                                 uint32_t const,
-                                 uint32_t,
-                                 int8_t,
-                                 char const * const,
-                                 char const * const,
-                                 uint32_t const)) const;
+        NODISCARD int subscribe(std::string const & pattern,
+                                void (*f) (API const &,
+                                           int const,
+                                           char const * const,
+                                           char const * const,
+                                           void const * const,
+                                           uint32_t const,
+                                           void const * const,
+                                           uint32_t const,
+                                           uint32_t,
+                                           int8_t,
+                                           char const * const,
+                                           char const * const,
+                                           uint32_t const)) const;
 
-        int subscribe(char const * const pattern,
-                      void (*f) (API const &,
-                                 int const,
-                                 char const * const,
-                                 char const * const,
-                                 void const * const,
-                                 uint32_t const,
-                                 void const * const,
-                                 uint32_t const,
-                                 uint32_t,
-                                 int8_t,
-                                 char const * const,
-                                 char const * const,
-                                 uint32_t const)) const;
-
-        template <typename T>
-        int subscribe(std::string const & pattern,
-                      T & object,
-                      void (T::*f) (API const &,
-                                    int const,
-                                    std::string const &,
-                                    std::string const &,
-                                    void const * const,
-                                    uint32_t const,
-                                    void const * const,
-                                    uint32_t const,
-                                    uint32_t,
-                                    int8_t,
-                                    char const * const,
-                                    char const * const,
-                                    uint32_t const)) const;
+        NODISCARD int subscribe(char const * const pattern,
+                                void (*f) (API const &,
+                                           int const,
+                                           char const * const,
+                                           char const * const,
+                                           void const * const,
+                                           uint32_t const,
+                                           void const * const,
+                                           uint32_t const,
+                                           uint32_t,
+                                           int8_t,
+                                           char const * const,
+                                           char const * const,
+                                           uint32_t const)) const;
 
         template <typename T>
-        int subscribe(char const * const pattern,
-                      T & object,
-                      void (T::*f) (API const &,
-                                    int const,
-                                    std::string const &,
-                                    std::string const &,
-                                    void const * const,
-                                    uint32_t const,
-                                    void const * const,
-                                    uint32_t const,
-                                    uint32_t,
-                                    int8_t,
-                                    char const * const,
-                                    char const * const,
-                                    uint32_t const)) const;
+        NODISCARD int subscribe(std::string const & pattern,
+                                T & object,
+                                void (T::*f) (API const &,
+                                              int const,
+                                              std::string const &,
+                                              std::string const &,
+                                              void const * const,
+                                              uint32_t const,
+                                              void const * const,
+                                              uint32_t const,
+                                              uint32_t,
+                                              int8_t,
+                                              char const * const,
+                                              char const * const,
+                                              uint32_t const)) const;
 
         template <typename T>
-        int subscribe(std::string const & pattern,
-                      T & object,
-                      void (T::*f) (API const &,
-                                    int const,
-                                    char const * const,
-                                    char const * const,
-                                    void const * const,
-                                    uint32_t const,
-                                    void const * const,
-                                    uint32_t const,
-                                    uint32_t,
-                                    int8_t,
-                                    char const * const,
-                                    char const * const,
-                                    uint32_t const)) const;
+        NODISCARD int subscribe(char const * const pattern,
+                                T & object,
+                                void (T::*f) (API const &,
+                                              int const,
+                                              std::string const &,
+                                              std::string const &,
+                                              void const * const,
+                                              uint32_t const,
+                                              void const * const,
+                                              uint32_t const,
+                                              uint32_t,
+                                              int8_t,
+                                              char const * const,
+                                              char const * const,
+                                              uint32_t const)) const;
 
         template <typename T>
-        int subscribe(char const * const pattern,
-                      T & object,
-                      void (T::*f) (API const &,
-                                    int const,
-                                    char const * const,
-                                    char const * const,
-                                    void const * const,
-                                    uint32_t const,
-                                    void const * const,
-                                    uint32_t const,
-                                    uint32_t,
-                                    int8_t,
-                                    char const * const,
-                                    char const * const,
-                                    uint32_t const)) const;
+        NODISCARD int subscribe(std::string const & pattern,
+                                T & object,
+                                void (T::*f) (API const &,
+                                              int const,
+                                              char const * const,
+                                              char const * const,
+                                              void const * const,
+                                              uint32_t const,
+                                              void const * const,
+                                              uint32_t const,
+                                              uint32_t,
+                                              int8_t,
+                                              char const * const,
+                                              char const * const,
+                                              uint32_t const)) const;
+
+        template <typename T>
+        NODISCARD int subscribe(char const * const pattern,
+                                T & object,
+                                void (T::*f) (API const &,
+                                              int const,
+                                              char const * const,
+                                              char const * const,
+                                              void const * const,
+                                              uint32_t const,
+                                              void const * const,
+                                              uint32_t const,
+                                              uint32_t,
+                                              int8_t,
+                                              char const * const,
+                                              char const * const,
+                                              uint32_t const)) const;
 
     private:
-        int subscribe(char const * const pattern,
-                      callback_function_generic * p) const;
+        NODISCARD int subscribe(char const * const pattern,
+                                callback_function_generic * p) const;
 
     public:
-        int subscribe_count(char const * const pattern) const;
+        NODISCARD int subscribe_count(char const * const pattern) const;
 
-        inline int subscribe_count(std::string const & pattern) const
+        NODISCARD inline int subscribe_count(std::string const & pattern) const
         {
             return subscribe_count(pattern.c_str());
         }
 
-        int unsubscribe(char const * const pattern) const;
+        NODISCARD int unsubscribe(char const * const pattern) const;
 
-        inline int unsubscribe(std::string const & pattern) const
+        NODISCARD inline int unsubscribe(std::string const & pattern) const
         {
             return unsubscribe(pattern.c_str());
         }
 
-        int send_async(char const * const name,
-                       void const * const request,
-                       uint32_t const request_size) const;
+        NODISCARD int send_async(char const * const name,
+                                 void const * const request,
+                                 uint32_t const request_size) const;
 
-        inline int send_async(std::string const & name,
-                              void const * const request,
-                              uint32_t const request_size) const
+        NODISCARD inline int send_async(std::string const & name,
+                                        void const * const request,
+                                        uint32_t const request_size) const
         {
             return send_async(name.c_str(),
                               request,
                               request_size);
         }
 
-        int send_async(char const * const name,
-                       void const * const request_info,
-                       uint32_t const request_info_size,
-                       void const * const request,
-                       uint32_t const request_size,
-                       uint32_t timeout,
-                       int8_t const priority) const;
+        NODISCARD int send_async(char const * const name,
+                                 void const * const request_info,
+                                 uint32_t const request_info_size,
+                                 void const * const request,
+                                 uint32_t const request_size,
+                                 uint32_t timeout,
+                                 int8_t const priority) const;
 
-        inline int send_async(std::string const & name,
-                              void const * const request_info,
-                              uint32_t const request_info_size,
-                              void const * const request,
-                              uint32_t const request_size,
-                              uint32_t timeout,
-                              int8_t const priority) const
+        NODISCARD inline int send_async(std::string const & name,
+                                        void const * const request_info,
+                                        uint32_t const request_info_size,
+                                        void const * const request,
+                                        uint32_t const request_size,
+                                        uint32_t timeout,
+                                        int8_t const priority) const
         {
             return send_async(name.c_str(),
                               request_info,
@@ -350,34 +360,34 @@ class API
                               priority);
         }
 
-        int send_sync(char const * const name,
-                      void const * const request,
-                      uint32_t const request_size) const;
+        NODISCARD int send_sync(char const * const name,
+                                void const * const request,
+                                uint32_t const request_size) const;
 
-        inline int send_sync(std::string const & name,
-                             void const * const request,
-                             uint32_t const request_size) const
+        NODISCARD inline int send_sync(std::string const & name,
+                                       void const * const request,
+                                       uint32_t const request_size) const
         {
             return send_sync(name.c_str(),
                              request,
                              request_size);
         }
 
-        int send_sync(char const * const name,
-                      void const * const request_info,
-                      uint32_t const request_info_size,
-                      void const * const request,
-                      uint32_t const request_size,
-                      uint32_t timeout,
-                      int8_t const priority) const;
+        NODISCARD int send_sync(char const * const name,
+                                void const * const request_info,
+                                uint32_t const request_info_size,
+                                void const * const request,
+                                uint32_t const request_size,
+                                uint32_t timeout,
+                                int8_t const priority) const;
 
-        inline int send_sync(std::string const & name,
-                             void const * const request_info,
-                             uint32_t const request_info_size,
-                             void const * const request,
-                             uint32_t const request_size,
-                             uint32_t timeout,
-                             int8_t const priority) const
+        NODISCARD inline int send_sync(std::string const & name,
+                                       void const * const request_info,
+                                       uint32_t const request_info_size,
+                                       void const * const request,
+                                       uint32_t const request_size,
+                                       uint32_t timeout,
+                                       int8_t const priority) const
         {
             return send_sync(name.c_str(),
                              request_info,
@@ -388,34 +398,34 @@ class API
                              priority);
         }
 
-        int mcast_async(char const * const name,
-                        void const * const request,
-                        uint32_t const request_size) const;
+        NODISCARD int mcast_async(char const * const name,
+                                  void const * const request,
+                                  uint32_t const request_size) const;
 
-        inline int mcast_async(std::string const & name,
-                               void const * const request,
-                               uint32_t const request_size) const
+        NODISCARD inline int mcast_async(std::string const & name,
+                                         void const * const request,
+                                         uint32_t const request_size) const
         {
             return mcast_async(name.c_str(),
                                request,
                                request_size);
         }
 
-        int mcast_async(char const * const name,
-                        void const * const request_info,
-                        uint32_t const request_info_size,
-                        void const * const request,
-                        uint32_t const request_size,
-                        uint32_t timeout,
-                        int8_t const priority) const;
+        NODISCARD int mcast_async(char const * const name,
+                                  void const * const request_info,
+                                  uint32_t const request_info_size,
+                                  void const * const request,
+                                  uint32_t const request_size,
+                                  uint32_t timeout,
+                                  int8_t const priority) const;
 
-        inline int mcast_async(std::string const & name,
-                               void const * const request_info,
-                               uint32_t const request_info_size,
-                               void const * const request,
-                               uint32_t const request_size,
-                               uint32_t timeout,
-                               int8_t const priority) const
+        NODISCARD inline int mcast_async(std::string const & name,
+                                         void const * const request_info,
+                                         uint32_t const request_info_size,
+                                         void const * const request,
+                                         uint32_t const request_size,
+                                         uint32_t timeout,
+                                         int8_t const priority) const
         {
             return mcast_async(name.c_str(),
                                request_info,
@@ -426,17 +436,17 @@ class API
                                priority);
         }
 
-        char const * get_response() const;
-        uint32_t get_response_size() const;
+        NODISCARD char const * get_response() const;
+        NODISCARD uint32_t get_response_size() const;
 
-        char const * get_response_info() const;
-        uint32_t get_response_info_size() const;
+        NODISCARD char const * get_response_info() const;
+        NODISCARD uint32_t get_response_info_size() const;
 
-        uint32_t get_trans_id_count() const;
-        char const * get_trans_id(unsigned int const i = 0) const;
-        bool get_trans_id_null(unsigned int const i = 0) const;
+        NODISCARD uint32_t get_trans_id_count() const;
+        NODISCARD char const * get_trans_id(unsigned int const i = 0) const;
+        NODISCARD bool get_trans_id_null(unsigned int const i = 0) const;
 
-        uint32_t get_subscribe_count() const;
+        NODISCARD uint32_t get_subscribe_count() const;
 
         int forward_(int const request_type,
                      char const * const name,
@@ -648,94 +658,95 @@ class API
                                source_size);
         }
 
-        int recv_async() const;
+        NODISCARD int recv_async() const;
 
-        int recv_async(uint32_t timeout) const;
+        NODISCARD int recv_async(uint32_t timeout) const;
 
-        int recv_async(char const * const trans_id) const;
+        NODISCARD int recv_async(char const * const trans_id) const;
 
-        int recv_async(uint32_t timeout,
-                       char const * const trans_id) const;
+        NODISCARD int recv_async(uint32_t timeout,
+                                 char const * const trans_id) const;
 
-        inline int recv_async(uint32_t timeout,
-                              std::string const & trans_id) const
+        NODISCARD inline int recv_async(uint32_t timeout,
+                                        std::string const & trans_id) const
         {
             return recv_async(timeout,
                               trans_id.c_str());
         }
 
-        int recv_async(uint32_t timeout,
-                       bool consume) const;
+        NODISCARD int recv_async(uint32_t timeout,
+                                 bool consume) const;
 
-        int recv_async(char const * const trans_id,
-                       bool consume) const;
+        NODISCARD int recv_async(char const * const trans_id,
+                                 bool consume) const;
 
-        inline int recv_async(std::string const & trans_id,
-                              bool consume) const
+        NODISCARD inline int recv_async(std::string const & trans_id,
+                                        bool consume) const
         {
             return recv_async(trans_id.c_str(),
                               consume);
         }
 
-        int recv_async(uint32_t timeout,
-                       char const * const trans_id,
-                       bool consume) const;
+        NODISCARD int recv_async(uint32_t timeout,
+                                 char const * const trans_id,
+                                 bool consume) const;
 
-        inline int recv_async(uint32_t timeout,
-                              std::string const & trans_id,
-                              bool consume) const
+        NODISCARD inline int recv_async(uint32_t timeout,
+                                        std::string const & trans_id,
+                                        bool consume) const
         {
             return recv_async(timeout,
                               trans_id.c_str(),
                               consume);
         }
 
-        uint32_t process_index() const;
-        static uint32_t process_index_();
+        NODISCARD uint32_t process_index() const;
+        NODISCARD static uint32_t process_index_();
 
-        uint32_t process_count() const;
+        NODISCARD uint32_t process_count() const;
 
-        uint32_t process_count_max() const;
-        static uint32_t process_count_max_();
+        NODISCARD uint32_t process_count_max() const;
+        NODISCARD static uint32_t process_count_max_();
 
-        uint32_t process_count_min() const;
-        static uint32_t process_count_min_();
+        NODISCARD uint32_t process_count_min() const;
+        NODISCARD static uint32_t process_count_min_();
 
-        char const * prefix() const;
+        NODISCARD char const * prefix() const;
 
-        uint32_t timeout_initialize() const;
-        static uint32_t timeout_initialize_();
+        NODISCARD uint32_t timeout_initialize() const;
+        NODISCARD static uint32_t timeout_initialize_();
 
-        uint32_t timeout_async() const;
+        NODISCARD uint32_t timeout_async() const;
 
-        uint32_t timeout_sync() const;
+        NODISCARD uint32_t timeout_sync() const;
 
-        uint32_t timeout_terminate() const;
-        static uint32_t timeout_terminate_();
+        NODISCARD uint32_t timeout_terminate() const;
+        NODISCARD static uint32_t timeout_terminate_();
 
-        int8_t priority_default() const;
+        NODISCARD int8_t priority_default() const;
 
-        int poll(int timeout = -1) const;
+        NODISCARD int poll(int timeout = -1) const;
 
-        int shutdown() const;
+        NODISCARD int shutdown() const;
 
-        int shutdown(char const * const reason) const;
+        NODISCARD int shutdown(char const * const reason) const;
 
-        inline int shutdown(std::string const & reason) const
+        NODISCARD inline int shutdown(std::string const & reason) const
         {
             return shutdown(reason.c_str());
         }
 
+        NODISCARD
         static char const ** info_key_value_parse(void const * const info,
                                                   uint32_t const info_size);
         static void info_key_value_parse_destroy(char const ** pairs);
 
-        static char const * info_key_value_new(char const ** pairs,
-                                               uint32_t & info_size);
+        NODISCARD static char const * info_key_value_new(char const ** pairs,
+                                                         uint32_t & info_size);
 
-        static char const * info_key_value_new(char const ** pairs,
-                                               uint32_t & info_size,
-                                               bool response);
+        NODISCARD static char const * info_key_value_new(char const ** pairs,
+                                                         uint32_t & info_size,
+                                                         bool response);
 
         // return/forward automatic delete/free
         void free_with_delete() const;
@@ -811,7 +822,7 @@ class API
         // ...
         // throw (boost::enable_error_info(e)
         //            << errinfo_stack(CloudI::API::backtrace()));
-        static std::string backtrace();
+        NODISCARD static std::string backtrace();
 
         // Use fatal_error as the base class for exceptions
         // that must cause the service process to restart
@@ -1662,6 +1673,12 @@ int API::subscribe(char const * const pattern,
 }
 
 } // namespace CloudI
+
+#undef NODISCARD
+#ifdef NODISCARD_EXTERNAL
+#define NODISCARD NODISCARD_EXTERNAL
+#undef NODISCARD_EXTERNAL
+#endif
 
 #endif // CLOUDI_HPP
 

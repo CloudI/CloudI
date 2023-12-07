@@ -32,9 +32,21 @@
 
 #include <stdint.h>
 
-#if defined __cplusplus
+#ifdef NODISCARD
+#define NODISCARD_EXTERNAL NODISCARD
+#undef NODISCARD
+#endif
+#if defined(__cplusplus)
+#if (__cplusplus >= 201603L)
+#define NODISCARD [[nodiscard]]
+#endif
 extern "C"
 {
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
+#define NODISCARD [[nodiscard]]
+#endif
+#ifndef NODISCARD
+#define NODISCARD
 #endif
 
 #define CLOUDI_MAX_BUFFERSIZE 2147483648U /* 2GB */
@@ -120,65 +132,65 @@ typedef void (*cloudi_callback_t)(int const request_type,
 #define cloudi_get_timeout_terminate(api)      ((api)->timeout_terminate)
 #define cloudi_get_priority_default(api)       ((api)->priority_default)
 
-int cloudi_initialize(cloudi_instance_t * api,
-                      unsigned int const thread_index,
-                      void * state);
+NODISCARD int cloudi_initialize(cloudi_instance_t * api,
+                                unsigned int const thread_index,
+                                void * state);
 
 void * cloudi_destroy(cloudi_instance_t * api);
 
-int cloudi_initialize_thread_count(unsigned int * const thread_count);
+NODISCARD int cloudi_initialize_thread_count(unsigned int * const thread_count);
 
-int cloudi_subscribe(cloudi_instance_t * api,
-                     char const * const pattern,
-                     cloudi_callback_t f);
+NODISCARD int cloudi_subscribe(cloudi_instance_t * api,
+                               char const * const pattern,
+                               cloudi_callback_t f);
 
-int cloudi_subscribe_count(cloudi_instance_t * api,
-                           char const * const pattern);
+NODISCARD int cloudi_subscribe_count(cloudi_instance_t * api,
+                                     char const * const pattern);
 
-int cloudi_unsubscribe(cloudi_instance_t * api,
-                       char const * const pattern);
+NODISCARD int cloudi_unsubscribe(cloudi_instance_t * api,
+                                 char const * const pattern);
 
-int cloudi_send_async(cloudi_instance_t * api,
-                      char const * const name,
-                      void const * const request,
-                      uint32_t const request_size);
+NODISCARD int cloudi_send_async(cloudi_instance_t * api,
+                                char const * const name,
+                                void const * const request,
+                                uint32_t const request_size);
 
-int cloudi_send_async_(cloudi_instance_t * api,
-                       char const * const name,
-                       void const * const request_info,
-                       uint32_t const request_info_size,
-                       void const * const request,
-                       uint32_t const request_size,
-                       uint32_t timeout,
-                       int8_t const priority);
+NODISCARD int cloudi_send_async_(cloudi_instance_t * api,
+                                 char const * const name,
+                                 void const * const request_info,
+                                 uint32_t const request_info_size,
+                                 void const * const request,
+                                 uint32_t const request_size,
+                                 uint32_t timeout,
+                                 int8_t const priority);
 
-int cloudi_send_sync(cloudi_instance_t * api,
-                     char const * const name,
-                     void const * const request,
-                     uint32_t const request_size);
+NODISCARD int cloudi_send_sync(cloudi_instance_t * api,
+                               char const * const name,
+                               void const * const request,
+                               uint32_t const request_size);
 
-int cloudi_send_sync_(cloudi_instance_t * api,
-                      char const * const name,
-                      void const * const request_info,
-                      uint32_t const request_info_size,
-                      void const * const request,
-                      uint32_t const request_size,
-                      uint32_t timeout,
-                      int8_t const priority);
+NODISCARD int cloudi_send_sync_(cloudi_instance_t * api,
+                                char const * const name,
+                                void const * const request_info,
+                                uint32_t const request_info_size,
+                                void const * const request,
+                                uint32_t const request_size,
+                                uint32_t timeout,
+                                int8_t const priority);
 
-int cloudi_mcast_async(cloudi_instance_t * api,
-                       char const * const name,
-                       void const * const request,
-                       uint32_t const request_size);
+NODISCARD int cloudi_mcast_async(cloudi_instance_t * api,
+                                 char const * const name,
+                                 void const * const request,
+                                 uint32_t const request_size);
 
-int cloudi_mcast_async_(cloudi_instance_t * api,
-                        char const * const name,
-                        void const * const request_info,
-                        uint32_t const request_info_size,
-                        void const * const request,
-                        uint32_t const request_size,
-                        uint32_t timeout,
-                        int8_t const priority);
+NODISCARD int cloudi_mcast_async_(cloudi_instance_t * api,
+                                  char const * const name,
+                                  void const * const request_info,
+                                  uint32_t const request_info_size,
+                                  void const * const request,
+                                  uint32_t const request_size,
+                                  uint32_t timeout,
+                                  int8_t const priority);
 
 int cloudi_forward(cloudi_instance_t * api,
                    int const request_type,
@@ -254,24 +266,24 @@ int cloudi_return_sync(cloudi_instance_t * api,
                        char const * const source,
                        uint32_t const source_size);
 
-int cloudi_recv_async(cloudi_instance_t * api,
-                      uint32_t timeout,
-                      char const * const trans_id,
-                      int consume);
+NODISCARD int cloudi_recv_async(cloudi_instance_t * api,
+                                uint32_t timeout,
+                                char const * const trans_id,
+                                int consume);
 
-int cloudi_poll(cloudi_instance_t * api,
-                int timeout);
+NODISCARD int cloudi_poll(cloudi_instance_t * api,
+                          int timeout);
 
-int cloudi_shutdown(cloudi_instance_t * api,
-                    char const * const reason);
+NODISCARD int cloudi_shutdown(cloudi_instance_t * api,
+                              char const * const reason);
 
-char const ** cloudi_info_key_value_parse(void const * const info,
-                                          uint32_t const info_size);
+NODISCARD char const ** cloudi_info_key_value_parse(void const * const info,
+                                                    uint32_t const info_size);
 void cloudi_info_key_value_parse_destroy(char const ** pairs);
 
-char const * cloudi_info_key_value_new(char const ** pairs,
-                                       uint32_t * info_size,
-                                       int response);
+NODISCARD char const * cloudi_info_key_value_new(char const ** pairs,
+                                                 uint32_t * info_size,
+                                                 int response);
 
 /* return/forward automatic free */
 void cloudi_free_name(cloudi_instance_t * api);
@@ -281,28 +293,34 @@ void cloudi_free_request(cloudi_instance_t * api);
 void cloudi_free_response_info(cloudi_instance_t * api);
 void cloudi_free_response(cloudi_instance_t * api);
 
+NODISCARD
 int cloudi_initialize_process_index(uint32_t * const process_index);
+NODISCARD
 int cloudi_initialize_process_count_max(uint32_t * const process_count_max);
+NODISCARD
 int cloudi_initialize_process_count_min(uint32_t * const process_count_min);
+NODISCARD
 int cloudi_initialize_timeout_initialize(uint32_t * const timeout_initialize);
+NODISCARD
 int cloudi_initialize_timeout_terminate(uint32_t * const timeout_terminate);
 
 enum
 {
     cloudi_success                             =   0,
-    // programs can use exit status values [1..6] without conflicts
-    // with internal cloudi error conditions
+    /* programs can use exit status values [1..6] without conflicts
+     * with internal cloudi error conditions
+     */
 
-    // API specific errors
-    cloudi_terminate                           = 110, // cloudi_error_poll_HUP
+    /* API specific errors */
+    cloudi_terminate                           = 110,/* cloudi_error_poll_HUP */
     cloudi_timeout                             =   7,
     cloudi_error_function_parameter            =   8,
     cloudi_error_read_underflow                =   9,
     cloudi_error_ei_decode                     =  10,
-    // reuse some exit status values from os_spawn
+    /* reuse some exit status values from os_spawn */
     cloudi_invalid_input                       =  11,
     cloudi_out_of_memory                       =  12,
-    // reuse some exit status values from GEPD
+    /* reuse some exit status values from GEPD */
     cloudi_error_read_EAGAIN                   =  81,
     cloudi_error_read_EBADF                    =  82,
     cloudi_error_read_EFAULT                   =  83,
@@ -337,8 +355,13 @@ enum
     cloudi_error_poll_unknown                  = 112
 };
 
-#if defined __cplusplus
+#if defined(__cplusplus)
 }
+#endif
+#undef NODISCARD
+#ifdef NODISCARD_EXTERNAL
+#define NODISCARD NODISCARD_EXTERNAL
+#undef NODISCARD_EXTERNAL
 #endif
 
 #endif /* CLOUDI_H */

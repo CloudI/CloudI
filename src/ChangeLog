@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2023-12-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add [[nodiscard]] to the C/C++ CloudI API functions where
+      return values need to be checked to avoid service implementation errors
+
 2023-11-29 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix 0.0 =/= -0.0 match Erlang/OTP 26.1 warning in cloudi_math eunit test
