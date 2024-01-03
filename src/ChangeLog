@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-01-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add Mastodon README badge
+
 2023-12-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add [[nodiscard]] to the C/C++ CloudI API functions where
