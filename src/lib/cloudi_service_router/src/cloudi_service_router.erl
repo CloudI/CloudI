@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @copyright 2014-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -577,15 +577,15 @@ http_redirect_pick(Parameters,
                 HttpRedirectGet =:= false ->
                     <<"308">>
             end,
-            case cloudi_x_trie:find(http_redirect_hostname(HttpRedirectNew),
-                                    HttpRedirectHealth) of
-                {ok, false} ->
+            case http_redirect_hostname(false, HttpRedirectNew,
+                                        HttpRedirectHealth) of
+                ok ->
                     http_redirect_pick_secondary(HttpRedirectSecondaries,
                                                  Parameters,
                                                  HttpStatusCode,
                                                  HttpRedirectNew,
                                                  HttpRedirectHealth);
-                _ ->
+                error ->
                     {ok, HttpStatusCode,
                      erlang:list_to_binary(HttpRedirectNew)}
             end;
@@ -605,9 +605,9 @@ http_redirect_pick_secondary([Destination | Destinations], Parameters,
                         http_redirect_get = HttpRedirectGet} = Destination,
     case name_parameters(HttpRedirect, Parameters, Destination) of
         {ok, HttpRedirectNew} ->
-            case cloudi_x_trie:find(http_redirect_hostname(HttpRedirectNew),
-                                    HttpRedirectHealth) of
-                {ok, true} ->
+            case http_redirect_hostname(true, HttpRedirectNew,
+                                        HttpRedirectHealth) of
+                ok ->
                     HttpStatusCode = if
                         HttpRedirectGet =:= true ->
                             <<"302">>;
@@ -616,7 +616,7 @@ http_redirect_pick_secondary([Destination | Destinations], Parameters,
                     end,
                     {ok, HttpStatusCode,
                      erlang:list_to_binary(HttpRedirectNew)};
-                _ ->
+                error ->
                     http_redirect_pick_secondary(Destinations,
                                                  Parameters,
                                                  HttpStatusCodeDefault,
@@ -627,8 +627,24 @@ http_redirect_pick_secondary([Destination | Destinations], Parameters,
             {error, Reason, HttpRedirect}
     end.
 
-http_redirect_hostname(HttpRedirect) ->
-    maps:get(host, uri_string:parse(HttpRedirect)).
+http_redirect_hostname(HealthExpected, HttpRedirect, HttpRedirectHealth) ->
+    case uri_string:parse(HttpRedirect) of
+        {error, _, _} ->
+            if
+                HealthExpected =:= true ->
+                    error;
+                HealthExpected =:= false ->
+                    ok
+            end;
+        URIMap ->
+            case cloudi_x_trie:find(maps:get(host, URIMap),
+                                    HttpRedirectHealth) of
+                {ok, HealthExpected} ->
+                    ok;
+                _ ->
+                    error
+            end
+    end.
 
 http_redirect_health(HostsInfo) ->
     http_redirect_health(HostsInfo, cloudi_x_trie:new()).
