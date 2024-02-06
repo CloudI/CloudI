@@ -428,18 +428,27 @@ cloudi_service_handle_info(http_redirect_health,
         {ok, TransId} ->
             {noreply, State#state{http_redirect_health_id = TransId}};
         {error, Reason} ->
-            {stop, {http_redirect_health, Reason}, State}
+            ?LOG_ERROR("http_redirect_health request to \"~ts\" failed: ~p",
+                       [HealthName, Reason]),
+            {noreply,
+             State#state{http_redirect_health = http_redirect_health([])}}
     end;
 cloudi_service_handle_info(#return_async_active{response = Response,
                                                 trans_id = TransId},
                            #state{http_redirect_health_id = TransId} = State,
                            _Dispatcher) ->
-    {noreply, State#state{http_redirect_health = http_redirect_health(Response),
-                          http_redirect_health_id = undefined}};
+    {noreply,
+     State#state{http_redirect_health = http_redirect_health(Response),
+                 http_redirect_health_id = undefined}};
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
-                           #state{http_redirect_health_id = TransId} = State,
+                           #state{http_redirect_health_name = HealthName,
+                                  http_redirect_health_id = TransId} = State,
                            _Dispatcher) ->
-    {stop, {http_redirect_health, timeout}, State};
+    ?LOG_ERROR("http_redirect_health response from \"~ts\" timeout",
+               [HealthName]),
+    {noreply,
+     State#state{http_redirect_health = http_redirect_health([]),
+                 http_redirect_health_id = undefined}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
