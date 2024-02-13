@@ -4,11 +4,16 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Task Size Calculation==
+%%% Determine the task size that can be processed in a node's Erlang process
+%%% while utilizing a single timeout value for all requests.
+%%% The single timeout value is based on the target time in hours.
+%%% The goal is to have all requests taking the same target time while
+%%% the task size varies based on the node's execution speed.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +34,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2009-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_task_size).
@@ -160,10 +165,10 @@ reduce(Pid, Multiplier,
     Node = node(Pid),
     case maps:find(Node, Lookup) of
         {ok, #node{task_size = TaskSize} = NodeState} ->
-            NewTaskSize = task_size_clamp(TaskSize * Multiplier,
-                                          TaskSizeMin, TaskSizeMax),
-            NewNodeState = NodeState#node{task_size = NewTaskSize},
-            State#cloudi_task_size{lookup = maps:put(Node, NewNodeState,
+            {_, TaskSizeNew} = task_size_clamp(TaskSize * Multiplier,
+                                               TaskSizeMin, TaskSizeMax),
+            NodeStateNew = NodeState#node{task_size = TaskSizeNew},
+            State#cloudi_task_size{lookup = maps:put(Node, NodeStateNew,
                                                      Lookup)};
         error ->
             State
@@ -187,7 +192,7 @@ put(Pid, TaskSize, ElapsedTime,
                       task_size_initial = TaskSizeInitial,
                       task_size_min = TaskSizeMin,
                       task_size_max = TaskSizeMax,
-                      target_time = TargetTime0,
+                      target_time = TargetTime,
                       target_time_incr = TargetTimeIncr,
                       target_time_decr = TargetTimeDecr,
                       target_time_min = TargetTimeMin,
@@ -195,40 +200,39 @@ put(Pid, TaskSize, ElapsedTime,
                       lookup = Lookup} = State)
     when is_pid(Pid), is_integer(TaskSize), is_float(ElapsedTime) ->
     Node = node(Pid),
-    #node{task_size = OldTaskSize} = NodeState = case maps:find(Node, Lookup) of
+    #node{task_size = TaskSizeOld} = NodeState = case maps:find(Node, Lookup) of
         {ok, LookupValue} ->
             LookupValue;
         error ->
             #node{task_size = TaskSizeInitial}
     end,
-    TaskSizeSmoothed = task_size_smoothed(TaskSize, OldTaskSize,
-                                          TargetTime0, ElapsedTime, TaskCount),
-    NewTaskSize = task_size_clamp(TaskSizeSmoothed, TaskSizeMin, TaskSizeMax),
-    {NextTargetTimeIncr, TargetTime1} = if
-        NewTaskSize < TaskSizeMin + 0.5 ->
-            target_time_incr(TargetTimeIncr + 1, TargetTime0, TargetTimeMax);
-        true ->
-            {0, TargetTime0}
+    TaskSizeSmoothed = task_size_smoothed(TaskSize, TaskSizeOld,
+                                          TargetTime, ElapsedTime, TaskCount),
+    {TaskSizeClamp,
+     TaskSizeNew} = task_size_clamp(TaskSizeSmoothed, TaskSizeMin, TaskSizeMax),
+    {TargetTimeIncrNew,
+     TargetTimeDecrNew,
+     TargetTimeNew} = if
+        TaskSizeClamp =:= minimum ->
+            {TargetTimeIncrNext,
+             TargetTimeNext} = target_time_incr(TargetTimeIncr + 1,
+                                                TargetTime, TargetTimeMax),
+            {TargetTimeIncrNext, 0, TargetTimeNext};
+        TaskSizeClamp =:= maximum ->
+            {TargetTimeDecrNext,
+             TargetTimeNext} = target_time_decr(TargetTimeDecr + 1,
+                                                TargetTime, TargetTimeMin),
+            {0, TargetTimeDecrNext, TargetTimeNext};
+        TaskSizeClamp =:= clamped ->
+            {0, 0, TargetTime}
     end,
-    {NextTargetTimeDecr, TargetTimeN} = if
-        NewTaskSize > TaskSizeMax - 0.5 ->
-            target_time_decr(TargetTimeDecr + 1, TargetTime1, TargetTimeMin);
-        true ->
-            {0, TargetTime1}
-    end,
-    {NewTargetTimeIncr, NewTargetTimeDecr} = if
-        NextTargetTimeIncr > 0, NextTargetTimeDecr > 0 ->
-            {0, 0};
-        true ->
-            {NextTargetTimeIncr, NextTargetTimeDecr}
-    end,
-    NewLookup = maps:put(Node,
-                         NodeState#node{task_size = NewTaskSize},
+    LookupNew = maps:put(Node,
+                         NodeState#node{task_size = TaskSizeNew},
                          Lookup),
-    State#cloudi_task_size{target_time = TargetTimeN,
-                           target_time_incr = NewTargetTimeIncr,
-                           target_time_decr = NewTargetTimeDecr,
-                           lookup = NewLookup}.
+    State#cloudi_task_size{target_time = TargetTimeNew,
+                           target_time_incr = TargetTimeIncrNew,
+                           target_time_decr = TargetTimeDecrNew,
+                           lookup = LookupNew}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -239,19 +243,19 @@ task_size_clamp(TaskSize, TaskSizeMin, TaskSizeMax)
     TaskSizeInteger = floor(TaskSize),
     if
         TaskSizeInteger < TaskSizeMin ->
-            TaskSizeMin;
+            {minimum, TaskSizeMin};
         TaskSizeInteger > TaskSizeMax ->
-            TaskSizeMax;
+            {maximum, TaskSizeMax};
         true ->
-            TaskSize
+            {clamped, TaskSize}
     end.
 
-task_size_smoothed(CurrentTaskSize, OldTaskSize,
+task_size_smoothed(TaskSizeCurrent, TaskSizeOld,
                    TargetTimeTotal, ElapsedTime, TaskCount)
-    when is_integer(CurrentTaskSize), is_number(OldTaskSize),
+    when is_integer(TaskSizeCurrent), is_number(TaskSizeOld),
          is_float(TargetTimeTotal), is_float(ElapsedTime) ->
     TargetTime = TargetTimeTotal / ?TARGET_TIME_USAGE_FACTOR,
-    NextTaskSize = CurrentTaskSize * (TargetTime / ElapsedTime),
+    TaskSizeNext = TaskSizeCurrent * (TargetTime / ElapsedTime),
     Difference = erlang:abs((TargetTime - ElapsedTime) / ElapsedTime),
     % determine the truncated moving average period based on the
     % percentage difference between the elapsed time and the target time
@@ -309,34 +313,34 @@ task_size_smoothed(CurrentTaskSize, OldTaskSize,
             20790.0                             % = 1890.0 * 11
     end),
     % perform truncated moving average
-    Change = (NextTaskSize - OldTaskSize) / SmoothingFactor,
-    OldTaskSize + Change.
+    Change = (TaskSizeNext - TaskSizeOld) / SmoothingFactor,
+    TaskSizeOld + Change.
 
 target_time_incr(?TARGET_TIME_ADJUST, TargetTime, TargetTimeMax) ->
-    NewTargetTime = erlang:min(TargetTime * ?TARGET_TIME_ADJUST_FACTOR,
+    TargetTimeNew = erlang:min(TargetTime * ?TARGET_TIME_ADJUST_FACTOR,
                                TargetTimeMax),
     if
-        NewTargetTime == TargetTimeMax ->
-            ?LOG_ERROR("target time increase failed (~p, ~p)",
-                       [TargetTime, TargetTimeMax]);
+        TargetTimeNew == TargetTimeMax ->
+            ?LOG_TRACE("target time limited by maximum (~p hours)",
+                       [TargetTimeMax]);
         true ->
-            ?LOG_WARN("target time increased to ~p hours", [NewTargetTime])
+            ?LOG_TRACE("target time increased to ~p hours", [TargetTimeNew])
     end,
-    {0, NewTargetTime};
+    {0, TargetTimeNew};
 target_time_incr(TargetTimeIncr, TargetTime, _) ->
     {TargetTimeIncr, TargetTime}.
 
 target_time_decr(?TARGET_TIME_ADJUST, TargetTime, TargetTimeMin) ->
-    NewTargetTime = erlang:max(TargetTime / ?TARGET_TIME_ADJUST_FACTOR,
+    TargetTimeNew = erlang:max(TargetTime / ?TARGET_TIME_ADJUST_FACTOR,
                                TargetTimeMin),
     if
-        NewTargetTime == TargetTimeMin ->
-            ?LOG_ERROR("target time decrease failed (~p, ~p)",
-                       [TargetTime, TargetTimeMin]);
+        TargetTimeNew == TargetTimeMin ->
+            ?LOG_TRACE("target time limited by minimum (~p hours)",
+                       [TargetTimeMin]);
         true ->
-            ?LOG_WARN("target time decreased to ~p hours", [NewTargetTime])
+            ?LOG_TRACE("target time decreased to ~p hours", [TargetTimeNew])
     end,
-    {0, NewTargetTime};
+    {0, TargetTimeNew};
 target_time_decr(TargetTimeDecr, TargetTime, _) ->
     {TargetTimeDecr, TargetTime}.
 

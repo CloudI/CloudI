@@ -41,7 +41,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2022-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2022-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -62,8 +62,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2022-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @copyright 2022-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_health_check).
@@ -124,6 +124,24 @@
 -define(DEFAULT_PING_FAILURE,           undefined).
 -define(DEFAULT_PING_RESTORED,          undefined).
 
+-ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
+% able to use -if/-elif here
+-if(?OTP_RELEASE >= 25).
+-define(ERLANG_OTP_VERSION_25_FEATURES, true).
+-endif.
+-endif.
+-ifdef(ERLANG_OTP_VERSION_25_FEATURES).
+-define(HTTPS_SSL_OPTIONS(Name),
+        [{server_name_indication, Name},
+         {verify, verify_peer},
+         {depth, 100},
+         {cacerts, public_key:cacerts_get()}]).
+-else.
+-define(HTTPS_SSL_OPTIONS(Name),
+        [{server_name_indication, Name}] ++
+        cloudi_x_hackney_ssl:check_hostname_opts(Name) ++
+        cloudi_x_hackney_ssl:cipher_opts()).
+-endif.
 % ensure timeouts do not delay the health check interval
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
@@ -368,9 +386,7 @@ tcp_test_https(Method, [_ | _] = Path, StatusCode)
         end,
         URL = "https://" ++ SocketAddress ++ Path,
         RequestHeaders = [{<<"host">>, erlang:list_to_binary(Name)}],
-        SSLOptions = [{server_name_indication, Name}] ++
-                     cloudi_x_hackney_ssl:check_hostname_opts(Name) ++
-                     cloudi_x_hackney_ssl:cipher_opts(),
+        SSLOptions = ?HTTPS_SSL_OPTIONS(Name),
         case cloudi_x_hackney:request(Method, URL, RequestHeaders, <<>>,
                                       [with_body,
                                        {ssl_options, SSLOptions},

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-02-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_service_health_check:tcp_test_https/3 SSL options
+      when using Erlang/OTP >= 25.0
+    * Change the cloudi_task_size module log output to use the trace loglevel
+    * Improve the cloudi_task_size module source code
+
 2024-02-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi_service_router http_redirect_health error handling
