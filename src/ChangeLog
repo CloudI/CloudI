@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-02-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add default SSL options to cloudi_service_http_client for use with
+      the SSL functionality in Erlang/OTP >= 25.0
+    * Update nodefinder for use with SSL functionality in Erlang/OTP >= 25.0
+      (when connecting to ec2)
+
 2024-02-13 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi_service_health_check:tcp_test_https/3 SSL options

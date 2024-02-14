@@ -231,10 +231,10 @@ aws_request_form(Method, Protocol, Host, Port, Path, Form, Headers, Config) ->
             get ->
                 Req = lists:flatten([URL, $?, Form]),
                 nodefinder_ec2_api_httpc:request(
-                  Req, get, Headers, <<>>, get_timeout(Config), Config);
+                  Req, get, Host, Headers, <<>>, get_timeout(Config), Config);
             _ ->
                 nodefinder_ec2_api_httpc:request(
-                  lists:flatten(URL), Method,
+                  lists:flatten(URL), Method, Host,
                   [{<<"content-type">>, <<"application/x-www-form-urlencoded; charset=utf-8">>} | Headers],
                   list_to_binary(Form), get_timeout(Config), Config)
         end,

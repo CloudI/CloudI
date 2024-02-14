@@ -44,7 +44,7 @@
           %% Network request timeout; if not specifed, the default timeout will be used:
           %% other services: 10s.
           timeout=undefined::timeout()|undefined,
-          http_client=lhttpc::nodefinder_ec2_api_httpc:request_fun(), %% If using hackney, ensure that it is started.
+          http_client=httpc::httpc|hackney,
           hackney_pool=default::atom() %% The name of the http request pool hackney should use.
          }).
 -type(aws_config() :: #aws_config{}).

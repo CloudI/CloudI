@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2014-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -108,6 +108,22 @@
            RequestStartMicroSec) / 1000.0,
           HeadersIncoming, Request,
           HeadersOutgoing, Response])).
+
+-ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
+% able to use -if/-elif here
+-if(?OTP_RELEASE >= 25).
+-define(ERLANG_OTP_VERSION_25_FEATURES, true).
+-endif.
+-endif.
+-ifdef(ERLANG_OTP_VERSION_25_FEATURES).
+-define(SSL_OPTIONS(HostName),
+        [{server_name_indication, HostName},
+         {verify, verify_peer},
+         {depth, 100},
+         {cacerts, public_key:cacerts_get()}]).
+-else.
+-define(SSL_OPTIONS(HostName), []).
+-endif.
 
 -record(state,
     {
@@ -797,15 +813,18 @@ header_content_type(Headers) ->
     end.
 
 url_string({HostName, <<"80">>}, URLPath) ->
-    "http://" ++ erlang:binary_to_list(HostName) ++
-    erlang:binary_to_list(URLPath);
+    HostNameStr = erlang:binary_to_list(HostName),
+    URL = "http://" ++ HostNameStr ++ erlang:binary_to_list(URLPath),
+    {HostNameStr, URL};
 url_string({HostName, <<"443">>}, URLPath) ->
-    "https://" ++ erlang:binary_to_list(HostName) ++
-    erlang:binary_to_list(URLPath);
+    HostNameStr = erlang:binary_to_list(HostName),
+    URL = "https://" ++ HostNameStr ++ erlang:binary_to_list(URLPath),
+    {HostNameStr, URL};
 url_string({HostName, Port}, URLPath) ->
-    "http://" ++ erlang:binary_to_list(HostName) ++
-    ":" ++ erlang:binary_to_list(Port) ++
-    erlang:binary_to_list(URLPath).
+    HostNameStr = erlang:binary_to_list(HostName),
+    URL = "http://" ++ HostNameStr ++ ":" ++ erlang:binary_to_list(Port) ++
+          erlang:binary_to_list(URLPath),
+    {HostNameStr, URL}.
 
 client_request(?MODULE_INETS, Profile, Method0,
                HeadersIncoming0, Request, Timeout,
@@ -813,7 +832,8 @@ client_request(?MODULE_INETS, Profile, Method0,
     case headers_request_filter(HeadersIncoming0) of
         {ok, Host, URLPath, HeadersIncomingN} ->
             MethodN = method_atom(Method0),
-            URL = url_string(headers_request_filter_host(Host), URLPath),
+            {HostName,
+             URL} = url_string(headers_request_filter_host(Host), URLPath),
             RequestHeaders = [{erlang:binary_to_list(Kin),
                                erlang:binary_to_list(Vin)} ||
                               {Kin, Vin} <- HeadersIncomingN],
@@ -837,6 +857,7 @@ client_request(?MODULE_INETS, Profile, Method0,
             end,
             case ?MODULE_INETS:request(MethodN, ClientRequest,
                                        [{autoredirect, false},
+                                        {ssl, ?SSL_OPTIONS(HostName)},
                                         {timeout, Timeout}],
                                        [{body_format, binary}], Profile) of
                 {ok, {{_HttpVersion, StatusCode, _Reason},
@@ -861,7 +882,8 @@ client_request(?MODULE_HACKNEY, Profile, Method0,
     case headers_request_filter(HeadersIncoming0) of
         {ok, Host, URLPath, HeadersIncomingN} ->
             MethodN = method_atom(Method0),
-            URL = url_string(headers_request_filter_host(Host), URLPath),
+            {HostName,
+             URL} = url_string(headers_request_filter_host(Host), URLPath),
             RequestHeaders = HeadersIncomingN,
             RequestBody = if
                 MethodN =:= get ->
@@ -872,6 +894,7 @@ client_request(?MODULE_HACKNEY, Profile, Method0,
             case ?MODULE_HACKNEY:request(MethodN, URL,
                                          RequestHeaders, RequestBody,
                                          [with_body,
+                                          {ssl_options, ?SSL_OPTIONS(HostName)},
                                           {connect_timeout, Timeout},
                                           {recv_timeout, Timeout},
                                           {pool, Profile}]) of
