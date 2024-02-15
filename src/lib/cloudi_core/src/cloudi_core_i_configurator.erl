@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @copyright 2011-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -1494,12 +1494,7 @@ code_status_files(Services, SecondsStart, SecondsNow) ->
     code_status_files(Services, [], SecondsStart, SecondsNow).
 
 code_status_files([], ChangedFiles, _, _) ->
-    {ok,
-     [[{type, Type},
-       {file_age, cloudi_timestamp:seconds_to_string(SecondsElapsed)},
-       {file_path, FilePath},
-       {service_ids, IDs}]
-      || {SecondsElapsed, Type, FilePath, IDs} <- ChangedFiles]};
+    {ok, code_status_files_result(ChangedFiles)};
 code_status_files([Service | Services], ChangedFiles,
                   SecondsStart, SecondsNow) ->
     {Type, FilePath} = case Service of
@@ -1530,6 +1525,33 @@ code_status_files([Service | Services], ChangedFiles,
             {error, {file, {FilePath, Reason}}}
     end.
 
+code_status_files_result([]) ->
+    [];
+code_status_files_result([{SecondsElapsed, internal, FilePath, IDs} |
+                          ChangedFiles]) ->
+    Result0 = [{service_ids, IDs}],
+    ResultN = case code_status_module_loaded(FilePath) of
+        {FileLoaded, FileVersion} ->
+            FileVersionBin = cloudi_string:term_to_binary_compact(FileVersion),
+            [{file_loaded, FileLoaded},
+             {file_version, erlang:binary_to_list(FileVersionBin)} |
+             Result0];
+        false ->
+            Result0
+    end,
+    [[{type, internal},
+      {file_age, cloudi_timestamp:seconds_to_string(SecondsElapsed)},
+      {file_path, FilePath} |
+      ResultN] |
+     code_status_files_result(ChangedFiles)];
+code_status_files_result([{SecondsElapsed, external, FilePath, IDs} |
+                          ChangedFiles]) ->
+    [[{type, external},
+      {file_age, cloudi_timestamp:seconds_to_string(SecondsElapsed)},
+      {file_path, FilePath},
+      {service_ids, IDs}] |
+     code_status_files_result(ChangedFiles)].
+
 code_status_files_filter(Services, S) ->
     code_status_files_filter(Services, [], [], S).
 
@@ -1555,6 +1577,40 @@ code_status_files_filter([#config_service_external{file_path = FilePath,
     code_status_files_filter(ServicesIn, [ID | IDs], ServicesOut, S);
 code_status_files_filter([Service | ServicesIn], IDs, ServicesOut, S) ->
     code_status_files_filter(ServicesIn, IDs, [Service | ServicesOut], S).
+
+code_status_module_loaded(FilePath) ->
+    try erlang:list_to_existing_atom(filename:basename(FilePath, ".beam")) of
+        Module ->
+            case cloudi_x_reltool_util:module_version(Module) of
+                [] ->
+                    % the version is not present if stripped
+                    false;
+                VersionLoaded ->
+                    case code:get_object_code(Module) of
+                        {Module, Beam, FilePath} ->
+                            case beam_lib:version(Beam) of
+                                {ok, {Module, VersionFile}} ->
+                                    {VersionLoaded =:= VersionFile,
+                                     VersionFile};
+                                {error, beam_lib, _} ->
+                                    % the version is not present if stripped
+                                    false
+                            end;
+                        {Module, _, _} ->
+                            % the code path is getting a different file
+                            % from the filesystem
+                            % (whether the FilePath file was previously loaded
+                            %  is unknown because the currently loaded
+                            %  object code is inaccessible)
+                            false;
+                        error ->
+                            false
+                    end
+            end
+    catch
+        error:badarg ->
+            false
+    end.
 
 read_file_info(FilePath) ->
     file:read_file_info(FilePath, [raw, {time, posix}]).

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-02-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add file_loaded and file_version values for internal service modules
+      in the CloudI Service API code_status runtime_cloudi_changes result
+      (if the module changed on the filesystem and the module file on
+       the filesystem was not stripped)
+
 2024-02-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the CloudI Service API nodes_status_reset function to

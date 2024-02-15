@@ -558,6 +558,7 @@
 -export_type([max_heap_size_options/0]).
 
 -type file_path() :: nonempty_string().
+-type file_version() :: list(byte()). % utf8 string
 -type args_internal() :: list().
 -type args_external() :: string().
 -type env_external() :: list({string(), string()}).
@@ -593,6 +594,7 @@
 -type directory_external() ::
     file_path() | undefined.
 -export_type([file_path/0,
+              file_version/0,
               args_internal/0,
               args_external/0,
               env_external/0,
@@ -1353,11 +1355,21 @@
               logging_status/0,
               logging_proplist/0]).
 
--type code_status_runtime_change() ::
-    nonempty_list({type, internal | external} |
+-type code_status_runtime_change_internal() ::
+    nonempty_list({type, internal} |
+                  {file_age, seconds_string()} |
+                  {file_path, file_path()} |
+                  {file_loaded, boolean()} |
+                  {file_version, file_version()} |
+                  {service_ids, nonempty_list(service_id())}).
+-type code_status_runtime_change_external() ::
+    nonempty_list({type, external} |
                   {file_age, seconds_string()} |
                   {file_path, file_path()} |
                   {service_ids, nonempty_list(service_id())}).
+-type code_status_runtime_change() ::
+    code_status_runtime_change_internal() |
+    code_status_runtime_change_external().
 -type code_status() ::
     nonempty_list({build_machine, nonempty_string()} |
                   {build_kernel_version, nonempty_string()} |
@@ -1387,7 +1399,9 @@
                   {runtime_cloudi_start, iso8601()} |
                   {runtime_cloudi_total, nanoseconds_string()} |
                   {runtime_cloudi_changes, list(code_status_runtime_change())}).
--export_type([code_status_runtime_change/0,
+-export_type([code_status_runtime_change_internal/0,
+              code_status_runtime_change_external/0,
+              code_status_runtime_change/0,
               code_status/0]).
 
 %%%------------------------------------------------------------------------
