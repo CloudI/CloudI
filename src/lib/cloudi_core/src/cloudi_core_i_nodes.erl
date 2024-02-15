@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2011-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -46,6 +46,7 @@
          dead/1,
          nodes/1,
          status/2,
+         status_reset/1,
          logging_redirect_set/1,
          node_name/1]).
 
@@ -114,6 +115,9 @@ nodes(Timeout) ->
 
 status(NodesSelection, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, {status, NodesSelection}, Timeout)).
+
+status_reset(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE, status_reset, Timeout)).
 
 logging_redirect_set(Node) when is_atom(Node) ->
     gen_server:cast(?MODULE, {logging_redirect_set, Node}).
@@ -267,6 +271,22 @@ handle_call({status, NodesSelection}, _,
                          NodesDownDurations, NodesState,
                          Cost, CostPrecision),
     {reply, Reply, State};
+
+handle_call(status_reset, _,
+            #state{nodes_dead = NodesDead,
+                   nodes_all = NodesAll,
+                   nodes_state = NodesState,
+                   nodes_down_durations = NodesDownDurations} = State) ->
+    NodesAllNew = NodesAll -- NodesDead,
+    {NodesStateNew,
+     NodesDownDurationsNew} = nodes_status_reset(NodesDead,
+                                                 NodesState,
+                                                 NodesDownDurations),
+    {reply, ok,
+     State#state{nodes_dead = [],
+                 nodes_all = NodesAllNew,
+                 nodes_state = NodesStateNew,
+                 nodes_down_durations = NodesDownDurationsNew}};
 
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
@@ -780,6 +800,14 @@ node_status_cost(CostValue, NanoSeconds, CostPrecision, LocalNode, Status0) ->
     [{CostNameTotal,
       erlang:float_to_list(CostCurrency,
                            [{decimals, CostPrecision}])} | StatusN].
+
+nodes_status_reset([], NodesState, NodesDownDurations) ->
+    {NodesState, NodesDownDurations};
+nodes_status_reset([Node | NodesDead], NodesState, NodesDownDurations) ->
+    NodesStateNew = maps:remove(Node, NodesState),
+    NodesDownDurationsNew = cloudi_availability:
+                            durations_erase(Node, NodesDownDurations),
+    nodes_status_reset(NodesDead, NodesStateNew, NodesDownDurationsNew).
 
 discovery_start_args(ec2_start, StartA) ->
     [EC2AccessKeyId, EC2SecretAccessKey,

@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @copyright 2011-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -58,6 +58,7 @@
          nodes_alive/1,
          nodes_dead/1,
          nodes_status/2,
+         nodes_status_reset/1,
          nodes/1,
          logging_set/2,
          logging_file_set/2,
@@ -1917,6 +1918,25 @@ nodes_status(L, Timeout)
         {error, _} = Error ->
             Error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reset the nodes status.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_status_reset(Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error,
+     timeout | noproc | shutdown |
+     {node_not_found, any()}}.
+
+nodes_status_reset(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_nodes:status_reset(Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

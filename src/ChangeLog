@@ -3,6 +3,8 @@
 
 2024-02-14 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add the CloudI Service API nodes_status_reset function to
+      remove all status data for nodes that are currently dead (disconnected)
     * Add default SSL options to cloudi_service_http_client for use with
       the SSL functionality in Erlang/OTP >= 25.0
     * Update nodefinder for use with SSL functionality in Erlang/OTP >= 25.0
