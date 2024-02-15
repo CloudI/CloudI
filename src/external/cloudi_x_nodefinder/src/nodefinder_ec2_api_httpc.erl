@@ -52,7 +52,7 @@
          {depth, 100},
          {cacerts, public_key:cacerts_get()}]).
 -else.
--define(SSL_OPTIONS(Host), []).
+-define(SSL_OPTIONS(_Host), []).
 -endif.
 
 request(URL, Method, Host, Hdrs, Body, Timeout,

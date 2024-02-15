@@ -122,7 +122,7 @@
          {depth, 100},
          {cacerts, public_key:cacerts_get()}]).
 -else.
--define(SSL_OPTIONS(HostName), []).
+-define(SSL_OPTIONS(_HostName), []).
 -endif.
 
 -record(state,
