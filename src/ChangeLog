@@ -7,6 +7,7 @@
       in the CloudI Service API code_status runtime_cloudi_changes result
       (if the module changed on the filesystem and the module file on
        the filesystem was not stripped)
+    * Update reltool_util
 
 2024-02-14 Michael Truog   <mjtruog at protonmail dot com>
 

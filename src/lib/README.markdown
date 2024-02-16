@@ -73,8 +73,8 @@ Erlang `reltool_util`
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit df61a2fa7ae8c4e7e82a702c3008070c850c894a (v2.0.7)`
-- `Fri Oct 27 06:13:06 UTC 2023`
+- `commit 1727b7f534650214a16b5906ee4cbbf407a05b02`
+- `Fri Feb 16 03:44:41 UTC 2024`
 - `MIT`
 
 Erlang `supool`

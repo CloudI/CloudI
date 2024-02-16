@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,33 +31,33 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @copyright 2013-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
 -author('mjtruog at protonmail dot com').
 
 -export([application_env/1,
+         application_loaded/1,
+         application_modules/1,
+         application_modules/2,
+         application_purged/1,
+         application_purged/2,
+         application_remove/1,
+         application_remove/2,
+         application_remove/3,
+         application_running/1,
+         application_running/2,
          application_start/1,
          application_start/2,
          application_start/3,
          application_start/4,
          application_stop/1,
          application_stop/2,
-         application_remove/1,
-         application_remove/2,
-         application_remove/3,
-         application_purged/1,
-         application_purged/2,
-         application_running/1,
-         application_running/2,
-         application_loaded/1,
-         application_modules/1,
-         application_modules/2,
+         applications_remove/3,
          applications_start/1,
          applications_start/2,
-         applications_remove/3,
          config_load/1,
          ensure_application_loaded/1,
          ensure_application_started/1,
@@ -65,25 +65,27 @@
          is_deprecated/3,
          is_module_loaded/1,
          is_module_loaded/2,
+         module_behaviours/1,
+         module_code/1,
+         module_code_print/1,
+         module_exports/1,
          module_load/1,
          module_loaded/1,
-         module_unload/1,
-         module_reload/1,
          module_purged/1,
          module_purged/2,
-         module_exports/1,
-         module_behaviours/1,
+         module_reload/1,
+         module_unload/1,
          module_version/1,
-         modules_reload/1,
          modules_purged/2,
-         script_start/1,
+         modules_reload/1,
          script_remove/1,
          script_remove/2,
          script_remove/3,
-         boot_start/1,
+         script_start/1,
          boot_remove/1,
          boot_remove/2,
-         boot_remove/3]).
+         boot_remove/3,
+         boot_start/1]).
 
 -define(IS_MODULE_LOADED_DELTA, 100).
 -define(MODULES_PURGED_DELTA, 100).
@@ -128,6 +130,218 @@ application_env(Application)
                 {error, _} = Error ->
                     Error
             end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if an application is currently loaded.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_loaded(Application :: atom()) ->
+    {ok, {atom(), string()}} |
+    {error, {not_found, atom()}}.
+
+application_loaded(Application)
+    when is_atom(Application) ->
+    Apps = application:loaded_applications(),
+    case lists:keyfind(Application, 1, Apps) of
+        {Application, _, VSN} ->
+            {ok, {Application, VSN}};
+        false ->
+            {error, {not_found, Application}}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Retrieve a list of application modules.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_modules(Application :: atom()) ->
+    {ok, list(atom())} |
+    {error, {modules_missing, atom()}}.
+
+application_modules(Application) ->
+    application_modules(Application, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Retrieve a list of application modules with filter options.===
+%% Options can contain {behavior, ModuleName} to list all the modules
+%% that use a specific behaviour (the information will not be present if
+%% the beam file was stripped).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_modules(Application :: atom(),
+                          Options :: list({atom(), any()})) ->
+    {ok, list(atom())} |
+    {error, {modules_missing, atom()}}.
+
+application_modules(Application, Options)
+    when is_atom(Application), is_list(Options) ->
+    case application:get_key(Application, modules) of
+        {ok, Modules} ->
+            {ok, modules_filter(Options, Modules, false)};
+        undefined ->
+            {error, {modules_missing, Application}}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Purge a loaded application's modules and unload the application.===
+%% The application is stopped if it is running, but its dependencies are
+%% ignored.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_purged(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+application_purged(Application) ->
+    application_purged(Application, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Purge a loaded application's modules and unload the application with a specific timeout.===
+%% The application is stopped if it is running, but its dependencies are
+%% ignored.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_purged(Application :: atom(),
+                         Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+application_purged(Application, Timeout)
+    when is_atom(Application) ->
+    case application_loaded(Application) of
+        {ok, _} ->
+            case ensure_application_stopped(Application) of
+                ok ->
+                    case application_modules(Application) of
+                        {ok, Modules} ->
+                            case modules_purged(Modules, Timeout) of
+                                ok ->
+                                    application:unload(Application);
+                                {error, _} = Error ->
+                                    Error
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop and purge the modules of an application and all of its dependencies.===
+%% Only application dependencies that are not required for other
+%% applications are removed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_remove(Application :: atom()) ->
+    ok |
+    {error, any()}.
+
+application_remove(Application) ->
+    application_remove(Application, 5000, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop and purge the modules of an application and all of its dependencies with a timeout.===
+%% Only application dependencies that are not required for other
+%% applications are removed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_remove(Application :: atom(),
+                         Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, any()}.
+
+application_remove(Application, Timeout) ->
+    application_remove(Application, Timeout, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop and purge the modules of an application and all of its dependencies with a timeout and a list of applications to ignore.===
+%% Only application dependencies that are not required for other
+%% applications are removed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_remove(Application :: atom(),
+                         Timeout :: pos_integer() | infinity,
+                         Ignore :: list(atom())) ->
+    ok |
+    {error, any()}.
+
+application_remove(Application, infinity, Ignore)
+    when is_atom(Application), is_list(Ignore) ->
+    case application_stop_dependencies(Application, Ignore) of
+        {ok, Applications} ->
+            applications_purged(Applications, infinity);
+        {error, _} = Error ->
+            Error
+    end;
+application_remove(Application, Timeout, Ignore)
+    when is_atom(Application), is_integer(Timeout), Timeout > 0,
+         is_list(Ignore) ->
+    case application_stop_dependencies(Application, Ignore) of
+        {ok, Applications} ->
+            TimeoutSlice = erlang:round(
+                0.5 + Timeout / erlang:length(Applications)),
+            applications_purged(Applications, TimeoutSlice);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if an application is currently running.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_running(Application :: atom()) ->
+    {ok, {atom(), string()}} |
+    {error, application_controller_timeout | {not_found, atom()}}.
+
+application_running(Application)
+    when is_atom(Application) ->
+    application_running(Application, 5000).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if an application is currently running with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec application_running(Application :: atom(),
+                          Timeout :: pos_integer() | infinity) ->
+    {ok, {atom(), string()}} |
+    {error, application_controller_timeout | {not_found, atom()}}.
+
+application_running(Application, Timeout)
+    when is_atom(Application) ->
+    try application:which_applications(Timeout) of
+        Apps ->
+            case lists:keyfind(Application, 1, Apps) of
+                {Application, _, VSN} ->
+                    {ok, {Application, VSN}};
+                false ->
+                    {error, {not_found, Application}}
+            end
+    catch exit:{timeout, _} ->
+        {error, application_controller_timeout}
     end.
 
 %%-------------------------------------------------------------------------
@@ -249,214 +463,26 @@ application_stop(Application, Ignore)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Stop and purge the modules of an application and all of its dependencies.===
+%% ===Stop and purge the modules of all applications and their dependencies with a timeout and a list of applications to ignore.===
 %% Only application dependencies that are not required for other
 %% applications are removed.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec application_remove(Application :: atom()) ->
+-spec applications_remove(Applications :: list(atom()),
+                          Timeout :: pos_integer() | infinity,
+                          Ignore :: list(atom())) ->
     ok |
     {error, any()}.
 
-application_remove(Application) ->
-    application_remove(Application, 5000, []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Stop and purge the modules of an application and all of its dependencies with a timeout.===
-%% Only application dependencies that are not required for other
-%% applications are removed.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_remove(Application :: atom(),
-                         Timeout :: pos_integer() | infinity) ->
-    ok |
-    {error, any()}.
-
-application_remove(Application, Timeout) ->
-    application_remove(Application, Timeout, []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Stop and purge the modules of an application and all of its dependencies with a timeout and a list of applications to ignore.===
-%% Only application dependencies that are not required for other
-%% applications are removed.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_remove(Application :: atom(),
-                         Timeout :: pos_integer() | infinity,
-                         Ignore :: list(atom())) ->
-    ok |
-    {error, any()}.
-
-application_remove(Application, infinity, Ignore)
-    when is_atom(Application), is_list(Ignore) ->
-    case application_stop_dependencies(Application, Ignore) of
-        {ok, Applications} ->
-            applications_purged(Applications, infinity);
+applications_remove([], _, _) ->
+    ok;
+applications_remove([Application | Applications], Timeout, Ignore) ->
+    case application_remove(Application, Timeout, Ignore) of
+        ok ->
+            applications_remove(Applications, Timeout, Ignore);
         {error, _} = Error ->
             Error
-    end;
-application_remove(Application, Timeout, Ignore)
-    when is_atom(Application), is_integer(Timeout), Timeout > 0,
-         is_list(Ignore) ->
-    case application_stop_dependencies(Application, Ignore) of
-        {ok, Applications} ->
-            TimeoutSlice = erlang:round(
-                0.5 + Timeout / erlang:length(Applications)),
-            applications_purged(Applications, TimeoutSlice);
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Purge a loaded application's modules and unload the application.===
-%% The application is stopped if it is running, but its dependencies are
-%% ignored.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_purged(Application :: atom()) ->
-    ok |
-    {error, any()}.
-
-application_purged(Application) ->
-    application_purged(Application, 5000).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Purge a loaded application's modules and unload the application with a specific timeout.===
-%% The application is stopped if it is running, but its dependencies are
-%% ignored.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_purged(Application :: atom(),
-                         Timeout :: pos_integer() | infinity) ->
-    ok |
-    {error, any()}.
-
-application_purged(Application, Timeout)
-    when is_atom(Application) ->
-    case application_loaded(Application) of
-        {ok, _} ->
-            case ensure_application_stopped(Application) of
-                ok ->
-                    case application_modules(Application) of
-                        {ok, Modules} ->
-                            case modules_purged(Modules, Timeout) of
-                                ok ->
-                                    application:unload(Application);
-                                {error, _} = Error ->
-                                    Error
-                            end;
-                        {error, _} = Error ->
-                            Error
-                    end;
-                {error, _} = Error ->
-                    Error
-            end;
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Check if an application is currently running.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_running(Application :: atom()) ->
-    {ok, {atom(), string()}} |
-    {error, application_controller_timeout | {not_found, atom()}}.
-
-application_running(Application)
-    when is_atom(Application) ->
-    application_running(Application, 5000).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Check if an application is currently running with a timeout.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_running(Application :: atom(),
-                          Timeout :: pos_integer() | infinity) ->
-    {ok, {atom(), string()}} |
-    {error, application_controller_timeout | {not_found, atom()}}.
-
-application_running(Application, Timeout)
-    when is_atom(Application) ->
-    try application:which_applications(Timeout) of
-        Apps ->
-            case lists:keyfind(Application, 1, Apps) of
-                {Application, _, VSN} ->
-                    {ok, {Application, VSN}};
-                false ->
-                    {error, {not_found, Application}}
-            end
-    catch exit:{timeout, _} ->
-        {error, application_controller_timeout}
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Check if an application is currently loaded.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_loaded(Application :: atom()) ->
-    {ok, {atom(), string()}} |
-    {error, {not_found, atom()}}.
-
-application_loaded(Application)
-    when is_atom(Application) ->
-    Apps = application:loaded_applications(),
-    case lists:keyfind(Application, 1, Apps) of
-        {Application, _, VSN} ->
-            {ok, {Application, VSN}};
-        false ->
-            {error, {not_found, Application}}
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Retrieve a list of application modules.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_modules(Application :: atom()) ->
-    {ok, list(atom())} |
-    {error, {modules_missing, atom()}}.
-
-application_modules(Application) ->
-    application_modules(Application, []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Retrieve a list of application modules with filter options.===
-%% Options can contain {behavior, ModuleName} to list all the modules
-%% that use a specific behaviour (the information will not be present if
-%% the beam file was stripped).
-%% @end
-%%-------------------------------------------------------------------------
-
--spec application_modules(Application :: atom(),
-                          Options :: list({atom(), any()})) ->
-    {ok, list(atom())} |
-    {error, {modules_missing, atom()}}.
-
-application_modules(Application, Options)
-    when is_atom(Application), is_list(Options) ->
-    case application:get_key(Application, modules) of
-        {ok, Modules} ->
-            {ok, modules_filter(Options, Modules, false)};
-        undefined ->
-            {error, {modules_missing, Application}}
     end.
 
 %%-------------------------------------------------------------------------
@@ -487,30 +513,6 @@ applications_start([_ | _] = Applications) ->
 
 applications_start([_ | _] = Applications, Timeout) ->
     applications_start_element(Applications, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Stop and purge the modules of all applications and their dependencies with a timeout and a list of applications to ignore.===
-%% Only application dependencies that are not required for other
-%% applications are removed.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec applications_remove(Applications :: list(atom()),
-                          Timeout :: pos_integer() | infinity,
-                          Ignore :: list(atom())) ->
-    ok |
-    {error, any()}.
-
-applications_remove([], _, _) ->
-    ok;
-applications_remove([Application | Applications], Timeout, Ignore) ->
-    case application_remove(Application, Timeout, Ignore) of
-        ok ->
-            applications_remove(Applications, Timeout, Ignore);
-        {error, _} = Error ->
-            Error
-    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -711,6 +713,92 @@ is_module_loaded(Module, Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===List the behaviours used by a module.===
+%% The information will not be present if the beam file was stripped.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_behaviours(Module :: module()) ->
+    list(module()).
+
+module_behaviours(Module)
+    when is_atom(Module) ->
+    Behaviours = lists:flatmap(fun(Attribute) ->
+        case Attribute of
+            {behaviour, L} ->
+                L;
+            {behavior, L} ->
+                L;
+            _ ->
+                []
+        end
+    end, Module:module_info(attributes)),
+    Behaviours.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the module's source code.===
+%% The module needs to include debug_info for this function to succeed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_code(Module :: module()) ->
+    {ok, string()} |
+    {error, not_found | no_abstract_code | {beam_lib, beam_lib:chnk_rsn()}}.
+
+module_code(Module) ->
+    case code:get_object_code(Module) of
+        {Module, Beam, _} ->
+            case beam_lib:chunks(Beam,[abstract_code]) of
+                {ok, {Module, [{abstract_code, no_abstract_code}]}} ->
+                    {error, no_abstract_code};
+                {ok, {Module, [{abstract_code, {_, AbstractCode}}]}} ->
+                    SyntaxTree = erl_syntax:form_list(AbstractCode),
+                    {ok, erl_prettypr:format(SyntaxTree)};
+                {error, beam_lib, Reason} ->
+                    {error, {beam_lib, Reason}}
+            end;
+        error ->
+            {error, not_found}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Print the module's source code.===
+%% The module needs to include debug_info for this function to succeed.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_code_print(Module :: module()) ->
+    ok |
+    {error, not_found | no_abstract_code | {beam_lib, beam_lib:chnk_rsn()}}.
+
+module_code_print(Module) ->
+    case module_code(Module) of
+        {ok, Code} ->
+            io:format("~s", [Code]);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===List the exported functions of a module.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_exports(Module :: atom()) ->
+    list({atom(), pos_integer()}).
+
+module_exports(Module)
+    when is_atom(Module) ->
+    {exports, L0} = lists:keyfind(exports, 1, Module:module_info()),
+    {value, _, L1} = lists:keytake(module_info, 1, L0),
+    {value, _, L2} = lists:keytake(module_info, 1, L1),
+    L2.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Load a module.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -750,57 +838,6 @@ module_loaded(Module)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Unload a module.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec module_unload(Module :: atom()) ->
-    ok |
-    {error, not_loaded | not_unloaded}.
-
-module_unload(Module)
-    when is_atom(Module) ->
-    case code:delete(Module) of
-        true ->
-            ok;
-        false ->
-            case is_module_loaded_check(Module) of
-                true ->
-                    code:purge(Module),
-                    case code:delete(Module) of
-                        true ->
-                            ok;
-                        false ->
-                            {error, not_unloaded}
-                    end;
-                false ->
-                    {error, not_loaded}
-            end
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Reload a module.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec module_reload(Module :: atom()) ->
-    ok |
-    {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}.
-
-module_reload(Module)
-    when is_atom(Module) ->
-    code:purge(Module),
-    case code:load_file(Module) of
-        {module, Module} ->
-            code:soft_purge(Module),
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Make sure a module is purged.===
 %% If the module is not loaded, ignore it.
 %% @end
@@ -831,43 +868,54 @@ module_purged(Module, Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===List the exported functions of a module.===
+%% ===Reload a module.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec module_exports(Module :: atom()) ->
-    list({atom(), pos_integer()}).
+-spec module_reload(Module :: atom()) ->
+    ok |
+    {error, badfile | nofile | not_purged | on_load_failure | sticky_directory}.
 
-module_exports(Module)
+module_reload(Module)
     when is_atom(Module) ->
-    {exports, L0} = lists:keyfind(exports, 1, Module:module_info()),
-    {value, _, L1} = lists:keytake(module_info, 1, L0),
-    {value, _, L2} = lists:keytake(module_info, 1, L1),
-    L2.
+    code:purge(Module),
+    case code:load_file(Module) of
+        {module, Module} ->
+            code:soft_purge(Module),
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===List the behaviours used by a module.===
-%% The information will not be present if the beam file was stripped.
+%% ===Unload a module.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec module_behaviours(Module :: module()) ->
-    list(module()).
+-spec module_unload(Module :: atom()) ->
+    ok |
+    {error, not_loaded | not_unloaded}.
 
-module_behaviours(Module)
+module_unload(Module)
     when is_atom(Module) ->
-    Behaviours = lists:flatmap(fun(Attribute) ->
-        case Attribute of
-            {behaviour, L} ->
-                L;
-            {behavior, L} ->
-                L;
-            _ ->
-                []
-        end
-    end, Module:module_info(attributes)),
-    Behaviours.
+    case code:delete(Module) of
+        true ->
+            ok;
+        false ->
+            case is_module_loaded_check(Module) of
+                true ->
+                    code:purge(Module),
+                    case code:delete(Module) of
+                        true ->
+                            ok;
+                        false ->
+                            {error, not_unloaded}
+                    end;
+                false ->
+                    {error, not_loaded}
+            end
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -896,27 +944,6 @@ module_version(Module)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Reload a list of modules.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec modules_reload(Modules :: nonempty_list(atom())) ->
-    ok |
-    {error, any()}.
-
-modules_reload([Module | _] = Modules)
-    when is_atom(Module) ->
-    ok = modules_map(Modules, purge),
-    case code:atomic_load(Modules) of
-        ok ->
-            ok = modules_map(Modules, soft_purge),
-            ok;
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Make sure modules are purged with a timeout.===
 %% If a module is not loaded, ignore it.
 %% @end
@@ -936,31 +963,21 @@ modules_purged(Modules, Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start everything specified within a script file.===
-%% A script file is the input used when creating a boot file, which is the
-%% file used when first starting the Erlang VM.  This function checks
-%% all applications to determine if they are already running with the
-%% expected versions.  All modules are checked to make sure they have
-%% been loaded, if they are expected to have been loaded. Normally,
-%% the script is only used in the binary boot file format and only a single
-%% boot file is used during the lifetime of the Erlang VM
-%% (so it is unclear if using this function is bad or just unorthodox).
-%% The script file is expected to be within a release directory created
-%% by reltool.
+%% ===Reload a list of modules.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec script_start(FilePath :: string()) ->
-    {ok, list(atom())} |
+-spec modules_reload(Modules :: nonempty_list(atom())) ->
+    ok |
     {error, any()}.
 
-script_start(FilePath)
-    when is_list(FilePath) ->
-    true = lists:suffix(".script", FilePath),
-    case file:consult(FilePath) of
-        {ok, [{script, {_Name, _Vsn}, _Instructions} = Script]} ->
-            Dir = filename:dirname(FilePath),
-            script_start_data(Script, Dir);
+modules_reload([Module | _] = Modules)
+    when is_atom(Module) ->
+    ok = modules_map(Modules, purge),
+    case code:atomic_load(Modules) of
+        ok ->
+            ok = modules_map(Modules, soft_purge),
+            ok;
         {error, _} = Error ->
             Error
     end.
@@ -1049,29 +1066,31 @@ script_remove(FilePath, Timeout, Ignore)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start everything specified within a boot file.===
-%% A boot file is used when first starting the Erlang VM.  This function checks
+%% ===Start everything specified within a script file.===
+%% A script file is the input used when creating a boot file, which is the
+%% file used when first starting the Erlang VM.  This function checks
 %% all applications to determine if they are already running with the
 %% expected versions.  All modules are checked to make sure they have
 %% been loaded, if they are expected to have been loaded. Normally,
-%% only a single boot file is used during the lifetime of the Erlang VM
+%% the script is only used in the binary boot file format and only a single
+%% boot file is used during the lifetime of the Erlang VM
 %% (so it is unclear if using this function is bad or just unorthodox).
-%% The boot file is expected to be within a release directory created
+%% The script file is expected to be within a release directory created
 %% by reltool.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec boot_start(FilePath :: string()) ->
+-spec script_start(FilePath :: string()) ->
     {ok, list(atom())} |
     {error, any()}.
 
-boot_start(FilePath)
+script_start(FilePath)
     when is_list(FilePath) ->
-    true = lists:suffix(".boot", FilePath),
-    case file:read_file(FilePath) of
-        {ok, ScriptData} ->
+    true = lists:suffix(".script", FilePath),
+    case file:consult(FilePath) of
+        {ok, [{script, {_Name, _Vsn}, _Instructions} = Script]} ->
             Dir = filename:dirname(FilePath),
-            script_start_data(erlang:binary_to_term(ScriptData), Dir);
+            script_start_data(Script, Dir);
         {error, _} = Error ->
             Error
     end.
@@ -1149,6 +1168,35 @@ boot_remove(FilePath, Timeout, Ignore)
             Dir = filename:dirname(FilePath),
             script_remove_data(erlang:binary_to_term(ScriptData),
                                Dir, Timeout, Ignore);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start everything specified within a boot file.===
+%% A boot file is used when first starting the Erlang VM.  This function checks
+%% all applications to determine if they are already running with the
+%% expected versions.  All modules are checked to make sure they have
+%% been loaded, if they are expected to have been loaded. Normally,
+%% only a single boot file is used during the lifetime of the Erlang VM
+%% (so it is unclear if using this function is bad or just unorthodox).
+%% The boot file is expected to be within a release directory created
+%% by reltool.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec boot_start(FilePath :: string()) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+boot_start(FilePath)
+    when is_list(FilePath) ->
+    true = lists:suffix(".boot", FilePath),
+    case file:read_file(FilePath) of
+        {ok, ScriptData} ->
+            Dir = filename:dirname(FilePath),
+            script_start_data(erlang:binary_to_term(ScriptData), Dir);
         {error, _} = Error ->
             Error
     end.
