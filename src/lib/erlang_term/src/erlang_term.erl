@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2023 Michael Truog
+%%% @copyright 2014-2024 Michael Truog
 %%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -48,10 +48,13 @@
 
 -ifdef(ERLANG_OTP_VERSION_16).
 -else.
--define(ERLANG_OTP_VERSION_17_FEATURES, undefined).
+-define(ERLANG_OTP_VERSION_17_FEATURES, true).
 -ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
 -if(?OTP_RELEASE >= 25).
 -define(ERLANG_OTP_VERSION_25_FEATURES, true).
+-if(?OTP_RELEASE >= 27).
+-define(ERLANG_OTP_VERSION_27_FEATURES, true).
+-endif.
 -endif.
 -endif.
 -endif.
@@ -64,40 +67,9 @@ byte_size_terms(Term)
         byte_size_terms(K) + byte_size_terms(V) + Bytes
     end, 0, Term)
     ;).
--define(INTERNAL_TEST_MAP,
-    88 = byte_size(#{1=>1, 2=>2, 3=>3}, 8),
-    136 = byte_size(#{1=>RefcBinary, 2=>2, 3=>3}, 8) -
-          erlang:byte_size(RefcBinary),
-    ).
 -else.
 -define(BYTE_SIZE_TERMS_MAP,
     ;).
--define(INTERNAL_TEST_MAP,
-    ok,
-    ).
--endif.
--ifdef(ERLANG_OTP_VERSION_25_FEATURES).
--define(INTERNAL_TEST_EXTERNAL_FUNCTION,
-    72 = byte_size({fun module:function/0, []}, 8),
-    ).
--define(INTERNAL_TEST_TUPLE_EMPTY,
-    8 = byte_size({}, 8),
-    32 = byte_size(#{}, 8),
-    ).
--else.
--define(INTERNAL_TEST_EXTERNAL_FUNCTION,
-    48 = byte_size({fun module:function/0, []}, 8),
-    ).
--ifdef(ERLANG_OTP_VERSION_17_FEATURES).
--define(INTERNAL_TEST_TUPLE_EMPTY,
-    16 = byte_size({}, 8),
-    40 = byte_size(#{}, 8),
-    ).
--else.
--define(INTERNAL_TEST_TUPLE_EMPTY,
-    16 = byte_size({}, 8),
-    ).
--endif.
 -endif.
 
 %%%------------------------------------------------------------------------
@@ -175,6 +147,66 @@ byte_size_term_global(_) ->
 -define(TEST_TIMEOUT, 10). % seconds
 -endif.
 
+-ifdef(ERLANG_OTP_VERSION_27_FEATURES).
+-define(INTERNAL_TEST_REFC_BINARY,
+    9 = 1 + erts_debug:flat_size(RefcBinary),
+    ).
+-else.
+-define(INTERNAL_TEST_REFC_BINARY,
+    7 = 1 + erts_debug:flat_size(RefcBinary),
+    ).
+-endif.
+
+-ifdef(ERLANG_OTP_VERSION_17_FEATURES).
+-ifdef(ERLANG_OTP_VERSION_27_FEATURES).
+-define(INTERNAL_TEST_MAP,
+    88 = byte_size(#{1=>1, 2=>2, 3=>3}, 8),
+    152 = byte_size(#{1=>RefcBinary, 2=>2, 3=>3}, 8) -
+          erlang:byte_size(RefcBinary),
+    ).
+-else.
+-define(INTERNAL_TEST_MAP,
+    88 = byte_size(#{1=>1, 2=>2, 3=>3}, 8),
+    136 = byte_size(#{1=>RefcBinary, 2=>2, 3=>3}, 8) -
+          erlang:byte_size(RefcBinary),
+    ).
+-endif.
+-else.
+-define(INTERNAL_TEST_MAP,
+    ok,
+    ).
+-endif.
+
+-ifdef(ERLANG_OTP_VERSION_25_FEATURES).
+-ifdef(ERLANG_OTP_VERSION_27_FEATURES).
+-define(INTERNAL_TEST_EXTERNAL_FUNCTION,
+    48 = byte_size({fun module:function/0, []}, 8),
+    ).
+-else.
+-define(INTERNAL_TEST_EXTERNAL_FUNCTION,
+    72 = byte_size({fun module:function/0, []}, 8),
+    ).
+-endif.
+-define(INTERNAL_TEST_TUPLE_EMPTY,
+    8 = byte_size({}, 8),
+    32 = byte_size(#{}, 8),
+    ).
+-else.
+-define(INTERNAL_TEST_EXTERNAL_FUNCTION,
+    48 = byte_size({fun module:function/0, []}, 8),
+    ).
+-ifdef(ERLANG_OTP_VERSION_17_FEATURES).
+-define(INTERNAL_TEST_TUPLE_EMPTY,
+    16 = byte_size({}, 8),
+    40 = byte_size(#{}, 8),
+    ).
+-else.
+-define(INTERNAL_TEST_TUPLE_EMPTY,
+    16 = byte_size({}, 8),
+    ).
+-endif.
+-endif.
+
 module_test_() ->
     {timeout, ?TEST_TIMEOUT, [
         {"internal tests", ?_assertEqual(ok, t_basic())}
@@ -183,12 +215,12 @@ module_test_() ->
 t_basic() ->
     RefcBinary = <<1:((?HEAP_BINARY_LIMIT + 1) * 8)>>,
     HeapBinary = <<1:(?HEAP_BINARY_LIMIT * 8)>>,
-    true = (7 == (1 + erts_debug:flat_size(RefcBinary))),
-    % doesn't work in console shell
+    ?INTERNAL_TEST_REFC_BINARY
+    % doesn't work in the interpreter (console shell)
     % (process heap size of binary is excluded
-    %  when executed in the console shell)
-    true = (11 == (1 + erts_debug:flat_size(HeapBinary))),
-    true = (4 == (1 + erts_debug:flat_size(<<1:8>>))),
+    %  when executed in the interpreter)
+    11 = 1 + erts_debug:flat_size(HeapBinary),
+    4 = 1 + erts_debug:flat_size(<<1:8>>),
 
     24 = byte_size(<<>>, 8),
     32 = byte_size(<<"abc">>, 8),
