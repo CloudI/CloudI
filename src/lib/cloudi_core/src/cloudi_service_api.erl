@@ -558,7 +558,7 @@
 -export_type([max_heap_size_options/0]).
 
 -type file_path() :: nonempty_string().
--type file_version() :: list(byte()). % utf8 string
+-type file_version() :: nonempty_list(byte()). % utf8 string
 -type args_internal() :: list().
 -type args_external() :: string().
 -type env_external() :: list({string(), string()}).

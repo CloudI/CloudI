@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-02-20 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_statistics eunit test compilation
+      (Thanks to Frej Drejhammar for the suggestion to avoid the inlined list)
+    * Improve cloudi_service_api type specification
+
 2024-02-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update erlang_term
