@@ -6,11 +6,16 @@
 %%% ==CloudI (Abstract) Map-Reduce Service==
 %%% This module provides an Erlang behaviour for fault-tolerant,
 %%% database agnostic map-reduce.  See the hexpi test for example usage.
+%%%
+%%% When the service implementing the cloudi_service_map_reduce behaviour
+%%% is suspended, the map request responses will accumulate without
+%%% timeouts during the time spent suspended.  That means a map-reduce
+%%% service can be suspended to pause the map processing.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +36,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @copyright 2012-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).

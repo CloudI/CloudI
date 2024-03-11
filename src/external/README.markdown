@@ -276,9 +276,9 @@ Erlang `rebar2`
 `Erlang OTP-compliant build tool`
 
 - `https://github.com/okeuday/rebar2`
-- `commit 7d0b56a5d815d791e5a24e0ccb9032a671961a9e (CloudI)`
-- `Wed Nov 29 22:11:29 UTC 2023`
-- `Apache License 2.0`
+- `commit 68979e330b77450776bbe5dac973dab9d26ddc43 (2.7.0)`
+- `Mon Mar 11 20:36:34 UTC 2024`
+- `MIT`
 
 Erlang `setup`
 --------------

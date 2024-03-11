@@ -1,0 +1,4381 @@
+#!/usr/bin/env escript
+%%!
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+%%%------------------------------------------------------------------------
+%%%
+%%% rebar: Erlang Build Tool
+%%%
+%%% Copyright (c) 2009-2010 Dave Smith
+%%% Copyright (c) 2024 Michael Truog <mjtruog at protonmail dot com>
+%%%
+%%% Permission is hereby granted, free of charge, to any person obtaining a
+%%% copy of this software and associated documentation files (the "Software"),
+%%% to deal in the Software without restriction, including without limitation
+%%% the rights to use, copy, modify, merge, publish, distribute, sublicense,
+%%% and/or sell copies of the Software, and to permit persons to whom the
+%%% Software is furnished to do so, subject to the following conditions:
+%%%
+%%% The above copyright notice and this permission notice shall be included in
+%%% all copies or substantial portions of the Software.
+%%%
+%%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+%%% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+%%% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+%%% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+%%% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+%%% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+%%% DEALINGS IN THE SOFTWARE.
+%%%------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% rebar.erl
+%--------------------------------------------------------------------------
+
+-module(rebar).
+-vsn("2.7.0").
+
+-mode(compile).
+
+-export([main/1]).
+
+-define(FAIL, rebar_utils_abort()).
+-define(ABORT(Str, Args), rebar_utils_abort(Str, Args)).
+
+-define(CONSOLE(Str, Args), io:format(Str, Args)).
+
+-define(DEBUG(Str, Args), rebar_log_log(debug, Str, Args)).
+-define(INFO(Str, Args), rebar_log_log(info, Str, Args)).
+-define(WARN(Str, Args), rebar_log_log(warn, Str, Args)).
+-define(ERROR(Str, Args), rebar_log_log(error, Str, Args)).
+
+-define(FMT(Str, Args), lists:flatten(io_lib:format(Str, Args))).
+
+-define(MODULES_AVAILABLE, [
+        rebar_erlc_compiler,
+        rebar_otp_app,
+        rebar_ct,
+        rebar_eunit,
+        rebar_edoc
+    ]).
+-define(MODULES_ANY_DIR, [
+        rebar_require_vsn,
+        rebar_deps,
+        rebar_subdirs,
+        rebar_cleaner
+    ]).
+% a rebar "module" functionality requires its command functions be exported
+-define(MODULE_FUNCTION(Module, Command),
+    try erlang:list_to_existing_atom(erlang:atom_to_list(Module) ++ "_" ++
+                                     erlang:atom_to_list(Command))
+    catch
+        error:badarg ->
+            undefined
+    end).
+-export([rebar_erlc_compiler_compile/2,
+         rebar_erlc_compiler_clean/2,
+         rebar_otp_app_compile/2,
+         rebar_otp_app_clean/2,
+         rebar_ct_ct/2,
+         rebar_eunit_eunit/2,
+         rebar_eunit_clean/2,
+         rebar_edoc_doc/2,
+         rebar_require_vsn_compile/2,
+         rebar_require_vsn_eunit/2,
+         rebar_deps_preprocess/2,
+         rebar_deps_postprocess/2,
+         rebar_deps_compile/2,
+         rebar_deps_setup_env/1,
+         'rebar_deps_check-deps'/2,
+         'rebar_deps_get-deps'/2,
+         'rebar_deps_update-deps'/2,
+         'rebar_deps_delete-deps'/2,
+         'rebar_deps_list-deps'/2,
+         rebar_subdirs_preprocess/2,
+         rebar_cleaner_clean/2]).
+
+-define(EUNIT_DIR, ".eunit").
+-define(CONFIG_FILENAME, "rebar.config").
+-define(DEFAULT_JOBS, 3).
+
+-include_lib("kernel/include/file.hrl").
+
+-record(dep,
+    {
+        dir,
+        app,
+        vsn_regex,
+        source,
+        is_raw %% is_raw = true means non-Erlang/OTP dependency
+    }).
+
+-record(config,
+    {
+        dir :: file:filename(),
+        opts = [] :: list(),
+        globals = rebar_config_new_globals(),
+        envs = rebar_config_new_env(),
+        %% cross-directory/-command config
+        skip_dirs = rebar_config_new_skip_dirs(),
+        xconf = rebar_config_new_xconf()
+    }).
+-type config() :: #config{}.
+
+%% escript Entry point
+main(Args) ->
+    try rebar_run(Args) of
+        ok ->
+            ok
+    catch
+        throw:rebar_abort ->
+            erlang:halt(1);
+        ErrorType:Error ->
+            %% Nothing should percolate up from rebar_core;
+            %% Dump this error to console
+            io:format("Uncaught error in rebar: ~p\n", [{ErrorType, Error}]),
+            erlang:halt(1)
+    end.
+
+rebar_run(RawArgs) ->
+    ok = rebar_set_env(),
+    %% Parse out command line arguments -- what's left is a list of commands to
+    %% run -- and start running commands
+    Args = rebar_parse_args(RawArgs),
+    BaseConfig = rebar_init_config(Args),
+    {BaseConfig1, Cmds} = rebar_save_options(BaseConfig, Args),
+    rebar_run_aux(BaseConfig1, Cmds).
+
+rebar_set_env() ->
+    %% Default log level
+    ok = application:set_env(rebar, log_level, error),
+    ok.
+
+rebar_init_config({Options, _NonOptArgs}) ->
+    GlobalConfig0 = rebar_config_new(),
+
+    %% Set the rebar config to use
+    GlobalConfig1 = case proplists:get_value(config, Options) of
+        undefined ->
+            GlobalConfig0;
+        Conf ->
+            rebar_config_set_global(GlobalConfig0, config, Conf)
+    end,
+
+    GlobalConfig2 = rebar_set_log_level(GlobalConfig1, Options),
+    %% Initialize logging system
+    ok = rebar_log_init(GlobalConfig2),
+
+    BaseConfig = rebar_config_base_config(GlobalConfig2),
+
+    %% Keep track of how many operations we do, so we can detect bad commands
+    BaseConfig1 = rebar_config_set_xconf(BaseConfig, operations, 0),
+    %% Initialize vsn cache
+    rebar_config_set_xconf(BaseConfig1, vsn_cache, dict:new()).
+
+rebar_save_options(Config0, {Options, NonOptArgs}) ->
+    GlobalDefines0 = [],
+    Config1 = rebar_config_set_xconf(Config0, defines, GlobalDefines0),
+
+    %% Set global variables based on options
+    Config2 = case proplists:get_value(jobs, Options, ?DEFAULT_JOBS) of
+        ?DEFAULT_JOBS ->
+            Config1;
+        Jobs ->
+            rebar_config_set_global(Config1, jobs, Jobs)
+    end,
+
+    %% Filter all the flags (i.e. strings of form key=value) from the
+    %% command line arguments. What's left will be the commands to run.
+    {Config3, RawCmds} = rebar_filter_flags(Config2, NonOptArgs, []),
+    {Config3, rebar_unabbreviate_command_names(RawCmds)}.
+
+rebar_run_aux(BaseConfig0, Commands) ->
+    %% Convert command strings to atoms
+    CommandAtoms = [list_to_atom(C) || C <- Commands],
+    %% Check commands and maybe halt execution
+    ok = rebar_show_info_maybe_halt(CommandAtoms),
+
+    %% Determine the location of the rebar executable; important for pulling
+    %% resources out of the escript
+    ScriptName = ?FILE,
+    BaseConfig1 = rebar_config_set_xconf(BaseConfig0, escript, ScriptName),
+    ?DEBUG("Rebar location: ~p\n", [ScriptName]),
+
+    %% Note the top-level directory for reference
+    AbsCwd = filename:absname(rebar_utils_get_cwd()),
+    BaseConfig2 = rebar_config_set_xconf(BaseConfig1, base_dir, AbsCwd),
+
+    %% Process each command, resetting any state between each one
+    rebar_core_process_commands(CommandAtoms, BaseConfig2).
+
+%%
+%% print help/usage string
+%%
+rebar_help() ->
+    io:format("Usage: rebar <command,...>
+
+  -h                Show the program options
+  -c                Show available commands
+  -v, -vv, -vvv     Verbosity level (default == 0)
+  -V                Show version information
+  -j <jobs>         Number of concurrent workers (default == ~w)
+  -C <config>       Rebar config file to use
+  var=value         rebar global variables (e.g. suites=foo)
+  command           Command to run (e.g. compile)
+", [?DEFAULT_JOBS]).
+
+%%
+%% Parse command line arguments to provide:
+%%   command line argument options in reverse order
+%%   commands and key=value pairs as non-options in order
+%%
+rebar_parse_args(RawArgs) ->
+    rebar_parse_args(RawArgs, [], []).
+
+rebar_parse_args([], Options, NonOptArgs) ->
+    {Options, lists:reverse(NonOptArgs)};
+rebar_parse_args(["-h" | RawArgs], Options, NonOptArgs) ->
+    rebar_parse_args(RawArgs, Options, ["help" | NonOptArgs]);
+rebar_parse_args(["-c" | RawArgs], Options, NonOptArgs) ->
+    rebar_parse_args(RawArgs, Options, ["commands" | NonOptArgs]);
+rebar_parse_args(["-v" ++ Verbose | RawArgs], Options, NonOptArgs) ->
+    rebar_parse_args(RawArgs,
+                     [{verbose, lists:sum([$v | Verbose]) div $v} | Options],
+                     NonOptArgs);
+rebar_parse_args(["-V" | RawArgs], Options, NonOptArgs) ->
+    rebar_parse_args(RawArgs, Options, ["version" | NonOptArgs]);
+rebar_parse_args(["-j", Jobs | RawArgs], Options, NonOptArgs) ->
+    rebar_parse_args(RawArgs,
+                     [{jobs, erlang:list_to_integer(Jobs)} | Options],
+                     NonOptArgs);
+rebar_parse_args(["-C", Config | RawArgs], Options, NonOptArgs) ->
+    rebar_parse_args(RawArgs, [{config, Config} | Options], NonOptArgs);
+rebar_parse_args([[$- | _] = InvalidOpt | _], _, _) ->
+    ?ERROR("Invalid option '~s'~n", [InvalidOpt]),
+    rebar_help(),
+    erlang:halt(1);
+rebar_parse_args([NonOptArg | RawArgs], Options, NonOptArgs) ->
+    rebar_parse_args(RawArgs, Options, [NonOptArg | NonOptArgs]).
+
+%%
+%% set log level based on getopt option
+%%
+rebar_set_log_level(Config, Options) ->
+    LogLevel = case proplists:get_value(verbose, Options) of
+        undefined ->
+            rebar_log_default_level();
+        Verbosity ->
+            Verbosity
+    end,
+    rebar_config_set_global(Config, verbose, LogLevel).
+
+%%
+%% show version information and halt
+%%
+rebar_version() ->
+    Version = [_ | _] = lists:flatmap(fun(Attribute) ->
+        case Attribute of
+            {vsn, VSN} ->
+                VSN;
+            _ ->
+                []
+        end
+    end, ?MODULE:module_info(attributes)),
+    {ok, Data} = file:read_file(?FILE),
+    FileHash = erlang:phash2(Data),
+    ?CONSOLE("rebar (CloudI fork) ~s ~w\n",
+             [Version, FileHash]).
+
+%%
+%% show info and maybe halt execution
+%%
+rebar_show_info_maybe_halt([]) ->
+    ?ERROR("No command to run specified!~n",[]),
+    rebar_commands(),
+    erlang:halt(1);
+rebar_show_info_maybe_halt(CommandAtoms) ->
+    false = rebar_show_info_maybe_halt(help, CommandAtoms,
+                                       fun rebar_help/0),
+    false = rebar_show_info_maybe_halt(commands, CommandAtoms,
+                                       fun rebar_commands/0),
+    false = rebar_show_info_maybe_halt(version, CommandAtoms,
+                                       fun rebar_version/0),
+    ok.
+
+rebar_show_info_maybe_halt(CommandAtom, CommandAtoms, F) ->
+    case lists:member(CommandAtom, CommandAtoms) of
+        true ->
+            F(),
+            erlang:halt(0);
+        false ->
+            false
+    end.
+
+%%
+%% print known commands
+%%
+rebar_commands() ->
+    io:format(
+"clean                                Clean
+compile                              Compile sources
+
+doc                                  Generate Erlang program documentation
+
+check-deps                           Display to be fetched dependencies
+get-deps                             Fetch dependencies
+update-deps                          Update fetched dependencies
+delete-deps                          Delete fetched dependencies
+list-deps                            List dependencies
+
+eunit       [suites=foo]             Run eunit tests in foo.erl and
+                                     test/foo_tests.erl
+            [suites=foo] [tests=bar] Run specific eunit tests [first test name
+                                     starting with 'bar' in foo.erl and
+                                     test/foo_tests.erl]
+            [tests=bar]              For every existing suite, run the first
+                                     test whose name starts with bar and, if
+                                     no such test exists, run the test whose
+                                     name starts with bar in the suite's
+                                     _tests module
+
+ct          [suites=] [case=]        Run common_test suites
+
+help                                 Show the program options
+version                              Show version information
+").
+
+rebar_get_jobs(Config) ->
+    rebar_config_get_global(Config, jobs, ?DEFAULT_JOBS).
+
+%%
+%% Seperate all commands (single-words) from flags (key=value) and store
+%% values into the rebar_config global storage.
+%%
+rebar_filter_flags(Config, [], Commands) ->
+    {Config, lists:reverse(Commands)};
+rebar_filter_flags(Config, [Item | Rest], Commands) ->
+    case string:tokens(Item, "=") of
+        [Command] ->
+            rebar_filter_flags(Config, Rest, [Command | Commands]);
+        [KeyStr, RawValue] ->
+            Key = list_to_atom(KeyStr),
+            Value = case Key of
+                        verbose ->
+                            list_to_integer(RawValue);
+                        _ ->
+                            RawValue
+                    end,
+            Config1 = rebar_config_set_global(Config, Key, Value),
+            rebar_filter_flags(Config1, Rest, Commands);
+        Other ->
+            ?CONSOLE("Ignoring command line argument: ~p\n", [Other]),
+            rebar_filter_flags(Config, Rest, Commands)
+    end.
+
+rebar_command_names() ->
+    ["check-deps", "clean", "compile",
+     "ct", "delete-deps", "doc", "eunit",
+     "get-deps", "help", "list-deps",
+     "update-deps", "version"].
+
+rebar_unabbreviate_command_names([]) ->
+    [];
+rebar_unabbreviate_command_names([Command | Commands]) ->
+    case rebar_get_command_name_candidates(Command) of
+        [] ->
+            %% let the rest of the code detect that the command doesn't exist
+            %% (this would perhaps be a good place to fail)
+            [Command | rebar_unabbreviate_command_names(Commands)];
+        [FullCommand] ->
+            [FullCommand | rebar_unabbreviate_command_names(Commands)];
+        Candidates ->
+            ?ABORT("Found more than one match for abbreviated command name "
+                   " '~s',~nplease be more specific. Possible candidates:~n"
+                   "  ~s~n",
+                   [Command, string:join(Candidates, ", ")])
+    end.
+
+rebar_get_command_name_candidates(Command) ->
+    %% Get the command names which match the given (abbreviated) command name.
+    %% * "c"        matches commands like compile, clean and create-app
+    %% * "create"   matches command create only, since it's unique
+    %% * "create-"  matches commands starting with create-
+    %% * "c-a"      matches create-app
+    %% * "create-a" matches create-app
+    %% * "c-app"    matches create-app
+    Candidates = [Candidate || Candidate <- rebar_command_names(),
+                  rebar_is_command_name_candidate(Command, Candidate)],
+    %% Is there a complete match?  If so return only that, return a
+    %% list of candidates otherwise
+    case lists:member(Command, Candidates) of
+        true  -> [Command];
+        false -> Candidates
+    end.
+
+rebar_is_command_name_candidate(Command, Candidate) ->
+    lists:prefix(Command, Candidate) orelse
+    rebar_is_command_name_sub_word_candidate(Command, Candidate).
+
+rebar_is_command_name_sub_word_candidate(Command, Candidate) ->
+    %% Allow for parts of commands to be abbreviated, i.e. create-app
+    %% can be shortened to "create-a", "c-a" or "c-app" (but not
+    %% "create-" since that would be ambiguous).
+    ReOpts = [{return, list}],
+    CommandSubWords = re:split(Command, "-", ReOpts),
+    CandidateSubWords = re:split(Candidate, "-", ReOpts),
+    rebar_is_command_name_sub_word_candidate_aux(CommandSubWords,
+                                                 CandidateSubWords).
+
+rebar_is_command_name_sub_word_candidate_aux([CmdSW | CmdSWs],
+                                             [CandSW | CandSWs]) ->
+    lists:prefix(CmdSW, CandSW) andalso
+    rebar_is_command_name_sub_word_candidate_aux(CmdSWs, CandSWs);
+rebar_is_command_name_sub_word_candidate_aux([], []) ->
+    true;
+rebar_is_command_name_sub_word_candidate_aux(_CmdSWs, _CandSWs) ->
+    false.
+
+%--------------------------------------------------------------------------
+% rebar_core.erl
+%--------------------------------------------------------------------------
+
+rebar_core_process_commands([], ParentConfig) ->
+    AbortTrapped = rebar_config_get_xconf(ParentConfig, abort_trapped, false),
+    case {rebar_core_get_operations(ParentConfig), AbortTrapped} of
+        {0, _} ->
+            %% None of the commands had any effect
+            ?FAIL;
+        {_, true} ->
+            %% An abort was previously trapped
+            ?FAIL;
+        _ ->
+            ok
+    end;
+rebar_core_process_commands([Command | Rest], ParentConfig) ->
+    %% Reset skip dirs
+    ParentConfig1 = rebar_config_reset_skip_dirs(ParentConfig),
+    Operations = rebar_core_get_operations(ParentConfig1),
+
+    ParentConfig4 = try
+        %% Convert the code path so that all the entries are absolute paths.
+        %% If not, code:set_path() may choke on invalid relative paths when
+        %% trying to restore the code path from inside a subdirectory.
+        true = rebar_utils_expand_code_path(),
+        {ParentConfig2,
+         _DirSet} = rebar_core_process_dir(rebar_utils_get_cwd(),
+                                           ParentConfig1, Command,
+                                           sets:new()),
+        case rebar_core_get_operations(ParentConfig2) of
+            Operations ->
+                %% This command didn't do anything
+                ?CONSOLE("Command '~s' not understood or not applicable~n",
+                         [Command]);
+            _ ->
+                ok
+        end,
+        %% TODO: reconsider after config inheritance removal/redesign
+        ParentConfig3 = rebar_config_clean_config(ParentConfig1, ParentConfig2),
+        %% Wipe out vsn cache to avoid invalid hits when
+        %% dependencies are updated
+        rebar_config_set_xconf(ParentConfig3, vsn_cache, dict:new())
+    catch
+        throw:rebar_abort ->
+            case rebar_config_get_xconf(ParentConfig1, keep_going, false) of
+                false ->
+                    ?FAIL;
+                true ->
+                    ?WARN("Continuing on after abort: ~p\n", [Rest]),
+                    rebar_config_set_xconf(ParentConfig1,
+                                           abort_trapped, true)
+            end
+    end,
+    rebar_core_process_commands(Rest, ParentConfig4).
+
+rebar_core_process_dir(Dir, ParentConfig, Command, DirSet) ->
+    case filelib:is_dir(Dir) of
+        false ->
+            ?WARN("Skipping non-existent sub-dir: ~p\n", [Dir]),
+            {ParentConfig, DirSet};
+
+        true ->
+            ok = file:set_cwd(Dir),
+            Config = rebar_core_maybe_load_local_config(Dir, ParentConfig),
+
+            %% Save the current code path and then update it with
+            %% lib_dirs. Children inherit parents code path, but we
+            %% also want to ensure that we restore everything to pristine
+            %% condition after processing this child
+            CurrentCodePath = rebar_core_update_code_path(Config),
+
+            %% Get the list of processing modules and check each one against
+            %% CWD to see if it's a fit -- if it is, use that set of modules
+            %% to process this dir.
+            ModulesAvailable = ?MODULES_AVAILABLE,
+            AppModules = rebar_core_app_modules(ModulesAvailable, Dir),
+            rebar_core_maybe_process_dir(AppModules, Config, CurrentCodePath,
+                              Dir, Command, DirSet)
+    end.
+
+rebar_core_maybe_process_dir({[], undefined} = ModuleSet,
+                             Config, CurrentCodePath,
+                             Dir, Command, DirSet) ->
+    rebar_core_process_dir0(Dir, Command, DirSet,
+                            Config, CurrentCodePath, ModuleSet);
+rebar_core_maybe_process_dir({_, ModuleSetFile} = ModuleSet,
+                             Config, CurrentCodePath,
+                             Dir, Command, DirSet) ->
+    case (lists:suffix(".app.src", ModuleSetFile) orelse
+          lists:suffix(".app", ModuleSetFile)) of
+        true ->
+            %% .app.src or .app file, check if is_skipped_app
+            rebar_core_maybe_process_dir0(ModuleSetFile, ModuleSet,
+                                          Config, CurrentCodePath, Dir,
+                                          Command, DirSet);
+        false ->
+            %% not an app dir, no need to consider apps=/skip_apps=
+            rebar_core_process_dir0(Dir, Command, DirSet,
+                                    Config, CurrentCodePath, ModuleSet)
+    end.
+
+rebar_core_maybe_process_dir0(AppFile, ModuleSet,
+                              Config, CurrentCodePath,
+                              Dir, Command, DirSet) ->
+    case rebar_app_utils_is_skipped_app(Config, AppFile) of
+        {Config1, {true, SkippedApp}} ->
+            ?DEBUG("Skipping app: ~p~n", [SkippedApp]),
+            Config2 = rebar_core_increment_operations(Config1),
+            {Config2, DirSet};
+        {Config1, false} ->
+            rebar_core_process_dir0(Dir, Command, DirSet,
+                                    Config1, CurrentCodePath, ModuleSet)
+    end.
+
+rebar_core_process_dir0(Dir, Command, DirSet, Config0, CurrentCodePath,
+                        {DirModules, ModuleSetFile}) ->
+    %% Get the list of modules for "any dir". This is a catch-all list
+    %% of modules that are processed in addition to modules associated
+    %% with this directory type. These any_dir modules are processed
+    %% FIRST.
+    AnyDirModules = ?MODULES_ANY_DIR,
+
+    Modules = AnyDirModules ++ DirModules,
+
+    %% Invoke 'preprocess' on the modules -- this yields a list of other
+    %% directories that should be processed _before_ the current one.
+    {Config1,
+     Predirs} = rebar_core_acc_modules(Modules, preprocess, Config0,
+                                       ModuleSetFile),
+    AllPredirs = Predirs,
+
+    ?DEBUG("Predirs: ~p\n", [AllPredirs]),
+    {Config2,
+     DirSet2} = rebar_core_process_each(AllPredirs, Command, Config1,
+                                        ModuleSetFile, DirSet),
+
+    %% Make sure the CWD is reset properly; processing the dirs may have
+    %% caused it to change
+    ok = file:set_cwd(Dir),
+
+    %% Check that this directory is not on the skip list
+    Config4 = case rebar_config_is_skip_dir(Config2, Dir) of
+        true ->
+            %% Do not execute the command on the directory, as some
+            %% module has requested a skip on it.
+            ?INFO("Skipping ~s in ~s\n", [Command, Dir]),
+            Config2;
+
+        false ->
+            %% Check for and get command specific environments
+            {Config3,
+             Env} = rebar_core_setup_envs(Config2, Modules),
+
+            %% Execute the current command on this directory
+            rebar_core_execute(Command, Modules, Config3, ModuleSetFile, Env)
+    end,
+
+    %% Mark the current directory as processed
+    DirSet3 = sets:add_element(Dir, DirSet2),
+
+    %% Invoke 'postprocess' on the modules. This yields a list of other
+    %% directories that should be processed _after_ the current one.
+    {Config5,
+     Postdirs} = rebar_core_acc_modules(Modules, postprocess,
+                                        Config4, ModuleSetFile),
+    ?DEBUG("Postdirs: ~p\n", [Postdirs]),
+    Res = rebar_core_process_each(Postdirs, Command, Config5,
+                                  ModuleSetFile, DirSet3),
+
+    %% Make sure the CWD is reset properly; processing the dirs may have
+    %% caused it to change
+    ok = file:set_cwd(Dir),
+
+    %% Once we're all done processing, reset the code path to whatever
+    %% the parent initialized it to
+    rebar_core_restore_code_path(CurrentCodePath),
+
+    %% Return the updated {config, dirset} as result
+    Res.
+
+rebar_core_maybe_load_local_config(Dir, ParentConfig) ->
+    %% We need to ensure we don't overwrite custom
+    %% config when we are dealing with base_dir.
+    case rebar_utils_processing_base_dir(ParentConfig, Dir) of
+        true ->
+            ParentConfig;
+        false ->
+            rebar_config_new(ParentConfig)
+    end.
+
+%%
+%% Given a list of directories and a set of previously processed directories,
+%% process each one we haven't seen yet
+%%
+rebar_core_process_each([], _Command,
+                        Config, _ModuleSetFile, DirSet) ->
+    %% reset cached (setup_env) envs
+    Config1 = rebar_config_reset_envs(Config),
+    {Config1, DirSet};
+rebar_core_process_each([Dir | Rest], Command,
+                        Config, ModuleSetFile, DirSet) ->
+    case sets:is_element(Dir, DirSet) of
+        true ->
+            ?DEBUG("Skipping ~s; already processed!\n", [Dir]),
+            rebar_core_process_each(Rest, Command,
+                                    Config, ModuleSetFile, DirSet);
+        false ->
+            {Config1,
+             DirSet2} = rebar_core_process_dir(Dir, Config, Command, DirSet),
+            Config2 = rebar_config_clean_config(Config, Config1),
+            %% reset cached (setup_env) envs
+            Config3 = rebar_config_reset_envs(Config2),
+            rebar_core_process_each(Rest, Command,
+                                    Config3, ModuleSetFile, DirSet2)
+    end.
+
+%%
+%% Check if this is a rebar app directory
+%%
+rebar_core_app_modules(Modules, Dir) ->
+    case rebar_app_utils_is_app_dir(Dir) of
+        {true, File} ->
+            {Modules, File};
+        false ->
+            {[], undefined}
+    end.
+
+%%
+%% Execute a command across all applicable modules
+%%
+rebar_core_execute(Command, Modules, Config, ModuleFile, Env) ->
+    case rebar_core_select_modules(Modules, Command, []) of
+        [] ->
+            Cmd = atom_to_list(Command),
+            case (lists:prefix("pre_", Cmd) orelse
+                  lists:prefix("post_", Cmd)) of
+                true ->
+                    ok;
+                false ->
+                    ?WARN("'~p' command does not apply to directory ~s\n",
+                          [Command, rebar_utils_get_cwd()])
+            end,
+            Config;
+
+        TargetModules ->
+            %% Provide some info on where we are
+            Dir = rebar_utils_get_cwd(),
+            ?CONSOLE("==> ~s (~s)\n", [filename:basename(Dir), Command]),
+
+            Config1 = rebar_core_increment_operations(Config),
+
+            %% Run the available modules
+            rebar_core_apply_hooks(pre_hooks, Config1, Command, Env),
+            case catch(rebar_core_run_modules(TargetModules, Command,
+                                              Config1, ModuleFile)) of
+                {ok, NewConfig} ->
+                    rebar_core_apply_hooks(post_hooks, NewConfig, Command, Env),
+                    NewConfig;
+                {error, failed} ->
+                    ?FAIL;
+                {Module, {error, _} = Other} ->
+                    ?ABORT("~p failed while processing ~s in module ~s: ~s\n",
+                           [Command, Dir, Module,
+                            io_lib:print(Other, 1, 80, -1)]);
+                Other ->
+                    ?ABORT("~p failed while processing ~s: ~s\n",
+                           [Command, Dir, io_lib:print(Other, 1, 80, -1)])
+            end
+    end.
+
+%% Increment the count of operations, since some module
+%% responds to this command
+rebar_core_increment_operations(Config) ->
+    Operations = rebar_core_get_operations(Config),
+    rebar_config_set_xconf(Config, operations, Operations + 1).
+
+rebar_core_get_operations(Config) ->
+    rebar_config_get_xconf(Config, operations).
+
+rebar_core_update_code_path(Config) ->
+    case rebar_config_get_local(Config, lib_dirs, []) of
+        [] ->
+            no_change;
+        Paths ->
+            OldPath = code:get_path(),
+            LibPaths = rebar_core_expand_lib_dirs(Paths,
+                                                  rebar_utils_get_cwd(), []),
+            ok = code:add_pathsa(LibPaths),
+            {old, OldPath}
+    end.
+
+rebar_core_restore_code_path(no_change) ->
+    ok;
+rebar_core_restore_code_path({old, Path}) ->
+    %% Verify that all of the paths still exist -- some dynamically
+    %% added paths can get blown away during clean.
+    true = code:set_path([F
+                          || F <- Path,
+                             rebar_core_erl_prim_loader_is_file(F)]),
+    ok.
+
+rebar_core_erl_prim_loader_is_file(File) ->
+    erl_prim_loader:read_file_info(File) =/= error.
+
+rebar_core_expand_lib_dirs([], _Root, Acc) ->
+    Acc;
+rebar_core_expand_lib_dirs([Dir | Rest], Root, Acc) ->
+    Apps = filelib:wildcard(filename:join([Dir, "*", "ebin"])),
+    FqApps = [filename:join([Root, A]) || A <- Apps],
+    rebar_core_expand_lib_dirs(Rest, Root, Acc ++ FqApps).
+
+rebar_core_select_modules([], _Command, Acc) ->
+    lists:reverse(Acc);
+rebar_core_select_modules([Module | Rest], Command, Acc) ->
+    Function = ?MODULE_FUNCTION(Module, Command),
+    case erlang:function_exported(?MODULE, Function, 2) of
+        true ->
+            rebar_core_select_modules(Rest, Command, [Module | Acc]);
+        false ->
+            rebar_core_select_modules(Rest, Command, Acc)
+    end.
+
+rebar_core_run_modules([], _Command, Config, _File) ->
+    {ok, Config};
+rebar_core_run_modules([Module | Rest], Command, Config, File) ->
+    Function = ?MODULE_FUNCTION(Module, Command),
+    case ?MODULE:Function(Config, File) of
+        ok ->
+            rebar_core_run_modules(Rest, Command, Config, File);
+        {ok, NewConfig} ->
+            rebar_core_run_modules(Rest, Command, NewConfig, File);
+        {error, _} = Error ->
+            {Module, Error}
+    end.
+
+rebar_core_apply_hooks(Mode, Config, Command, Env) ->
+    Hooks = rebar_config_get_local(Config, Mode, []),
+    lists:foreach(fun rebar_core_apply_hook/1,
+                  [{Env, Hook} || Hook <- Hooks,
+                                  element(1, Hook) =:= Command orelse
+                                  element(2, Hook) =:= Command]).
+
+rebar_core_apply_hook({Env, {Arch, Command, Hook}}) ->
+    case rebar_utils_is_arch(Arch) of
+        true ->
+            rebar_core_apply_hook({Env, {Command, Hook}});
+        false ->
+            ok
+    end;
+rebar_core_apply_hook({Env, {Command, Hook}}) ->
+    Msg = lists:flatten(io_lib:format("Command [~p] failed!~n", [Command])),
+    rebar_utils_sh(Hook, [{env, Env}, {abort_on_error, Msg}]).
+
+rebar_core_setup_envs(Config, Modules) ->
+    lists:foldl(fun(M, {C, E} = T) ->
+        Function = ?MODULE_FUNCTION(M, setup_env),
+        case erlang:function_exported(?MODULE, Function, 1) of
+            true ->
+                Env = ?MODULE:Function(C),
+                C1 = rebar_config_save_env(C, M, Env),
+                {C1, E ++ Env};
+            false ->
+                T
+        end
+    end, {Config, []}, Modules).
+
+rebar_core_acc_modules(Modules, Command, Config, File) ->
+    rebar_core_acc_modules(rebar_core_select_modules(Modules, Command, []),
+                Command, Config, File, []).
+
+rebar_core_acc_modules([], _Command, Config, _File, Acc) ->
+    {Config, Acc};
+rebar_core_acc_modules([Module | Rest], Command, Config, File, Acc) ->
+    Function = ?MODULE_FUNCTION(Module, Command),
+    {Config1, Dirs1} = case ?MODULE:Function(Config, File) of
+        {ok, Dirs} ->
+            {Config, Dirs};
+        {ok, NewConfig, Dirs} ->
+            {NewConfig, Dirs}
+    end,
+    rebar_core_acc_modules(Rest, Command, Config1, File, Acc ++ Dirs1).
+
+%--------------------------------------------------------------------------
+% rebar_erlc_compiler.erl
+%--------------------------------------------------------------------------
+
+%% Supported configuration variables:
+%%
+%% * erl_opts - Erlang list of options passed to compile:file/2
+%%              It is also possible to specify platform specific
+%%              options by specifying a pair or a triplet where the
+%%              first string is a regex that is checked against the
+%%              string
+%%
+%%                OtpRelease ++ "-" ++ SysArch ++ "-" ++ Words.
+%%
+%%              where
+%%
+%%                OtpRelease = erlang:system_info(otp_release).
+%%                SysArch = erlang:system_info(system_architecture).
+%%                Words = integer_to_list(8 *
+%%                            erlang:system_info({wordsize, external})).
+%%
+%%              E.g. to define HAVE_SENDFILE only on systems with
+%%              sendfile(), to define BACKLOG on Linux/FreeBSD as 128,
+%%              and to define 'old_inets' for R13 OTP release do:
+%%
+%%              {erl_opts, [{platform_define,
+%%                           "(linux|solaris|freebsd|darwin)",
+%%                           'HAVE_SENDFILE'},
+%%                          {platform_define, "(linux|freebsd)",
+%%                           'BACKLOG', 128},
+%%                          {platform_define, "R13",
+%%                           'old_inets'}]}.
+%%
+
+-spec rebar_erlc_compiler_compile(config(), file:filename()) -> 'ok'.
+rebar_erlc_compiler_compile(Config, _AppFile) ->
+    rebar_base_compiler_run(Config,
+                            rebar_erlc_compiler_check_files(rebar_config_get_local(
+                                          Config, xrl_first_files, [])),
+                            "src", ".xrl", "src", ".erl",
+                            fun rebar_erlc_compiler_compile_xrl/3),
+    rebar_base_compiler_run(Config,
+                            rebar_erlc_compiler_check_files(rebar_config_get_local(
+                                          Config, yrl_first_files, [])),
+                            "src", ".yrl", "src", ".erl",
+                            fun rebar_erlc_compiler_compile_yrl/3),
+    rebar_base_compiler_run(Config,
+                            rebar_erlc_compiler_check_files(rebar_config_get_local(
+                                          Config, mib_first_files, [])),
+                            "mibs", ".mib", "priv/mibs", ".bin",
+                            fun rebar_erlc_compiler_compile_mib/3),
+    rebar_erlc_compiler_doterl_compile(Config, "ebin").
+
+-spec rebar_erlc_compiler_clean(config(), file:filename()) -> 'ok'.
+rebar_erlc_compiler_clean(_Config, _AppFile) ->
+    MibFiles = rebar_utils_find_files("mibs", "^.*\\.mib\$"),
+    MIBs = [filename:rootname(filename:basename(MIB)) || MIB <- MibFiles],
+    rebar_file_utils_delete_each(
+      [filename:join(["include",MIB++".hrl"]) || MIB <- MIBs]),
+    lists:foreach(fun(F) -> ok = rebar_file_utils_rm_rf(F) end,
+                  ["ebin/*.beam", "priv/mibs/*.bin"]),
+
+    YrlFiles = rebar_utils_find_files("src", "^.*\\.[x|y]rl\$"),
+    rebar_file_utils_delete_each(
+      [ binary_to_list(iolist_to_binary(re:replace(F, "\\.[x|y]rl$", ".erl")))
+        || F <- YrlFiles ]),
+
+    %% Erlang compilation is recursive, so it's possible that we have a nested
+    %% directory structure in ebin with .beam files within. As such, we want
+    %% to scan whatever is left in the ebin/ directory for sub-dirs which
+    %% satisfy our criteria.
+    BeamFiles = rebar_utils_find_files("ebin", "^.*\\.beam\$"),
+    rebar_file_utils_delete_each(BeamFiles),
+    lists:foreach(fun(Dir) ->
+        rebar_erlc_compiler_delete_dir(Dir, rebar_erlc_compiler_dirs(Dir))
+    end, rebar_erlc_compiler_dirs("ebin")),
+    ok.
+
+%% .erl Compilation used by eunit
+rebar_erlc_compiler_test_compile(Config, Cmd, OutDir) ->
+    %% Obtain all the test modules for inclusion in the compile stage.
+    %% Notice: this could also be achieved with the following
+    %% rebar.config option: {test_compile_opts, [{src_dirs, ["test"]}]}
+    TestErls = rebar_utils_find_files("test", ".*\\.erl\$"),
+
+    %% Copy source files to eunit dir for cover in case they are not directly
+    %% in src but in a subdirectory of src. Cover only looks in cwd and ../src
+    %% for source files. Also copy files from src_dirs.
+    ErlOpts = rebar_utils_erl_opts(Config),
+
+    SrcDirs = rebar_utils_src_dirs(proplists:append_values(src_dirs, ErlOpts)),
+    SrcErls = lists:foldl(fun(Dir, Acc) ->
+            Files = rebar_utils_find_files(Dir, ".*\\.erl\$"),
+            lists:append(Acc, Files)
+    end, [], SrcDirs),
+
+    %% If it is not the first time rebar eunit is executed, there will be source
+    %% files already present in OutDir. Since some SCMs (like Perforce) set
+    %% the source files as being read only (unless they are checked out), we
+    %% need to be sure that the files already present in OutDir are writable
+    %% before doing the copy. This is done here by removing any file that was
+    %% already present before calling rebar_file_utils_cp_r.
+
+    %% Get the full path to a file that was previously copied in OutDir
+    ToCleanUp = fun(F, Acc) ->
+            F2 = filename:basename(F),
+            F3 = filename:join([OutDir, F2]),
+            case filelib:is_regular(F3) of
+                true -> [F3|Acc];
+                false -> Acc
+            end
+    end,
+
+    ok = rebar_file_utils_delete_each(lists:foldl(ToCleanUp, [], TestErls)),
+    ok = rebar_file_utils_delete_each(lists:foldl(ToCleanUp, [], SrcErls)),
+
+    ok = rebar_file_utils_cp_r(SrcErls ++ TestErls, OutDir),
+
+    %% Compile erlang code to OutDir, using a tweaked config
+    %% with appropriate defines for eunit, and include all the test modules
+    %% as well.
+    ok = rebar_erlc_compiler_doterl_compile(rebar_erlc_compiler_test_compile_config(Config, Cmd), OutDir, TestErls),
+
+    {ok, SrcErls}.
+
+rebar_erlc_compiler_test_compile_config(Config, Cmd) ->
+    {Config1, TriqOpts} = triq_opts(Config),
+    {Config2, PropErOpts} = proper_opts(Config1),
+    {Config3, EqcOpts} = rebar_erlc_compiler_eqc_opts(Config2),
+
+    ErlOpts = rebar_config_get_list(Config3, erl_opts, []),
+    OptsAtom = list_to_atom(Cmd ++ "_compile_opts"),
+    EunitOpts = rebar_config_get_list(Config3, OptsAtom, []),
+    Opts0 = [{d, 'TEST'}] ++
+        ErlOpts ++ EunitOpts ++ TriqOpts ++ PropErOpts ++ EqcOpts,
+    Opts = [O || O <- Opts0, O =/= no_debug_info],
+    Config4 = rebar_config_set(Config3, erl_opts, Opts),
+
+    FirstFilesAtom = list_to_atom(Cmd ++ "_first_files"),
+    FirstErls = rebar_config_get_list(Config4, FirstFilesAtom, []),
+    rebar_config_set(Config4, erl_first_files, FirstErls).
+
+triq_opts(Config) ->
+    {NewConfig, IsAvail} = rebar_erlc_compiler_is_lib_avail(Config, is_triq_avail, triq,
+                                        "triq.hrl", "Triq"),
+    Opts = rebar_erlc_compiler_define_if('TRIQ', IsAvail),
+    {NewConfig, Opts}.
+
+proper_opts(Config) ->
+    {NewConfig, IsAvail} = rebar_erlc_compiler_is_lib_avail(Config, is_proper_avail, proper,
+                                        "proper.hrl", "PropEr"),
+    Opts = rebar_erlc_compiler_define_if('PROPER', IsAvail),
+    {NewConfig, Opts}.
+
+rebar_erlc_compiler_eqc_opts(Config) ->
+    {NewConfig, IsAvail} = rebar_erlc_compiler_is_lib_avail(Config, is_eqc_avail, eqc,
+                                        "eqc.hrl", "QuickCheck"),
+    Opts = rebar_erlc_compiler_define_if('EQC', IsAvail),
+    {NewConfig, Opts}.
+
+rebar_erlc_compiler_define_if(Def, true) -> [{d, Def}];
+rebar_erlc_compiler_define_if(_Def, false) -> [].
+
+rebar_erlc_compiler_is_lib_avail(Config, DictKey, Mod, Hrl, Name) ->
+    case rebar_config_get_xconf(Config, DictKey, undefined) of
+        undefined ->
+            IsAvail = case code:lib_dir(Mod) of
+                          {error, bad_name} ->
+                              false;
+                          Dir ->
+                              filelib:is_regular(filename:join([Dir,
+                                                                "include",
+                                                                Hrl]))
+                      end,
+            NewConfig = rebar_config_set_xconf(Config, DictKey, IsAvail),
+            ?DEBUG("~s availability: ~p\n", [Name, IsAvail]),
+            {NewConfig, IsAvail};
+        IsAvail ->
+            {Config, IsAvail}
+    end.
+
+-spec rebar_erlc_compiler_doterl_compile(config(), file:filename()) -> 'ok'.
+rebar_erlc_compiler_doterl_compile(Config, OutDir) ->
+    rebar_erlc_compiler_doterl_compile(Config, OutDir, []).
+
+rebar_erlc_compiler_doterl_compile(Config, OutDir, MoreSources) ->
+    FirstErls = rebar_config_get_list(Config, erl_first_files, []),
+    ErlOpts = rebar_utils_erl_opts(Config),
+    ?DEBUG("erl_opts ~p~n", [ErlOpts]),
+    %% Support the src_dirs option allowing multiple directories to
+    %% contain erlang source. This might be used, for example, should
+    %% eunit tests be separated from the core application source.
+    SrcDirs = rebar_utils_src_dirs(proplists:append_values(src_dirs, ErlOpts)),
+    RestErls  = [Source || Source <- rebar_erlc_compiler_gather_src(SrcDirs, []) ++ MoreSources,
+                           not lists:member(Source, FirstErls)],
+
+    %% Split RestErls so that parse_transforms and behaviours are instead added
+    %% to erl_first_files, parse transforms first.
+    %% This should probably be somewhat combined with inspect_epp
+    [ParseTransforms, Behaviours, OtherErls] =
+        lists:foldl(fun(F, [A, B, C]) ->
+                            case rebar_erlc_compiler_compile_priority(F) of
+                                parse_transform ->
+                                    [[F | A], B, C];
+                                behaviour ->
+                                    [A, [F | B], C];
+                                callback ->
+                                    [A, [F | B], C];
+                                _ ->
+                                    [A, B, [F | C]]
+                            end
+                    end, [[], [], []], RestErls),
+
+    NewFirstErls = FirstErls ++ ParseTransforms ++ Behaviours,
+
+    %% Make sure that ebin/ exists and is on the path
+    ok = filelib:ensure_dir(filename:join("ebin", "dummy.beam")),
+    CurrPath = code:get_path(),
+    true = code:add_path(filename:absname("ebin")),
+    OutDir1 = proplists:get_value(outdir, ErlOpts, OutDir),
+    rebar_base_compiler_run(Config, NewFirstErls, OtherErls,
+                            fun(S, C) ->
+                                    rebar_erlc_compiler_internal_erl_compile(C, S, OutDir1, ErlOpts)
+                            end),
+    true = code:set_path(CurrPath),
+    ok.
+
+-spec include_path(file:filename(), config()) -> [file:filename(), ...].
+include_path(Source, Config) ->
+    ErlOpts = rebar_config_get(Config, erl_opts, []),
+    ["include", filename:dirname(Source)]
+        ++ proplists:get_all_values(i, ErlOpts).
+
+-spec rebar_erlc_compiler_inspect(file:filename(),
+              [file:filename(), ...]) -> {string(), [string()]}.
+rebar_erlc_compiler_inspect(Source, IncludePath) ->
+    ModuleDefault = filename:basename(Source, ".erl"),
+    case epp:open(Source, IncludePath) of
+        {ok, Epp} ->
+            rebar_erlc_compiler_inspect_epp(Epp, Source, ModuleDefault, []);
+        {error, Reason} ->
+            ?DEBUG("Failed to inspect ~s: ~p\n", [Source, Reason]),
+            {ModuleDefault, []}
+    end.
+
+-spec rebar_erlc_compiler_inspect_epp(pid(), file:filename(), file:filename(),
+                  [string()]) -> {string(), [string()]}.
+rebar_erlc_compiler_inspect_epp(Epp, Source, Module, Includes) ->
+    case epp:parse_erl_form(Epp) of
+        {ok, {attribute, _, module, ModInfo}} ->
+            ActualModuleStr =
+                case ModInfo of
+                    %% Typical module name, single atom
+                    ActualModule when is_atom(ActualModule) ->
+                        atom_to_list(ActualModule);
+                    %% Packag-ized module name, list of atoms
+                    ActualModule when is_list(ActualModule) ->
+                        string:join([atom_to_list(P) ||
+                                        P <- ActualModule], ".");
+                    %% Parameterized module name, single atom
+                    {ActualModule, _} when is_atom(ActualModule) ->
+                        atom_to_list(ActualModule);
+                    %% Parameterized and packagized module name, list of atoms
+                    {ActualModule, _} when is_list(ActualModule) ->
+                        string:join([atom_to_list(P) ||
+                                        P <- ActualModule], ".")
+                end,
+            rebar_erlc_compiler_inspect_epp(Epp, Source, ActualModuleStr, Includes);
+        {ok, {attribute, 1, file, {Module, 1}}} ->
+            rebar_erlc_compiler_inspect_epp(Epp, Source, Module, Includes);
+        {ok, {attribute, 1, file, {Source, 1}}} ->
+            rebar_erlc_compiler_inspect_epp(Epp, Source, Module, Includes);
+        {ok, {attribute, 1, file, {IncFile, 1}}} ->
+            rebar_erlc_compiler_inspect_epp(Epp, Source, Module, [IncFile | Includes]);
+        {eof, _} ->
+            epp:close(Epp),
+            {Module, Includes};
+        _ ->
+            rebar_erlc_compiler_inspect_epp(Epp, Source, Module, Includes)
+    end.
+
+-spec rebar_erlc_compiler_needs_compile(file:filename(), file:filename(),
+                    [string()]) -> boolean().
+rebar_erlc_compiler_needs_compile(Source, Target, Hrls) ->
+    TargetLastMod = filelib:last_modified(Target),
+    lists:any(fun(I) -> TargetLastMod < filelib:last_modified(I) end,
+              [Source] ++ Hrls).
+
+-spec rebar_erlc_compiler_internal_erl_compile(config(), file:filename(),
+                           file:filename(), list()) -> 'ok' | 'skipped'.
+rebar_erlc_compiler_internal_erl_compile(Config, Source, Outdir, ErlOpts) ->
+    %% Determine the target name and includes list by inspecting the source file
+    {Module, Hrls} = rebar_erlc_compiler_inspect(Source, include_path(Source, Config)),
+
+    %% Construct the target filename
+    Target = filename:join([Outdir, Module]) ++ ".beam",
+    ok = filelib:ensure_dir(Target),
+
+    %% If the file needs compilation, based on last mod date of includes or
+    %% the target
+    case rebar_erlc_compiler_needs_compile(Source, Target, Hrls) of
+        true ->
+            Opts = [{outdir, filename:dirname(Target)}] ++
+                ErlOpts ++ [{i, "include"}, return],
+            case compile:file(Source, Opts) of
+                {ok, _Mod} ->
+                    ok;
+                {ok, _Mod, Ws} ->
+                    rebar_base_compiler_ok_tuple(Config, Source, Ws);
+                {error, Es, Ws} ->
+                    rebar_base_compiler_error_tuple(Config, Source,
+                                                    Es, Ws, Opts)
+            end;
+        false ->
+            skipped
+    end.
+
+-spec rebar_erlc_compiler_compile_mib(file:filename(), file:filename(),
+                                      config()) -> 'ok'.
+rebar_erlc_compiler_compile_mib(Source, Target, Config) ->
+    ok = rebar_utils_ensure_dir(Target),
+    ok = rebar_utils_ensure_dir(filename:join("include", "dummy.hrl")),
+    Opts = [{outdir, "priv/mibs"}, {i, ["priv/mibs"]}] ++
+        rebar_config_get(Config, mib_opts, []),
+    case snmpc:compile(Source, Opts) of
+        {ok, _} ->
+            Mib = filename:rootname(Target),
+            ok = snmpc:mib_to_hrl(Mib),
+            Hrl_filename = Mib ++ ".hrl",
+            rebar_file_utils_mv(Hrl_filename, "include"),
+            ok;
+        {error, compilation_failed} ->
+            ?FAIL
+    end.
+
+-spec rebar_erlc_compiler_compile_xrl(file:filename(), file:filename(),
+                                      config()) -> 'ok'.
+rebar_erlc_compiler_compile_xrl(Source, Target, Config) ->
+    Opts = [{scannerfile, Target} | rebar_config_get(Config, xrl_opts, [])],
+    rebar_erlc_compiler_compile_xrl_yrl(Config, Source, Target, Opts, leex).
+
+-spec rebar_erlc_compiler_compile_yrl(file:filename(), file:filename(),
+                                      config()) -> 'ok'.
+rebar_erlc_compiler_compile_yrl(Source, Target, Config) ->
+    Opts = [{parserfile, Target} | rebar_config_get(Config, yrl_opts, [])],
+    rebar_erlc_compiler_compile_xrl_yrl(Config, Source, Target, Opts, yecc).
+
+-spec rebar_erlc_compiler_compile_xrl_yrl(config(), file:filename(),
+                      file:filename(), list(), module()) -> 'ok'.
+rebar_erlc_compiler_compile_xrl_yrl(Config, Source, Target, Opts, Mod) ->
+    case rebar_erlc_compiler_needs_compile(Source, Target, []) of
+        true ->
+            case Mod:file(Source, Opts ++ [{return, true}]) of
+                {ok, _} ->
+                    ok;
+                {ok, _Mod, Ws} ->
+                    rebar_base_compiler_ok_tuple(Config, Source, Ws);
+                {error, Es, Ws} ->
+                    rebar_base_compiler_error_tuple(Config, Source,
+                                                    Es, Ws, Opts)
+            end;
+        false ->
+            skipped
+    end.
+
+rebar_erlc_compiler_gather_src([], Srcs) ->
+    Srcs;
+rebar_erlc_compiler_gather_src([Dir|Rest], Srcs) ->
+    rebar_erlc_compiler_gather_src(Rest, Srcs ++ rebar_utils_find_files(Dir, ".*\\.erl\$")).
+
+
+-spec rebar_erlc_compiler_dirs(file:filename()) -> [file:filename()].
+rebar_erlc_compiler_dirs(Dir) ->
+    [F || F <- filelib:wildcard(filename:join([Dir, "*"])), filelib:is_dir(F)].
+
+-spec rebar_erlc_compiler_delete_dir(file:filename(), [string()]) -> 'ok' | {'error', atom()}.
+rebar_erlc_compiler_delete_dir(Dir, []) ->
+    file:del_dir(Dir);
+rebar_erlc_compiler_delete_dir(Dir, Subdirs) ->
+    lists:foreach(fun(D) -> rebar_erlc_compiler_delete_dir(D, rebar_erlc_compiler_dirs(D)) end, Subdirs),
+    file:del_dir(Dir).
+
+-spec rebar_erlc_compiler_compile_priority(file:filename()) -> 'normal' | 'behaviour' |
+                                           'callback' |
+                                           'parse_transform'.
+rebar_erlc_compiler_compile_priority(File) ->
+    case epp_dodger:parse_file(File) of
+        {error, _} ->
+            normal; % couldn't parse the file, default priority
+        {ok, Trees} ->
+            F2 = fun({tree,arity_qualifier,_,
+                      {arity_qualifier,{tree,atom,_,behaviour_info},
+                       {tree,integer,_,1}}}, _) ->
+                         behaviour;
+                    ({tree,arity_qualifier,_,
+                      {arity_qualifier,{tree,atom,_,parse_transform},
+                       {tree,integer,_,2}}}, _) ->
+                         parse_transform;
+                    (_, Acc) ->
+                         Acc
+                 end,
+
+            F = fun({tree, attribute, _,
+                     {attribute, {tree, atom, _, export},
+                      [{tree, list, _, {list, List, none}}]}}, Acc) ->
+                        lists:foldl(F2, Acc, List);
+                   ({tree, attribute, _,
+                     {attribute, {tree, atom, _, callback},_}}, _Acc) ->
+                        callback;
+                   (_, Acc) ->
+                        Acc
+                end,
+
+            lists:foldl(F, normal, Trees)
+    end.
+
+%%
+%% Ensure all files in a list are present and abort if one is missing
+%%
+-spec rebar_erlc_compiler_check_files([file:filename()]) -> [file:filename()].
+rebar_erlc_compiler_check_files(FileList) ->
+    [rebar_erlc_compiler_check_file(F) || F <- FileList].
+
+rebar_erlc_compiler_check_file(File) ->
+    case filelib:is_regular(File) of
+        false -> ?ABORT("File ~p is missing, aborting\n", [File]);
+        true -> File
+    end.
+
+%--------------------------------------------------------------------------
+% rebar_otp_app.erl
+%--------------------------------------------------------------------------
+
+rebar_otp_app_compile(Config, File) ->
+    %% If we get an .app.src file, it needs to be pre-processed and
+    %% written out as a ebin/*.app file. That resulting file will then
+    %% be validated as usual.
+    {Config1, AppFile} = case rebar_app_utils_is_app_src(File) of
+                             true ->
+                                 rebar_otp_app_preprocess(Config, File);
+                             false ->
+                                 {Config, File}
+                         end,
+
+    %% Load the app file and validate it.
+    case rebar_app_utils_load_app_file(Config1, AppFile) of
+        {ok, Config2, AppName, AppData} ->
+            rebar_otp_app_validate_name(AppName, AppFile),
+
+            %% In general, the list of modules is an important thing to validate
+            %% for compliance with OTP guidelines and upgrade procedures.
+            %% However, some people prefer not to validate this list.
+            case rebar_config_get_local(Config1, validate_app_modules, true) of
+                true ->
+                    Modules = proplists:get_value(modules, AppData),
+                    {rebar_otp_app_validate_modules(AppName, Modules), Config2};
+                false ->
+                    {ok, Config2}
+            end;
+        {error, Reason} ->
+            ?ABORT("Failed to load app file ~s: ~p\n", [AppFile, Reason])
+    end.
+
+rebar_otp_app_clean(_Config, File) ->
+    %% If the app file is a .app.src, delete the generated .app file
+    case rebar_app_utils_is_app_src(File) of
+        true ->
+            case file:delete(rebar_app_utils_app_src_to_app(File)) of
+                ok ->
+                    ok;
+                {error, enoent} ->
+                    %% The file not existing is OK, we can ignore the error.
+                    ok;
+                Other ->
+                    Other
+            end;
+        false ->
+            ok
+    end.
+
+rebar_otp_app_preprocess(Config, AppSrcFile) ->
+    case rebar_app_utils_load_app_file(Config, AppSrcFile) of
+        {ok, Config1, AppName, AppData} ->
+            %% Look for a configuration file with vars we want to
+            %% substitute. Note that we include the list of modules available in
+            %% ebin/ and update the app data accordingly.
+            AppVars = rebar_otp_app_load_app_vars(Config1) ++ [{modules, rebar_otp_app_ebin_modules()}],
+            A1 = rebar_otp_app_apply_app_vars(AppVars, AppData),
+
+
+            %% AppSrcFile may contain instructions for generating a vsn number
+            {Config2, Vsn} = rebar_app_utils_app_vsn(Config1, AppSrcFile),
+            A2 = lists:keystore(vsn, 1, A1, {vsn, Vsn}),
+
+            %% Build the final spec as a string
+            Spec = io_lib:format("~p.\n", [{application, AppName, A2}]),
+
+            %% Setup file .app filename and write new contents
+            AppFile = rebar_app_utils_app_src_to_app(AppSrcFile),
+            ok = rebar_file_utils_write_file_if_contents_differ(AppFile, Spec),
+
+            %% Make certain that the ebin/ directory is available
+            %% on the code path
+            true = code:add_path(filename:absname(filename:dirname(AppFile))),
+
+            {Config2, AppFile};
+
+        {error, Reason} ->
+            ?ABORT("Failed to read ~s for preprocessing: ~p\n",
+                   [AppSrcFile, Reason])
+    end.
+
+rebar_otp_app_load_app_vars(Config) ->
+    case rebar_config_get_local(Config, app_vars_file, undefined) of
+        undefined ->
+            ?INFO("No app_vars_file defined.\n", []),
+            [];
+        Filename ->
+            ?INFO("Loading app vars from ~p\n", [Filename]),
+            {ok, Vars} = file:consult(Filename),
+            Vars
+    end.
+
+rebar_otp_app_apply_app_vars([], AppData) ->
+    AppData;
+rebar_otp_app_apply_app_vars([{Key, Value} | Rest], AppData) ->
+    AppData2 = lists:keystore(Key, 1, AppData, {Key, Value}),
+    rebar_otp_app_apply_app_vars(Rest, AppData2).
+
+rebar_otp_app_validate_name(AppName, File) ->
+    %% Convert the .app file name to an atom -- check it against the
+    %% identifier within the file
+    ExpApp = list_to_atom(filename:basename(File, ".app")),
+    case ExpApp == AppName of
+        true ->
+            ok;
+        false ->
+            ?ERROR("Invalid ~s: name of application (~p) "
+                   "must match filename.\n", [File, AppName]),
+            ?FAIL
+    end.
+
+rebar_otp_app_validate_modules(AppName, undefined) ->
+    ?ERROR("Missing modules declaration in ~p.app~n", [AppName]),
+    ?FAIL;
+rebar_otp_app_validate_modules(AppName, Mods) ->
+    %% Construct two sets -- one for the actual .beam files in ebin/
+    %% and one for the modules
+    %% listed in the .app file
+    EbinSet = ordsets:from_list(rebar_otp_app_ebin_modules()),
+    ModSet = ordsets:from_list(Mods),
+
+    %% Identify .beam files listed in the .app, but not present in ebin/
+    case ordsets:subtract(ModSet, EbinSet) of
+        [] ->
+            ok;
+        MissingBeams ->
+            Msg1 = lists:flatten([io_lib:format("\t* ~p\n", [M]) ||
+                                     M <- MissingBeams]),
+            ?ERROR("One or more modules listed in ~p.app are not "
+                   "present in ebin/*.beam:\n~s", [AppName, Msg1]),
+            ?FAIL
+    end,
+
+    %% Identify .beam files NOT list in the .app, but present in ebin/
+    case ordsets:subtract(EbinSet, ModSet) of
+        [] ->
+            ok;
+        MissingMods ->
+            Msg2 = lists:flatten([io_lib:format("\t* ~p\n", [M]) ||
+                                     M <- MissingMods]),
+            ?ERROR("One or more .beam files exist that are not "
+                   "listed in ~p.app:\n~s", [AppName, Msg2]),
+            ?FAIL
+    end.
+
+rebar_otp_app_ebin_modules() ->
+    lists:sort([rebar_utils_beam_to_mod("ebin", N)
+                || N <- rebar_utils_beams("ebin")]).
+
+%--------------------------------------------------------------------------
+% rebar_ct.erl
+%--------------------------------------------------------------------------
+
+%% -------------------------------------------------------------------
+%%
+%% Targets:
+%% test - runs common test suites in ./test
+%% int_test - runs suites in ./int_test
+%% perf_test - runs suites inm ./perf_test
+%%
+%% Global options:
+%% verbose=1 - show output from the common_test run as it goes
+%% suites="foo,bar" - runs <test>/foo_SUITE and <test>/bar_SUITE
+%% case="mycase" - runs individual test case foo_SUITE:mycase
+%% -------------------------------------------------------------------
+
+rebar_ct_ct(Config, File) ->
+    TestDir = rebar_config_get_local(Config, ct_dir, "test"),
+    LogDir = rebar_config_get_local(Config, ct_log_dir, "logs"),
+    rebar_ct_run_test_if_present(TestDir, LogDir, Config, File).
+
+rebar_ct_run_test_if_present(TestDir, LogDir, Config, File) ->
+    case filelib:is_dir(TestDir) of
+        false ->
+            ?WARN("~s directory not present - skipping\n", [TestDir]),
+            ok;
+        true ->
+            case filelib:wildcard(TestDir ++ "/*_SUITE.{beam,erl}") of
+                [] ->
+                    ?WARN("~s directory present, but no common_test"
+                          ++ " SUITES - skipping\n", [TestDir]),
+                    ok;
+                _ ->
+                    try
+                        rebar_ct_run_test(TestDir, LogDir, Config, File)
+                    catch
+                        throw:skip ->
+                            ok
+                    end
+            end
+    end.
+
+rebar_ct_run_test(TestDir, LogDir, Config, _File) ->
+    {Cmd, RawLog} = rebar_ct_make_cmd(TestDir, LogDir, Config),
+    ?DEBUG("ct_run cmd:~n~p~n", [Cmd]),
+    rebar_ct_clear_log(LogDir, RawLog),
+    Output = case rebar_config_is_verbose(Config) of
+        false ->
+            " >> " ++ RawLog ++ " 2>&1";
+        true ->
+            " 2>&1 | tee -a " ++ RawLog
+    end,
+    Waiter = rebar_ct_waiter_start(),
+    rebar_utils_sh(Cmd ++ Output, [{env,[{"TESTDIR", TestDir}]}]),
+    rebar_ct_waiter_stop(Waiter),
+    rebar_ct_check_log(Config, RawLog).
+
+rebar_ct_clear_log(LogDir, RawLog) ->
+    case filelib:ensure_dir(filename:join(LogDir, "index.html")) of
+        ok ->
+            NowStr = rebar_utils_now_str(),
+            LogHeader = "--- Test run on " ++ NowStr ++ " ---\n",
+            ok = file:write_file(RawLog, LogHeader);
+        {error, Reason} ->
+            ?ERROR("Could not create log dir - ~p\n", [Reason]),
+            ?FAIL
+    end.
+
+rebar_ct_waiter_start_loop() ->
+    rebar_ct_waiter_start_loop(0).
+
+rebar_ct_waiter_start_loop(Elapsed) ->
+    Interval = 10, % seconds
+    receive
+        done ->
+            ok
+    after
+        Interval * 1000 ->
+            NewElapsed = Elapsed + Interval,
+            ?CONSOLE("CT was processing for ~w seconds...\n", [NewElapsed]),
+            rebar_ct_waiter_start_loop(NewElapsed)
+    end.
+
+rebar_ct_waiter_start() ->
+    erlang:spawn_link(fun rebar_ct_waiter_start_loop/0).
+
+rebar_ct_waiter_stop(Pid) ->
+    MonitorRef = erlang:monitor(process, Pid),
+    Pid ! done,
+    receive
+        {'DOWN', MonitorRef, process, Pid, _} ->
+            ok
+    end.
+
+%% calling ct with erl does not return non-zero on failure - have to check
+%% log results
+rebar_ct_check_log(Config, RawLog) ->
+    {ok, Msg} = rebar_utils_sh("grep -e 'TEST COMPLETE' "
+                               "-e '{error,make_failed}' " ++ RawLog,
+                               [{use_stdout, false}]),
+    MakeFailed = string:str(Msg, "{error,make_failed}") =/= 0,
+    RunFailed = string:str(Msg, ", 0 failed") =:= 0,
+    if
+        MakeFailed ->
+            rebar_ct_show_log(Config, RawLog),
+            ?ERROR("Building tests failed\n",[]),
+            ?FAIL;
+
+        RunFailed ->
+            rebar_ct_show_log(Config, RawLog),
+            ?ERROR("One or more tests failed\n",[]),
+            ?FAIL;
+
+        true ->
+            ?CONSOLE("DONE.\n~s\n", [Msg])
+    end.
+
+%% Show the log if it hasn't already been shown because verbose was on
+rebar_ct_show_log(Config, RawLog) ->
+    ?CONSOLE("Showing log\n", []),
+    case rebar_config_is_verbose(Config) of
+        false ->
+            {ok, Contents} = file:read_file(RawLog),
+            ?CONSOLE("~s", [Contents]);
+        true ->
+            ok
+    end.
+
+rebar_ct_make_cmd(TestDir, RawLogDir, Config) ->
+    Cwd = rebar_utils_get_cwd(),
+    LogDir = filename:join(Cwd, RawLogDir),
+    EbinDir = filename:absname(filename:join(Cwd, "ebin")),
+    IncludeDir = filename:join(Cwd, "include"),
+    Include = case filelib:is_dir(IncludeDir) of
+        true ->
+            " -include \"" ++ IncludeDir ++ "\"";
+        false ->
+            ""
+    end,
+
+    %% Add the code path of the rebar process to the code path. This
+    %% includes the dependencies in the code path. The directories
+    %% that are part of the root Erlang install are filtered out to
+    %% avoid duplication
+    R = code:root_dir(),
+    NonLibCodeDirs = [P || P <- code:get_path(), not lists:prefix(R, P)],
+    CodeDirs = [io_lib:format("\"~s\"", [Dir]) ||
+                   Dir <- [EbinDir|NonLibCodeDirs]],
+    CodePathString = string:join(CodeDirs, " "),
+    Cmd = case rebar_ct_get_ct_specs(Cwd) of
+        undefined ->
+            ?FMT("erl " % should we expand ERL_PATH?
+                 " -noshell -pa ~s ~s"
+                 " ~s"
+                 " -logdir \"~s\""
+                 " -env TEST_DIR \"~s\""
+                 " ~s"
+                 " -s ct_run script_start -s erlang halt",
+                 [CodePathString,
+                  Include,
+                  rebar_ct_build_name(Config),
+                  LogDir,
+                  filename:join(Cwd, TestDir),
+                  rebar_ct_get_extra_params(Config)]) ++
+                rebar_ct_get_cover_config(Config, Cwd) ++
+                rebar_ct_get_ct_config_file(TestDir) ++
+                rebar_ct_get_config_file(TestDir) ++
+                rebar_ct_get_suites(Config, TestDir) ++
+                rebar_ct_get_case(Config);
+        SpecFlags ->
+            ?FMT("erl " % should we expand ERL_PATH?
+                 " -noshell -pa ~s ~s"
+                 " ~s"
+                 " -logdir \"~s\""
+                 " -env TEST_DIR \"~s\""
+                 " ~s"
+                 " -s ct_run script_start -s erlang halt",
+                 [CodePathString,
+                  Include,
+                  rebar_ct_build_name(Config),
+                  LogDir,
+                  filename:join(Cwd, TestDir),
+                  rebar_ct_get_extra_params(Config)]) ++
+                SpecFlags ++ rebar_ct_get_cover_config(Config, Cwd)
+    end,
+    RawLog = filename:join(LogDir, "raw.log"),
+    {Cmd, RawLog}.
+
+rebar_ct_build_name(Config) ->
+    case rebar_config_get_local(Config, ct_use_short_names, false) of
+        true -> "-sname test";
+        false -> " -name test@" ++ net_adm:localhost()
+    end.
+
+rebar_ct_get_extra_params(Config) ->
+    rebar_config_get_local(Config, ct_extra_params, "").
+
+rebar_ct_get_ct_specs(Cwd) ->
+    case rebar_ct_collect_glob(Cwd, ".*\.test\.spec\$") of
+        [] -> undefined;
+        [Spec] ->
+            " -spec " ++ Spec;
+        Specs ->
+            " -spec " ++
+            lists:flatten([io_lib:format("~s ", [Spec]) || Spec <- Specs])
+    end.
+
+rebar_ct_get_cover_config(Config, Cwd) ->
+    case rebar_config_get_local(Config, cover_enabled, false) of
+        false ->
+            "";
+        true ->
+            case rebar_ct_collect_glob(Cwd, ".*cover\.spec\$") of
+                [] ->
+                    ?DEBUG("No cover spec found: ~s~n", [Cwd]),
+                    "";
+                [Spec] ->
+                    ?DEBUG("Found cover file ~w~n", [Spec]),
+                    " -cover " ++ Spec;
+                Specs ->
+                    ?ABORT("Multiple cover specs found: ~p~n", [Specs])
+            end
+    end.
+
+rebar_ct_collect_glob(Cwd, Glob) ->
+    filelib:fold_files(Cwd, Glob, true, fun rebar_ct_collect_files/2, []).
+
+rebar_ct_collect_files(F, Acc) ->
+    %% Ignore any specs under the deps/ directory. Do this pulling
+    %% the dirname off the the F and then splitting it into a list.
+    Parts = filename:split(filename:dirname(F)),
+    case lists:member("deps", Parts) of
+        true ->
+            Acc;                % There is a directory named "deps" in path
+        false ->
+            [F | Acc]           % No "deps" directory in path
+    end.
+
+rebar_ct_get_ct_config_file(TestDir) ->
+    Config = filename:join(TestDir, "test.config"),
+    case filelib:is_regular(Config) of
+        false ->
+            " ";
+        true ->
+            " -ct_config " ++ Config
+    end.
+
+rebar_ct_get_config_file(TestDir) ->
+    Config = filename:join(TestDir, "app.config"),
+    case filelib:is_regular(Config) of
+        false ->
+            " ";
+        true ->
+            " -config " ++ Config
+    end.
+
+rebar_ct_get_suites(Config, TestDir) ->
+    case rebar_config_get_global(Config, suites, undefined) of
+        undefined ->
+            " -dir " ++ TestDir;
+        Suites ->
+            Suites1 = string:tokens(Suites, ","),
+            Suites2 = [rebar_ct_find_suite_path(Suite, TestDir)
+                       || Suite <- Suites1],
+            string:join([" -suite"] ++ Suites2, " ")
+    end.
+
+rebar_ct_find_suite_path(Suite, TestDir) ->
+    Path = filename:join(TestDir, Suite ++ "_SUITE.erl"),
+    case filelib:is_regular(Path) of
+        false ->
+            ?WARN("Suite ~s not found\n", [Suite]),
+            %% Note - this throw is caught in run_test_if_present/3;
+            %% this solution was easier than refactoring the entire module.
+            throw(skip);
+        true ->
+            Path
+    end.
+
+rebar_ct_get_case(Config) ->
+    case rebar_config_get_global(Config, 'case', undefined) of
+        undefined ->
+            "";
+        Case ->
+            " -case " ++ Case
+    end.
+
+%--------------------------------------------------------------------------
+% rebar_eunit.erl
+%--------------------------------------------------------------------------
+
+%% rebar_eunit supports the following commands:
+%% <ul>
+%%   <li>eunit - runs eunit tests</li>
+%%   <li>clean - remove ?EUNIT_DIR directory</li>
+%%   <li>reset_after_eunit::boolean() - default = true.
+%%       If true, try to "reset" VM state to approximate state prior to
+%%       running the EUnit tests:
+%%       <ul>
+%%        <li>Stop net_kernel if it was started</li>
+%%        <li>Stop OTP applications not running before EUnit tests were run</li>
+%%        <li>Kill processes not running before EUnit tests were run</li>
+%%        <li>Reset OTP application environment variables</li>
+%%       </ul>
+%%   </li>
+%% </ul>
+%% The following Global options are supported:
+%% <ul>
+%%   <li>verbose=1 - show extra output from the eunit test</li>
+%%   <li>
+%%      suites="foo,bar" - runs tests in foo.erl, test/foo_tests.erl and
+%%      tests in bar.erl, test/bar_tests.erl
+%%   </li>
+%%   <li>
+%%      suites="foo,bar" tests="baz"- runs first test with name starting
+%%      with 'baz' in foo.erl, test/foo_tests.erl and tests in bar.erl,
+%%      test/bar_tests.erl
+%%   </li>
+%%   <li>
+%%      tests="baz"- For every existing suite, run the first test whose
+%%      name starts with bar and, if no such test exists, run the test
+%%      whose name starts with bar in the suite's _tests module
+%%   </li>
+%% </ul>
+%% Additionally, for projects that have separate folders for the core
+%% implementation, and for the unit tests, then the following
+%% <code>rebar.config</code> option can be provided:
+%% <code>{test_compile_opts, [{src_dirs, ["dir"]}]}.</code>.
+
+rebar_eunit_eunit(Config, _AppFile) ->
+    ok = rebar_eunit_ensure_dirs(),
+    %% Save code path
+    CodePath = rebar_eunit_setup_code_path(),
+    CompileOnly = rebar_utils_get_experimental_global(Config, compile_only,
+                                                      false),
+    {ok, SrcErls} = rebar_erlc_compiler_test_compile(Config, "eunit",
+                                                     ?EUNIT_DIR),
+    case CompileOnly of
+        "true" ->
+            true = code:set_path(CodePath),
+            ?CONSOLE("Compiled modules for eunit~n", []);
+        false ->
+            rebar_eunit_run_eunit(Config, CodePath, SrcErls)
+    end.
+
+rebar_eunit_clean(_Config, _File) ->
+    rebar_file_utils_rm_rf(?EUNIT_DIR).
+
+rebar_eunit_run_eunit(Config, CodePath, SrcErls) ->
+    %% Build a list of all the .beams in ?EUNIT_DIR -- use this for
+    %% cover and eunit testing. Normally you can just tell cover
+    %% and/or eunit to scan the directory for you, but eunit does a
+    %% code:purge in conjunction with that scan and causes any cover
+    %% compilation info to be lost.
+
+    AllBeamFiles = rebar_utils_beams(?EUNIT_DIR),
+    {BeamFiles, TestBeamFiles} =
+        lists:partition(fun(N) -> string:str(N, "_tests.beam") =:= 0 end,
+                        AllBeamFiles),
+    OtherBeamFiles = TestBeamFiles --
+        [filename:rootname(N) ++ "_tests.beam" || N <- AllBeamFiles],
+    ModuleBeamFiles = BeamFiles ++ OtherBeamFiles,
+
+    %% Get modules to be run in eunit
+    AllModules = [rebar_utils_beam_to_mod(?EUNIT_DIR, N) || N <- AllBeamFiles],
+    {SuitesProvided, FilteredModules} = rebar_eunit_filter_suites(Config, AllModules),
+
+    %% Get matching tests
+    Tests = rebar_eunit_get_tests(Config, SuitesProvided, ModuleBeamFiles, FilteredModules),
+
+    SrcModules = [rebar_utils_erl_to_mod(M) || M <- SrcErls],
+
+    {ok, CoverLog} = rebar_eunit_cover_init(Config, ModuleBeamFiles),
+
+    StatusBefore = rebar_eunit_status_before_eunit(),
+    EunitResult = rebar_eunit_perform_eunit(Config, Tests),
+
+    rebar_eunit_perform_cover(Config, FilteredModules, SrcModules),
+    rebar_eunit_cover_close(CoverLog),
+
+    case proplists:get_value(reset_after_eunit, rebar_eunit_get_eunit_opts(Config),
+                             true) of
+        true ->
+            rebar_eunit_reset_after_eunit(StatusBefore);
+        false ->
+            ok
+    end,
+
+    %% Stop cover to clean the cover_server state. This is important if we want
+    %% eunit+cover to not slow down when analyzing many Erlang modules.
+    ok = cover:stop(),
+
+    case EunitResult of
+        ok ->
+            ok;
+        _ ->
+            ?ABORT("One or more eunit tests failed.~n", [])
+    end,
+
+    %% Restore code path
+    true = code:set_path(CodePath),
+    ok.
+
+rebar_eunit_ensure_dirs() ->
+    %% Make sure ?EUNIT_DIR/ and ebin/ directory exists (append dummy module)
+    ok = filelib:ensure_dir(filename:join(rebar_eunit_eunit_dir(), "dummy")),
+    ok = filelib:ensure_dir(filename:join(rebar_utils_ebin_dir(), "dummy")).
+
+rebar_eunit_eunit_dir() ->
+    filename:join(rebar_utils_get_cwd(), ?EUNIT_DIR).
+
+rebar_eunit_setup_code_path() ->
+    %% Setup code path prior to compilation so that parse_transforms
+    %% and the like work properly. Also, be sure to add ebin_dir()
+    %% to the END of the code path so that we don't have to jump
+    %% through hoops to access the .app file
+    CodePath = code:get_path(),
+    true = code:add_patha(rebar_eunit_eunit_dir()),
+    true = code:add_pathz(rebar_utils_ebin_dir()),
+    CodePath.
+
+%%
+%% == filter suites ==
+%%
+
+rebar_eunit_filter_suites(Config, Modules) ->
+    RawSuites = rebar_config_get_global(Config, suites, ""),
+    SuitesProvided = RawSuites =/= "",
+    Suites = [list_to_atom(Suite) || Suite <- string:tokens(RawSuites, ",")],
+    {SuitesProvided, rebar_eunit_filter_suites1(Modules, Suites)}.
+
+rebar_eunit_filter_suites1(Modules, []) ->
+    Modules;
+rebar_eunit_filter_suites1(Modules, Suites) ->
+    [M || M <- Modules, lists:member(M, Suites)].
+
+%%
+%% == get matching tests ==
+%%
+rebar_eunit_get_tests(Config, SuitesProvided,
+                      ModuleBeamFiles, FilteredModules) ->
+    Modules = case SuitesProvided of
+        false ->
+            %% No specific suites have been provided, use
+            %% ModuleBeamFiles which filters out "*_tests" modules
+            %% so eunit won't doubly run them and cover only
+            %% calculates coverage on production code. However,
+            %% keep "*_tests" modules that are not automatically
+            %% included by eunit.
+            %%
+            %% From 'Primitives' in the EUnit User's Guide
+            %% http://www.erlang.org/doc/apps/eunit/chapter.html
+            %% "In addition, EUnit will also look for another
+            %% module whose name is ModuleName plus the suffix
+            %% _tests, and if it exists, all the tests from that
+            %% module will also be added. (If ModuleName already
+            %% contains the suffix _tests, this is not done.) E.g.,
+            %% the specification {module, mymodule} will run all
+            %% tests in the modules mymodule and mymodule_tests.
+            %% Typically, the _tests module should only contain
+            %% test cases that use the public interface of the main
+            %% module (and no other code)."
+            [rebar_utils_beam_to_mod(?EUNIT_DIR, N) ||
+                N <- ModuleBeamFiles];
+        true ->
+            %% Specific suites have been provided, return the
+            %% filtered modules
+            FilteredModules
+    end,
+    rebar_eunit_get_matching_tests(Config, Modules).
+
+rebar_eunit_get_matching_tests(Config, Modules) ->
+    RawFunctions = rebar_utils_get_experimental_global(Config, tests, ""),
+    Tests = [list_to_atom(F1) || F1 <- string:tokens(RawFunctions, ",")],
+    case Tests of
+        [] ->
+            Modules;
+        Functions ->
+            case rebar_eunit_get_matching_tests1(Modules, Functions, []) of
+                [] ->
+                    [];
+                RawTests ->
+                    rebar_eunit_make_test_primitives(RawTests)
+            end
+    end.
+
+rebar_eunit_get_matching_tests1([], _Functions, TestFunctions) ->
+    TestFunctions;
+
+rebar_eunit_get_matching_tests1([Module|TModules], Functions, TestFunctions) ->
+    %% Get module exports
+    ModuleStr = atom_to_list(Module),
+    ModuleExports = rebar_eunit_get_beam_test_exports(ModuleStr),
+    %% Get module _tests exports
+    TestModuleStr = string:concat(ModuleStr, "_tests"),
+    TestModuleExports = rebar_eunit_get_beam_test_exports(TestModuleStr),
+    %% Build tests {M, F} list
+    Tests = rebar_eunit_get_matching_tests2(Functions, {Module, ModuleExports},
+                                {list_to_atom(TestModuleStr),
+                                 TestModuleExports}),
+    rebar_eunit_get_matching_tests1(TModules, Functions,
+                                    lists:merge([TestFunctions, Tests])).
+
+rebar_eunit_get_matching_tests2(Functions, {Mod, ModExports},
+                                {TestMod, TestModExports}) ->
+    %% Look for matching functions into ModExports
+    ModExportsStr = [atom_to_list(E1) || E1 <- ModExports],
+    TestModExportsStr = [atom_to_list(E2) || E2 <- TestModExports],
+    rebar_eunit_get_matching_exports(Functions, {Mod, ModExportsStr},
+                         {TestMod, TestModExportsStr}, []).
+
+rebar_eunit_get_matching_exports([], _, _, Matched) ->
+    Matched;
+rebar_eunit_get_matching_exports([Function|TFunctions], {Mod, ModExportsStr},
+                                 {TestMod, TestModExportsStr}, Matched) ->
+
+    FunctionStr = atom_to_list(Function),
+    %% Get matching Function in module, otherwise look in _tests module
+    NewMatch = case rebar_eunit_get_matching_export(FunctionStr,
+                                                    ModExportsStr) of
+        [] ->
+            {TestMod,
+             rebar_eunit_get_matching_export(FunctionStr, TestModExportsStr)};
+        MatchingExport ->
+            {Mod, MatchingExport}
+    end,
+    case NewMatch of
+        {_, []} ->
+            rebar_eunit_get_matching_exports(TFunctions, {Mod, ModExportsStr},
+                                 {TestMod, TestModExportsStr}, Matched);
+        _ ->
+            rebar_eunit_get_matching_exports(TFunctions, {Mod, ModExportsStr},
+                                 {TestMod, TestModExportsStr},
+                                 [NewMatch|Matched])
+    end.
+
+rebar_eunit_get_matching_export(_FunctionStr, []) ->
+    [];
+rebar_eunit_get_matching_export(FunctionStr, [ExportStr|TExportsStr]) ->
+    case string:str(ExportStr, FunctionStr) of
+        1 ->
+            list_to_atom(ExportStr);
+        _ ->
+            rebar_eunit_get_matching_export(FunctionStr, TExportsStr)
+    end.
+
+rebar_eunit_get_beam_test_exports(ModuleStr) ->
+    FilePath = filename:join(rebar_eunit_eunit_dir(),
+                             string:concat(ModuleStr, ".beam")),
+    case filelib:is_regular(FilePath) of
+        true ->
+            {beam_file, _, Exports0, _, _, _} = beam_disasm:file(FilePath),
+            Exports1 = [FunName || {FunName, FunArity, _} <- Exports0,
+                                   FunArity =:= 0],
+            F = fun(FName) ->
+                        FNameStr = atom_to_list(FName),
+                        re:run(FNameStr, "_test(_)?") =/= nomatch
+                end,
+            lists:filter(F, Exports1);
+        _ ->
+            []
+    end.
+
+rebar_eunit_make_test_primitives(RawTests) ->
+    %% Use {test,M,F} and {generator,M,F} if at least R15B02. Otherwise,
+    %% use eunit_test:function_wrapper/2 fallback.
+    %% eunit_test:function_wrapper/2 was renamed to eunit_test:mf_wrapper/2
+    %% in R15B02; use that as >= R15B02 check.
+    %% TODO: remove fallback and use only {test,M,F} and {generator,M,F}
+    %% primitives once at least R15B02 is required.
+    {module, eunit_test} = code:ensure_loaded(eunit_test),
+    MakePrimitive = case erlang:function_exported(eunit_test, mf_wrapper, 2) of
+        true  -> fun rebar_eunit_eunit_primitive/3;
+        false -> fun rebar_eunit_pre15b02_eunit_primitive/3
+    end,
+
+    ?CONSOLE("    Running test function(s):~n", []),
+    lists:foldl(fun({M, F2}, Acc) ->
+        ?CONSOLE("      ~p:~p/0~n", [M, F2]),
+        FNameStr = atom_to_list(F2),
+        NewFunction =
+            case re:run(FNameStr, "_test_") of
+                nomatch ->
+                    %% Normal test
+                    MakePrimitive(test, M, F2);
+                _ ->
+                    %% Generator
+                    MakePrimitive(generator, M, F2)
+            end,
+        [NewFunction|Acc]
+    end, [], RawTests).
+
+rebar_eunit_eunit_primitive(Type, M, F) ->
+    {Type, M, F}.
+
+rebar_eunit_pre15b02_eunit_primitive(test, M, F) ->
+    eunit_test:function_wrapper(M, F);
+rebar_eunit_pre15b02_eunit_primitive(generator, M, F) ->
+    {generator, eunit_test:function_wrapper(M, F)}.
+
+%%
+%% == run tests ==
+%%
+
+rebar_eunit_perform_eunit(Config, Tests) ->
+    EunitOpts = rebar_eunit_get_eunit_opts(Config),
+
+    %% Move down into ?EUNIT_DIR while we run tests so any generated files
+    %% are created there (versus in the source dir)
+    Cwd = rebar_utils_get_cwd(),
+    ok = file:set_cwd(?EUNIT_DIR),
+
+    EunitResult = (catch eunit:test(Tests, EunitOpts)),
+
+    %% Return to original working dir
+    ok = file:set_cwd(Cwd),
+
+    EunitResult.
+
+rebar_eunit_get_eunit_opts(Config) ->
+    %% Enable verbose in eunit if so requested..
+    BaseOpts = case rebar_config_is_verbose(Config) of
+        true ->
+            [verbose];
+        false ->
+            []
+    end,
+
+    BaseOpts ++ rebar_config_get_list(Config, eunit_opts, []).
+
+%%
+%% == code coverage ==
+%%
+
+rebar_eunit_perform_cover(Config, BeamFiles, SrcModules) ->
+    rebar_eunit_perform_cover(rebar_config_get(Config, cover_enabled, false),
+                  Config, BeamFiles, SrcModules).
+
+rebar_eunit_perform_cover(false, _Config, _BeamFiles, _SrcModules) ->
+    ok;
+rebar_eunit_perform_cover(true, Config, BeamFiles, SrcModules) ->
+    rebar_eunit_cover_analyze(Config, BeamFiles, SrcModules).
+
+rebar_eunit_cover_analyze(_Config, [], _SrcModules) ->
+    ok;
+rebar_eunit_cover_analyze(Config, FilteredModules, SrcModules) ->
+    %% Generate coverage info for all the cover-compiled modules
+    Coverage = lists:flatten([rebar_eunit_cover_analyze_mod(M)
+                              || M <- FilteredModules,
+                              cover:is_compiled(M) =/= false]),
+
+    %% Write index of coverage info
+    rebar_eunit_cover_write_index(lists:sort(Coverage), SrcModules),
+
+    %% Write coverage details for each file
+    lists:foreach(fun({M, _, _}) ->
+        {ok, _} = cover:analyze_to_file(M, rebar_eunit_cover_file(M), [html])
+    end, Coverage),
+
+    Index = filename:join([rebar_utils_get_cwd(), ?EUNIT_DIR, "index.html"]),
+    ?CONSOLE("Cover analysis: ~s\n", [Index]),
+
+    %% Export coverage data, if configured
+    case rebar_config_get(Config, cover_export_enabled, false) of
+        true ->
+            rebar_eunit_cover_export_coverdata();
+        false ->
+            ok
+    end,
+
+    %% Print coverage report, if configured
+    case rebar_config_get(Config, cover_print_enabled, false) of
+        true ->
+            rebar_eunit_cover_print_coverage(lists:sort(Coverage));
+        false ->
+            ok
+    end.
+
+rebar_eunit_cover_close(not_enabled) ->
+    ok;
+rebar_eunit_cover_close(F) ->
+    ok = file:close(F).
+
+rebar_eunit_cover_init(false, _BeamFiles) ->
+    {ok, not_enabled};
+rebar_eunit_cover_init(true, BeamFiles) ->
+    %% Attempt to start the cover server, then set its group leader to
+    %% .eunit/cover.log, so all cover log messages will go there instead of
+    %% to stdout. If the cover server is already started, we'll kill that
+    %% server and start a new one in order not to inherit a polluted
+    %% cover_server state.
+    {ok, CoverPid} = case whereis(cover_server) of
+        undefined ->
+            cover:start();
+        _         ->
+            cover:stop(),
+            cover:start()
+    end,
+
+    {ok, F} = OkOpen = file:open(filename:join([?EUNIT_DIR, "cover.log"]),
+                                 [write]),
+
+    group_leader(F, CoverPid),
+
+    ?INFO("Cover compiling ~s\n", [rebar_utils_get_cwd()]),
+
+    Compiled = [{Beam, cover:compile_beam(Beam)} || Beam <- BeamFiles],
+    case [Module || {_, {ok, Module}} <- Compiled] of
+        [] ->
+            %% No modules compiled successfully...fail
+            ?ERROR("Cover failed to compile any modules; aborting.~n", []),
+            ?FAIL;
+        _ ->
+            %% At least one module compiled successfully
+
+            %% It's not an error for cover compilation to fail partially,
+            %% but we do want to warn about them
+            PrintWarning =
+                fun(Beam, Desc) ->
+                        ?CONSOLE("Cover compilation warning for ~p: ~p",
+                                 [Beam, Desc])
+                end,
+            _ = [PrintWarning(Beam, Desc) || {Beam, {error, Desc}} <- Compiled],
+            OkOpen
+    end;
+rebar_eunit_cover_init(Config, BeamFiles) ->
+    rebar_eunit_cover_init(rebar_config_get(Config, cover_enabled, false), BeamFiles).
+
+rebar_eunit_cover_analyze_mod(Module) ->
+    case cover:analyze(Module, coverage, module) of
+        {ok, {Module, {Covered, NotCovered}}} ->
+            %% Modules that include the eunit header get an implicit
+            %% test/0 fun, which cover considers a runnable line, but
+            %% eunit:test(TestRepresentation) never calls.  Decrement
+            %% NotCovered in this case.
+            [rebar_eunit_align_notcovered_count(Module, Covered, NotCovered,
+                                    rebar_eunit_is_eunitized(Module))];
+        {error, Reason} ->
+            ?ERROR("Cover analyze failed for ~p: ~p ~p\n",
+                   [Module, Reason, code:which(Module)]),
+            []
+    end.
+
+rebar_eunit_is_eunitized(Mod) ->
+    rebar_eunit_has_eunit_test_fun(Mod) andalso
+    rebar_eunit_has_header(Mod, "include/eunit.hrl").
+
+rebar_eunit_has_eunit_test_fun(Mod) ->
+    [
+        F
+        || {exports, Funs} <- Mod:module_info(),
+           {F, 0} <- Funs, F =:= test
+    ] =/= [].
+
+rebar_eunit_has_header(Mod, Header) ->
+    Mod1 = case code:which(Mod) of
+        cover_compiled ->
+            {file, File} = cover:is_compiled(Mod),
+            File;
+        non_existing -> Mod;
+        preloaded -> Mod;
+        L -> L
+    end,
+    {ok, {_, [{abstract_code, {_, AC}}]}} = beam_lib:chunks(Mod1,
+                                                            [abstract_code]),
+    [F || {attribute, 1, file, {F, 1}} <- AC,
+          string:str(F, Header) =/= 0] =/= [].
+
+rebar_eunit_align_notcovered_count(Module, Covered, NotCovered, false) ->
+    {Module, Covered, NotCovered};
+rebar_eunit_align_notcovered_count(Module, Covered, NotCovered, true) ->
+    {Module, Covered, NotCovered - 1}.
+
+rebar_eunit_cover_write_index(Coverage, SrcModules) ->
+    {ok, F} = file:open(filename:join([?EUNIT_DIR, "index.html"]), [write]),
+    ok = file:write(F, "<html><head><title>Coverage Summary</title></head>\n"),
+    IsSrcCoverage = fun({Mod,_C,_N}) ->
+        lists:member(Mod, SrcModules)
+    end,
+    {SrcCoverage, TestCoverage} = lists:partition(IsSrcCoverage, Coverage),
+    rebar_eunit_cover_write_index_section(F, "Source", SrcCoverage),
+    rebar_eunit_cover_write_index_section(F, "Test", TestCoverage),
+    ok = file:write(F, "</body></html>"),
+    ok = file:close(F).
+
+rebar_eunit_cover_write_index_section(_F, _SectionName, []) ->
+    ok;
+rebar_eunit_cover_write_index_section(F, SectionName, Coverage) ->
+    %% Calculate total coverage
+    {Covered, NotCovered} = lists:foldl(fun({_Mod, C, N}, {CAcc, NAcc}) ->
+        {CAcc + C, NAcc + N}
+    end, {0, 0}, Coverage),
+    TotalCoverage = rebar_eunit_percentage(Covered, NotCovered),
+
+    %% Write the report
+    ok = file:write(F, ?FMT("<body><h1>~s Summary</h1>\n", [SectionName])),
+    ok = file:write(F, ?FMT("<h3>Total: ~s</h3>\n", [TotalCoverage])),
+    ok = file:write(F, "<table><tr><th>Module</th><th>Coverage %</th></tr>\n"),
+
+    FmtLink = fun(Module, Cov, NotCov) ->
+        ?FMT("<tr><td><a href='~s.COVER.html'>~s</a></td><td>~s</td>\n",
+             [Module, Module, rebar_eunit_percentage(Cov, NotCov)])
+    end,
+    lists:foreach(fun({Module, Cov, NotCov}) ->
+        ok = file:write(F, FmtLink(Module, Cov, NotCov))
+    end, Coverage),
+    ok = file:write(F, "</table>\n").
+
+rebar_eunit_cover_print_coverage(Coverage) ->
+    {Covered, NotCovered} = lists:foldl(fun({_Mod, C, N}, {CAcc, NAcc}) ->
+        {CAcc + C, NAcc + N}
+    end, {0, 0}, Coverage),
+    TotalCoverage = rebar_eunit_percentage(Covered, NotCovered),
+
+    %% Determine the longest module name for right-padding
+    Width = lists:foldl(fun({Mod, _, _}, Acc) ->
+        case length(atom_to_list(Mod)) of
+            N when N > Acc ->
+                N;
+            _ ->
+                Acc
+        end
+    end, 0, Coverage) * -1,
+
+    %% Print the output the console
+    ?CONSOLE("~nCode Coverage:~n", []),
+    lists:foreach(fun({Mod, C, N}) ->
+        ?CONSOLE("~*s : ~3s~n",
+                 [Width, Mod, rebar_eunit_percentage(C, N)])
+    end, Coverage),
+    ?CONSOLE("~n~*s : ~s~n", [Width, "Total", TotalCoverage]).
+
+rebar_eunit_cover_file(Module) ->
+    filename:join([?EUNIT_DIR, atom_to_list(Module) ++ ".COVER.html"]).
+
+rebar_eunit_cover_export_coverdata() ->
+    ExportFile = filename:join(rebar_eunit_eunit_dir(), "eunit.coverdata"),
+    case cover:export(ExportFile) of
+        ok ->
+            ?CONSOLE("Coverdata export: ~s~n", [ExportFile]);
+        {error, Reason} ->
+            ?ERROR("Coverdata export failed: ~p~n", [Reason])
+    end.
+
+rebar_eunit_percentage(0, 0) ->
+    "not executed";
+rebar_eunit_percentage(Cov, NotCov) ->
+    integer_to_list(trunc((Cov / (Cov + NotCov)) * 100)) ++ "%".
+
+%%
+%% == reset_after_eunit ==
+%%
+
+rebar_eunit_status_before_eunit() ->
+    Apps = rebar_eunit_get_app_names(),
+    AppEnvs = [{App, application:get_all_env(App)} || App <- Apps],
+    {erlang:processes(), erlang:is_alive(), AppEnvs, ets:tab2list(ac_tab)}.
+
+rebar_eunit_get_app_names() ->
+    [AppName || {AppName, _, _} <- application:loaded_applications()].
+
+rebar_eunit_reset_after_eunit({OldProcesses, WasAlive, OldAppEnvs, _OldACs}) ->
+    IsAlive = erlang:is_alive(),
+    if
+        not WasAlive andalso IsAlive ->
+            ?DEBUG("Stopping net kernel....\n", []),
+            erl_epmd:stop(),
+            _ = net_kernel:stop(),
+            rebar_eunit_rebar_eunit_pause_until_net_kernel_stopped();
+        true ->
+            ok
+    end,
+
+    OldApps = [App || {App, _} <- OldAppEnvs],
+    Apps = rebar_eunit_get_app_names(),
+    _ = [
+        begin
+            _ = case lists:member(App, OldApps) of
+                true  -> ok;
+                false -> application:stop(App)
+            end,
+            ok = application:unset_env(App, K)
+        end
+        || App <- Apps, App /= rebar,
+           {K, _V} <- application:get_all_env(App)
+    ],
+
+    rebar_eunit_reconstruct_app_env_vars(Apps),
+
+    Processes = erlang:processes(),
+    _ = rebar_eunit_kill_extras(Processes -- OldProcesses),
+
+    ok.
+
+rebar_eunit_kill_extras(Pids) ->
+    %% Killing any of the procs below will either:
+    %% 1. Interfere with stuff that we don't want interfered with, or
+    %% 2. May/will force the 'kernel' app to shutdown, which *will*
+    %%    interfere with rebar's ability To Do Useful Stuff(tm).
+    %% This list may require changes as OTP versions and/or
+    %% rebar use cases change.
+    KeepProcs = [cover_server, eunit_server,
+                 eqc, eqc_license, eqc_locked,
+                 %% inet_gethost_native is started on demand, when
+                 %% doing name lookups. It is under kernel_sup, under
+                 %% a supervisor_bridge.
+                 inet_gethost_native],
+    Killed = [
+        begin
+            Info = case erlang:process_info(Pid) of
+                undefined -> [];
+                Else      -> Else
+            end,
+            Keep1 = case proplists:get_value(registered_name, Info) of
+                undefined ->
+                    false;
+                Name ->
+                    lists:member(Name, KeepProcs)
+            end,
+            Keep2 = case proplists:get_value(dictionary, Info) of
+                undefined ->
+                    false;
+                Ds ->
+                    case proplists:get_value('$ancestors', Ds) of
+                        undefined ->
+                            false;
+                        As ->
+                            lists:member(kernel_sup, As)
+                    end
+            end,
+            if
+                Keep1 orelse Keep2 ->
+                    ok;
+                true ->
+                    ?DEBUG("Kill ~p ~p\n", [Pid, Info]),
+                    exit(Pid, kill),
+                    Pid
+            end
+        end
+        || Pid <- Pids
+    ],
+    case lists:usort(Killed) -- [ok] of
+        [] ->
+            ?DEBUG("No processes to kill\n", []),
+            [];
+        Else ->
+            lists:foreach(fun(Pid) ->
+                rebar_eunit_wait_until_dead(Pid)
+            end, Else),
+            Else
+    end.
+
+rebar_eunit_reconstruct_app_env_vars([App|Apps]) ->
+    CmdLine0 = proplists:get_value(App, init:get_arguments(), []),
+    CmdVars = [{list_to_atom(K), list_to_atom(V)} || {K, V} <- CmdLine0],
+    AppFile = (catch filename:join([code:lib_dir(App),
+                                    "ebin",
+                                    atom_to_list(App) ++ ".app"])),
+    AppVars = case file:consult(AppFile) of
+        {ok, [{application, App, Ps}]} ->
+            proplists:get_value(env, Ps, []);
+        _ ->
+            []
+    end,
+
+    %% App vars specified in config files override those in the .app file.
+    %% Config files later in the args list override earlier ones.
+    AppVars1 = case init:get_argument(config) of
+        {ok, ConfigFiles} ->
+            {App, MergedAppVars} = lists:foldl(fun rebar_eunit_merge_app_vars/2,
+                                               {App, AppVars},
+                                               ConfigFiles),
+            MergedAppVars;
+        error ->
+            AppVars
+    end,
+    AllVars = CmdVars ++ AppVars1,
+    ?DEBUG("Reconstruct ~p ~p\n", [App, AllVars]),
+    lists:foreach(fun({K, V}) ->
+        application:set_env(App, K, V)
+    end, AllVars),
+    rebar_eunit_reconstruct_app_env_vars(Apps);
+rebar_eunit_reconstruct_app_env_vars([]) ->
+    ok.
+
+rebar_eunit_merge_app_vars(ConfigFile, {App, AppVars}) ->
+    File = rebar_eunit_ensure_config_extension(ConfigFile),
+    FileAppVars = rebar_eunit_app_vars_from_config_file(File, App),
+    Dict1 = dict:from_list(AppVars),
+    Dict2 = dict:from_list(FileAppVars),
+    Dict3 = dict:merge(fun(_Key, _Value1, Value2) -> Value2 end, Dict1, Dict2),
+    {App, dict:to_list(Dict3)}.
+
+rebar_eunit_ensure_config_extension(File) ->
+    %% config files must end with .config on disk but when specifying them
+    %% via the -config option the extension is optional
+    BaseFileName = filename:basename(File, ".config"),
+    DirName = filename:dirname(File),
+    filename:join(DirName, BaseFileName ++ ".config").
+
+rebar_eunit_app_vars_from_config_file(File, App) ->
+    case file:consult(File) of
+        {ok, [Env]} ->
+            proplists:get_value(App, Env, []);
+        _ ->
+            []
+    end.
+
+rebar_eunit_wait_until_dead(Pid) when is_pid(Pid) ->
+    Ref = erlang:monitor(process, Pid),
+    receive
+        {'DOWN', Ref, process, _Obj, Info} ->
+            Info
+    after
+        10*1000 ->
+            exit({timeout_waiting_for, Pid})
+    end;
+rebar_eunit_wait_until_dead(_) ->
+    ok.
+
+rebar_eunit_rebar_eunit_pause_until_net_kernel_stopped() ->
+    rebar_eunit_pause_until_net_kernel_stopped(10).
+
+rebar_eunit_pause_until_net_kernel_stopped(0) ->
+    exit(net_kernel_stop_failed);
+rebar_eunit_pause_until_net_kernel_stopped(N) ->
+    try
+        _ = net_kernel:i(),
+        timer:sleep(100),
+        rebar_eunit_pause_until_net_kernel_stopped(N - 1)
+    catch
+        error:badarg ->
+            ?DEBUG("Stopped net kernel.\n", []),
+            ok
+    end.
+
+%--------------------------------------------------------------------------
+% rebar_edoc.erl
+%--------------------------------------------------------------------------
+
+%% rebar_edoc supports the following command:
+%% <ul>
+%%   <li>doc (essentially erl -noshell -run edoc_run application
+%% "'$(&lt;app_name&gt;)'"
+%% '"."' '[&lt;options&gt;]')</li>
+%% </ul>
+%% EDoc options can be given in the <code>edoc_opts</code> option in
+%% <code>rebar.config</code>.
+
+rebar_edoc_doc(Config, File) ->
+    %% Save code path
+    CodePath = rebar_edoc_setup_code_path(),
+
+    %% Get the edoc_opts and app file info
+    EDocOpts = rebar_config_get(Config, edoc_opts, []),
+    {ok, Config1, AppName,
+     _AppData} = rebar_app_utils_load_app_file(Config, File),
+
+    case rebar_edoc_needs_regen(EDocOpts) of
+        true ->
+            ?INFO("Regenerating edocs for ~p\n", [AppName]),
+            ok = edoc:application(AppName, ".", EDocOpts);
+        false ->
+            ?INFO("Skipping regeneration of edocs for ~p\n", [AppName]),
+            ok
+    end,
+
+    %% Restore code path
+    true = code:set_path(CodePath),
+    {ok, Config1}.
+
+rebar_edoc_setup_code_path() ->
+    %% Setup code path prior to calling edoc so that edown, asciiedoc,
+    %% and the like can work properly when generating their own
+    %% documentation.
+    CodePath = code:get_path(),
+    true = code:add_patha(rebar_utils_ebin_dir()),
+    CodePath.
+
+-type path_spec() :: {'file', file:filename()} | file:filename().
+-spec rebar_edoc_newer_file_exists(Paths::[path_spec()], OldFile::string()) -> boolean().
+rebar_edoc_newer_file_exists(Paths, OldFile) ->
+    OldModTime = filelib:last_modified(OldFile),
+
+    ThrowIfNewer = fun(Fn, _Acc) ->
+        FModTime = filelib:last_modified(Fn),
+        (FModTime > OldModTime) andalso
+        throw({newer_file_exists, {Fn, FModTime}})
+    end,
+
+    try
+        lists:foldl(fun
+            ({file, F}, _) ->
+                ThrowIfNewer(F, false);
+            (P, _) ->
+                filelib:fold_files(P, ".*.erl", true,
+                                   ThrowIfNewer, false)
+        end, undefined, Paths)
+    catch
+        throw:{newer_file_exists, {Filename, FMod}} ->
+            ?DEBUG("~p is more recent than ~p: "
+                   "~120p > ~120p\n",
+                   [Filename, OldFile, FMod, OldModTime]),
+            true
+    end.
+
+%% Needs regen if any dependent file is changed since the last
+%% edoc run. Dependent files are the erlang source files,
+%% and the overview file, if it exists.
+-spec rebar_edoc_needs_regen(proplists:proplist()) -> boolean().
+rebar_edoc_needs_regen(EDocOpts) ->
+    DocDir = proplists:get_value(dir, EDocOpts, "doc"),
+    EDocInfoName = filename:join(DocDir, "edoc-info"),
+    OverviewFile = proplists:get_value(overview, EDocOpts, "overview.edoc"),
+    EDocOverviewName = filename:join(DocDir, OverviewFile),
+    SrcPaths = proplists:get_value(source_path, EDocOpts, ["src"]),
+
+    rebar_edoc_newer_file_exists([{file, EDocOverviewName} | SrcPaths],
+                                 EDocInfoName).
+
+%--------------------------------------------------------------------------
+% rebar_require_vsn.erl
+%--------------------------------------------------------------------------
+
+rebar_require_vsn_compile(Config, _) ->
+    rebar_require_vsn_check_versions(Config).
+
+rebar_require_vsn_eunit(Config, _) ->
+    rebar_require_vsn_check_versions(Config).
+
+rebar_require_vsn_check_versions(Config) ->
+    OtpRelease = erlang:system_info(otp_release),
+    ErtsVersion = erlang:system_info(version),
+    ReOpts = [{capture, none}],
+    ErtsRegex = rebar_config_get(Config, require_erts_vsn, ".*"),
+    case re:run(ErtsVersion, ErtsRegex, ReOpts) of
+        match ->
+            ?DEBUG("Matched required ERTS version: ~s -> ~s\n",
+                   [ErtsVersion, ErtsRegex]);
+        nomatch ->
+            ?ABORT("ERTS version ~s does not match required regex ~s\n",
+                   [ErtsVersion, ErtsRegex])
+    end,
+    OtpRegex = rebar_config_get(Config, require_otp_vsn, ".*"),
+    case re:run(OtpRelease, OtpRegex, ReOpts) of
+        match ->
+            ?DEBUG("Matched required OTP release: ~s -> ~s\n",
+                   [OtpRelease, OtpRegex]);
+        nomatch ->
+            ?ABORT("OTP release ~s does not match required regex ~s\n",
+                   [OtpRelease, OtpRegex])
+    end,
+    case rebar_config_get(Config, require_min_otp_vsn, undefined) of
+        undefined ->
+            ?DEBUG("Min OTP version unconfigured~n", []);
+        MinOtpVsn ->
+            {MinMaj,
+             MinMin} = rebar_require_vsn_version_tuple(MinOtpVsn,
+                                                       "configured"),
+            {OtpMaj,
+             OtpMin} = rebar_require_vsn_version_tuple(OtpRelease,
+                                                       "OTP Release"),
+            case {OtpMaj, OtpMin} >= {MinMaj, MinMin} of
+                true ->
+                    ?DEBUG("~s satisfies the requirement for vsn ~s~n",
+                           [OtpRelease, MinOtpVsn]);
+                false ->
+                    ?ABORT("OTP release ~s or later is required, "
+                           "you have: ~s~n",
+                           [MinOtpVsn, OtpRelease])
+            end
+    end.
+
+rebar_require_vsn_version_tuple(OtpRelease, Type) ->
+    case re:run(OtpRelease, "R(\\d+)B?-?(\\d+)?", [{capture, all, list}]) of
+        {match, [_Full, Maj, Min]} ->
+            {list_to_integer(Maj), list_to_integer(Min)};
+        {match, [_Full, Maj]} ->
+            {list_to_integer(Maj), 0};
+        nomatch ->
+            ?ABORT("Cannot parse ~s version string: ~s~n",
+                   [Type, OtpRelease])
+    end.
+
+%--------------------------------------------------------------------------
+% rebar_deps.erl
+%--------------------------------------------------------------------------
+
+rebar_deps_preprocess(Config, _) ->
+    %% Side effect to set deps_dir globally for all dependencies from
+    %% top level down. Means the root deps_dir is honoured or the default
+    %% used globally since it will be set on the first time through here
+    DepsDir = rebar_deps_get_shared_deps_dir(Config, []),
+    Config1 = rebar_deps_set_shared_deps_dir(Config, DepsDir),
+
+    %% Get the list of deps for the current working directory and identify those
+    %% deps that are available/present.
+    Deps = rebar_config_get_local(Config1, deps, []),
+    {Config2,
+     {AvailableDeps, MissingDeps}} = rebar_deps_find_deps(Config1, find, Deps),
+
+    ?DEBUG("Available deps: ~p\n", [AvailableDeps]),
+    ?DEBUG("Missing deps  : ~p\n", [MissingDeps]),
+
+    %% Add available deps to code path
+    Config3 = rebar_deps_update_deps_code_path(Config2, AvailableDeps),
+
+    %% If skip_deps=true, mark each dep dir as a skip_dir w/ the core so that
+    %% the current command doesn't run on the dep dir. However, pre/postprocess
+    %% WILL run (and we want it to) for transitivity purposes.
+    %%
+    %% Also, if skip_deps=comma,separated,app,list, then only the given
+    %% dependencies are skipped.
+    NewConfig = case rebar_config_get_global(Config3, skip_deps, false) of
+        "true" ->
+            lists:foldl(fun(#dep{dir = Dir}, C) ->
+                rebar_config_set_skip_dir(C, Dir)
+            end, Config3, AvailableDeps);
+        Apps when is_list(Apps) ->
+            SkipApps = [list_to_atom(App) || App <- string:tokens(Apps, ",")],
+            lists:foldl(fun(#dep{dir = Dir, app = App}, C) ->
+                case lists:member(App, SkipApps) of
+                    true -> rebar_config_set_skip_dir(C, Dir);
+                    false -> C
+                end
+            end, Config3, AvailableDeps);
+        _ ->
+            Config3
+    end,
+
+    %% Filtering out 'raw' dependencies so that no commands other than
+    %% deps-related can be executed on their directories.
+    NonRawAvailableDeps = [D || D <- AvailableDeps, not D#dep.is_raw],
+
+    %% Return all the available dep directories for process
+    {ok, NewConfig, rebar_deps_dep_dirs(NonRawAvailableDeps)}.
+
+rebar_deps_postprocess(Config, _) ->
+    case rebar_config_get_xconf(Config, ?MODULE, undefined) of
+        undefined ->
+            {ok, []};
+        Dirs ->
+            NewConfig = rebar_config_erase_xconf(Config, ?MODULE),
+            {ok, NewConfig, Dirs}
+    end.
+
+rebar_deps_compile(Config, _) ->
+    {Config1, _AvailDeps} = rebar_deps_do_check_deps(Config),
+    {ok, Config1}.
+
+%% set REBAR_DEPS_DIR and ERL_LIBS environment variables
+rebar_deps_setup_env(Config) ->
+    {true, DepsDir} = rebar_deps_get_deps_dir(Config),
+    %% include rebar's DepsDir in ERL_LIBS
+    Separator = case os:type() of
+        {win32, nt} ->
+            ";";
+        _ ->
+            ":"
+    end,
+    ERL_LIBS = case os:getenv("ERL_LIBS") of
+        false ->
+            {"ERL_LIBS", DepsDir};
+        PrevValue ->
+            {"ERL_LIBS", DepsDir ++ Separator ++ PrevValue}
+    end,
+    [{"REBAR_DEPS_DIR", DepsDir}, ERL_LIBS].
+
+%% common function used by 'check-deps' and 'compile'
+rebar_deps_do_check_deps(Config) ->
+    %% Get the list of immediate (i.e. non-transitive) deps that are missing
+    Deps = rebar_config_get_local(Config, deps, []),
+    case rebar_deps_find_deps(Config, find, Deps) of
+        {Config1, {AvailDeps, []}} ->
+            %% No missing deps
+            {Config1, AvailDeps};
+        {_Config1, {_, MissingDeps}} ->
+            lists:foreach(fun (#dep{app=App, vsn_regex=Vsn, source=Src}) ->
+                ?CONSOLE("Dependency not available: ~p-~s (~p)\n",
+                         [App, Vsn, Src])
+            end, MissingDeps),
+            ?FAIL
+    end.
+
+'rebar_deps_check-deps'(Config, _) ->
+    {Config1, AvailDeps} = rebar_deps_do_check_deps(Config),
+    {ok, rebar_deps_save_dep_dirs(Config1, AvailDeps)}.
+
+'rebar_deps_get-deps'(Config, _) ->
+    %% Determine what deps are available and missing
+    Deps = rebar_config_get_local(Config, deps, []),
+    {Config1,
+     {_AvailableDeps, MissingDeps}} = rebar_deps_find_deps(Config, find, Deps),
+    MissingDeps1 = [D || D <- MissingDeps, D#dep.source =/= undefined],
+
+    %% For each missing dep with a specified source, try to pull it.
+    {Config2, PulledDeps} = lists:foldl(fun(D, {C, PulledDeps0}) ->
+        {C1, D1} = rebar_deps_use_source(C, D),
+        {C1, [D1 | PulledDeps0]}
+    end, {Config1, []}, MissingDeps1),
+
+    %% Add each pulled dep to our list of dirs for post-processing. This yields
+    %% the necessary transitivity of the deps
+    {ok, rebar_deps_save_dep_dirs(Config2, lists:reverse(PulledDeps))}.
+
+'rebar_deps_update-deps'(Config, _) ->
+    %% Determine what deps are required
+    RawDeps = rebar_config_get_local(Config, deps, []),
+    {Config1, Deps} = rebar_deps_find_deps(Config, read, RawDeps),
+
+    %% Update each dep
+    UpdatedDeps = [rebar_deps_update_source(Config1, D)
+                   || D <- Deps, D#dep.source =/= undefined],
+
+    %% Add each updated dep to our list of dirs for post-processing. This yields
+    %% the necessary transitivity of the deps
+    {ok, rebar_deps_save_dep_dirs(Config1, UpdatedDeps)}.
+
+'rebar_deps_delete-deps'(Config, _) ->
+    %% Delete all the available deps in our deps/ directory, if any
+    {true, DepsDir} = rebar_deps_get_deps_dir(Config),
+    Deps = rebar_config_get_local(Config, deps, []),
+    {Config1, {AvailableDeps, _}} = rebar_deps_find_deps(Config, find, Deps),
+    _ = [rebar_deps_delete_dep(D)
+         || D <- AvailableDeps,
+            lists:prefix(DepsDir, D#dep.dir)],
+    {ok, Config1}.
+
+'rebar_deps_list-deps'(Config, _) ->
+    Deps = rebar_config_get_local(Config, deps, []),
+    case rebar_deps_find_deps(Config, find, Deps) of
+        {Config1, {AvailDeps, []}} ->
+            lists:foreach(fun(Dep) ->
+                rebar_deps_print_source(Dep)
+            end, AvailDeps),
+            {ok, rebar_deps_save_dep_dirs(Config1, AvailDeps)};
+        {_, MissingDeps} ->
+            ?ABORT("Missing dependencies: ~p\n", [MissingDeps])
+    end.
+
+%% Added because of trans deps,
+%% need all deps in same dir and should be the one set by the root rebar.config
+%% Sets a default if root config has no deps_dir set
+rebar_deps_set_shared_deps_dir(Config, []) ->
+    GlobalDepsDir = rebar_config_get_global(Config, deps_dir, "deps"),
+    DepsDir = rebar_config_get_local(Config, deps_dir, GlobalDepsDir),
+    rebar_config_set_xconf(Config, deps_dir, DepsDir);
+rebar_deps_set_shared_deps_dir(Config, _DepsDir) ->
+    Config.
+
+rebar_deps_get_shared_deps_dir(Config, Default) ->
+    rebar_config_get_xconf(Config, deps_dir, Default).
+
+rebar_deps_get_deps_dir(Config) ->
+    rebar_deps_get_deps_dir(Config, "").
+
+rebar_deps_get_deps_dir(Config, App) ->
+    BaseDir = rebar_config_get_xconf(Config, base_dir, []),
+    DepsDir = rebar_deps_get_shared_deps_dir(Config, "deps"),
+    {true, filename:join([BaseDir, DepsDir, App])}.
+
+rebar_deps_dep_dirs(Deps) ->
+    [D#dep.dir || D <- Deps].
+
+rebar_deps_save_dep_dirs(Config, Deps) ->
+    rebar_config_set_xconf(Config, ?MODULE, rebar_deps_dep_dirs(Deps)).
+
+rebar_deps_get_lib_dir(App) ->
+    %% Find App amongst the reachable lib directories
+    %% Returns either the found path or a tagged tuple with a boolean
+    %% to match get_deps_dir's return type
+    case code:lib_dir(App) of
+        {error, bad_name} -> {false, bad_name};
+        Path -> {true, Path}
+    end.
+
+rebar_deps_update_deps_code_path(Config, []) ->
+    Config;
+rebar_deps_update_deps_code_path(Config, [Dep | Rest]) ->
+    Config2 = case rebar_deps_is_app_available(Config,
+                                               Dep#dep.app,
+                                               Dep#dep.vsn_regex,
+                                               Dep#dep.dir,
+                                               Dep#dep.is_raw) of
+        {Config1, {true, _}} ->
+            Dir = filename:join(Dep#dep.dir, "ebin"),
+            ok = filelib:ensure_dir(filename:join(Dir, "dummy")),
+            ?DEBUG("Adding ~s to code path~n", [Dir]),
+            true = code:add_patha(Dir),
+            Config1;
+        {Config1, {false, _}} ->
+            Config1
+    end,
+    rebar_deps_update_deps_code_path(Config2, Rest).
+
+rebar_deps_find_deps(Config, find=Mode, Deps) ->
+    rebar_deps_find_deps(Config, Mode, Deps, {[], []});
+rebar_deps_find_deps(Config, read=Mode, Deps) ->
+    rebar_deps_find_deps(Config, Mode, Deps, []).
+
+rebar_deps_find_deps(Config, find,
+                     [], {Avail, Missing}) ->
+    {Config, {lists:reverse(Avail), lists:reverse(Missing)}};
+rebar_deps_find_deps(Config, read,
+                     [], Deps) ->
+    {Config, lists:reverse(Deps)};
+rebar_deps_find_deps(Config, Mode,
+                     [App | Rest], Acc)
+    when is_atom(App) ->
+    rebar_deps_find_deps(Config, Mode,
+                         [{App, ".*", undefined} | Rest], Acc);
+rebar_deps_find_deps(Config, Mode,
+                     [{App, VsnRegex} | Rest], Acc)
+    when is_atom(App) ->
+    rebar_deps_find_deps(Config, Mode,
+                         [{App, VsnRegex, undefined} | Rest], Acc);
+rebar_deps_find_deps(Config, Mode,
+                     [{App, VsnRegex, Source} | Rest], Acc) ->
+    rebar_deps_find_deps(Config, Mode,
+                         [{App, VsnRegex, Source, []} | Rest], Acc);
+rebar_deps_find_deps(Config, Mode,
+                     [{App, VsnRegex, Source, Opts} | Rest], Acc)
+    when is_list(Opts) ->
+    Dep = #dep{app = App,
+               vsn_regex = VsnRegex,
+               source = Source,
+               %% dependency is considered raw (i.e. non-Erlang/OTP) when
+               %% 'raw' option is present
+               is_raw = proplists:get_value(raw, Opts, false)},
+    {Config1, {Availability, FoundDir}} = rebar_deps_find_dep(Config, Dep),
+    rebar_deps_find_deps(Config1, Mode, Rest,
+              rebar_deps_acc_deps(Mode, Availability, Dep, FoundDir, Acc));
+rebar_deps_find_deps(_Config, _Mode,
+                     [Other | _Rest], _Acc) ->
+    ?ABORT("Invalid dependency specification ~p in ~s\n",
+           [Other, rebar_utils_get_cwd()]).
+
+rebar_deps_find_dep(Config, Dep) ->
+    %% Find a dep based on its source,
+    %% e.g. {git, "https://github.com/mochi/mochiweb.git", "HEAD"}
+    %% Deps with a source must be found (or fetched) locally.
+    %% Those without a source may be satisfied from lib dir (get_lib_dir).
+    rebar_deps_find_dep(Config, Dep, Dep#dep.source).
+
+rebar_deps_find_dep(Config, Dep, undefined) ->
+    %% 'source' is undefined.  If Dep is not satisfied locally,
+    %% go ahead and find it amongst the lib_dir's.
+    case rebar_deps_find_dep_in_dir(Config, Dep,
+                                    rebar_deps_get_deps_dir(Config,
+                                                            Dep#dep.app)) of
+        {_Config1, {avail, _Dir}} = Avail ->
+            Avail;
+        {Config1, {missing, _}} ->
+            rebar_deps_find_dep_in_dir(Config1, Dep,
+                                       rebar_deps_get_lib_dir(Dep#dep.app))
+    end;
+rebar_deps_find_dep(Config, Dep, _Source) ->
+    %% _Source is defined.  Regardless of what it is, we must find it
+    %% locally satisfied or fetch it from the original source
+    %% into the project's deps
+    rebar_deps_find_dep_in_dir(Config, Dep,
+                               rebar_deps_get_deps_dir(Config, Dep#dep.app)).
+
+rebar_deps_find_dep_in_dir(Config, _Dep, {false, Dir}) ->
+    {Config, {missing, Dir}};
+rebar_deps_find_dep_in_dir(Config, Dep, {true, Dir}) ->
+    App = Dep#dep.app,
+    VsnRegex = Dep#dep.vsn_regex,
+    IsRaw = Dep#dep.is_raw,
+    case rebar_deps_is_app_available(Config, App, VsnRegex, Dir, IsRaw) of
+        {Config1, {true, _AppFile}} -> {Config1, {avail, Dir}};
+        {Config1, {false, _}}       -> {Config1, {missing, Dir}}
+    end.
+
+rebar_deps_acc_deps(find, avail, Dep, AppDir, {Avail, Missing}) ->
+    {[Dep#dep { dir = AppDir } | Avail], Missing};
+rebar_deps_acc_deps(find, missing, Dep, AppDir, {Avail, Missing}) ->
+    {Avail, [Dep#dep { dir = AppDir } | Missing]};
+rebar_deps_acc_deps(read, _, Dep, AppDir, Acc) ->
+    [Dep#dep { dir = AppDir } | Acc].
+
+rebar_deps_delete_dep(D) ->
+    case filelib:is_dir(D#dep.dir) of
+        true ->
+            ?INFO("Deleting dependency: ~s\n", [D#dep.dir]),
+            rebar_file_utils_rm_rf(D#dep.dir);
+        false ->
+            ok
+    end.
+
+rebar_deps_require_source_engine(Source) ->
+    true = rebar_deps_source_engine_avail(Source),
+    ok.
+
+%% IsRaw = false means regular Erlang/OTP dependency
+%%
+%% IsRaw = true means non-Erlang/OTP dependency, e.g. the one that does not
+%% have a proper .app file
+rebar_deps_is_app_available(Config, App, VsnRegex, Path, _IsRaw = false) ->
+    ?DEBUG("is_app_available, looking for App ~p with Path ~p~n", [App, Path]),
+    case rebar_app_utils_is_app_dir(Path) of
+        {true, AppFile} ->
+            case rebar_app_utils_app_name(Config, AppFile) of
+                {Config1, App} ->
+                    {Config2, Vsn} = rebar_app_utils_app_vsn(Config1, AppFile),
+                    ?INFO("Looking for ~s-~s ; found ~s-~s at ~s\n",
+                          [App, VsnRegex, App, Vsn, Path]),
+                    case re:run(Vsn, VsnRegex, [{capture, none}]) of
+                        match ->
+                            {Config2, {true, Path}};
+                        nomatch ->
+                            ?WARN("~s has version ~p; requested regex was ~s\n",
+                                  [AppFile, Vsn, VsnRegex]),
+                            {Config2,
+                             {false, {version_mismatch,
+                                      {AppFile,
+                                       {expected, VsnRegex}, {has, Vsn}}}}}
+                    end;
+                {Config1, OtherApp} ->
+                    ?WARN("~s has application id ~p; expected ~p\n",
+                          [AppFile, OtherApp, App]),
+                    {Config1,
+                     {false, {name_mismatch,
+                              {AppFile, {expected, App}, {has, OtherApp}}}}}
+            end;
+        false ->
+            ?WARN("Expected ~s to be an app dir (containing ebin/*.app), "
+                  "but no .app found.\n", [Path]),
+            {Config, {false, {missing_app_file, Path}}}
+    end;
+rebar_deps_is_app_available(Config, App, _VsnRegex, Path, _IsRaw = true) ->
+    ?DEBUG("is_app_available, looking for Raw Depencency ~p with Path ~p~n",
+           [App, Path]),
+    case filelib:is_dir(Path) of
+        true ->
+            %% TODO: look for version string in <Path>/VERSION file? Not clear
+            %% how to detect git/svn/hg/{cmd, ...} settings that can be passed
+            %% to rebar_utils_vcs_vsn/2 to obtain version dynamically
+            {Config, {true, Path}};
+        false ->
+            ?WARN("Expected ~s to be a raw dependency directory, "
+                  "but no directory found.\n", [Path]),
+            {Config, {false, {missing_raw_dependency_directory, Path}}}
+    end.
+
+rebar_deps_use_source(Config, Dep) ->
+    rebar_deps_use_source(Config, Dep, 3).
+
+rebar_deps_use_source(_Config, Dep, 0) ->
+    ?ABORT("Failed to acquire source from ~p after 3 tries.\n",
+           [Dep#dep.source]);
+rebar_deps_use_source(Config, Dep, Count) ->
+    case filelib:is_dir(Dep#dep.dir) of
+        true ->
+            %% Already downloaded -- verify the versioning matches the regex
+            case rebar_deps_is_app_available(Config,
+                                             Dep#dep.app,
+                                             Dep#dep.vsn_regex,
+                                             Dep#dep.dir,
+                                             Dep#dep.is_raw) of
+                {Config1, {true, _}} ->
+                    Dir = filename:join(Dep#dep.dir, "ebin"),
+                    ok = filelib:ensure_dir(filename:join(Dir, "dummy")),
+                    %% Available version matches up -- we're good to go;
+                    %% add the app dir to our code path
+                    true = code:add_patha(Dir),
+                    {Config1, Dep};
+                {_Config1, {false, Reason}} ->
+                    %% The app that was downloaded doesn't match up (or had
+                    %% errors or something). For the time being, abort.
+                    ?ABORT("Dependency dir ~s failed application validation "
+                           "with reason:~n~p.\n", [Dep#dep.dir, Reason])
+            end;
+        false ->
+            ?CONSOLE("Pulling ~p from ~p\n", [Dep#dep.app, Dep#dep.source]),
+            rebar_deps_require_source_engine(Dep#dep.source),
+            {true, TargetDir} = rebar_deps_get_deps_dir(Config, Dep#dep.app),
+            rebar_deps_download_source(TargetDir, Dep#dep.source),
+            rebar_deps_use_source(Config, Dep#dep { dir = TargetDir }, Count-1)
+    end.
+
+rebar_deps_download_source(AppDir, {hg, Url, Rev}) ->
+    ok = filelib:ensure_dir(AppDir),
+    rebar_utils_sh(?FMT("hg clone -U ~s ~s", [Url, filename:basename(AppDir)]),
+                   [{cd, filename:dirname(AppDir)}]),
+    rebar_utils_sh(?FMT("hg update ~s", [Rev]), [{cd, AppDir}]);
+rebar_deps_download_source(AppDir, {git, Url}) ->
+    rebar_deps_download_source(AppDir, {git, Url, {branch, "HEAD"}});
+rebar_deps_download_source(AppDir, {git, Url, ""}) ->
+    rebar_deps_download_source(AppDir, {git, Url, {branch, "HEAD"}});
+rebar_deps_download_source(AppDir, {git, Url, {branch, Branch}}) ->
+    ok = filelib:ensure_dir(AppDir),
+    rebar_utils_sh(?FMT("git clone -n ~s ~s", [Url, filename:basename(AppDir)]),
+                   [{cd, filename:dirname(AppDir)}]),
+    rebar_utils_sh(?FMT("git checkout -q origin/~s", [Branch]), [{cd, AppDir}]);
+rebar_deps_download_source(AppDir, {git, Url, {tag, Tag}}) ->
+    ok = filelib:ensure_dir(AppDir),
+    rebar_utils_sh(?FMT("git clone -n ~s ~s", [Url, filename:basename(AppDir)]),
+                   [{cd, filename:dirname(AppDir)}]),
+    rebar_utils_sh(?FMT("git checkout -q ~s", [Tag]), [{cd, AppDir}]);
+rebar_deps_download_source(AppDir, {git, Url, Rev}) ->
+    ok = filelib:ensure_dir(AppDir),
+    rebar_utils_sh(?FMT("git clone -n ~s ~s", [Url, filename:basename(AppDir)]),
+                   [{cd, filename:dirname(AppDir)}]),
+    rebar_utils_sh(?FMT("git checkout -q ~s", [Rev]), [{cd, AppDir}]);
+rebar_deps_download_source(AppDir, {bzr, Url, Rev}) ->
+    ok = filelib:ensure_dir(AppDir),
+    rebar_utils_sh(?FMT("bzr branch -r ~s ~s ~s",
+                        [Rev, Url, filename:basename(AppDir)]),
+                   [{cd, filename:dirname(AppDir)}]);
+rebar_deps_download_source(AppDir, {svn, Url, Rev}) ->
+    ok = filelib:ensure_dir(AppDir),
+    rebar_utils_sh(?FMT("svn checkout -r ~s ~s ~s",
+                        [Rev, Url, filename:basename(AppDir)]),
+                   [{cd, filename:dirname(AppDir)}]);
+rebar_deps_download_source(AppDir, {rsync, Url}) ->
+    ok = filelib:ensure_dir(AppDir),
+    rebar_utils_sh(?FMT("rsync -az --delete ~s/ ~s", [Url, AppDir]), []);
+rebar_deps_download_source(AppDir, {fossil, Url}) ->
+    rebar_deps_download_source(AppDir, {fossil, Url, ""});
+rebar_deps_download_source(AppDir, {fossil, Url, latest}) ->
+    rebar_deps_download_source(AppDir, {fossil, Url, ""});
+rebar_deps_download_source(AppDir, {fossil, Url, Version}) ->
+    Repository = filename:join(AppDir, filename:basename(AppDir) ++ ".fossil"),
+    ok = filelib:ensure_dir(Repository),
+    ok = file:set_cwd(AppDir),
+    rebar_utils_sh(?FMT("fossil clone ~s ~s", [Url, Repository]),
+                   [{cd, AppDir}]),
+    rebar_utils_sh(?FMT("fossil open ~s ~s --nested", [Repository, Version]),
+                   []).
+
+rebar_deps_update_source(Config, Dep) ->
+    %% It's possible when updating a source, that a given dep does not have a
+    %% VCS directory, such as when a source archive is built of a project, with
+    %% all deps already downloaded/included. So, verify that the necessary VCS
+    %% directory exists before attempting to do the update.
+    {true, AppDir} = rebar_deps_get_deps_dir(Config, Dep#dep.app),
+    case rebar_deps_has_vcs_dir(element(1, Dep#dep.source), AppDir) of
+        true ->
+            ?CONSOLE("Updating ~p from ~p\n", [Dep#dep.app, Dep#dep.source]),
+            rebar_deps_require_source_engine(Dep#dep.source),
+            rebar_deps_update_source1(AppDir, Dep#dep.source),
+            Dep;
+        false ->
+            ?WARN("Skipping update for ~p: "
+                  "no VCS directory available!\n", [Dep]),
+            Dep
+    end.
+
+rebar_deps_update_source1(AppDir, {git, Url}) ->
+    rebar_deps_update_source1(AppDir, {git, Url, {branch, "HEAD"}});
+rebar_deps_update_source1(AppDir, {git, Url, ""}) ->
+    rebar_deps_update_source1(AppDir, {git, Url, {branch, "HEAD"}});
+rebar_deps_update_source1(AppDir, {git, _Url, {branch, Branch}}) ->
+    ShOpts = [{cd, AppDir}],
+    rebar_utils_sh("git fetch origin", ShOpts),
+    rebar_utils_sh(?FMT("git checkout -q origin/~s", [Branch]), ShOpts);
+rebar_deps_update_source1(AppDir, {git, _Url, {tag, Tag}}) ->
+    ShOpts = [{cd, AppDir}],
+    rebar_utils_sh("git fetch --tags origin", ShOpts),
+    rebar_utils_sh(?FMT("git checkout -q ~s", [Tag]), ShOpts);
+rebar_deps_update_source1(AppDir, {git, _Url, Refspec}) ->
+    ShOpts = [{cd, AppDir}],
+    rebar_utils_sh("git fetch origin", ShOpts),
+    rebar_utils_sh(?FMT("git checkout -q ~s", [Refspec]), ShOpts);
+rebar_deps_update_source1(AppDir, {svn, _Url, Rev}) ->
+    rebar_utils_sh(?FMT("svn up -r ~s", [Rev]), [{cd, AppDir}]);
+rebar_deps_update_source1(AppDir, {hg, _Url, Rev}) ->
+    rebar_utils_sh(?FMT("hg pull -u -r ~s", [Rev]), [{cd, AppDir}]);
+rebar_deps_update_source1(AppDir, {bzr, _Url, Rev}) ->
+    rebar_utils_sh(?FMT("bzr update -r ~s", [Rev]), [{cd, AppDir}]);
+rebar_deps_update_source1(AppDir, {rsync, Url}) ->
+    rebar_utils_sh(?FMT("rsync -az --delete ~s/ ~s",[Url,AppDir]),[]);
+rebar_deps_update_source1(AppDir, {fossil, Url}) ->
+    rebar_deps_update_source1(AppDir, {fossil, Url, ""});
+rebar_deps_update_source1(AppDir, {fossil, Url, latest}) ->
+    rebar_deps_update_source1(AppDir, {fossil, Url, ""});
+rebar_deps_update_source1(AppDir, {fossil, _Url, Version}) ->
+    ok = file:set_cwd(AppDir),
+    rebar_utils_sh("fossil pull", [{cd, AppDir}]),
+    rebar_utils_sh(?FMT("fossil update ~s", [Version]), []).
+
+%% ===================================================================
+%% Source helper functions
+%% ===================================================================
+
+rebar_deps_source_engine_avail(Source) ->
+    Name = element(1, Source),
+    rebar_deps_source_engine_avail(Name, Source).
+
+rebar_deps_source_engine_avail(Name, Source)
+    when Name == hg; Name == git; Name == svn; Name == bzr; Name == rsync;
+         Name == fossil ->
+    case rebar_deps_vcs_client_vsn(Name) >=
+         rebar_deps_required_vcs_client_vsn(Name) of
+        true ->
+            true;
+        false ->
+            ?ABORT("Rebar requires version ~p or higher of ~s to process ~p\n",
+                   [rebar_deps_required_vcs_client_vsn(Name), Name, Source])
+    end.
+
+rebar_deps_vcs_client_vsn(false, _VsnArg, _VsnRegex) ->
+    false;
+rebar_deps_vcs_client_vsn(Path, VsnArg, VsnRegex) ->
+    {ok, Info} = rebar_utils_sh(Path ++ VsnArg,
+                                [{env, [{"LANG", "C"}]},
+                                 {use_stdout, false}]),
+    case re:run(Info, VsnRegex, [{capture, all_but_first, list}]) of
+        {match, Match} ->
+            list_to_tuple([list_to_integer(S) || S <- Match]);
+        _ ->
+            false
+    end.
+
+rebar_deps_required_vcs_client_vsn(hg)     -> {1, 1};
+rebar_deps_required_vcs_client_vsn(git)    -> {1, 5};
+rebar_deps_required_vcs_client_vsn(bzr)    -> {2, 0};
+rebar_deps_required_vcs_client_vsn(svn)    -> {1, 6};
+rebar_deps_required_vcs_client_vsn(rsync)  -> {2, 0};
+rebar_deps_required_vcs_client_vsn(fossil) -> {1, 0}.
+
+rebar_deps_vcs_client_vsn(hg) ->
+    rebar_deps_vcs_client_vsn(rebar_utils_find_executable("hg"),
+                              " --version",
+                              "version (\\d+).(\\d+)");
+rebar_deps_vcs_client_vsn(git) ->
+    rebar_deps_vcs_client_vsn(rebar_utils_find_executable("git"),
+                              " --version",
+                              "git version (\\d+).(\\d+)");
+rebar_deps_vcs_client_vsn(bzr) ->
+    rebar_deps_vcs_client_vsn(rebar_utils_find_executable("bzr"),
+                              " --version",
+                              "Bazaar \\(bzr\\) (\\d+).(\\d+)");
+rebar_deps_vcs_client_vsn(svn) ->
+    rebar_deps_vcs_client_vsn(rebar_utils_find_executable("svn"),
+                              " --version",
+                              "svn, version (\\d+).(\\d+)");
+rebar_deps_vcs_client_vsn(rsync) ->
+    rebar_deps_vcs_client_vsn(rebar_utils_find_executable("rsync"),
+                              " --version",
+                              "rsync  version (\\d+).(\\d+)");
+rebar_deps_vcs_client_vsn(fossil) ->
+    rebar_deps_vcs_client_vsn(rebar_utils_find_executable("fossil"),
+                              " version",
+                              "version (\\d+).(\\d+)").
+
+rebar_deps_has_vcs_dir(git, Dir) ->
+    filelib:is_dir(filename:join(Dir, ".git"));
+rebar_deps_has_vcs_dir(hg, Dir) ->
+    filelib:is_dir(filename:join(Dir, ".hg"));
+rebar_deps_has_vcs_dir(bzr, Dir) ->
+    filelib:is_dir(filename:join(Dir, ".bzr"));
+rebar_deps_has_vcs_dir(svn, Dir) ->
+    filelib:is_dir(filename:join(Dir, ".svn")) orelse
+    filelib:is_dir(filename:join(Dir, "_svn"));
+rebar_deps_has_vcs_dir(rsync, _) ->
+    true;
+rebar_deps_has_vcs_dir(_, _) ->
+    true.
+
+rebar_deps_print_source(#dep{app=App, source=Source}) ->
+    ?CONSOLE("~s~n", [rebar_deps_format_source(App, Source)]).
+
+rebar_deps_format_source(App, {git, Url}) ->
+    ?FMT("~p BRANCH ~s ~s", [App, "HEAD", Url]);
+rebar_deps_format_source(App, {git, Url, ""}) ->
+    ?FMT("~p BRANCH ~s ~s", [App, "HEAD", Url]);
+rebar_deps_format_source(App, {git, Url, {branch, Branch}}) ->
+    ?FMT("~p BRANCH ~s ~s", [App, Branch, Url]);
+rebar_deps_format_source(App, {git, Url, {tag, Tag}}) ->
+    ?FMT("~p TAG ~s ~s", [App, Tag, Url]);
+rebar_deps_format_source(App, {_, Url, Rev}) ->
+    ?FMT("~p REV ~s ~s", [App, Rev, Url]);
+rebar_deps_format_source(App, undefined) ->
+    ?FMT("~p", [App]).
+
+%--------------------------------------------------------------------------
+% rebar_subdirs.erl
+%--------------------------------------------------------------------------
+
+rebar_subdirs_preprocess(Config, _) ->
+    %% Get the list of subdirs specified in the config (if any).
+    Cwd = rebar_utils_get_cwd(),
+    ListSubdirs = rebar_config_get_local(Config, sub_dirs, []),
+    Subdirs0 = lists:flatmap(fun filelib:wildcard/1, ListSubdirs),
+    case {rebar_config_is_skip_dir(Config, Cwd), Subdirs0} of
+        {true, []} ->
+            {ok, []};
+        {true, _} ->
+            ?WARN("Ignoring sub_dirs for ~s~n", [Cwd]),
+            {ok, []};
+        {false, _} ->
+            Check = rebar_subdirs_check_loop(Cwd),
+            ok = lists:foreach(Check, Subdirs0),
+            Subdirs = [filename:join(Cwd, Dir) || Dir <- Subdirs0],
+            {ok, Subdirs}
+    end.
+
+rebar_subdirs_check_loop(Cwd) ->
+    RebarConfig = filename:join(Cwd, "rebar.config"),
+    fun(Dir0) ->
+        IsSymlink = case file:read_link_info(Dir0) of
+            {ok, #file_info{type=symlink}} ->
+                {true, rebar_subdirs_resolve_symlink(Dir0)};
+            _ ->
+                {false, Dir0}
+        end,
+        case IsSymlink of
+            {false, Dir="."} ->
+                ?ERROR("infinite loop detected:~nsub_dirs"
+                       " entry ~p in ~s~n", [Dir, RebarConfig]);
+            {true, Cwd} ->
+                ?ERROR("infinite loop detected:~nsub_dirs"
+                       " entry ~p in ~s is a symlink to \".\"~n",
+                       [Dir0, RebarConfig]);
+            _ ->
+                ok
+        end
+    end.
+
+rebar_subdirs_resolve_symlink(Dir0) ->
+    {ok, Dir} = file:read_link(Dir0),
+    Dir.
+
+%--------------------------------------------------------------------------
+% rebar_cleaner.erl
+%--------------------------------------------------------------------------
+
+rebar_cleaner_clean(Config, _AppFile) ->
+    %% Get a list of files to delete from config and remove them
+    FilesToClean = rebar_config_get(Config, clean_files, []),
+    lists:foreach(fun(F) ->
+        rebar_file_utils_rm_rf(F)
+    end, FilesToClean).
+
+%--------------------------------------------------------------------------
+% rebar_base_compiler.erl
+%--------------------------------------------------------------------------
+
+rebar_base_compiler_run(Config, FirstFiles, RestFiles, CompileFn) ->
+    %% Compile the first files in sequence
+    rebar_base_compiler_compile_each(FirstFiles, Config, CompileFn),
+
+    %% Spin up workers for the rest of the files
+    case RestFiles of
+        [] ->
+            ok;
+        _ ->
+            Self = self(),
+            F = fun() ->
+                rebar_base_compiler_compile_worker(Self, Config, CompileFn)
+            end,
+            Jobs = rebar_get_jobs(Config),
+            ?DEBUG("Starting ~B compile worker(s)~n", [Jobs]),
+            Pids = [spawn_monitor(F) || _I <- lists:seq(1,Jobs)],
+            rebar_base_compiler_compile_queue(Pids, RestFiles)
+    end.
+
+rebar_base_compiler_run(Config, FirstFiles, SourceDir, SourceExt,
+                        TargetDir, TargetExt,
+                        Compile3Fn) ->
+    rebar_base_compiler_run(Config, FirstFiles, SourceDir, SourceExt,
+                            TargetDir, TargetExt,
+                            Compile3Fn, [check_last_mod]).
+
+rebar_base_compiler_run(Config, FirstFiles, SourceDir, SourceExt,
+                        TargetDir, TargetExt,
+                        Compile3Fn, Opts) ->
+    %% Convert simple extension to proper regex
+    SourceExtRe = ".*\\" ++ SourceExt ++ [$$],
+
+    Recursive = proplists:get_value(recursive, Opts, true),
+    %% Find all possible source files
+    FoundFiles = rebar_utils_find_files(SourceDir, SourceExtRe, Recursive),
+    %% Remove first files from found files
+    RestFiles = [Source
+                 || Source <- FoundFiles,
+                    not lists:member(Source, FirstFiles)],
+
+    %% Check opts for flag indicating that compile should check lastmod
+    CheckLastMod = proplists:get_bool(check_last_mod, Opts),
+
+    rebar_base_compiler_run(Config, FirstFiles, RestFiles, fun(S, C) ->
+        Target = rebar_base_compiler_target_file(S, SourceDir, SourceExt,
+                                                 TargetDir, TargetExt),
+        rebar_base_compiler_simple_compile_wrapper(S, Target,
+                                                   Compile3Fn, C, CheckLastMod)
+    end).
+
+rebar_base_compiler_ok_tuple(Config, Source, Ws) ->
+    {ok, rebar_base_compiler_format_warnings(Config, Source, Ws)}.
+
+rebar_base_compiler_error_tuple(Config, Source, Es, Ws, Opts) ->
+    {error, rebar_base_compiler_format_errors(Config, Source, Es),
+     rebar_base_compiler_format_warnings(Config, Source, Ws, Opts)}.
+
+rebar_base_compiler_simple_compile_wrapper(Source, Target,
+                                           Compile3Fn, Config, false) ->
+    Compile3Fn(Source, Target, Config);
+rebar_base_compiler_simple_compile_wrapper(Source, Target,
+                                           Compile3Fn, Config, true) ->
+    case filelib:last_modified(Target) < filelib:last_modified(Source) of
+        true ->
+            Compile3Fn(Source, Target, Config);
+        false ->
+            skipped
+    end.
+
+rebar_base_compiler_target_file(SourceFile, SourceDir, SourceExt,
+                                TargetDir, TargetExt) ->
+    %% Remove all leading components of the source dir from the file -- we want
+    %% to maintain the deeper structure (if any) of the source file path
+    BaseFile = rebar_base_compiler_remove_common_path(SourceFile, SourceDir),
+    filename:join([TargetDir, filename:dirname(BaseFile),
+                   filename:basename(BaseFile, SourceExt) ++ TargetExt]).
+
+rebar_base_compiler_remove_common_path(Fname, Path) ->
+    rebar_base_compiler_remove_common_path1(filename:split(Fname),
+                                            filename:split(Path)).
+
+rebar_base_compiler_remove_common_path1([Part | RestFilename],
+                                        [Part | RestPath]) ->
+    rebar_base_compiler_remove_common_path1(RestFilename, RestPath);
+rebar_base_compiler_remove_common_path1(FilenameParts, _) ->
+    filename:join(FilenameParts).
+
+rebar_base_compiler_compile(Source, Config, CompileFn) ->
+    case CompileFn(Source, Config) of
+        ok ->
+            ok;
+        skipped ->
+            skipped;
+        Error ->
+            Error
+    end.
+
+rebar_base_compiler_compile_each([], _Config, _CompileFn) ->
+    ok;
+rebar_base_compiler_compile_each([Source | Rest], Config, CompileFn) ->
+    case rebar_base_compiler_compile(Source, Config, CompileFn) of
+        ok ->
+            ?CONSOLE("Compiled ~s\n", [Source]);
+        {ok, Warnings} ->
+            rebar_base_compiler_report(Warnings),
+            ?CONSOLE("Compiled ~s\n", [Source]);
+        skipped ->
+            ?INFO("Skipped ~s\n", [Source]);
+        Error ->
+            rebar_base_compiler_maybe_report(Error),
+            ?DEBUG("Compilation failed: ~p\n", [Error]),
+            ?FAIL
+    end,
+    rebar_base_compiler_compile_each(Rest, Config, CompileFn).
+
+rebar_base_compiler_compile_queue([], []) ->
+    ok;
+rebar_base_compiler_compile_queue(Pids, Targets) ->
+    receive
+        {next, Worker} ->
+            case Targets of
+                [] ->
+                    Worker ! empty,
+                    rebar_base_compiler_compile_queue(Pids, Targets);
+                [Source | Rest] ->
+                    Worker ! {compile, Source},
+                    rebar_base_compiler_compile_queue(Pids, Rest)
+            end;
+
+        {fail, Error} ->
+            rebar_base_compiler_maybe_report(Error),
+            ?DEBUG("Worker compilation failed: ~p\n", [Error]),
+            ?FAIL;
+
+        {compiled, Source, Warnings} ->
+            rebar_base_compiler_report(Warnings),
+            ?CONSOLE("Compiled ~s\n", [Source]),
+            rebar_base_compiler_compile_queue(Pids, Targets);
+
+        {compiled, Source} ->
+            ?CONSOLE("Compiled ~s\n", [Source]),
+            rebar_base_compiler_compile_queue(Pids, Targets);
+
+        {skipped, Source} ->
+            ?INFO("Skipped ~s\n", [Source]),
+            rebar_base_compiler_compile_queue(Pids, Targets);
+
+        {'DOWN', Mref, _, Pid, normal} ->
+            ?DEBUG("Worker exited cleanly\n", []),
+            Pids2 = lists:delete({Pid, Mref}, Pids),
+            rebar_base_compiler_compile_queue(Pids2, Targets);
+
+        {'DOWN', _Mref, _, _Pid, Info} ->
+            ?DEBUG("Worker failed: ~p\n", [Info]),
+            ?FAIL
+    end.
+
+rebar_base_compiler_compile_worker(QueuePid, Config, CompileFn) ->
+    QueuePid ! {next, self()},
+    receive
+        {compile, Source} ->
+            case catch(rebar_base_compiler_compile(Source, Config,
+                                                   CompileFn)) of
+                {ok, Ws} ->
+                    QueuePid ! {compiled, Source, Ws},
+                    rebar_base_compiler_compile_worker(QueuePid, Config,
+                                                       CompileFn);
+                ok ->
+                    QueuePid ! {compiled, Source},
+                    rebar_base_compiler_compile_worker(QueuePid, Config,
+                                                       CompileFn);
+                skipped ->
+                    QueuePid ! {skipped, Source},
+                    rebar_base_compiler_compile_worker(QueuePid, Config,
+                                                       CompileFn);
+                Error ->
+                    QueuePid ! {fail, [{error, Error},
+                                       {source, Source}]},
+                    ok
+            end;
+
+        empty ->
+            ok
+    end.
+
+rebar_base_compiler_format_errors(Config, Source, Errors) ->
+    rebar_base_compiler_format_errors(Config, Source, "", Errors).
+
+rebar_base_compiler_format_warnings(Config, Source, Warnings) ->
+    rebar_base_compiler_format_warnings(Config, Source, Warnings, []).
+
+rebar_base_compiler_format_warnings(Config, Source, Warnings, Opts) ->
+    Prefix = case lists:member(warnings_as_errors, Opts) of
+        true -> "";
+        false -> "Warning: "
+    end,
+    rebar_base_compiler_format_errors(Config, Source, Prefix, Warnings).
+
+rebar_base_compiler_maybe_report([{error,
+                                   {error, _Es, _Ws} = ErrorsAndWarnings},
+                                  {source, _}]) ->
+    rebar_base_compiler_maybe_report(ErrorsAndWarnings);
+rebar_base_compiler_maybe_report({error, Es, Ws}) ->
+    rebar_base_compiler_report(Es),
+    rebar_base_compiler_report(Ws);
+rebar_base_compiler_maybe_report(_) ->
+    ok.
+
+rebar_base_compiler_report(Messages) ->
+    lists:foreach(fun(Msg) ->
+        io:format("~s", [Msg])
+    end, Messages).
+
+rebar_base_compiler_format_errors(Config, _MainSource, Extra, Errors) ->
+    [begin
+         AbsSource = case rebar_utils_processing_base_dir(Config) of
+             true ->
+                 Source;
+             false ->
+                 filename:absname(Source)
+         end,
+         [rebar_base_compiler_format_error(AbsSource, Extra, Desc)
+          || Desc <- Descs]
+     end
+     || {Source, Descs} <- Errors].
+
+rebar_base_compiler_format_error(AbsSource, Extra,
+                                 {{Line, Column}, Mod, Desc}) ->
+    ErrorDesc = Mod:format_error(Desc),
+    ?FMT("~s:~w:~w: ~s~s~n", [AbsSource, Line, Column, Extra, ErrorDesc]);
+rebar_base_compiler_format_error(AbsSource, Extra,
+                                 {Line, Mod, Desc}) ->
+    ErrorDesc = Mod:format_error(Desc),
+    ?FMT("~s:~w: ~s~s~n", [AbsSource, Line, Extra, ErrorDesc]);
+rebar_base_compiler_format_error(AbsSource, Extra,
+                                 {Mod, Desc}) ->
+    ErrorDesc = Mod:format_error(Desc),
+    ?FMT("~s: ~s~s~n", [AbsSource, Extra, ErrorDesc]).
+
+%--------------------------------------------------------------------------
+% rebar_app_utils.erl
+%--------------------------------------------------------------------------
+
+rebar_app_utils_is_app_dir(Dir) ->
+    SrcDir = filename:join([Dir, "src"]),
+    AppSrc = filename:join([SrcDir, "*.app.src"]),
+    case filelib:wildcard(AppSrc) of
+        [AppSrcFile] ->
+            {true, AppSrcFile};
+        [] ->
+            EbinDir = filename:join([Dir, "ebin"]),
+            App = filename:join([EbinDir, "*.app"]),
+            case filelib:wildcard(App) of
+                [AppFile] ->
+                    {true, AppFile};
+                [] ->
+                    false;
+                _ ->
+                    ?ERROR("More than one .app file in ~s~n", [EbinDir]),
+                    false
+            end;
+        _ ->
+            ?ERROR("More than one .app.src file in ~s~n", [SrcDir]),
+            false
+    end.
+
+rebar_app_utils_is_app_src(Filename) ->
+    %% If removing the extension .app.src yields a shorter name,
+    %% this is an .app.src file.
+    Filename =/= filename:rootname(Filename, ".app.src").
+
+rebar_app_utils_app_src_to_app(Filename) ->
+    filename:join("ebin", filename:basename(Filename, ".app.src") ++ ".app").
+
+rebar_app_utils_app_name(Config, AppFile) ->
+    case rebar_app_utils_load_app_file(Config, AppFile) of
+        {ok, NewConfig, AppName, _} ->
+            {NewConfig, AppName};
+        {error, Reason} ->
+            ?ABORT("Failed to extract name from ~s: ~p\n",
+                   [AppFile, Reason])
+    end.
+
+rebar_app_utils_app_vsn(Config, AppFile) ->
+    case rebar_app_utils_load_app_file(Config, AppFile) of
+        {ok, Config1, _, AppInfo} ->
+            AppDir = filename:dirname(filename:dirname(AppFile)),
+            rebar_utils_vcs_vsn(Config1,
+                                rebar_app_utils_get_value(vsn,
+                                                          AppInfo, AppFile),
+                                AppDir);
+        {error, Reason} ->
+            ?ABORT("Failed to extract vsn from ~s: ~p\n",
+                   [AppFile, Reason])
+    end.
+
+rebar_app_utils_is_skipped_app(Config, AppFile) ->
+    {Config1, ThisApp} = rebar_app_utils_app_name(Config, AppFile),
+    %% Check for apps global parameter; this is a comma-delimited list
+    %% of apps on which we want to run commands
+    Skipped = case rebar_app_utils_get_apps(Config) of
+        undefined ->
+            %% No apps parameter specified, check the skip_apps list..
+            case rebar_app_utils_get_skip_apps(Config) of
+                undefined ->
+                    %% No skip_apps list, run everything..
+                    false;
+                SkipApps ->
+                    TargetApps = [list_to_atom(A)
+                                  || A <- string:tokens(SkipApps, ",")],
+                    rebar_app_utils_is_skipped(ThisApp, TargetApps)
+            end;
+        Apps ->
+            %% run only selected apps
+            TargetApps = [list_to_atom(A) || A <- string:tokens(Apps, ",")],
+            rebar_app_utils_is_selected(ThisApp, TargetApps)
+    end,
+    {Config1, Skipped}.
+
+rebar_app_utils_load_app_file(Config, Filename) ->
+    AppFile = {app_file, Filename},
+    case rebar_config_get_xconf(Config, {appfile, AppFile}, undefined) of
+        undefined ->
+            case rebar_app_utils_consult_app_file(Filename) of
+                {ok, [{application, AppName, AppData}]} ->
+                    Config1 = rebar_config_set_xconf(Config,
+                                                     {appfile, AppFile},
+                                                     {AppName, AppData}),
+                    {ok, Config1, AppName, AppData};
+                {error, _} = Error ->
+                    Error;
+                Other ->
+                    {error, {unexpected_terms, Other}}
+            end;
+        {AppName, AppData} ->
+            {ok, Config, AppName, AppData}
+    end.
+
+%% In the case of *.app.src we want to give the user the ability to
+%% dynamically script the application resource file (think dynamic version
+%% string, etc.), in a way similar to what can be done with the rebar
+%% config. However, in the case of *.app, rebar should not manipulate
+%% that file. This enforces that dichotomy between app and app.src.
+rebar_app_utils_consult_app_file(Filename) ->
+    case lists:suffix(".app.src", Filename) of
+        false ->
+            file:consult(Filename);
+        true ->
+            %% TODO: EXPERIMENTAL For now let's warn the user if a
+            %% script is going to be run.
+            case filelib:is_regular([Filename, ".script"]) of
+                true ->
+                    ?CONSOLE("NOTICE: Using experimental *.app.src.script "
+                             "functionality on ~s ~n", [Filename]);
+                _ ->
+                    ok
+            end,
+            rebar_config_consult_file(Filename)
+    end.
+
+rebar_app_utils_get_value(Key, AppInfo, AppFile) ->
+    case proplists:get_value(Key, AppInfo) of
+        undefined ->
+            ?ABORT("Failed to get app value '~p' from '~s'~n", [Key, AppFile]);
+        Value ->
+            Value
+    end.
+
+%% apps= for selecting apps
+rebar_app_utils_is_selected(ThisApp, TargetApps) ->
+    case lists:member(ThisApp, TargetApps) of
+        false ->
+            {true, ThisApp};
+        true ->
+            false
+    end.
+
+%% skip_apps= for filtering apps
+rebar_app_utils_is_skipped(ThisApp, TargetApps) ->
+    case lists:member(ThisApp, TargetApps) of
+        false ->
+            false;
+        true ->
+            {true, ThisApp}
+    end.
+
+rebar_app_utils_get_apps(Config) ->
+    rebar_config_get_global(Config, apps, undefined).
+
+rebar_app_utils_get_skip_apps(Config) ->
+    rebar_config_get_global(Config, skip_apps, undefined).
+
+%--------------------------------------------------------------------------
+% rebar_file_utils.erl
+%--------------------------------------------------------------------------
+
+%% Remove files and directories.
+%% Target is a single filename, directoryname or wildcard expression.
+-spec rebar_file_utils_rm_rf(string()) -> 'ok'.
+rebar_file_utils_rm_rf(Target) ->
+    case os:type() of
+        {unix, _} ->
+            EscTarget = rebar_file_utils_escape_spaces(Target),
+            {ok, []} = rebar_utils_sh(?FMT("rm -rf ~s", [EscTarget]),
+                                      [{use_stdout, false}, return_on_error]),
+            ok;
+        {win32, _} ->
+            Filelist = filelib:wildcard(Target),
+            Dirs = [F || F <- Filelist, filelib:is_dir(F)],
+            Files = Filelist -- Dirs,
+            ok = rebar_file_utils_delete_each(Files),
+            ok = rebar_file_utils_delete_each_dir_win32(Dirs),
+            ok
+    end.
+
+-spec rebar_file_utils_cp_r(list(string()), file:filename()) -> 'ok'.
+rebar_file_utils_cp_r([], _Dest) ->
+    ok;
+rebar_file_utils_cp_r(Sources, Dest) ->
+    case os:type() of
+        {unix, _} ->
+            EscSources = [rebar_file_utils_escape_spaces(Src)
+                          || Src <- Sources],
+            SourceStr = string:join(EscSources, " "),
+            {ok, []} = rebar_utils_sh(?FMT("cp -R ~s \"~s\"",
+                                           [SourceStr, Dest]),
+                                      [{use_stdout, false}, return_on_error]),
+            ok;
+        {win32, _} ->
+            lists:foreach(fun(Src) ->
+                ok = rebar_file_utils_cp_r_win32(Src, Dest)
+            end, Sources),
+            ok
+    end.
+
+-spec rebar_file_utils_mv(string(), file:filename()) -> 'ok'.
+rebar_file_utils_mv(Source, Dest) ->
+    case os:type() of
+        {unix, _} ->
+            EscSource = rebar_file_utils_escape_spaces(Source),
+            EscDest = rebar_file_utils_escape_spaces(Dest),
+            {ok, []} = rebar_utils_sh(?FMT("mv ~s ~s", [EscSource, EscDest]),
+                                      [{use_stdout, false}, return_on_error]),
+            ok;
+        {win32, _} ->
+            {ok, R} = rebar_utils_sh(?FMT("move /y \"~s\" \"~s\" 1> nul",
+                                          [filename:nativename(Source),
+                                           filename:nativename(Dest)]),
+                                     [{use_stdout, false}, return_on_error]),
+            case R of
+                [] ->
+                    ok;
+                _ ->
+                    {error,
+                     lists:flatten(io_lib:format("Failed to move ~s to ~s~n",
+                                                 [Source, Dest]))}
+            end
+    end.
+
+rebar_file_utils_delete_each([]) ->
+    ok;
+rebar_file_utils_delete_each([File | Rest]) ->
+    case file:delete(File) of
+        ok ->
+            rebar_file_utils_delete_each(Rest);
+        {error, enoent} ->
+            rebar_file_utils_delete_each(Rest);
+        {error, Reason} ->
+            ?ERROR("Failed to delete file ~s: ~p\n", [File, Reason]),
+            ?FAIL
+    end.
+
+rebar_file_utils_write_file_if_contents_differ(Filename, Bytes) ->
+    ToWrite = iolist_to_binary(Bytes),
+    case file:read_file(Filename) of
+        {ok, ToWrite} ->
+            ok;
+        {ok,  _} ->
+            file:write_file(Filename, ToWrite);
+        {error,  _} ->
+            file:write_file(Filename, ToWrite)
+    end.
+
+rebar_file_utils_delete_each_dir_win32([]) ->
+    ok;
+rebar_file_utils_delete_each_dir_win32([Dir | Rest]) ->
+    {ok, []} = rebar_utils_sh(?FMT("rd /q /s \"~s\"",
+                                   [filename:nativename(Dir)]),
+                              [{use_stdout, false}, return_on_error]),
+    rebar_file_utils_delete_each_dir_win32(Rest).
+
+rebar_file_utils_xcopy_win32(Source,Dest)->
+    {ok, R} = rebar_utils_sh(?FMT("xcopy \"~s\" \"~s\" /q /y /e 2> nul",
+                                  [filename:nativename(Source),
+                                   filename:nativename(Dest)]),
+                             [{use_stdout, false}, return_on_error]),
+    case length(R) > 0 of
+        %% when xcopy fails, stdout is empty and and error message is printed
+        %% to stderr (which is redirected to nul)
+        true ->
+            ok;
+        false ->
+            {error,
+             lists:flatten(io_lib:format("Failed to xcopy from ~s to ~s~n",
+                                         [Source, Dest]))}
+    end.
+
+rebar_file_utils_cp_r_win32({true, SourceDir}, {true, DestDir}) ->
+    %% from directory to directory
+    SourceBase = filename:basename(SourceDir),
+    ok = case file:make_dir(filename:join(DestDir, SourceBase)) of
+        {error, eexist} -> ok;
+        Other -> Other
+    end,
+    ok = rebar_file_utils_xcopy_win32(SourceDir,
+                                      filename:join(DestDir, SourceBase));
+rebar_file_utils_cp_r_win32({false, Source} = S,{true, DestDir}) ->
+    %% from file to directory
+    rebar_file_utils_cp_r_win32(S,
+                                {false,
+                                 filename:join(DestDir,
+                                               filename:basename(Source))});
+rebar_file_utils_cp_r_win32({false, Source},{false, Dest}) ->
+    %% from file to file
+    {ok,_} = file:copy(Source, Dest),
+    ok;
+rebar_file_utils_cp_r_win32({true, SourceDir}, {false, DestDir}) ->
+    case filelib:is_regular(DestDir) of
+        true ->
+            %% From directory to file? This shouldn't happen
+            {error,
+             lists:flatten(io_lib:format("Cannot copy dir (~p) to file (~p)\n",
+                                         [SourceDir, DestDir]))};
+        false ->
+            %% Specifying a target directory that doesn't currently exist.
+            %% So let's attempt to create this directory
+            case filelib:ensure_dir(filename:join(DestDir, "dummy")) of
+                ok ->
+                    ok = rebar_file_utils_xcopy_win32(SourceDir, DestDir);
+                {error, Reason} ->
+                    {error,
+                     lists:flatten(io_lib:format("Unable to create dir ~p:"
+                                                 " ~p\n",
+                                                 [DestDir, Reason]))}
+            end
+    end;
+rebar_file_utils_cp_r_win32(Source,Dest) ->
+    Dst = {filelib:is_dir(Dest), Dest},
+    lists:foreach(fun(Src) ->
+        ok = rebar_file_utils_cp_r_win32({filelib:is_dir(Src), Src}, Dst)
+    end, filelib:wildcard(Source)),
+    ok.
+
+rebar_file_utils_escape_spaces(Str) ->
+    re:replace(Str, " ", "\\\\ ", [global, {return, list}]).
+
+%--------------------------------------------------------------------------
+% rebar_log.erl
+%--------------------------------------------------------------------------
+
+rebar_log_init(Config) ->
+    Verbosity = rebar_config_get_global(Config, verbose,
+                                        rebar_log_default_level()),
+    case rebar_log_valid_level(Verbosity) of
+        0 -> rebar_log_set_level(error);
+        1 -> rebar_log_set_level(warn);
+        2 -> rebar_log_set_level(info);
+        3 -> rebar_log_set_level(debug)
+    end.
+
+rebar_log_set_level(Level) ->
+    ok = application:set_env(rebar, log_level, Level).
+
+rebar_log_log(Level, Str, Args) ->
+    {ok, LogLevel} = application:get_env(rebar, log_level),
+    case rebar_log_should_log(LogLevel, Level) of
+        true ->
+            io:format(rebar_log_log_prefix(Level) ++ Str, Args);
+        false ->
+            ok
+    end.
+
+rebar_log_default_level() ->
+    rebar_log_error_level().
+
+rebar_log_valid_level(Level) ->
+    erlang:max(rebar_log_error_level(),
+               erlang:min(Level, rebar_log_debug_level())).
+
+rebar_log_error_level() -> 0.
+rebar_log_debug_level() -> 3.
+
+rebar_log_should_log(debug, _)     -> true;
+rebar_log_should_log(info, debug)  -> false;
+rebar_log_should_log(info, _)      -> true;
+rebar_log_should_log(warn, debug)  -> false;
+rebar_log_should_log(warn, info)   -> false;
+rebar_log_should_log(warn, _)      -> true;
+rebar_log_should_log(error, error) -> true;
+rebar_log_should_log(error, _)     -> false;
+rebar_log_should_log(_, _)         -> false.
+
+rebar_log_log_prefix(debug) -> "DEBUG: ";
+rebar_log_log_prefix(info)  -> "INFO:  ";
+rebar_log_log_prefix(warn)  -> "WARN:  ";
+rebar_log_log_prefix(error) -> "ERROR: ".
+
+%--------------------------------------------------------------------------
+% rebar_config.erl
+%--------------------------------------------------------------------------
+
+rebar_config_base_config(GlobalConfig) ->
+    ConfName = rebar_config_get_global(GlobalConfig, config, ?CONFIG_FILENAME),
+    rebar_config_new(GlobalConfig, ConfName).
+
+rebar_config_new() ->
+    #config{dir = rebar_utils_get_cwd()}.
+
+rebar_config_new(ConfigFile) when is_list(ConfigFile) ->
+    case rebar_config_consult_file(ConfigFile) of
+        {ok, Opts} ->
+            #config{dir = rebar_utils_get_cwd(),
+                    opts = Opts};
+        Other ->
+            ?ABORT("Failed to load ~s: ~p~n", [ConfigFile, Other])
+    end;
+rebar_config_new(#config{opts = Opts,
+                         globals = Globals,
+                         skip_dirs = SkipDirs,
+                         xconf = Xconf}) ->
+    rebar_config_new(#config{opts = Opts,
+                             globals = Globals,
+                             skip_dirs = SkipDirs,
+                             xconf = Xconf},
+                     ?CONFIG_FILENAME).
+
+rebar_config_get(Config, Key, Default) ->
+    proplists:get_value(Key, Config#config.opts, Default).
+
+rebar_config_get_list(Config, Key, Default) ->
+    rebar_config_get(Config, Key, Default).
+
+rebar_config_get_local(Config, Key, Default) ->
+    proplists:get_value(Key,
+                        rebar_config_local_opts(Config#config.opts, []),
+                        Default).
+
+rebar_config_set(Config, Key, Value) ->
+    Opts = proplists:delete(Key, Config#config.opts),
+    Config#config { opts = [{Key, Value} | Opts] }.
+
+rebar_config_set_global(Config, jobs = Key, Value) ->
+    true = is_integer(Value) andalso (Value >= 1),
+    NewGlobals = dict:store(Key, Value, Config#config.globals),
+    Config#config{globals = NewGlobals};
+rebar_config_set_global(Config, Key, Value) ->
+    NewGlobals = dict:store(Key, Value, Config#config.globals),
+    Config#config{globals = NewGlobals}.
+
+rebar_config_get_global(Config, Key, Default) ->
+    case dict:find(Key, Config#config.globals) of
+        error ->
+            Default;
+        {ok, Value} ->
+            Value
+    end.
+
+rebar_config_is_verbose(Config) ->
+    DefaulLevel = rebar_log_default_level(),
+    rebar_config_get_global(Config, verbose, DefaulLevel) > DefaulLevel.
+
+rebar_config_consult_file(File) ->
+    case filename:extension(File) of
+        ".script" ->
+            rebar_config_consult_and_eval(rebar_config_remove_script_ext(File),
+                                          File);
+        _ ->
+            Script = File ++ ".script",
+            case filelib:is_regular(Script) of
+                true ->
+                    rebar_config_consult_and_eval(File, Script);
+                false ->
+                    ?DEBUG("Consult config file ~p~n", [File]),
+                    file:consult(File)
+            end
+    end.
+
+rebar_config_save_env(Config, Mod, Env) ->
+    NewEnvs = dict:store(Mod, Env, Config#config.envs),
+    Config#config{envs = NewEnvs}.
+
+rebar_config_reset_envs(Config) ->
+    Config#config{envs = rebar_config_new_env()}.
+
+rebar_config_set_skip_dir(Config, Dir) ->
+    OldSkipDirs = Config#config.skip_dirs,
+    NewSkipDirs = case rebar_config_is_skip_dir(Config, Dir) of
+        false ->
+            ?DEBUG("Adding skip dir: ~s\n", [Dir]),
+            dict:store(Dir, true, OldSkipDirs);
+        true ->
+            OldSkipDirs
+    end,
+    Config#config{skip_dirs = NewSkipDirs}.
+
+rebar_config_is_skip_dir(Config, Dir) ->
+    dict:is_key(Dir, Config#config.skip_dirs).
+
+rebar_config_reset_skip_dirs(Config) ->
+    Config#config{skip_dirs = rebar_config_new_skip_dirs()}.
+
+rebar_config_set_xconf(Config, Key, Value) ->
+    NewXconf = dict:store(Key, Value, Config#config.xconf),
+    Config#config{xconf = NewXconf}.
+
+rebar_config_get_xconf(Config, Key) ->
+    {ok, Value} = dict:find(Key, Config#config.xconf),
+    Value.
+
+rebar_config_get_xconf(Config, Key, Default) ->
+    case dict:find(Key, Config#config.xconf) of
+        error ->
+            Default;
+        {ok, Value} ->
+            Value
+    end.
+
+rebar_config_erase_xconf(Config, Key) ->
+    NewXconf = dict:erase(Key, Config#config.xconf),
+    Config#config{xconf = NewXconf}.
+
+%% TODO: reconsider after config inheritance removal/redesign
+rebar_config_clean_config(Old, New) ->
+    New#config{opts = Old#config.opts}.
+
+rebar_config_new(ParentConfig, ConfName) ->
+    %% Load terms from rebar.config, if it exists
+    Dir = rebar_utils_get_cwd(),
+    ConfigFile = filename:join([Dir, ConfName]),
+    Opts0 = ParentConfig#config.opts,
+    Opts = case rebar_config_consult_file(ConfigFile) of
+        {ok, Terms} ->
+            %% Found a config file with some terms. We need to
+            %% be able to distinguish between local definitions
+            %% (i.e. from the file in the cwd) and inherited
+            %% definitions. To accomplish this, we use a marker
+            %% in the proplist (since order matters) between
+            %% the new and old defs.
+            Terms ++ [local] ++
+            [Opt || Opt <- Opts0, Opt /= local];
+        {error, enoent} ->
+            [local] ++
+            [Opt || Opt <- Opts0, Opt /= local];
+        Other ->
+            ?ABORT("Failed to load ~s: ~p\n", [ConfigFile, Other])
+    end,
+    ParentConfig#config{dir = Dir, opts = Opts}.
+
+rebar_config_consult_and_eval(File, Script) ->
+    ?DEBUG("Evaluating config script ~p~n", [Script]),
+    ConfigData = rebar_config_try_consult(File),
+    file:script(Script,
+                rebar_config_bs([{'CONFIG', ConfigData},
+                                 {'SCRIPT', Script}])).
+
+rebar_config_remove_script_ext(F) ->
+    "tpircs." ++ Rev = lists:reverse(F),
+    lists:reverse(Rev).
+
+rebar_config_try_consult(File) ->
+    case file:consult(File) of
+        {ok, Terms} ->
+            ?DEBUG("Consult config file ~p~n", [File]),
+            Terms;
+        {error, enoent} ->
+            [];
+        {error, Reason} ->
+            ?ABORT("Failed to read config file ~s: ~p~n", [File, Reason])
+    end.
+
+rebar_config_bs(Vars) ->
+    lists:foldl(fun({K,V}, Bs) ->
+        erl_eval:add_binding(K, V, Bs)
+    end, erl_eval:new_bindings(), Vars).
+
+rebar_config_local_opts([], Acc) ->
+    lists:reverse(Acc);
+rebar_config_local_opts([local | _Rest], Acc) ->
+    lists:reverse(Acc);
+rebar_config_local_opts([Item | Rest], Acc) ->
+    rebar_config_local_opts(Rest, [Item | Acc]).
+
+rebar_config_new_globals() ->
+    dict:new().
+
+rebar_config_new_env() ->
+    dict:new().
+
+rebar_config_new_skip_dirs() ->
+    dict:new().
+
+rebar_config_new_xconf() ->
+    dict:new().
+
+%--------------------------------------------------------------------------
+% rebar_utils.erl
+%--------------------------------------------------------------------------
+
+rebar_utils_get_cwd() ->
+    {ok, Dir} = file:get_cwd(),
+    Dir.
+
+rebar_utils_is_arch(ArchRegex) ->
+    case re:run(rebar_utils_get_arch(), ArchRegex, [{capture, none}]) of
+        match ->
+            true;
+        nomatch ->
+            false
+    end.
+
+rebar_utils_get_arch() ->
+    Words = rebar_utils_wordsize(),
+    erlang:system_info(otp_release) ++ "-" ++
+    erlang:system_info(system_architecture) ++ "-" ++ Words.
+
+rebar_utils_wordsize() ->
+    try erlang:system_info({wordsize, external}) of
+        Val ->
+            integer_to_list(8 * Val)
+    catch
+        error:badarg ->
+            integer_to_list(8 * erlang:system_info(wordsize))
+    end.
+
+%%
+%% Options = [Option] -- defaults to [use_stdout, abort_on_error]
+%% Option = ErrorOption | OutputOption | {cd, string()} | {env, Env}
+%% ErrorOption = return_on_error | abort_on_error | {abort_on_error, string()}
+%% OutputOption = use_stdout | {use_stdout, bool()}
+%% Env = [{string(), Val}]
+%% Val = string() | false
+%%
+rebar_utils_sh(Command0, Options0) ->
+    ?INFO("sh info:\n\tcwd: ~p\n\tcmd: ~s\n",
+          [rebar_utils_get_cwd(), Command0]),
+    ?DEBUG("\topts: ~p\n", [Options0]),
+
+    DefaultOptions = [use_stdout, abort_on_error],
+    Options = [rebar_utils_expand_sh_flag(V)
+               || V <- proplists:compact(Options0 ++ DefaultOptions)],
+
+    ErrorHandler = proplists:get_value(error_handler, Options),
+    OutputHandler = proplists:get_value(output_handler, Options),
+
+    Command = rebar_utils_patch_on_windows(Command0,
+                                           proplists:get_value(env,
+                                                               Options, [])),
+    PortSettings = proplists:get_all_values(port_settings, Options) ++
+        [exit_status, {line, 16384}, use_stdio, stderr_to_stdout, hide],
+    Port = open_port({spawn, Command}, PortSettings),
+
+    case rebar_utils_sh_loop(Port, OutputHandler, []) of
+        {ok, _Output} = Ok ->
+            Ok;
+        {error, {_Rc, _Output}=Err} ->
+            ErrorHandler(Command, Err)
+    end.
+
+rebar_utils_find_files(Dir, Regex) ->
+    rebar_utils_find_files(Dir, Regex, true).
+
+rebar_utils_find_files(Dir, Regex, Recursive) ->
+    filelib:fold_files(Dir, Regex, Recursive,
+                       fun(F, Acc) -> [F | Acc] end, []).
+
+rebar_utils_now_str() ->
+    {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:local_time(),
+    lists:flatten(io_lib:format("~4b/~2..0b/~2..0b ~2..0b:~2..0b:~2..0b",
+                                [Year, Month, Day, Hour, Minute, Second])).
+
+%% TODO: filelib:ensure_dir/1 corrected in R13B04. Remove when we drop
+%% support for OTP releases older than R13B04.
+rebar_utils_ensure_dir(Path) ->
+    case filelib:ensure_dir(Path) of
+        ok ->
+            ok;
+        {error,eexist} ->
+            ok;
+        Error ->
+            Error
+    end.
+
+-spec rebar_utils_abort() -> no_return().
+rebar_utils_abort() ->
+    throw(rebar_abort).
+
+-spec rebar_utils_abort(string(), [term()]) -> no_return().
+rebar_utils_abort(String, Args) ->
+    ?ERROR(String, Args),
+    rebar_utils_abort().
+
+rebar_utils_find_executable(Name) ->
+    case os:find_executable(Name) of
+        false ->
+            false;
+        Path ->
+            "\"" ++ filename:nativename(Path) ++ "\""
+    end.
+
+%% Convert all the entries in the code path to absolute paths.
+rebar_utils_expand_code_path() ->
+    CodePath = lists:foldl(fun(Path, Acc) ->
+        [filename:absname(Path) | Acc]
+    end, [], code:get_path()),
+    code:set_path(lists:reverse(CodePath)).
+
+%%
+%% Given env. variable FOO we want to expand all references to
+%% it in InStr. References can have two forms: $FOO and ${FOO}
+%% The end of form $FOO is delimited with whitespace or eol
+%%
+rebar_utils_expand_env_variable(InStr, VarName, RawVarValue) ->
+    case string:chr(InStr, $$) of
+        0 ->
+            %% No variables to expand
+            InStr;
+        _ ->
+            VarValue = re:replace(RawVarValue, "\\\\", "\\\\\\\\", [global]),
+            %% Use a regex to match/replace:
+            %% Given variable "FOO": match $FOO\s | $FOOeol | ${FOO}
+            RegEx = io_lib:format("\\\$(~s(\\s|$)|{~s})", [VarName, VarName]),
+            ReOpts = [global, {return, list}],
+            re:replace(InStr, RegEx, [VarValue, "\\2"], ReOpts)
+    end.
+
+rebar_utils_vcs_vsn(Config, Vcs, Dir) ->
+    Key = {Vcs, Dir},
+    Cache = rebar_config_get_xconf(Config, vsn_cache),
+    case dict:find(Key, Cache) of
+        error ->
+            VsnString = rebar_utils_vcs_vsn_1(Vcs, Dir),
+            Cache1 = dict:store(Key, VsnString, Cache),
+            Config1 = rebar_config_set_xconf(Config, vsn_cache, Cache1),
+            {Config1, VsnString};
+        {ok, VsnString} ->
+            {Config, VsnString}
+    end.
+
+rebar_utils_get_experimental_global(Config, Opt, Default) ->
+    rebar_utils_get_experimental_3(fun rebar_config_get_global/3,
+                                   Config, Opt, Default).
+
+%% Return list of erl_opts
+-spec rebar_utils_erl_opts(config()) -> list().
+rebar_utils_erl_opts(Config) ->
+    RawErlOpts = rebar_utils_filter_defines(rebar_config_get(Config,
+                                                             erl_opts, []),
+                                            []),
+    Defines = [{d, list_to_atom(D)}
+               || D <- rebar_config_get_xconf(Config, defines, [])],
+    Opts = Defines ++ RawErlOpts,
+    case proplists:is_defined(no_debug_info, Opts) of
+        true ->
+            [O || O <- Opts, O =/= no_debug_info];
+        false ->
+            [debug_info|Opts]
+    end.
+
+-spec rebar_utils_src_dirs([string()]) -> [file:filename(), ...].
+rebar_utils_src_dirs([]) ->
+    ["src"];
+rebar_utils_src_dirs(SrcDirs) ->
+    SrcDirs.
+
+rebar_utils_ebin_dir() ->
+    filename:join(rebar_utils_get_cwd(), "ebin").
+
+rebar_utils_processing_base_dir(Config) ->
+    Cwd = rebar_utils_get_cwd(),
+    rebar_utils_processing_base_dir(Config, Cwd).
+
+rebar_utils_processing_base_dir(Config, Dir) ->
+    Dir =:= rebar_config_get_xconf(Config, base_dir).
+
+rebar_utils_get_experimental_3(Get, Config, Opt, Default) ->
+    Val = Get(Config, Opt, Default),
+    case Val of
+        Default ->
+            Default;
+        Val ->
+            ?CONSOLE("NOTICE: Using experimental option '~p'~n", [Opt]),
+            Val
+    end.
+
+%% We do the shell variable substitution ourselves on Windows and hope that the
+%% command doesn't use any other shell magic.
+rebar_utils_patch_on_windows(Cmd, Env) ->
+    case os:type() of
+        {win32,nt} ->
+            Cmd1 = "cmd /q /c " ++ lists:foldl(fun({Key, Value}, Acc) ->
+                rebar_utils_expand_env_variable(Acc, Key, Value)
+            end, Cmd, Env),
+            %% Remove left-over vars
+            re:replace(Cmd1, "\\\$\\w+|\\\${\\w+}", "",
+                       [global, {return, list}]);
+        _ ->
+            Cmd
+    end.
+
+rebar_utils_expand_sh_flag(return_on_error) ->
+    {error_handler,
+     fun(_Command, Err) ->
+             {error, Err}
+     end};
+rebar_utils_expand_sh_flag({abort_on_error, Message}) ->
+    {error_handler,
+     rebar_utils_log_msg_and_abort(Message)};
+rebar_utils_expand_sh_flag(abort_on_error) ->
+    {error_handler,
+     fun rebar_utils_log_and_abort/2};
+rebar_utils_expand_sh_flag(use_stdout) ->
+    {output_handler,
+     fun(Line, Acc) ->
+         ?CONSOLE("~s", [Line]),
+         [Line | Acc]
+     end};
+rebar_utils_expand_sh_flag({use_stdout, false}) ->
+    {output_handler,
+     fun(Line, Acc) ->
+         [Line | Acc]
+     end};
+rebar_utils_expand_sh_flag({cd, _CdArg} = Cd) ->
+    {port_settings, Cd};
+rebar_utils_expand_sh_flag({env, _EnvArg} = Env) ->
+    {port_settings, Env}.
+
+-type err_handler() :: fun((string(), {integer(), string()}) -> no_return()).
+-spec rebar_utils_log_msg_and_abort(string()) -> err_handler().
+rebar_utils_log_msg_and_abort(Message) ->
+    fun(_Command, {_Rc, _Output}) ->
+        ?ABORT(Message, [])
+    end.
+
+-spec rebar_utils_log_and_abort(string(), {integer(), string()}) -> no_return().
+rebar_utils_log_and_abort(Command, {Rc, Output}) ->
+    ?ABORT("~s failed with error: ~w and output:~n~s~n",
+           [Command, Rc, Output]).
+
+rebar_utils_sh_loop(Port, Fun, Acc) ->
+    receive
+        {Port, {data, {eol, Line}}} ->
+            rebar_utils_sh_loop(Port, Fun, Fun(Line ++ "\n", Acc));
+        {Port, {data, {noeol, Line}}} ->
+            rebar_utils_sh_loop(Port, Fun, Fun(Line, Acc));
+        {Port, {exit_status, 0}} ->
+            {ok, lists:flatten(lists:reverse(Acc))};
+        {Port, {exit_status, Rc}} ->
+            {error, {Rc, lists:flatten(lists:reverse(Acc))}}
+    end.
+
+rebar_utils_beam_to_mod(Dir, Filename) ->
+    [Dir | Rest] = filename:split(Filename),
+    list_to_atom(filename:basename(string:join(Rest, "."), ".beam")).
+
+rebar_utils_erl_to_mod(Filename) ->
+    list_to_atom(filename:rootname(filename:basename(Filename))).
+
+rebar_utils_beams(Dir) ->
+    filelib:fold_files(Dir, ".*\.beam\$", true,
+                       fun(F, Acc) -> [F | Acc] end, []).
+
+rebar_utils_vcs_vsn_1(Vcs, Dir) ->
+    case rebar_utils_vcs_vsn_cmd(Vcs) of
+        {unknown, VsnString} ->
+            ?DEBUG("vcs_vsn: Unknown VCS atom in vsn field: ~p\n", [Vcs]),
+            VsnString;
+        {cmd, CmdString} ->
+            rebar_utils_vcs_vsn_invoke(CmdString, Dir);
+        Cmd ->
+            %% If there is a valid VCS directory in the application directory,
+            %% use that version info
+            Extension = lists:concat([".", Vcs]),
+            case filelib:is_dir(filename:join(Dir, Extension)) of
+                true ->
+                    ?DEBUG("vcs_vsn: Primary vcs used for ~s\n", [Dir]),
+                    rebar_utils_vcs_vsn_invoke(Cmd, Dir);
+                false ->
+                    %% No VCS directory found for the app. Depending on source
+                    %% tree structure, there may be one higher up, but that can
+                    %% yield unexpected results when used with deps. So, we
+                    %% fallback to searching for a priv/vsn.Vcs file.
+                    VsnFile = filename:join([Dir, "priv", "vsn" ++ Extension]),
+                    case file:read_file(VsnFile) of
+                        {ok, VsnBin} ->
+                            ?DEBUG("vcs_vsn: Read ~s from priv/vsn.~p\n",
+                                   [VsnBin, Vcs]),
+                            string:strip(binary_to_list(VsnBin), right, $\n);
+                        {error, enoent} ->
+                            ?DEBUG("vcs_vsn: Fallback to vcs for ~s\n", [Dir]),
+                            rebar_utils_vcs_vsn_invoke(Cmd, Dir)
+                    end
+            end
+    end.
+
+rebar_utils_vcs_vsn_cmd(git)    -> "git describe --always --tags";
+rebar_utils_vcs_vsn_cmd(hg)     -> "hg identify -i";
+rebar_utils_vcs_vsn_cmd(bzr)    -> "bzr revno";
+rebar_utils_vcs_vsn_cmd(svn)    -> "svnversion";
+rebar_utils_vcs_vsn_cmd(fossil) -> "fossil info";
+rebar_utils_vcs_vsn_cmd({cmd, _Cmd}=Custom) -> Custom;
+rebar_utils_vcs_vsn_cmd(Version) -> {unknown, Version}.
+
+rebar_utils_vcs_vsn_invoke(Cmd, Dir) ->
+    {ok, VsnString} = rebar_utils_sh(Cmd, [{cd, Dir}, {use_stdout, false}]),
+    string:strip(VsnString, right, $\n).
+
+%%
+%% Filter a list of erl_opts platform_define options such that only
+%% those which match the provided architecture regex are returned.
+%%
+rebar_utils_filter_defines([], Acc) ->
+    lists:reverse(Acc);
+rebar_utils_filter_defines([{platform_define, ArchRegex, Key} | Rest],
+                           Acc) ->
+    case rebar_utils_is_arch(ArchRegex) of
+        true ->
+            rebar_utils_filter_defines(Rest, [{d, Key} | Acc]);
+        false ->
+            rebar_utils_filter_defines(Rest, Acc)
+    end;
+rebar_utils_filter_defines([{platform_define, ArchRegex, Key, Value} | Rest],
+                           Acc) ->
+    case rebar_utils_is_arch(ArchRegex) of
+        true ->
+            rebar_utils_filter_defines(Rest, [{d, Key, Value} | Acc]);
+        false ->
+            rebar_utils_filter_defines(Rest, Acc)
+    end;
+rebar_utils_filter_defines([Opt | Rest], Acc) ->
+    rebar_utils_filter_defines(Rest, [Opt | Acc]).

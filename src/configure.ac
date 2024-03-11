@@ -843,19 +843,12 @@ AC_SUBST(VM_CONFIG_INET_BACKEND_SOCKET)
 AC_ARG_VAR([REBAR],[rebar executable])
 AC_ARG_WITH([rebar],
     [AS_HELP_STRING([--with-rebar@<:@=ARG@:>@],
-        [compile rebar executable for erlang dependency compilation (ARG=yes),
+        [use repository rebar executable for
+         Erlang/OTP dependency compilation (ARG=yes),
          or use a preexisting rebar executable (ARG=no) @<:@ARG=yes@:>@ ])],
     [want_rebar="$withval"], [want_rebar="yes"])
 if test "x$want_rebar" = "xyes"; then
-    AC_CONFIG_COMMANDS([rebar],
-        [(cd $SRCDIR/external/rebar/ && \
-          $ESCRIPT bootstrap && \
-          mv ./rebar $BUILDDIR && \
-          echo "Rebar built" || exit 1)],
-        [ESCRIPT=$ESCRIPT
-         SRCDIR=$abs_top_srcdir
-         BUILDDIR=$abs_top_builddir])
-    REBAR="$abs_top_builddir/rebar"
+    REBAR="$abs_top_srcdir/external/rebar2/rebar"
 else
     AC_PATH_PROG([REBAR], [rebar], , ["$abs_top_builddir" $PATH])
     if test -z "$REBAR"; then
@@ -863,7 +856,7 @@ else
     fi
 fi
 AC_SUBST(REBAR)
-AC_SUBST(REBAR_ARGS, ["--verbose 3"])
+AC_SUBST(REBAR_ARGS, ["-vvv"])
 
 # hexpi test
 if test "x$want_integration_tests" = "xyes" -a \
