@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @copyright 2011-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -51,7 +51,7 @@
 %% gen_statem callbacks
 -export([callback_mode/0,
          init/1, handle_event/4,
-         terminate/3, code_change/4, format_status/2]).
+         terminate/3, code_change/4]).
 
 %% FSM States
 -export(['CONNECT'/3,
@@ -62,6 +62,12 @@
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
 -include("cloudi_core_i_services_common_types.hrl").
+
+-ifdef(ERLANG_OTP_VERSION_27_FEATURES).
+-export([format_status/1]).
+-else.
+-export([format_status/2]).
+-endif.
 
 % message type enumeration
 -define(MESSAGE_INIT,                1).
@@ -1462,21 +1468,27 @@ terminate_pids(_, _) ->
 code_change(_, StateName, State, _) ->
     {ok, StateName, State}.
 
--ifdef(VERBOSE_STATE).
-format_status(_Opt, [_PDict, _StateName, State]) ->
-    [{data, [{"State", State}]}].
+-ifdef(ERLANG_OTP_VERSION_27_FEATURES).
+format_status(Status) ->
+    maps:update_with(data, fun format_status_state/1, Status).
 -else.
-format_status(_Opt,
-              [_PDict, _StateName,
-               #state{send_timeouts = SendTimeouts,
-                      send_timeout_monitors = SendTimeoutMonitors,
-                      recv_timeouts = RecvTimeouts,
-                      async_responses = AsyncResponses,
-                      queued = Queue,
-                      cpg_data = Groups,
-                      dest_deny = DestDeny,
-                      dest_allow = DestAllow,
-                      options = ConfigOptions} = State]) ->
+format_status(_Opt, [_PDict, _StateName, State]) ->
+    [{data, [{"State", format_status_state(State)}]}].
+-endif.
+
+-ifdef(VERBOSE_STATE).
+format_status_state(#state{} = State) ->
+    State.
+-else.
+format_status_state(#state{send_timeouts = SendTimeouts,
+                           send_timeout_monitors = SendTimeoutMonitors,
+                           recv_timeouts = RecvTimeouts,
+                           async_responses = AsyncResponses,
+                           queued = Queue,
+                           cpg_data = Groups,
+                           dest_deny = DestDeny,
+                           dest_allow = DestAllow,
+                           options = ConfigOptions} = State) ->
     GroupsNew = case Groups of
         undefined ->
             undefined;
@@ -1497,17 +1509,15 @@ format_status(_Opt,
     end,
     ConfigOptionsNew = cloudi_core_i_configuration:
                        services_format_options_external(ConfigOptions),
-    [{data,
-      [{"State",
-        State#state{send_timeouts = maps:to_list(SendTimeouts),
-                    send_timeout_monitors = maps:to_list(SendTimeoutMonitors),
-                    recv_timeouts = maps:to_list(RecvTimeouts),
-                    async_responses = maps:to_list(AsyncResponses),
-                    queued = cloudi_x_pqueue4:to_plist(Queue),
-                    cpg_data = GroupsNew,
-                    dest_deny = DestDenyNew,
-                    dest_allow = DestAllowNew,
-                    options = ConfigOptionsNew}}]}].
+    State#state{send_timeouts = maps:to_list(SendTimeouts),
+                send_timeout_monitors = maps:to_list(SendTimeoutMonitors),
+                recv_timeouts = maps:to_list(RecvTimeouts),
+                async_responses = maps:to_list(AsyncResponses),
+                queued = cloudi_x_pqueue4:to_plist(Queue),
+                cpg_data = GroupsNew,
+                dest_deny = DestDenyNew,
+                dest_allow = DestAllowNew,
+                options = ConfigOptionsNew}.
 -endif.
 
 %%%------------------------------------------------------------------------

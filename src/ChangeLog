@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-03-21 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add use of format_status/1 callback for Erlang/OTP 27.0 support
+
 2024-03-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi_service_map_reduce comment

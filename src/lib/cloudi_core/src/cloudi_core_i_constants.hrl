@@ -3,7 +3,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,11 +32,14 @@
 
 -ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
 % able to use -if/-elif here
--if(?OTP_RELEASE >= 25).
--define(ERLANG_OTP_VERSION_25_FEATURES, true).
--endif.
 -if(?OTP_RELEASE >= 24).
 -define(ERLANG_OTP_VERSION_24_FEATURES, true).
+-if(?OTP_RELEASE >= 25).
+-define(ERLANG_OTP_VERSION_25_FEATURES, true).
+-if(?OTP_RELEASE >= 27).
+-define(ERLANG_OTP_VERSION_27_FEATURES, true).
+-endif.
+-endif.
 -endif.
 -if(?OTP_RELEASE < 22).
 -error("Erlang/OTP version >= 22.0 is required!").

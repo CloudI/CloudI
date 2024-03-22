@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.7 {@date} {@time}
+%%% @copyright 2011-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -48,7 +48,7 @@
 %% gen_server callbacks
 -export([init/1,
          handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3, format_status/2]).
+         terminate/2, code_change/3]).
 
 %% duo_mode callbacks
 -export([duo_mode_loop_init/1,
@@ -67,6 +67,12 @@
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
 -include("cloudi_core_i_services_common_types.hrl").
+
+-ifdef(ERLANG_OTP_VERSION_27_FEATURES).
+-export([format_status/1]).
+-else.
+-export([format_status/2]).
+-endif.
 
 -record(state,
     {
@@ -817,22 +823,8 @@ handle_call(trans_id, _,
     {TransId, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
     hibernate_check({reply, TransId, State#state{uuid_generator = UUIDNew}});
 
-handle_call({get_status, Timeout}, _,
-            #state{dispatcher = Dispatcher,
-                   duo_mode_pid = DuoModePid} = State) ->
-    % provide something close to the dispatcher's status to have more
-    % consistency between the DuoModePid, if it exists
-    PDict = erlang:get(),
-    Result = {{status,
-               Dispatcher,
-               {module, gen_server},
-               [PDict,
-                running,
-                undefined, % Parent
-                undefined, % Debug
-                format_status(normal, [PDict, State])]},
-              format_status_duo_mode(DuoModePid, Timeout)},
-    hibernate_check({reply, Result, State});
+handle_call({get_status, Timeout}, _, State) ->
+    hibernate_check({reply, sys_get_status(Timeout, State), State});
 
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
@@ -1870,23 +1862,28 @@ terminate_pids(_, _) ->
 code_change(_, State, _) ->
     {ok, State}.
 
--ifdef(VERBOSE_STATE).
-format_status(_Opt, [_PDict, State]) ->
-    [{data,
-      [{"State", State}]}].
+-ifdef(ERLANG_OTP_VERSION_27_FEATURES).
+format_status(Status) ->
+    maps:update_with(state, fun format_status_state/1, Status).
 -else.
-format_status(_Opt,
-              [_PDict,
-               #state{send_timeouts = SendTimeouts,
-                      send_timeout_monitors = SendTimeoutMonitors,
-                      recv_timeouts = RecvTimeouts,
-                      async_responses = AsyncResponses,
-                      queued = Queue,
-                      queued_info = QueueInfo,
-                      cpg_data = Groups,
-                      dest_deny = DestDeny,
-                      dest_allow = DestAllow,
-                      options = ConfigOptions} = State]) ->
+format_status(_Opt, [_PDict, State]) ->
+    [{data, [{"State", format_status_state(State)}]}].
+-endif.
+
+-ifdef(VERBOSE_STATE).
+format_status_state(#state{} = State) ->
+    State.
+-else.
+format_status_state(#state{send_timeouts = SendTimeouts,
+                           send_timeout_monitors = SendTimeoutMonitors,
+                           recv_timeouts = RecvTimeouts,
+                           async_responses = AsyncResponses,
+                           queued = Queue,
+                           queued_info = QueueInfo,
+                           cpg_data = Groups,
+                           dest_deny = DestDeny,
+                           dest_allow = DestAllow,
+                           options = ConfigOptions} = State) ->
     RecvTimeoutsNew = if
         RecvTimeouts =:= undefined ->
             undefined;
@@ -1925,24 +1922,16 @@ format_status(_Opt,
     end,
     ConfigOptionsNew = cloudi_core_i_configuration:
                        services_format_options_internal(ConfigOptions),
-    [{data,
-      [{"State",
-        State#state{send_timeouts = maps:to_list(SendTimeouts),
-                    send_timeout_monitors = maps:to_list(SendTimeoutMonitors),
-                    recv_timeouts = RecvTimeoutsNew,
-                    async_responses = maps:to_list(AsyncResponses),
-                    queued = QueueNew,
-                    queued_info = QueueInfoNew,
-                    cpg_data = GroupsNew,
-                    dest_deny = DestDenyNew,
-                    dest_allow = DestAllowNew,
-                    options = ConfigOptionsNew}}]}];
-format_status(_Opt,
-              [_PDict, _SysState, _Parent, _Debug,
-               #state_duo{} = State]) ->
-    [{data,
-      [{"State",
-        duo_mode_format_state(State)}]}].
+    State#state{send_timeouts = maps:to_list(SendTimeouts),
+                send_timeout_monitors = maps:to_list(SendTimeoutMonitors),
+                recv_timeouts = RecvTimeoutsNew,
+                async_responses = maps:to_list(AsyncResponses),
+                queued = QueueNew,
+                queued_info = QueueInfoNew,
+                cpg_data = GroupsNew,
+                dest_deny = DestDenyNew,
+                dest_allow = DestAllowNew,
+                options = ConfigOptionsNew}.
 -endif.
 
 %%%------------------------------------------------------------------------
@@ -3426,17 +3415,6 @@ handle_module_info_loop_hibernate(Uses,
 
 % duo_mode specific logic
 
-format_status_duo_mode(undefined, _) ->
-    undefined;
-format_status_duo_mode(DuoModePid, Timeout)
-    when is_pid(DuoModePid) ->
-    case catch sys:get_status(DuoModePid, Timeout) of
-        {status, _, _, _} = Status ->
-            Status;
-        _ ->
-            timeout
-    end.
-
 duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                               module = Module,
                               dispatcher = Dispatcher} = State) ->
@@ -3556,26 +3534,63 @@ system_terminate(Reason, _Dispatcher, _Debug, State) ->
 system_code_change(State, _Module, _VsnOld, _Extra) ->
     {ok, State}.
 
-duo_mode_dispatcher_options(ConfigOptions) ->
-    ConfigOptions#config_service_options{
-        rate_request_max = undefined,
-        count_process_dynamic = false,
-        hibernate = false}.
+sys_get_status(Timeout,
+               #state{duo_mode_pid = DuoModePid} = State) ->
+    % provide sys:get_status/2 data for all linked long-lived processes
+    {sys_get_status_dispatcher(State),
+     sys_get_status_duo_mode(DuoModePid, Timeout)}.
+
+sys_get_status_dispatcher(#state{dispatcher = Dispatcher} = State) ->
+    % only dispatcher process state is used to provide data similar to
+    % the sys:get_status/2 output to allow calling
+    % sys:get_status/2 on other linked processes
+    PDict = erlang:get(),
+    {status,
+     Dispatcher,
+     {module, gen_server},
+     [PDict,
+      running,
+      undefined, % Parent
+      undefined, % Debug
+      format_status_state(State)]}.
+
+sys_get_status_duo_mode(undefined, _) ->
+    undefined;
+sys_get_status_duo_mode(DuoModePid, Timeout)
+    when is_pid(DuoModePid) ->
+    case catch sys:get_status(DuoModePid, Timeout) of
+        {status, DuoModePid,
+         {module, cloudi_core_i_services_internal} = ModuleTuple,
+         StatusItems} ->
+            [#state_duo{} = State |
+             StatusItemsReversed] = lists:reverse(StatusItems),
+            StatusItemsNew = lists:reverse(StatusItemsReversed,
+                                           [duo_mode_format_status(State)]),
+            {status, DuoModePid, ModuleTuple, StatusItemsNew};
+        _ ->
+            timeout
+    end.
 
 -ifdef(VERBOSE_STATE).
-duo_mode_format_state(State) ->
+duo_mode_format_status(State) ->
     State.
 -else.
-duo_mode_format_state(#state_duo{recv_timeouts = RecvTimeouts,
-                                 queued = Queue,
-                                 queued_info = QueueInfo,
-                                 options = ConfigOptions} = State) ->
+duo_mode_format_status(#state_duo{recv_timeouts = RecvTimeouts,
+                                  queued = Queue,
+                                  queued_info = QueueInfo,
+                                  options = ConfigOptions} = State) ->
     State#state_duo{recv_timeouts = maps:to_list(RecvTimeouts),
                     queued = cloudi_x_pqueue4:to_plist(Queue),
                     queued_info = queue:to_list(QueueInfo),
                     options = cloudi_core_i_configuration:
                               services_format_options_internal(ConfigOptions)}.
 -endif.
+
+duo_mode_dispatcher_options(ConfigOptions) ->
+    ConfigOptions#config_service_options{
+        rate_request_max = undefined,
+        count_process_dynamic = false,
+        hibernate = false}.
 
 duo_mode_loop_terminate(Reason,
                         #state_duo{duo_mode_pid = DuoModePid,
