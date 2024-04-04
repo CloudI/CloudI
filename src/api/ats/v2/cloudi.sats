@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2021-2023 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2021-2024 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -110,8 +110,10 @@ typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
 
    Operational purity (Haskell's purity) is similar to <!ntm,!exn>
    (catching exceptions breaks referential transparency and
-    most Haskell source code uses throwIO for raising exceptions,
-    so <!ntm> should be closer in practice).
+    most Haskell source code uses throwIO for raising synchronous exceptions,
+    so <!ntm> should be closer in practice if throw is avoided,
+    though error/assert does use throw for raising asynchronous exceptions to
+    make Haskell purity <!ntm,!exn>).
    Operational purity allows hardware architecture variation and
    operating system variation to be considered pure
    (e.g., a function returning the file path character '/' on UNIX and

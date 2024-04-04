@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-04-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve ATS CloudI API function effect tags comment
+
 2024-03-21 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add use of format_status/1 callback for Erlang/OTP 27.0 support
