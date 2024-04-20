@@ -105,12 +105,11 @@ typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
           read from global memory that may change state during runtime
           (includes file descriptors, stdin/stdout/stderr, not reentrant)
    !wrt - write (includes alloc/free) to memory owned (reentrant)
-   fun0 - mathematical purity (no side-effects) during runtime
-   fun1 - may have all possible side-effects (default)
+   fun0 - operational purity (no effects) during runtime
+   fun1 - may have all possible effects (default)
 
-   Operational purity (Haskell's purity) is similar to <!ntm,!exn>
-   (catching exceptions breaks referential transparency and
-    most Haskell source code uses throwIO for raising synchronous exceptions,
+   Haskell's purity is similar to <!ntm,!exn>
+   (most Haskell source code uses throwIO for raising synchronous exceptions,
     so <!ntm> should be closer in practice if throw is avoided,
     though error/assert does use throw for raising asynchronous exceptions to
     make Haskell purity <!ntm,!exn>).
@@ -119,19 +118,23 @@ typedef request_type = [a:int | a == ASYNC || a == SYNC] int(a)
    (e.g., a function returning the file path character '/' on UNIX and
     '\' on Windows is able to be pure).
 
-   fun0 mathematical purity is assumed to relate to only a single execution
-   without considering the result from separate hardware architectures or
-   separate operating systems
+   fun0 is operational purity
+   (not mathematical purity, i.e., referential transparency) due to
+   relating to only a single execution without considering the result
+   from separate hardware architectures or separate operating systems
    (because that variation is not represented as a separate tag).
+
+   Integer divide or modulo by zero is an !exn effect due to raising SIGFPE.
+
    sin/cos/tan/etc. functions and floating-point operations do not have
-   mathematical purity due to the ability to change the
+   operational purity due to the ability to change the
    IEEE rounding mode during runtime
    (i.e., they are !ref effects due to fesetround).
-   Integer divide or modulo by zero is an !exn effect due to raising SIGFPE
-   (if the hardware used traps floating point exceptions).
-   A floating-point operation may also have an !exn effect due to an exception
-   defined in fenv.h for feclearexcept
-   (glibc indicates if SIGFPE is raised with fegetexcept, i.e., not POSIX).
+   A floating-point operation may also have a !ref effect
+   (if the hardware used traps floating-point exceptions)
+   due to floating-point exceptions defined in fenv.h for feclearexcept
+   (glibc indicates the currently enabled floating-point exceptions
+    with fegetexcept, i.e., not POSIX).
 
  *)
 
