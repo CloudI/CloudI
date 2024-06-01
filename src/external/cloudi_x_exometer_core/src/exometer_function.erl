@@ -249,7 +249,12 @@ actual_datapoints(DPs, default, histogram) ->
     actual_datapoints(DPs, exometer_histogram:datapoints(), histogram);
 actual_datapoints(default, DPs, _) ->
     DPs;
+actual_datapoints(DPs0, {Exprs, DPs}, eval) ->
+    {Exprs, datapoints_subset(DPs0, DPs)};
 actual_datapoints(DPs0, DPs, _) ->
+    datapoints_subset(DPs0, DPs).
+
+datapoints_subset(DPs0, DPs) ->
     [D || D <- datapoints(DPs0, DPs),
           lists:member(D, DPs)].
 
@@ -543,11 +548,12 @@ eval_exprs([E|Es], _, Bs) ->
 eval_({erl, Exprs}, Bs) ->
     erl_eval:exprs(Exprs, Bs);
 eval_({T, P, E}, Bs) when T==m; T==match ->
-    Val = e(E, Bs),
-    {value, Val, match(P, Val, Bs)};
+    {value, Val, Bs1} = eval_(E, Bs),
+    {value, Val, match(P, Val, Bs1)};
 eval_({'case', Es, Cls}, Bs) ->
-    {value, V, _} = eval_exprs(Es, Bs),
-    case_clauses(Cls, V, Bs);
+    {value, V, Bs1} = eval_exprs(Es, Bs),
+    {value, Res, _} = case_clauses(Cls, V, Bs),
+    {value, Res, Bs1};
 eval_(Expr, Bs) -> {value, e(Expr, Bs), Bs}.
 
 e({T,V}, Bs) when T==v; T==var ->

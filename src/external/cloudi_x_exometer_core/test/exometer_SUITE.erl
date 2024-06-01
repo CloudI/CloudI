@@ -24,6 +24,7 @@
     test_gauge/1,
     test_fast_counter/1,
     test_crashing_function/1,
+    test_eval_script_match_case/1,
     test_wrapping_counter/1,
     test_update_or_create/1,
     test_update_or_create2/1,
@@ -31,14 +32,11 @@
     test_std_histogram/1,
     test_slot_histogram/1,
     test_std_duration/1,
-    test_folsom_histogram/1,
     test_aggregate/1,
     test_history1_slide/1,
     test_history1_slotslide/1,
-    test_history1_folsom/1,
     test_history4_slide/1,
     test_history4_slotslide/1,
-    test_history4_folsom/1,
     test_re_register_probe/1,
     test_ext_predef/1,
     test_app_predef/1,
@@ -80,6 +78,7 @@ groups() ->
         test_gauge,
         test_fast_counter,
         test_crashing_function,
+        test_eval_script_match_case,
         test_wrapping_counter
       ]},
      {test_defaults, [shuffle],
@@ -93,14 +92,11 @@ groups() ->
        test_std_histogram,
        test_slot_histogram,
        test_std_duration,
-       test_folsom_histogram,
        test_aggregate,
        test_history1_slide,
        test_history1_slotslide,
-       test_history1_folsom,
        test_history4_slide,
        test_history4_slotslide,
-       test_history4_folsom,
        test_slide_ignore_outdated
       ]},
      {re_register, [shuffle],
@@ -129,15 +125,6 @@ end_per_suite(_Config) ->
     ok.
 
 init_per_testcase(Case, Config) when
-      Case == test_folsom_histogram;
-      Case == test_history1_folsom;
-      Case == test_history4_folsom ->
-    {ok, StartedApps} = exometer_test_util:ensure_all_started(exometer_core),
-    ct:log("StartedApps = ~p", [StartedApps]),
-    application:start(bear),
-    application:start(folsom),
-    [{started_apps, StartedApps} | Config];
-init_per_testcase(Case, Config) when
       Case == test_ext_predef;
       Case == test_function_match ->
     ok = application:set_env(
@@ -160,14 +147,6 @@ init_per_testcase(_Case, Config) ->
     ct:log("StartedApps = ~p~n", [StartedApps]),
     [{started_apps, StartedApps} | Config].
 
-end_per_testcase(Case, Config) when
-      Case == test_folsom_histogram;
-      Case == test_history1_folsom;
-      Case == test_history4_folsom ->
-    _ = stop_started_apps(Config),
-    folsom:stop(),
-    application:stop(bear),
-    ok;
 end_per_testcase(Case, Config) when
       Case == test_ext_predef;
       Case == test_function_match ->
@@ -236,6 +215,29 @@ test_crashing_function(_Config) ->
     ok = exometer:new(C2, {function, ?MODULE, crash_fun, [], valie, [value]}, [{cache, 5000}]),
     {ok, {error, unavailable}} = exometer:get_value(C1, [value]),
     {ok, {error, unavailable}} = exometer:get_value(C2, [value]),
+    ok.
+
+%% Test running a script containing the pattern K = case X of ... end.
+test_eval_script_match_case(_Config) ->
+    C = [?MODULE, eval, ?LINE],
+    ok = exometer:new(C,{function,erlang,memory,[],
+                         eval,
+                         {[{fold,'X','Y',
+                            [{m,{v,'K'},
+                              {'case',[{v,'X'}],
+                               [{{a,bin},[],
+                                 [{a,binary}]},
+                                {{v,'_'},[],
+                                 [{v,'X'}]}]}},
+                             {cons,{t,[{v,'X'},{call,{proplists,get_value},
+                                                [{v,'K'},{v,'Value'}]}]},
+                              {v,'Y'}}],nil,{v,'DPs'}}],
+                          [bin,atom]}}),
+    {ok, Res1} = exometer:get_value(C),
+    [{atom,Va},{bin,Vb}] = lists:sort(Res1),
+    true = lists:all(fun is_integer/1, [Va, Vb]),
+    {ok, [{bin, _}]} = exometer:get_value(C, bin),
+    {ok, [{bin, _}]} = exometer:get_value(C, [bin]),
     ok.
 
 test_wrapping_counter(_Config) ->
@@ -342,32 +344,6 @@ update_duration(C, V) ->
     timer:sleep(V),
     exometer:update(C, timer_end).
 
-test_folsom_histogram(_Config) ->
-    ok = exometer:new(
-	   C1 = [?MODULE,hist,?LINE],
-	   ad_hoc, [{module, exometer_folsom},
-		    {type, histogram}]),  %% truncate by default
-    ok = exometer:new(
-	   C2 = [?MODULE,hist,?LINE],
-	   ad_hoc, [{module, exometer_folsom},
-		    {type, histogram},
-		    {truncate, true}]),
-    ok = exometer:new(
-	   C3 = [?MODULE,hist,?LINE],
-	   ad_hoc, [{module, exometer_folsom},
-		    {type, histogram},
-		    {truncate, false}]),
-    _ = [[update_(C1,V),update_(C2,V),update_(C3,V)] || V <- vals()],
-    {_, {ok,DPs1}} = timer:tc(exometer, get_value, [C1]),
-    {_, {ok,DPs2}} = timer:tc(exometer, get_value, [C2]),
-    {_, {ok,DPs3}} = timer:tc(exometer, get_value, [C3]),
-    [{n,134},{mean,2},{min,1},{max,9},{median,2},
-     {50,2},{75,3},{90,4},{95,5},{99,8},{999,9}] = DPs1 = DPs2,
-    [{n,134},{mean,2126866},{min,1},{max,9},{median,2},
-     {50,2},{75,3},{90,4},{95,5},{99,8},{999,9}] =
-     	scale_mean(DPs3),
-    ok.
-
 test_aggregate(_Config) ->
     K = ?LINE,
     ok = exometer:new(E1 = [?MODULE, K, a, 1], gauge, []),
@@ -389,17 +365,11 @@ test_history1_slide(_Config) ->
 test_history1_slotslide(_Config) ->
     test_history(1, slot_slide, file_path("test/data/puts_time_hist1.bin")).
 
-test_history1_folsom(_Config) ->
-    test_history(1, folsom, file_path("test/data/puts_time_hist1.bin")).
-
 test_history4_slide(_Config) ->
     test_history(4, slide, file_path("test/data/puts_time_hist4.bin")).
 
 test_history4_slotslide(_Config) ->
     test_history(4, slot_slide, file_path("test/data/puts_time_hist4.bin")).
-
-test_history4_folsom(_Config) ->
-    test_history(4, folsom, file_path("test/data/puts_time_hist4.bin")).
 
 test_re_register_probe(_Config) ->
     K = ?LINE,
@@ -531,7 +501,7 @@ test_history(N, slide, F) ->
     RefStats = load_data(F, M),
     ct:log("history(~w,s): ~p~n"
            "reference:   ~p~n", [N, exometer:get_value(M),
-                                 subset(RefStats)]),
+                                 RefStats]),
     ok;
 test_history(N, slot_slide, F) ->
     M = [?MODULE, hist, ?LINE],
@@ -542,27 +512,11 @@ test_history(N, slot_slide, F) ->
                        {slot_period, 1}]),
     RefStats = load_data(F, 2000, M),
     {T, {ok, Val}} = timer:tc(exometer,get_value,[M]),
-    Subset = subset(RefStats),
-    Error = calc_error(Val, Subset),
+    Error = calc_error(Val, RefStats),
     ct:log("time: ~p~n"
            "history(~w,ss): ~p~n"
            "reference:    ~p~n"
-           "error: ~p~n", [T, N, Val, Subset, Error]),
-    ok;
-test_history(N, folsom, F) ->
-    M = [?MODULE, hist, ?LINE],
-    ok = exometer:new(
-           M, ad_hoc, [{module, exometer_folsom},
-                       {type, histogram},
-                       {truncate, true}]),
-    RefStats = load_data(F, M),
-    {T, {ok, Val}} = timer:tc(exometer,get_value,[M]),
-    Subset = subset(RefStats),
-    Error = calc_error(Val, Subset),
-    ct:log("time: ~p~n"
-           "history(~w,f): ~p~n"
-           "reference: ~p~n"
-           "error: ~p~n", [T, N, Val, Subset, Error]),
+           "error: ~p~n", [T, N, Val, RefStats, Error]),
     ok.
 
 vals() ->
@@ -595,7 +549,7 @@ load_data(F, M) ->
     ct:log("load_data(~s,...)", [F]),
     ct:log("CWD = ~p", [element(2, file:get_cwd())]),
     {ok, [Values]} = file:consult(F),
-    Stats = bear:get_statistics(Values),
+    Stats = exometer_util:get_statistics(Values),
     _T1 = os:timestamp(),
     _ = [ok = exometer:update(M, V) || V <- Values],
     _T2 = os:timestamp(),
@@ -603,7 +557,7 @@ load_data(F, M) ->
 
 load_data(F, Rate, M) ->
     {ok, [Values]} = file:consult(F),
-    Stats = bear:get_statistics(Values),
+    Stats = exometer_util:get_statistics(Values),
     pace(Rate, fun([V|Vs]) ->
                        ok = exometer:update(M, V),
                        {more, Vs};
@@ -648,20 +602,25 @@ shoot(F, St, [_|T]) ->
 shoot(_, St, []) ->
     {more, St}.
 
-subset(Stats) ->
-    lists:map(
-      fun(mean) -> {mean, proplists:get_value(arithmetic_mean, Stats)};
-         (K) when is_atom(K) -> lists:keyfind(K, 1, Stats);
-         (P) when is_integer(P) ->
-              lists:keyfind(P, 1, proplists:get_value(percentile,Stats,[]))
-      end, [n,mean,min,max,median,50,75,90,95,99,999]).
-
 calc_error(Val, Ref) ->
+    ct:pal("Val = ~p, Ref = ~p", [Val, Ref]),
     lists:map(
       fun({{K,V}, {K,R}}) ->
-              {K, abs(V-R)/R}
-      end, lists:zip(Val, Ref)).
+              {K, try_err(V, R)}
+      end, lists:zip(Val, sort_ref(Val, Ref))).
 
+sort_ref([{K,_}|T], Ref) ->
+    {_, V} = lists:keyfind(K, 1, Ref),
+    [{K, V} | sort_ref(T, Ref)];
+sort_ref([], _) ->
+    [].
+
+try_err(V, R) ->
+    try abs(V-R)/R
+    catch
+        error:_ ->
+            error
+    end.
 
 compile_app1(Config) ->
     DataDir = filename:absname(?config(data_dir, Config)),

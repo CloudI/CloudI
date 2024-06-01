@@ -420,9 +420,6 @@ test_run(Module) ->
 %% `{Time1, Time2, Datapoints}'. `Time1' is the time (in microsecs) it took to
 %% insert the values. `Time2' is the time it took to calculate all default
 %% datapoints. The data set is shuffled between the two runs.
-%%
-%% To assess the accuracy of the reported percentiles, use e.g.
-%% `bear:get_statistics(exometer_histogram:test_series())' as a reference.
 %% @end
 test_run(Module, Interval) ->
     Series = test_series(),
@@ -462,7 +459,7 @@ tc(F) ->
 -spec test_series() -> [integer()].
 %% @doc Create a series of values for histogram testing.
 %%
-%% These are the properties of the current test set:
+%% These are the properties of the current test set (note: bear no longer in use):
 %% <pre lang="erlang">
 %% 1&gt; rp(bear:get_statistics(exometer_histogram:test_series())).
 %% [{min,3},

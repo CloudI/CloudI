@@ -2,6 +2,31 @@
 
 # The parse_trans application #
 
+__Authors:__ Ulf Wiger ([`ulf@wiger.net`](mailto:ulf@wiger.net)).
+
+Parse_transform utilities
+
+[![Build Status](https://github.com/uwiger/parse_trans/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/uwiger/parse_trans/actions/workflows/ci.yml)
+[![Hex pm](http://img.shields.io/hexpm/v/parse_trans.svg?style=flat)](https://hex.pm/packages/parse_trans)
+
+
+## Introduction ##
+
+Parse_trans was written in order to capture some useful patterns in parse transformation
+and code generation for Erlang.
+
+Most notably, perhaps, the module [`exprecs`](exprecs.md) generates standardized accessor
+functions for records, and [`ct_expand`](ct_expand.md) makes it possible to evaluate an
+expression at compile-time and substitute the result as a compile-time constant.
+
+Less known modules, perhaps:
+* [`parse_trans_pp`](parse_trans_pp.md) can be called with escript to pretty-print source from
+  debug-compiled .beam files.
+* [`parse_trans_codegen`](parse_trans_codegen.md) provides pseudo-functions that can be used for
+  simple code generation.
+* [`parse_trans`](parse_trans.md) provides various helper functions for traversing code and
+  managing complex parse transforms
+
 
 ## Modules ##
 

@@ -664,7 +664,8 @@ get_pos(I) ->
         undefined ->
             0;
         Form ->
-            erl_syntax:get_pos(Form)
+            Anno = erl_syntax:get_pos(Form),
+            erl_anno:location(Anno)
     end.
 
 -spec parse_transform(forms(), options()) ->
@@ -775,7 +776,8 @@ generate_f(attribute, {attribute,L,export_records,_} = Form, _Ctxt,
      false, Acc#pass1{inserted = true}};
 generate_f(function, Form, _Context, #pass1{generated = false} = Acc) ->
     % Layout record funs before first function
-    L = erl_syntax:get_pos(Form),
+    Anno = erl_syntax:get_pos(Form),
+    L = erl_anno:location(Anno),
     Forms = generate_specs_and_accessors(L, Acc),
     {Forms, Form, [], false, Acc#pass1{generated = true}};
 generate_f(_Type, Form, _Ctxt, Acc) ->
@@ -796,11 +798,17 @@ verify_generated(Forms, #pass1{} = Acc, _Context) ->
         false ->
             % should be re-written to use the parse_trans helper...?
             [{eof,Last}|RevForms] = lists:reverse(Forms),
+            Anno = erl_anno:new(Last),
             [{function, NewLast, _, _, _}|_] = RevAs =
-                lists:reverse(generate_specs_and_accessors(Last, Acc)),
-            lists:reverse([{eof, NewLast+1} | RevAs] ++ RevForms)
+                lists:reverse(generate_specs_and_accessors(Anno, Acc)),
+            Loc = erl_anno:location(NewLast),
+            lists:reverse([{eof, increment_line(Loc)} | RevAs] ++ RevForms)
     end.
 
+increment_line(L) when is_integer(L) ->
+    L + 1;
+increment_line({L, C}) when is_integer(L), is_integer(C) ->
+    {L + 1, C}.
 
 check_record_names(Es, L, #pass1{records = Rs}) ->
     case [E || E <- Es,
@@ -1503,7 +1511,7 @@ f_convert(_Vsns, L, Acc) ->
          [{var, L, 'Rec'}]}]],
        [{match, L, {var, L, 'Rname'},
          {call, L, {atom, L, element},
-          [{integer, L, 1}, {var, 1, 'Rec'}]}},
+          [{integer, L, 1}, {var, L, 'Rec'}]}},
         {match,L,{var,L,'Size'},
          {call, L, {atom, L, fname(info, Acc)},
           [{var,L,'Rname'}, {atom, L, size}, {var,L,'FromVsn'}]}},

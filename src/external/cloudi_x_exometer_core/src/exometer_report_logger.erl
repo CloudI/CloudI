@@ -105,6 +105,9 @@
 -callback logger_handle_data(binary(), plugin_state()) ->
     {binary(), plugin_state()}.
 
+-optional_callbacks([logger_init_input/1,
+                     logger_init_output/1]).
+
 -spec new([{id, any()} | {input, list()} | {output, list()}]) -> {ok,pid()}.
 %% @doc Create a new logger instance.
 %%

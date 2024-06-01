@@ -42,7 +42,7 @@ will be invoked to notify the plugin of the new metrics subscription.
 to the recipient through a previous `exometer_report()` function.
 
 + Tear down subscription<br />When `exometer_report:unsubscribe()` is called, addressing the
-custom report plugin, the recipient's `exometer_unsubscribe()` function
+custom report plugin, the recipient's `Mod:exometer_unsubscribe/4` function
 will be invoked to notify the plugin of the deleted subscription.
 
 The following chapters details each of the callbacks to be implemented
@@ -64,7 +64,7 @@ new plugin and return a state to be used in future plugin calls.
 + `Options`<br />Provides the prop list with attributes from the application environment
 for the cusom recipient. See [Configuring reporter plugins](#Configuring_reporter_plugins) for
 
-The `exomoeter_init()` function should return `{ok, State}` where
+The `Mod:exometer_init/1` function should return `{ok, State}` where
 State is a tuple that will be provided as a reference argument to
 future calls made into the plugin. Any other return formats will
 cancel the creation of the custom reporting plugin.
@@ -72,7 +72,7 @@ cancel the creation of the custom reporting plugin.
 
 #### <a name="exometer_subscribe/5">exometer_subscribe/5</a> ####
 
-The `exometer_subscribe()` function is invoked as follows:
+The `Mod:exometer_subscribe/5` function is invoked as follows:
 
 ```erlang
 
@@ -106,7 +106,7 @@ generate an error log message by exometer.
 
 #### <a name="exometer_report/5">exometer_report/5</a> ####
 
-The `exometer_report()` function is invoked as follows:
+The `Mod:exometer_report/5` function is invoked as follows:
 
 ```erlang
 
@@ -136,7 +136,7 @@ generate an error log message by exometer.
 
 #### <a name="exometer_unsubscribe/4">exometer_unsubscribe/4</a> ####
 
-The `exometer_unsubscribe()` function is invoked as follows:
+The `Mod:exometer_unsubscribe/4` function is invoked as follows:
 
 ```erlang
 
@@ -146,7 +146,7 @@ The `exometer_unsubscribe()` function is invoked as follows:
 The custom plugin can use this notification to modify and return its
 state in order to free resources used to maintain the now de-activated
 subscription. When this call returns, the given metric / data point
-will not be present in future calls to `exometer_report()`.
+will not be present in future calls to `exometer_report/5`.
 
 + `Metric`<br />Specifies the metric that is now subscribed to by the plugin
 as a list of atoms.
@@ -161,7 +161,7 @@ can understand.
 
 + `State`<br />Contains the state returned by the last called plugin function.
 
-The `exometer_unsubscribe()` function should return `{ok, State}` where
+The `Mod:exometer_unsubscribe/4` function should return `{ok, State}` where
 State is a tuple that will be provided as a reference argument to
 future calls made into the plugin. Any other return formats will
 generate an error log message by exometer.
@@ -198,7 +198,7 @@ with a list of one datapoint/value pair.
 
 
 <pre><code>
-datapoint() = <a href="exometer.md#type-datapoint">exometer:datapoint()</a>
+datapoint() = <a href="http://www.erlang.org/doc/man/exometer.html#type-datapoint">exometer:datapoint()</a>
 </code></pre>
 
 
@@ -258,7 +258,7 @@ interval() = pos_integer() | atom()
 
 
 <pre><code>
-metric() = <a href="exometer.md#type-name">exometer:name()</a> | {find, <a href="exometer.md#type-name">exometer:name()</a>} | {select, <a href="ets.md#type-match_spec">ets:match_spec()</a>}
+metric() = <a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a> | {find, <a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>} | {select, <a href="http://www.erlang.org/doc/man/ets.html#type-match_spec">ets:match_spec()</a>}
 </code></pre>
 
 
@@ -308,8 +308,16 @@ time_ms() = pos_integer()
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_reporter-2">add_reporter/2</a></td><td>Add a reporter.</td></tr><tr><td valign="top"><a href="#call_reporter-2">call_reporter/2</a></td><td>Send a custom (synchronous) call to <code>Reporter</code>.</td></tr><tr><td valign="top"><a href="#cast_reporter-2">cast_reporter/2</a></td><td>Send a custom (asynchronous) cast to <code>Reporter</code>.</td></tr><tr><td valign="top"><a href="#delete_interval-2">delete_interval/2</a></td><td>Delete a named interval.</td></tr><tr><td valign="top"><a href="#disable_me-2">disable_me/2</a></td><td>Used by a reporter to disable itself.</td></tr><tr><td valign="top"><a href="#disable_reporter-1">disable_reporter/1</a></td><td>Disable <code>Reporter</code>.</td></tr><tr><td valign="top"><a href="#enable_reporter-1">enable_reporter/1</a></td><td>Enable <code>Reporter</code>.</td></tr><tr><td valign="top"><a href="#get_intervals-1">get_intervals/1</a></td><td>List the named intervals for <code>Reporter</code>.</td></tr><tr><td valign="top"><a href="#list_metrics-0">list_metrics/0</a></td><td>Equivalent to <a href="#list_metrics-1"><tt>list_metrics([])</tt></a>.</td></tr><tr><td valign="top"><a href="#list_metrics-1">list_metrics/1</a></td><td>List all metrics matching <code>Path</code>, together with subscription status.</td></tr><tr><td valign="top"><a href="#list_reporters-0">list_reporters/0</a></td><td>List the name and pid of each known reporter.</td></tr><tr><td valign="top"><a href="#list_subscriptions-1">list_subscriptions/1</a></td><td>List all subscriptions for <code>Reporter</code>.</td></tr><tr><td valign="top"><a href="#new_entry-1">new_entry/1</a></td><td>Called by exometer whenever a new entry is created.</td></tr><tr><td valign="top"><a href="#remove_reporter-1">remove_reporter/1</a></td><td>Remove reporter and all its subscriptions.</td></tr><tr><td valign="top"><a href="#remove_reporter-2">remove_reporter/2</a></td><td>Remove <code>Reporter</code> (non-blocking call).</td></tr><tr><td valign="top"><a href="#restart_intervals-1">restart_intervals/1</a></td><td>Restart all named intervals, respecting specified delays.</td></tr><tr><td valign="top"><a href="#set_interval-3">set_interval/3</a></td><td>Specify a named interval.</td></tr><tr><td valign="top"><a href="#setopts-3">setopts/3</a></td><td>Called by exometer when options of a metric entry are changed.</td></tr><tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>Starts the server
---------------------------------------------------------------------.</td></tr><tr><td valign="top"><a href="#start_reporters-0">start_reporters/0</a></td><td></td></tr><tr><td valign="top"><a href="#subscribe-4">subscribe/4</a></td><td>Equivalent to <a href="#subscribe-6"><tt>subscribe(Reporter, Metric, DataPoint, Interval, [],
-true)</tt></a>.</td></tr><tr><td valign="top"><a href="#subscribe-5">subscribe/5</a></td><td>Equivalent to <a href="#subscribe-6"><tt>subscribe(Reporter, Metric, DataPoint, Interval, Extra,
+--------------------------------------------------------------------.</td></tr><tr><td valign="top"><a href="#start_reporters-0">start_reporters/0</a></td><td></td></tr><tr><td valign="top"><a href="#subscribe-4">subscribe/4</a></td><td>Equivalent to <a href="#subscribe-6"><tt>subscribe(Reporter,
+Metric,
+DataPoint,
+Interval,
+[],
+true)</tt></a>.</td></tr><tr><td valign="top"><a href="#subscribe-5">subscribe/5</a></td><td>Equivalent to <a href="#subscribe-6"><tt>subscribe(Reporter,
+Metric,
+DataPoint,
+Interval,
+Extra,
 false)</tt></a>.</td></tr><tr><td valign="top"><a href="#subscribe-6">subscribe/6</a></td><td>Add a subscription to an existing reporter.</td></tr><tr><td valign="top"><a href="#terminate_reporter-1">terminate_reporter/1</a></td><td></td></tr><tr><td valign="top"><a href="#trigger_interval-2">trigger_interval/2</a></td><td>Trigger a named interval.</td></tr><tr><td valign="top"><a href="#unsubscribe-3">unsubscribe/3</a></td><td>Equivalent to <a href="#unsubscribe-4"><tt>unsubscribe(Reporter, Metric, DataPoint, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#unsubscribe-4">unsubscribe/4</a></td><td>Removes a subscription.</td></tr><tr><td valign="top"><a href="#unsubscribe_all-2">unsubscribe_all/2</a></td><td>Removes all subscriptions related to Metric in Reporter.</td></tr></table>
 
 
@@ -465,7 +473,7 @@ List the named intervals for `Reporter`.
 ### list_metrics/0 ###
 
 <pre><code>
-list_metrics() -&gt; {ok, [{<a href="exometer.md#type-name">exometer:name()</a>, [<a href="#type-datapoint">datapoint()</a>], [{<a href="#type-reporter_name">reporter_name()</a>, <a href="#type-datapoint">datapoint()</a>}], <a href="exometer.md#type-status">exometer:status()</a>}]} | {error, any()}
+list_metrics() -&gt; {ok, [{<a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>, [<a href="#type-datapoint">datapoint()</a>], [{<a href="#type-reporter_name">reporter_name()</a>, <a href="#type-datapoint">datapoint()</a>}], <a href="http://www.erlang.org/doc/man/exometer.html#type-status">exometer:status()</a>}]} | {error, any()}
 </code></pre>
 <br />
 
@@ -476,7 +484,7 @@ Equivalent to [`list_metrics([])`](#list_metrics-1).
 ### list_metrics/1 ###
 
 <pre><code>
-list_metrics(Path::<a href="#type-metric">metric()</a>) -&gt; {ok, [{<a href="exometer.md#type-name">exometer:name()</a>, [<a href="#type-datapoint">datapoint()</a>], [{<a href="#type-reporter_name">reporter_name()</a>, <a href="#type-datapoint">datapoint()</a>}], <a href="exometer.md#type-status">exometer:status()</a>}]} | {error, any()}
+list_metrics(Path::<a href="#type-metric">metric()</a>) -&gt; {ok, [{<a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>, [<a href="#type-datapoint">datapoint()</a>], [{<a href="#type-reporter_name">reporter_name()</a>, <a href="#type-datapoint">datapoint()</a>}], <a href="http://www.erlang.org/doc/man/exometer.html#type-status">exometer:status()</a>}]} | {error, any()}
 </code></pre>
 <br />
 
@@ -514,7 +522,7 @@ List all subscriptions for `Reporter`.
 ### new_entry/1 ###
 
 <pre><code>
-new_entry(Entry::<a href="exometer.md#type-entry">exometer:entry()</a>) -&gt; ok
+new_entry(Entry::<a href="http://www.erlang.org/doc/man/exometer.html#type-entry">exometer:entry()</a>) -&gt; ok
 </code></pre>
 <br />
 
@@ -597,7 +605,7 @@ all intervals to be restarted/resynched with corresponding relative delays.
 ### setopts/3 ###
 
 <pre><code>
-setopts(Metric::<a href="exometer.md#type-entry">exometer:entry()</a>, Options::<a href="#type-options">options()</a>, Status::<a href="exometer.md#type-status">exometer:status()</a>) -&gt; ok
+setopts(Metric::<a href="http://www.erlang.org/doc/man/exometer.html#type-entry">exometer:entry()</a>, Options::<a href="#type-options">options()</a>, Status::<a href="http://www.erlang.org/doc/man/exometer.html#type-status">exometer:status()</a>) -&gt; ok
 </code></pre>
 <br />
 
@@ -633,7 +641,7 @@ subscribe(Reporter::<a href="#type-reporter_name">reporter_name()</a>, Metric::<
 </code></pre>
 <br />
 
-Equivalent to [`subscribe(Reporter, Metric, DataPoint, Interval, [],true)`](#subscribe-6).
+Equivalent to [`subscribe(Reporter,Metric,DataPoint,Interval,[],true)`](#subscribe-6).
 
 <a name="subscribe-5"></a>
 
@@ -644,7 +652,7 @@ subscribe(Reporter::<a href="#type-reporter_name">reporter_name()</a>, Metric::<
 </code></pre>
 <br />
 
-Equivalent to [`subscribe(Reporter, Metric, DataPoint, Interval, Extra,false)`](#subscribe-6).
+Equivalent to [`subscribe(Reporter,Metric,DataPoint,Interval,Extra,false)`](#subscribe-6).
 
 <a name="subscribe-6"></a>
 

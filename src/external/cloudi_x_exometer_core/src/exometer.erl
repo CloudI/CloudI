@@ -24,9 +24,7 @@
 %%            {['_'], fast_counter, [{module, exometer}]},
 %%            {['_'], gauge       , [{module, exometer}]},
 %%            {['_'], histogram   , [{module, exometer_histogram}]},
-%%            {['_'], spiral      , [{module, exometer_spiral}]},
-%%            {['_'], duration    , [{module, exometer_folsom}]},
-%%            {['_'], meter       , [{module, exometer_folsom}]},
+%%            {['_'], spiral      , [{module, exometer_spiral}]}
 %%           ]}
 %%         ]}
 %% </pre>
@@ -710,7 +708,7 @@ datapoints(D, _) when is_integer(D) ->
 datapoints(D, _) when is_list(D) ->
     D.
 
--spec info(name()) -> [{info(), any()}].
+-spec info(name()) -> [{info(), any()}] | undefined.
 %% @doc Returns a list of info items for Metric, see {@link info/2}.
 info(Name) ->
     case ets:lookup(exometer_util:table(), Name) of

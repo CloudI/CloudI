@@ -4,14 +4,13 @@
 
 Copyright (c) 2014 Basho Technologies, Inc.  All Rights Reserved.
 
-__Version:__ Oct 30 2018 13:49:09
+__Version:__ Feb 17 2024 15:18:00
 
 __Authors:__ Ulf Wiger ([`ulf.wiger@feuerlabs.com`](mailto:ulf.wiger@feuerlabs.com)), Magnus Feuer ([`magnus.feuer@feuerlabs.com`](mailto:magnus.feuer@feuerlabs.com)).
 
-[![Travis][travis badge]][travis]
+[![Build Status](https://github.com/Feuerlabs/exometer_core/actions/workflows/main.yml/badge.svg)](https://github.com/Feuerlabs/exometer_core/actions/workflows/main.yml)
 [![Hex.pm Version][hex version badge]][hex]
 [![Hex.pm License][hex license badge]][hex]
-[![Erlang Versions][erlang version badge]][travis]
 [![Build Tool][build tool]][hex]
 
 The Exometer Core package allows for easy and efficient instrumentation of
@@ -48,8 +47,7 @@ optional packages, both users and developers.
     4. [exometer_histogram (probe)](#exometer_histogram_(probe))
     5. [exometer_uniform (probe)](#exometer_uniform_(probe))
     6. [exometer_spiral (probe)](#exometer_spiral_(probe))
-    7. [exometer_folsom [entry]](#exometer_folsom_[entry])
-    8. [exometer_function [entry]](#exometer_function_[entry])
+    7. [exometer_function [entry]](#exometer_function_[entry])
 3. [Built in Reporters](#Built_in_Reporters)
     1. [exometer_report_tty](#exometer_report_tty)
 4. [Instrumenting Erlang code](#Instrumenting_Erlang_code)
@@ -90,8 +88,8 @@ Metrics are identified by a list of terms, such as given below:
 `[ xml_front_end, parser, file_size ]`
 
 A metric is created through a call by the code to be instrumented to
-`exometer:new()`. Once created, the metric can be updated through
-`exometer:update()`, or on its own initiative through the
+`exometer:new/2`. Once created, the metric can be updated through
+`exometer:update/2`, or on its own initiative through the
 `exometer_probe:sample` behavior implementation.
 
 
@@ -115,7 +113,7 @@ given metric.
 #### <a name="Metric_Type">Metric Type</a> ####
 
 The type of a metric, specified when the metric is created through
-`exometer:new()`, determines which `exometer_entry`
+`exometer:new/2`, determines which `exometer_entry`
 callback to use.
 
 The link between the type and the entry to use is configured
@@ -129,17 +127,13 @@ configurable `exometer_entry` callback.
 #### <a name="Entry_Callback">Entry Callback</a> ####
 
 An exometer entry callback will receive values reported to a metric through the
-`exometer:update()` call and compile it into one or more data points.
+`exometer:update/2` call and compile it into one or more data points.
 The entry callback can either be a counter (implemented natively
 in `exometer`), or a more complex statistical analysis such
 as a uniform distribution or a regular histogram.
 
 The various outputs from these entries are reported as data points
 under the given metric.
-
-An entry can also interface external analytics packages.
-`exometer_folsom`, for example, integrates with the
-`folsom_metrics` package found at [`https://github.com/boundary/folsom`](https://github.com/boundary/folsom).
 
 
 #### <a name="Probe">Probe</a> ####
@@ -159,7 +153,7 @@ the given subsystem and add it to the metric's data points.
 
 #### <a name="Caching">Caching</a> ####
 
-Metric and data point values are read with the `exometer:get_value()`
+Metric and data point values are read with the `exometer:get_value/1`
 function. In the case of counters, this operation is very fast. With probes,
 the call results in a synchronous dialog with the probe process, and the
 cost of serving the request depends on the probe implementation and the
@@ -168,12 +162,12 @@ nature of the metric being served.
 If the cost of reading the value is so high that calling the function often
 would result in prohibitive load, it is possible to cache the value. This is
 done either explicitly from the probe itself (by calling
-`exometer_cache:write()`), or by specifying the option `{cache, Lifetime}`
+`exometer_cache:write/3`), or by specifying the option `{cache, Lifetime}`
 for the entry. If an entry has a non-zero cache lifetime specified, the
-`get_value()` call will try fetching the cached value before calling the
+`get_value/1` call will try fetching the cached value before calling the
 actual entry and automatically caching the result.
 
-Note that if `{cache, Lifetime}` is not specified, `exometer:get_value()`
+Note that if `{cache, Lifetime}` is not specified, `exometer:get_value/1`
 will neither read nor write to the cache. It is possible for the probe
 to periodically cache a value regardless of how the cache lifetime is set,
 and the probe may also explicitly read from the cache if it isn't done
@@ -191,7 +185,7 @@ Each subscription ties a specific metric-datapoint pair to a reporter
 and an interval (given in milliseconds). The reporter system will, at
 the given interval, send the current value of the data point to the
 subscribing reporter. The subscription, with all its parameters,
-is setup through a call to `exometer_report:subscribe()`.
+is setup through a call to `exometer_report:subscribe/4`.
 
 In the case of processes, subscribed-to values will be delivered as a
 message. Modules, which implement the `exometer_report` callback
@@ -199,7 +193,7 @@ behavior, will receive the plugins as a callbacks within the
 `exometer_report` process.
 
 Subscriptions can either be setup at runtime, through
-`exometer_report:subscribe()` calls, or statically through the
+`exometer_report:subscribe/4` calls, or statically through the
 `exometer_report` configuration data.
 
 
@@ -212,10 +206,10 @@ with the Exometer Core package, as described below:
 #### <a name="counter_(exometer_native)">counter (exometer native)</a> ####
 
 The counter is implemented directly in `exometer` to provide simple
-counters.  A call to `exometer:update()` will add the provided value
+counters.  A call to `exometer:update/2` will add the provided value
 to the counter.
 
-The counter can be reset to zero through `exometer:reset()`.
+The counter can be reset to zero through `exometer:reset/1`.
 
 The available data points under a metric using the counter entry
 are `value` and `ms_since_reset`.
@@ -230,10 +224,10 @@ comparison to the regular counter.
 The tradeoff is that running tracing and/or debugging may interfere
 with the counter functionality.
 
-A call to `exometer:update()` will add the provided value to the
+A call to `exometer:update/2` will add the provided value to the
 counter.
 
-The counter can be reset to zero through `exometer:reset()`.
+The counter can be reset to zero through `exometer:reset/1`.
 
 The available data points under a metric using the fast_counter
 entry are `value` and `ms_since_reset`.
@@ -242,11 +236,11 @@ entry are `value` and `ms_since_reset`.
 #### <a name="gauge_(exometer_native)">gauge (exometer native)</a> ####
 
 The gauge is implemented directly in `exometer` to provide simple
-gauges.  A call to `exometer:update()` will set the gauge's value
+gauges.  A call to `exometer:update/2` will set the gauge's value
 to the provided value. That is, the value of the gauge entry is
 always the most recently provided value.
 
-The gauge can be reset to zero through `exometer:reset()`.
+The gauge can be reset to zero through `exometer:reset/1`.
 
 The available data points under a metric using the gauge entry
 are `value` and `ms_since_reset`.
@@ -255,7 +249,7 @@ are `value` and `ms_since_reset`.
 #### <a name="exometer_histogram_(probe)">exometer_histogram (probe)</a> ####
 
 The histogram probe stores a given number of updates, provided through
-`exometer:update()`, in a histogram. The histogram maintains a log
+`exometer:update/2`, in a histogram. The histogram maintains a log
 derived from all values received during a configurable time span and
 provides min, max, median, mean, and percentile analysis data points
 for the stored data.
@@ -272,7 +266,7 @@ resource consumption.
 #### <a name="exometer_uniform_(probe)">exometer_uniform (probe)</a> ####
 
 The uniform probe provides a uniform sample over a pool of values
-provided through `exometer:update()`. When the pool reaches its configurable
+provided through `exometer:update/2`. When the pool reaches its configurable
 max size, existing values will be replaced at random to make space for
 new values. Much like `exometer_histogram`, the uniform probe
 provides min, max, median, mean, and percentile analysis data points
@@ -283,7 +277,7 @@ for the stored data.
 
 The spiral probe maintains the total sum of all values stored in its
 histogram. The histogram has a configurable time span, all values
-provided to the probe, through `exometer:update()`, within that time
+provided to the probe, through `exometer:update/2`, within that time
 span will be summed up and reported. If, for example, the histogram
 covers 60 seconds, the spiral probe will report the sum of all
 values reported during the last minute.
@@ -291,26 +285,12 @@ values reported during the last minute.
 The grand total of all values received during the lifetime of the
 probe is also available.
 
-The available data points under a metric using the spiral entry
-are `count` (grand total) and `one` (sum for the last time span).
-
-
-#### <a name="exometer_folsom_[entry]">exometer_folsom [entry]</a> ####
-
-The folsom entry integrates with the folsom metrics package provided
-by the boundary repo at github. Updated values sent to the folsom entry
-can be forwarded to folsom's counter, histogram, duration, meter,
-and spiral.
-
-Folsom integration is provided as a backup. New code using Exometer Core
-should use the native probes that duplicate folsom.
-
 
 #### <a name="exometer_function_[entry]">exometer_function [entry]</a> ####
 
 The function entry allows for a simple caller-supplied function to be
 invoked in order to retrieve non-exometer data. The
-`exometer_function:get_value()` function will invoke a
+`exometer_function:get_value/4` function will invoke a
 `Module:Function(DataPoints)` call, where `Module` and
 `Function` are provided by the caller.
 
@@ -353,10 +333,6 @@ Note that dependent applications need to be started first. On newer OTP versions
 
 For testing, you can also use [`exometer:start/0`](exometer.md#start-0).
 
-If you make use of e.g. folsom metrics, you also need to start `folsom`.
-Exometer Core will not do that automatically, nor does it contain an
-application dependency for it.
-
 See [Configuring Exometer Core](#Configuring_Exometer_Core) for details on configuration data
 format.
 
@@ -382,8 +358,8 @@ under the given metric.
 
 #### <a name="Deleting_metrics">Deleting metrics</a> ####
 
-A metric previously created with `exometer:new()` can be deleted by
-`exometer:delete()`.
+A metric previously created with `exometer:new/2` can be deleted by
+`exometer:delete/1`.
 
 All subscriptions to the deleted metrics will be cancelled.
 
@@ -391,7 +367,7 @@ All subscriptions to the deleted metrics will be cancelled.
 #### <a name="Setting_metric_values">Setting metric values</a> ####
 
 A created metric can have its value updated through the
-`exometer:update()` function:
+`exometer:update/2` function:
 
 ```erlang
 
@@ -399,8 +375,8 @@ exometer:update(Name, Value)
 ```
 
 The `Name` parameter is the same atom list provided to a previous
-`exometer:new()` call. The `Value` is an arbitrarty element that is
-forwarded to the `exometer:update()` function of the entry/probe that the
+`exometer:new/2` call. The `Value` is an arbitrarty element that is
+forwarded to the `exometer:update/2` function of the entry/probe that the
 metric is mapped to.
 
 The receiving entry/probe will process the provided value and modify
@@ -419,8 +395,8 @@ exometer:info(Name, datapoints)
 ```
 
 The `Name` parameter is the same atom list provided to a previous
-`exometer:new()` call. The call will return a list of data point
-atoms that can then be provided to `exometer:get_value()` to
+`exometer:new/2` call. The call will return a list of data point
+atoms that can then be provided to `exometer:get_value/1` to
 retrieve their actual value:
 
 ```erlang
@@ -524,10 +500,7 @@ Below is an example, from `exometer_core/priv/app.config`:
         {['_'], function , [{module, exometer_function}]},
         {['_'], counter  , [{module, exometer}]},
         {['_'], histogram, [{module, exometer_histogram}]},
-        {['_'], spiral   , [{module, exometer_spiral}]},
-        {['_'], duration , [{module, exometer_folsom}]},
-        {['_'], meter    , [{module, exometer_folsom}]},
-        {['_'], gauge    , [{module, exometer_folsom}]}
+        {['_'], spiral   , [{module, exometer_spiral}]}
     ]}
 ]}
 ```
@@ -542,9 +515,6 @@ exometer.template.function.module  = exometer_function
 exometer.template.counter.module   = exometer
 exometer.template.histogram.module = exometer_histogram
 exometer.template.spiral.module    = exometer_spiral
-exometer.template.duration.module  = exometer_folsom
-exometer.template.meter.module     = exometer_folsom
-exometer.template.gauge.module     = exometer_folsom
 ```
 
 
@@ -584,7 +554,7 @@ called during upgrade, as it will re-apply the settings each time.
 #### <a name="Configuring_static_subscriptions">Configuring static subscriptions</a> ####
 
 Static subscriptions, which are automatically setup at exometer
-startup without having to invoke `exometer_report:subscribe()`, are
+startup without having to invoke `exometer_report:subscribe/4`, are
 configured through the report sub section under exometer.
 
 Below is an example, from `exometer/priv/app.config`:
@@ -632,7 +602,7 @@ The meaning of the above tuple elements is:
 + `Reporter :: module()`<br />Specifies the reporter plugin module, such as`exometer_report_collectd` that is to receive updated metric's data
 points.
 
-+ `Metric :: [atoms()]`<br />Specifies the path to a metric previously created with an`exometer:new()` call.
++ `Metric :: [atoms()]`<br />Specifies the path to a metric previously created with an`exometer:new/2` call.
 
 + `DataPoint` ::  atom() | [atom()]'<br />Specifies the data point within the given metric to send to the
     receiver. The data point must match one of the data points returned by`exometer:info(Name, datapoints)` for the given metrics name.
@@ -731,7 +701,6 @@ processing is complete.
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="exo_montest.md" class="module">exo_montest</a></td></tr>
 <tr><td><a href="exometer.md" class="module">exometer</a></td></tr>
 <tr><td><a href="exometer_admin.md" class="module">exometer_admin</a></td></tr>
 <tr><td><a href="exometer_alias.md" class="module">exometer_alias</a></td></tr>
@@ -739,11 +708,8 @@ processing is complete.
 <tr><td><a href="exometer_cpu.md" class="module">exometer_cpu</a></td></tr>
 <tr><td><a href="exometer_duration.md" class="module">exometer_duration</a></td></tr>
 <tr><td><a href="exometer_entry.md" class="module">exometer_entry</a></td></tr>
-<tr><td><a href="exometer_folsom.md" class="module">exometer_folsom</a></td></tr>
-<tr><td><a href="exometer_folsom_monitor.md" class="module">exometer_folsom_monitor</a></td></tr>
 <tr><td><a href="exometer_function.md" class="module">exometer_function</a></td></tr>
 <tr><td><a href="exometer_histogram.md" class="module">exometer_histogram</a></td></tr>
-<tr><td><a href="exometer_igor.md" class="module">exometer_igor</a></td></tr>
 <tr><td><a href="exometer_info.md" class="module">exometer_info</a></td></tr>
 <tr><td><a href="exometer_probe.md" class="module">exometer_probe</a></td></tr>
 <tr><td><a href="exometer_proc.md" class="module">exometer_proc</a></td></tr>

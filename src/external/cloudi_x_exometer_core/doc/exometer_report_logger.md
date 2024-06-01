@@ -10,7 +10,7 @@ Exometer report collector and logger.
 
 __Behaviours:__ [`gen_server`](gen_server.md).
 
-__This module defines the `exometer_report_logger` behaviour.__<br /> Required callback functions: `logger_init_input/1`, `logger_init_output/1`, `logger_handle_data/2`.
+__This module defines the `exometer_report_logger` behaviour.__<br /> Required callback functions: `logger_handle_data/2`.
 
 <a name="description"></a>
 

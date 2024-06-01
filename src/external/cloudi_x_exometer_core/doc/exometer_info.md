@@ -85,7 +85,7 @@ for each matching metric, and calls `pp(Entry)` for each entry.
 ### pp_lookup/1 ###
 
 <pre><code>
-pp_lookup(Name::<a href="exometer.md#type-name">exometer:name()</a>) -&gt; <a href="#type-pp">pp()</a> | undefined
+pp_lookup(Name::<a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>) -&gt; <a href="#type-pp">pp()</a> | undefined
 </code></pre>
 <br />
 
@@ -98,7 +98,7 @@ This function returns `undefined` if the entry cannot be found.
 ### pp_select/1 ###
 
 <pre><code>
-pp_select(Pat::<a href="ets.md#type-match_spec">ets:match_spec()</a>) -&gt; [<a href="#type-pp">pp()</a>]
+pp_select(Pat::<a href="http://www.erlang.org/doc/man/ets.html#type-match_spec">ets:match_spec()</a>) -&gt; [<a href="#type-pp">pp()</a>]
 </code></pre>
 <br />
 
@@ -115,7 +115,7 @@ Note that the match body of the select pattern must produce the full
 ### status/1 ###
 
 <pre><code>
-status(Exometer_entry::<a href="exometer.md#type-entry">exometer:entry()</a>) -&gt; enabled | disabled
+status(Exometer_entry::<a href="http://www.erlang.org/doc/man/exometer.html#type-entry">exometer:entry()</a>) -&gt; enabled | disabled
 </code></pre>
 <br />
 

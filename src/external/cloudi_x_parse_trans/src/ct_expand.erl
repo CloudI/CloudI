@@ -71,7 +71,7 @@ parse_transform(Forms, Options) ->
 ct_trace_opt(Options, Forms) ->
     case proplists:get_value(ct_expand_trace, Options) of
         undefined ->
-            case [Opt || {attribute,_,ct_expand_trace,Opt} <- Forms] of
+            case [Opt || {attribute,_,compile,{ct_expand_trace,Opt}} <- Forms] of
                 [] ->
                     [];
                 [_|_] = L ->
@@ -116,6 +116,7 @@ extract_fun(Name, Arity, Forms) ->
     end.
 
 eval_lfun({function,L,F,_,Clauses}, Args, Bs, Forms, Trace) ->
+    Line = erl_anno:line(L),
     try
         {ArgsV, Bs1} = lists:mapfoldl(
                          fun(A, Bs_) ->
@@ -124,16 +125,16 @@ eval_lfun({function,L,F,_,Clauses}, Args, Bs, Forms, Trace) ->
                                  {abstract(AV), Bs1_}
                          end, Bs, Args),
         Expr = {call, L, {'fun', L, {clauses, lfun_rewrite(Clauses, Forms)}}, ArgsV},
-        call_trace(Trace =/= [], L, F, ArgsV),
+        call_trace(Trace =/= [], Line, F, ArgsV),
         {value, Ret, _} =
             erl_eval:expr(Expr, erl_eval:new_bindings(), lfh(Forms, Trace)),
         ret_trace(lists:member(r, Trace) orelse lists:member(x, Trace),
-                  L, F, Args, Ret),
+                  Line, F, Args, Ret),
         %% restore bindings
         {value, Ret, Bs1}
     catch
         error:Err ->
-            exception_trace(lists:member(x, Trace), L, F, Args, Err),
+            exception_trace(lists:member(x, Trace), Line, F, Args, Err),
             error(Err)
     end.
 
@@ -152,9 +153,15 @@ pp_function(F, []) ->
     atom_to_list(F) ++ "()";
 pp_function(F, [A|As]) ->
     lists:flatten([atom_to_list(F), "(",
-                   [io_lib:fwrite("~w", [erl_parse:normalise(A)]) |
-                    [[",", io_lib:fwrite("~w", [erl_parse:normalise(A_)])] || A_ <- As]],
+                   [pp_term(A) |
+                    [[",", pp_term(A_)] || A_ <- As]],
                    ")"]).
+
+pp_term({'fun',_, {clauses,_}} = F) ->
+    %% erl_parse:normalise/1 doesn't handle this
+    io_lib:fwrite("~s", [erl_prettypr:format(F)]);
+pp_term(F) ->
+    io_lib:fwrite("~p", [erl_parse:normalise(F)]).
 
 ret_trace(false, _, _, _, _) -> ok;
 ret_trace(true, L, F, Args, Res) ->
@@ -181,53 +188,56 @@ lfun_rewrite(Exprs, Forms) ->
 -spec abstract(Data) -> AbsTerm when
       Data :: term(),
       AbsTerm :: abstract_expr().
-abstract(T) when is_function(T) ->
+abstract(T) ->
+    abstract(T, erl_anno:new(0)).
+
+abstract(T, A) when is_function(T) ->
     case erlang:fun_info(T, module) of
         {module, erl_eval} ->
             case erl_eval:fun_data(T) of
                 {fun_data, _Imports, Clauses} ->
-                    {'fun', 0, {clauses, Clauses}};
+                    {'fun', A, {clauses, Clauses}};
                 false ->
                     erlang:error(function_clause)  % mimicking erl_parse:abstract(T)
             end;
         _ ->
             erlang:error(function_clause)
     end;
-abstract(T) when is_integer(T) -> {integer,0,T};
-abstract(T) when is_float(T) -> {float,0,T};
-abstract(T) when is_atom(T) -> {atom,0,T};
-abstract([]) -> {nil,0};
-abstract(B) when is_bitstring(B) ->
-    {bin, 0, [abstract_byte(Byte, 0) || Byte <- bitstring_to_list(B)]};
-abstract([C|T]) when is_integer(C), 0 =< C, C < 256 ->
-    abstract_string(T, [C]);
-abstract([H|T]) ->
-    {cons,0,abstract(H),abstract(T)};
-abstract(Map) when is_map(Map) ->
-    {map,0,abstract_map(Map)};
-abstract(Tuple) when is_tuple(Tuple) ->
-    {tuple,0,abstract_list(tuple_to_list(Tuple))}.
+abstract(T, A) when is_integer(T) -> {integer,A,T};
+abstract(T, A) when is_float(T) -> {float,A,T};
+abstract(T, A) when is_atom(T) -> {atom,A,T};
+abstract([], A) -> {nil,A};
+abstract(B, A) when is_bitstring(B) ->
+    {bin, A, [abstract_byte(Byte, A) || Byte <- bitstring_to_list(B)]};
+abstract([C|T], A) when is_integer(C), 0 =< C, C < 256 ->
+    abstract_string(T, [C], A);
+abstract([H|T], A) ->
+    {cons,A,abstract(H, A),abstract(T, A)};
+abstract(Map, A) when is_map(Map) ->
+    {map,A,abstract_map(Map, A)};
+abstract(Tuple, A) when is_tuple(Tuple) ->
+    {tuple,A,abstract_list(tuple_to_list(Tuple), A)}.
 
-abstract_string([C|T], String) when is_integer(C), 0 =< C, C < 256 ->
-    abstract_string(T, [C|String]);
-abstract_string([], String) ->
-    {string, 0, lists:reverse(String)};
-abstract_string(T, String) ->
-    not_string(String, abstract(T)).
+abstract_string([C|T], String, A) when is_integer(C), 0 =< C, C < 256 ->
+    abstract_string(T, [C|String], A);
+abstract_string([], String, A) ->
+    {string, A, lists:reverse(String)};
+abstract_string(T, String, A) ->
+    not_string(String, abstract(T, A), A).
 
-not_string([C|T], Result) ->
-    not_string(T, {cons, 0, {integer, 0, C}, Result});
-not_string([], Result) ->
+not_string([C|T], Result, A) ->
+    not_string(T, {cons, A, {integer, A, C}, Result}, A);
+not_string([], Result, _A) ->
     Result.
 
-abstract_list([H|T]) ->
-    [abstract(H)|abstract_list(T)];
-abstract_list([]) ->
+abstract_list([H|T], A) ->
+    [abstract(H, A)|abstract_list(T, A)];
+abstract_list([], _A) ->
     [].
 
-abstract_map(Map) ->
-    [{map_field_assoc,0,abstract(K),abstract(V)}
-     || {K,V} <- maps:to_list(Map)
+abstract_map(Map, A) ->
+    [{map_field_assoc,A,abstract(K, A),abstract(V, A)}
+     || {K,V} <- lists:sort(maps:to_list(Map))
     ].
 
 abstract_byte(Byte, Line) when is_integer(Byte) ->

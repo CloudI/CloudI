@@ -138,7 +138,7 @@ expr_descr() = <a href="#type-expr_int">expr_int()</a> | <a href="#type-expr_ato
 
 
 <pre><code>
-expr_erl() = {erl, [<a href="erl_parse.md#type-abstract_expr">erl_parse:abstract_expr()</a>]}
+expr_erl() = {erl, [<a href="http://www.erlang.org/doc/man/erl_parse.html#type-abstract_expr">erl_parse:abstract_expr()</a>]}
 </code></pre>
 
 
@@ -339,7 +339,7 @@ simple_fun() = {function, <a href="#type-mod_name">mod_name()</a>, <a href="#typ
 ### behaviour/0 ###
 
 <pre><code>
-behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
+behaviour() -&gt; <a href="http://www.erlang.org/doc/man/exometer.html#type-behaviour">exometer:behaviour()</a>
 </code></pre>
 <br />
 
@@ -416,7 +416,7 @@ relationship between sublists is 'or'. This is the same as in Erlang.
 ### new/3 ###
 
 <pre><code>
-new(Name::<a href="exometer.md#type-name">exometer:name()</a>, X2::function, Opts::<a href="exometer.md#type-options">exometer:options()</a>) -&gt; {ok, <a href="#type-fun_rep">fun_rep()</a>}
+new(Name::<a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>, X2::function, Opts::<a href="http://www.erlang.org/doc/man/exometer.html#type-options">exometer:options()</a>) -&gt; {ok, <a href="#type-fun_rep">fun_rep()</a>}
 </code></pre>
 <br />
 

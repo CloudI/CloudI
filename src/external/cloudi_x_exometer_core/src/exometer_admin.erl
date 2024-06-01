@@ -274,7 +274,6 @@ handle_call({new_entry, Name, Type, Opts, AllowExisting} = _Req, _From, S) ->
             {[_], false} ->
                 {reply, {error, exists}, S};
             {LookupRes, _} ->
-                ?log(debug, "LookupRes = ~p~n", [LookupRes]),
                 E1 = process_opts(E0, NewOpts),
                 try
                    remove_old_instance(LookupRes, Name)
@@ -414,12 +413,12 @@ create_reporter_tabs() ->
 create_ets_tabs() ->
     case ets:info(?EXOMETER_SHARED, name) of
         undefined ->
-            [ets:new(T, [public, named_table, set, {keypos,2}])
+            [ets:new(T, [public, named_table, set, {keypos,2}, {read_concurrency, true}, {write_concurrency, true}, {decentralized_counters, true}])
              || T <- tables()],
             ets:new(?EXOMETER_SHARED, [public, named_table, ordered_set,
                                        {keypos, 2}]),
             ets:new(?EXOMETER_ENTRIES, [public, named_table, ordered_set,
-                                        {keypos, 2}]),
+                                        {keypos, 2}, {read_concurrency, true}, {write_concurrency, true}]),
             ets:new(?EXOMETER_REPORTERS, [public, named_table, set,
                                           {keypos, 2}]),
             ets:new(?EXOMETER_SUBS, [public, named_table, ordered_set,
@@ -559,8 +558,7 @@ module(histogram)     -> exometer_histogram;
 module(spiral   )     -> exometer_spiral;
 module(netlink  )     -> exometer_netlink;
 module(cpu      )     -> exometer_cpu;
-module(function )     -> exometer_function;
-module(meter    )     -> exometer_folsom.
+module(function )     -> exometer_function.
 
 search_default(Name, Type) ->
     case ets:lookup(?EXOMETER_SHARED, {default,Type,Name}) of

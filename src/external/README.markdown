@@ -37,15 +37,6 @@ C++ `GEPD`
 - `Sat Feb 11 04:48:47 UTC 2023`
 - `MIT`
 
-Erlang `bear`
--------------
-`Statistics functions for Erlang`
-
-- `https://github.com/folsom-project/bear`
-- `commit 22849b90a3cc8909a2cba9cc8b83385fe388387b (1.0)`
-- `Fri Apr 16 04:03:35 UTC 2021`
-- `Apache License 2.0`
-
 Erlang `certifi`
 ----------------
 `SSL Certificates for Erlang`
@@ -132,8 +123,8 @@ Erlang `exometer_core`
 `Erlang instrumentation package core`
 
 - `https://github.com/Feuerlabs/exometer_core`
-- `commit 358d5c6724b823104f122ca4f16439ae0e767c82`
-- `Fri Apr 16 04:03:35 UTC 2021`
+- `commit 0c21b161db23a62ac75562ba0fb815be36b41b6e`
+- `Sat Jun  1 20:28:59 UTC 2024`
 - `Mozilla Public License 2.0`
 
 Erlang `exometer_influxdb`
@@ -144,15 +135,6 @@ Erlang `exometer_influxdb`
 - `commit b27104776fdab5d19bb376f683c8d156c84e5a5a`
 - `Sat May 30 23:57:14 UTC 2020`
 - `Mozilla Public License 2.0`
-
-Erlang `folsom`
----------------
-`Erlang Events and Metrics`
-
-- `https://github.com/folsom-project/folsom`
-- `commit 62fd0714e6f0b4e7833880afe371a9c882ea0fc2 (1.0)`
-- `Fri Apr 16 04:03:35 UTC 2021`
-- `Apache License 2.0`
 
 Erlang `hackney`
 ----------------
@@ -168,8 +150,8 @@ Erlang `hut`
 `helper library for making Erlang libraries logging framework agnostic`
 
 - `https://github.com/tolbrino/hut`
-- `commit cd3e5b05c1efe6cd0351c435fbca1343702f1564`
-- `Fri Jan  7 03:39:19 UTC 2022`
+- `commit 9f0beabbfa4458965955d12950959992c1b108f5 (v1.4.0)`
+- `Sat Jun  1 20:28:59 UTC 2024`
 - `MIT`
 
 Erlang `idna`
@@ -231,8 +213,8 @@ Erlang `parse_trans`
 `Erlang parse transforms`
 
 - `https://github.com/uwiger/parse_trans`
-- `commit 8ba366f81789c913cd63d69c6d1da948c200d18a (3.3.1)`
-- `Fri Apr 16 02:13:25 UTC 2021`
+- `commit d99fb36755c813a5db23e6f93741aa58323ef911`
+- `Sat Jun  1 20:28:59 UTC 2024`
 - `Apache License 2.0`
 
 Erlang `pgsql`
@@ -285,8 +267,8 @@ Erlang `setup`
 `Erlang Setup Application`
 
 - `https://github.com/uwiger/setup`
-- `commit eda3352e7555b9faf42b5242d95fc386bccbe123 (2.0.2)`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit c6cbda8b2fa84987fd3e38db39080f4925bd0c2e (2.2.0)`
+- `Sat Jun  1 20:28:59 UTC 2024`
 - `Apache License 2.0`
 
 Erlang `ssl_verify_fun`

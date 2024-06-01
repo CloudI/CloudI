@@ -49,7 +49,7 @@ calls.
 
 Once running, the probe collects data from a subsystem, such as
 `/proc`, `sysfs`, and `netlink`, through timer-based calls to
-`probe_sample/1` or explicit calls to `probe_update/2`.
+`Mod:probe_sample/1` or explicit calls to `Mod:probe_update/2`.
 
 A probe implementation can support any number of data points,
 where each data point is a specifric sample from the probe. For
@@ -57,7 +57,7 @@ example, a probe that measures network traffic would have
 `rx_packets`, `tx_packets`, `errors`, `dropped`, and other data
 points reported by `ifconfig(8)` and `ip(8)`.
 
-Values are retrieved from the probe through the `probe_get_value/2`
+Values are retrieved from the probe through the `Mod:probe_get_value/2`
 call, which specifies the data points to be returned. The probe is
 expected to gather the given data points and return them to the
 caller.
@@ -71,7 +71,7 @@ implementation.
 
 #### <a name="behaviour/0">behaviour/0</a> ####
 
-The `behaviour/0` function for an entry implementation should return
+The `Mod:behaviour/0` function for an entry implementation should return
 the atom `probe`. This function will be involved by the
 exometer system in order to determine if a callback is
 an entry or a probe.
@@ -79,7 +79,7 @@ an entry or a probe.
 
 #### <a name="probe_init/3">probe_init/3</a> ####
 
-The `probe_init/3` function is invoked as follows:
+The `Mod:probe_init/3` function is invoked as follows:
 
 ```erlang
 
@@ -87,8 +87,8 @@ The `probe_init/3` function is invoked as follows:
 ```
 
 The implementation shall initiate the probe, create the
-necessary state, and return it for furure access
-through `probe_update/2`, `probe_sample/1` and `get_value/2` calls.
+necessary state, and return it for future access
+through `Mod:probe_update/2`, `Mod:probe_sample/1` and `Mod:probe_get_value/2` calls.
 
 The arguments are as follows:
 
@@ -104,10 +104,10 @@ different types are mapped to the same probe module.
 Specifies an option list that contains additional setup directives to
 the probe. The actual options to support are a combination of the
 standard options, described below, and probe specific options
-processed by `probe_init/3`.
+processed by `Mod:probe_init/3`.
 
 Standard options are processed directly by `new/3`, before
-`probe_init/3` is calledm and are as follows:
+`Mod:probe_init/3` is called, and are as follows:
 
 + `{priority, P}`
 Will be forwarded by the probe's process to `erlang:process_flag/2`.
@@ -125,27 +125,27 @@ Will be forwarded by the probe's process to `erlang:process_flag/2`.
 Specifies the interval, in milliseconds, that `exometer_probe:sample/1`.
 should be invoked at.
 
-The `probe_init/3` implementation is invoked by `exometer:new/3`,
+The `Mod:probe_init/3` implementation is invoked by `exometer:new/3`,
 which calls `exometer_probe:new/3`, which invokes the probe
 implementation..
 
-The `probe_init/3` function shall return `{ok, State}` where State
+The `Mod:probe_init/3` function shall return `{ok, State}` where State
 is a tuple that will be provided as a the `State` argument to all
 future probe implementation calls for the metric.
 
 If the `sample_interval` option has been specified in `Opts`,
-probe_sample/2' will be invoked immediately after `probe_init/2`
-returns to retrieve a first sample. After that, `probe_sample/2`
+`Mod:probe_sample/2` will be invoked immediately after `Mod:probe_init/2`
+returns to retrieve a first sample. After that, `Mod:probe_sample/2`
 will repeatedly will be called by the probe process at the
 millisecond-specified interval.
 
-Should `probe_init/3` return antyhing else but `{ok, State}`,
+Should `Mod:probe_init/3` return antyhing else but `{ok, State}`,
 invoking `new/3` call will fail.
 
 
 #### <a name="probe_terminate/1">probe_terminate/1</a> ####
 
-The `probe_terminate/1` function is invoked as follows:
+The `Mod:probe_terminate/1` function is invoked as follows:
 
 ```erlang
 
@@ -158,31 +158,31 @@ given state and return `ok`.
 The arguments are as follows:
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
-The `probe_terminate/1` implementation is invoked by `exometer:delete/1`, which
+The `Mod:probe_terminate/1` implementation is invoked by `exometer:delete/1`, which
 calls `exometer_probe:delete/3`, which invokes the probe
 implementation.
 
 
 #### <a name="probe_setopts/3">probe_setopts/3</a> ####
 
-The `probe_setopts/2` function is invoked as follows:
+The `Mod:probe_setopts/2` function is invoked as follows:
 
 ```erlang
 
        probe_setopts(Entry, Opts, State)
 ```
 
-The `probe_setopts/4` implementation is invoked by
+The `Mod:probe_setopts/4` implementation is invoked by
 `exometer:setopts/3`, which calls `exometer_probe:setopts/3`,
 which invokes the probe implementation.
 
 The implementation of this function shall modify the options of a
 probe. The `setopts/3` function, which will process standard
-options before invoking `probe_setopts/4` with the remaining
-options. See the documentation for `probe_init/3` for details.
+options before invoking `Mod:probe_setopts/4` with the remaining
+options. See the documentation for `Mod:probe_init/3` for details.
 
 The arguments are as follows:
 
@@ -197,7 +197,7 @@ The probe-specific options to be processed.
 The new status of the entry.
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequently
+The probe state, originally returned by `Mod:probe_init/3` and subsequently
 modified by other probe implementation calls.
 
 This function shall return `{ok, NewState}` where `NewState` is
@@ -206,7 +206,7 @@ the modified probe state that incorporates the new options.
 
 #### <a name="probe_update/2">probe_update/2</a> ####
 
-The `probe_update/2` function is invoked as follows:
+The `Mod:probe_update/2` function is invoked as follows:
 
 ```erlang
 
@@ -221,31 +221,31 @@ The arguments are as follows:
 The value to integrate.
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
-This function can be called outside the periodic `probe_sample/1/`
+This function can be called outside the periodic `Mod:probe_sample/1/`
 call to have the probe process a value given in `Value`.
 
-The `probe_update/2` implementation is invoked by `exometer:update/2`, which
+The `Mod:probe_update/2` implementation is invoked by `exometer:update/2`, which
 calls `exometer_probe:update/4`, which invokes the probe
 implementation.
 
-Once processed, `probe_update/2` shall return `{ok, NewState}`,
+Once processed, `Mod:probe_update/2` shall return `{ok, NewState}`,
 where `NewState` contains the new probe state with the processed
 value.
 
 
 #### <a name="probe_get_value/2">probe_get_value/2</a> ####
 
-The `probe_get_value/2` function is invoked as follows:
+The `Mod:probe_get_value/2` function is invoked as follows:
 
 ```erlang
 
        probe_get_value(DataPoints, State)
 ```
 
-The `probe_get_value/2` implementation shall retrieve the value of
+The `Mod:probe_get_value/2` implementation shall retrieve the value of
 one or more data points from the probe.
 
 The arguments are as follows:
@@ -254,17 +254,17 @@ The arguments are as follows:
 List of data point atoms to retrieve values for.
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
-The `probe_get_value/2` implementation is invoked by
+The `Mod:probe_get_value/2` implementation is invoked by
 `exometer:get_value/2`, which calls `exometer_probe:get_value/4`,
 which invokes the probe implementation.
 
 If `exometer:get_value/2` is invoked with `default` as a single
-data point, the probe's `probe_get_datapoints/1` function will be
+data point, the probe's `Mod:probe_get_datapoints/1` function will be
 called to retrieve all data points supported by the probe
-implementation. `probe_get_value/2` will then be called with the
+implementation. `Mod:probe_get_value/2` will then be called with the
 returned set of data points provided as an argument.
 
 This function shall return the value of all data points provided in
@@ -292,127 +292,127 @@ by the probe, the returned list shall look like below:
        [{ min, 0.1265 }, { max, 3338.21 }, { xyzzy, { error, unsupported } ]
 ```
 
-The `probe_get_value/2` implementation shall return `{ok, List}`,
+The `Mod:probe_get_value/2` implementation shall return `{ok, List}`,
 where `List` is the list of data points and their values described
 above. No new state is returned by this function.
 
 
 #### <a name="probe_get_datapoints/1">probe_get_datapoints/1</a> ####
 
-The `probe_get_datapoints/1` function is invoked as follows:
+The `Mod:probe_get_datapoints/1` function is invoked as follows:
 
 ```erlang
 
        probe_get_datapoints(State)
 ```
 
-The `probe_get_datapoints/1` shall return a list with all data points
+The `Mod:probe_get_datapoints/1` shall return a list with all data points
 supported by the probe
 
 The arguments are as follows:
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
-The `probe_get_datapoints/1` implementation is invoked by
+The `Mod:probe_get_datapoints/1` implementation is invoked by
 `exometer:info/2`, which calls `exometer_probe:get_datapoints/3`,
 which invokes the probe implementation.
 
 In cases where `exometer:get_value/2` is called with `default` as a
-single data point, `probe_get_datapoints/1` is also called to
+single data point, `Mod:probe_get_datapoints/1` is also called to
 retrieve a list of all supported data points, which is then
-forwarded to `probe_get_value/2`.
+forwarded to `Mod:probe_get_value/2`.
 
-The implementation of `probe_get_datapoints/1` shall return `{ok, DpList}`,
+The implementation of `Mod:probe_get_datapoints/1` shall return `{ok, DpList}`,
 where `DpList` is a list of data point atoms supported by the probe.
 
 
 #### <a name="probe_reset/1">probe_reset/1</a> ####
 
-The `probe_reset/1` function is invoked as follows:
+The `Mod:probe_reset/1` function is invoked as follows:
 
 ```erlang
 
        probe_reset(State)
 ```
 
-The `probe_reset/1` shall reset the state of the probe to its initial state.
+The `Mod:probe_reset/1` shall reset the state of the probe to its initial state.
 
 The arguments are as follows:
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
-The `probe_reset/1` implementation is invoked by
+The `Mod:probe_reset/1` implementation is invoked by
 `exometer:reset/1`, which calls `exometer_probe:reset/3`, which
 invokes the probe implementation.
 
-The implementation of `probe_reset/1` shall return `{ok,
+The implementation of `Mod:probe_reset/1` shall return `{ok,
 NewState}`, where `NewState` contains the reset state of the probe.
 
 
 #### <a name="probe_sample/1">probe_sample/1</a> ####
 
-The `probe_sample/1` function is invoked as follows:
+The `Mod:probe_sample/1` function is invoked as follows:
 
 ```erlang
 
        probe_sample(State)
 ```
 
-The `probe_sample/1` implementation shall sample data from the
+The `Mod:probe_sample/1` implementation shall sample data from the
 subsystem the probe is integrated with.
 
 The arguments are as follows:
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
-When invoked, `probe_sample/1` is expected to interface the
+When invoked, `Mod:probe_sample/1` is expected to interface the
 sub-system (/proc, /sysfs, etc) monitored by the probe, extract the
 relevant data from it, and return an updated probe state that
 incorporates the extracted data.
 
-The `probe_sample/1` function is invoked by the probe thread at
+The `Mod:probe_sample/1` function is invoked by the probe thread at
 intervals specified by the `{sample_interval, Intv}` option
 provided to `exometer_probe:new/3`. If this option is missing, or
-set to infinity, `probe_sample/1` will never be called.
+set to infinity, `Mod:probe_sample/1` will never be called.
 
-The implementation of `probe_sample/1` shall return `{ok,
+The implementation of `Mod:probe_sample/1` shall return `{ok,
 NewState}`, where `NewState` contains the new state of the probe
 with the sampled data integrated into it.
 
 
 #### <a name="probe_handle_msg/2">probe_handle_msg/2</a> ####
 
-The `probe_handle_msg/2` function is invoked as follows:
+The `Mod:probe_handle_msg/2` function is invoked as follows:
 
 ```erlang
 
        probe_handle_msg(Msg, State)
 ```
 
-The `probe_handle_msg/1` is invoked to process messages received
+The `Mod:probe_handle_msg/1` is invoked to process messages received
 by the probe process.
 
 The arguments are as follows:
 
 + `State`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
 + `Msg`
-The probe state, originally returned by `probe_init/3` and subsequentially
+The probe state, originally returned by `Mod:probe_init/3` and subsequentially
 modified by other probe implementation calls.
 
 The implementation of this function will be called by the probe's
 process when it receives a message that is not recognized by the
 internal receive loop.
 
-The implementation of `probe_handle_msg/2` shall return `{ok,
+The implementation of `Mod:probe_handle_msg/2` shall return `{ok,
 NewState}`, where `NewState` contains the new state of the probe
 that reflects the processed message.
 

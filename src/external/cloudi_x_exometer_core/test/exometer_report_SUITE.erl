@@ -295,7 +295,6 @@ tree_opt([H|T], L) when is_list(L) ->
 tree_opt([], _) ->
     undefined.
 
-
 logger_init_output(Pid) ->
     {ok, Pid}.
 

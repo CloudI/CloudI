@@ -3,6 +3,10 @@
 [![Hex.pm License][hex license badge]][hex]
 [![Build Tool][build tool]][hex]
 
+**NOTE:** Since both Erlang and Elixir provide pluggable logging facilities out
+of the box for a while now, the benefit of using `hut` has been 
+reduced. One may still use it, however it doesn't provide much benefit nowadays.
+
 ## Overview
 
 `hut` is a minimal library for Erlang libraries and small applications to

@@ -20,6 +20,7 @@
     get_env/2,
     tables/0,
     table/0,
+    get_statistics/1,
     get_statistics/3,
     get_statistics2/4,
     pick_items/2,
@@ -222,6 +223,10 @@ histogram(Values, DataPoints) ->
     H = histogram(Values),
     [DP || {K,_} = DP <- H,
            lists:member(K, DataPoints)].
+
+get_statistics(Values) ->
+    Sorted = lists:sort(Values),
+    get_statistics(length(Sorted), lists:sum([V || {_,V} <- Sorted]), Sorted).
 
 -spec get_statistics(Length::non_neg_integer(),
                      Total::non_neg_integer(),

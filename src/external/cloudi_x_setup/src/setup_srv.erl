@@ -14,6 +14,7 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%=============================================================================
+%% @private
 -module(setup_srv).
 -behaviour(gen_server).
 

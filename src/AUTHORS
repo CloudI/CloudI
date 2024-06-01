@@ -15,7 +15,6 @@ Natanael Copa               <ncopa at alpinelinux dot org>
 
 CloudI Integration Dependencies (alphabetical project order):
 backward-cpp         François-Xavier Bourlet <bombela@gmail.com>
-bear                 BMC TrueSight Pulse (formerly Boundary)
 booster              Artyom Beilis (Tonkikh)
 certifi              Benoit Chesneau <bchesneau@gmail.com>
 cowboy               Loïc Hoguin <essen@ninenines.eu>
@@ -24,10 +23,9 @@ elli                 elli-lib team
 emysql               Eonblast Corporation
 epgsql               Anton Lebedevich
 erlang-oauth         Tim Fletcher <mail@tfletcher.com>
-exometer             Basho Technologies
-exometer_core        Basho Technologies
+exometer             Ulf Wiger <ulf.wiger@feuerlabs.com>
+exometer_core        Ulf Wiger <ulf.wiger@feuerlabs.com>
 exometer_influxdb    Travelping GmbH
-folsom               BMC TrueSight Pulse (formerly Boundary)
 hackney              Benoît Chesneau <bchesneau@pm.me>
 hut                  Tino Breddin
 idna                 Benoît Chesneau <bchesneau@pm.me>

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @copyright 2015-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -515,15 +515,15 @@ scopes_accumulate_external(Scope, Concurrency, Scopes) ->
                      concurrency_external = Concurrency}, Scopes).
 
 services_accumulate(#service{service_f = ServiceF,
-                             count_process = CountProcess,
-                             count_thread = CountThread,
+                             process_count = ProcessCount,
+                             thread_count = ThreadCount,
                              scope = Scope},
                     #service_data{count_internal = CountInternal,
                                   count_external = CountExternal,
                                   concurrency_internal = ConcurrencyInternal,
                                   concurrency_external = ConcurrencyExternal,
                                   scopes = Scopes} = Changes) ->
-    Concurrency = CountProcess * CountThread,
+    Concurrency = ProcessCount * ThreadCount,
     case service_type(ServiceF) of
         internal ->
             NewScopes = scopes_accumulate_internal(Scope, Concurrency, Scopes),
@@ -837,11 +837,11 @@ service_metrics_pid(external, Pids, ProcessInfo,
 
 service_metrics(Pids, ProcessInfo0,
                 #service{service_f = ServiceF,
-                         count_process = CountProcess,
-                         count_thread = CountThread},
+                         process_count = ProcessCount,
+                         thread_count = ThreadCount},
                 QueuedEmptySize, Services, MetricPrefix) ->
     Metrics0 = [metric(gauge, MetricPrefix ++ [concurrency],
-                       CountProcess * CountThread)],
+                       ProcessCount * ThreadCount)],
     {Metrics1,
      ProcessInfoN} = service_metrics_pid(service_type(ServiceF),
                                          Pids, ProcessInfo0, QueuedEmptySize,

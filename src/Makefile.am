@@ -53,7 +53,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/uuid/src \
      -d $(top_srcdir)/lib/varpool/src \
      -d $(top_srcdir)/lib/varpool/test \
-     -d $(top_srcdir)/external/cloudi_x_bear/src \
      -d $(top_srcdir)/external/cloudi_x_certifi/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy1/src \
@@ -65,7 +64,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_exometer/src \
      -d $(top_srcdir)/external/cloudi_x_exometer_core/src \
      -d $(top_srcdir)/external/cloudi_x_exometer_influxdb/src \
-     -d $(top_srcdir)/external/cloudi_x_folsom/src \
      -d $(top_srcdir)/external/cloudi_x_hackney/src \
      -d $(top_srcdir)/external/cloudi_x_hut/src \
      -d $(top_srcdir)/external/cloudi_x_idna/src \
@@ -263,12 +261,10 @@ dialyze: all \
               tests/messaging/erlang/src \
               tests/msg_size/erlang/src \
               tests/null/erlang/src \
-              external/cloudi_x_bear/ebin \
               external/cloudi_x_cowboy/ebin \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
-              external/cloudi_x_folsom/ebin \
               external/cloudi_x_jsx/ebin \
               external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin \

@@ -150,17 +150,20 @@
          mode/0,
          find_hooks/0, find_hooks/1, find_hooks/2,
          run_hooks/0, run_hooks/1, run_hooks/2,
+         run_selected_hooks/2,
+         applications/0,
          find_env_vars/1,
          get_env/2, get_env/3,
          get_all_env/1,
          expand_value/2,  % expand_value/3 recommended instead
          expand_value/3,
-         patch_app/1,
+         patch_app/1, patch_app/3,
          find_app/1, find_app/2,
          pick_vsn/3,
          reload_app/1, reload_app/2, reload_app/3,
          keep_release/1,
-         lib_dirs/0, lib_dirs/1]).
+         lib_dirs/0, lib_dirs/1,
+         lib_dirs_under_path/1]).
 -export([read_config_script/3,   % (Name, F, Opts)
          read_config_script/4]). % (Name, F, Vars, Opts)
 
@@ -185,21 +188,6 @@
             true -> Expr;
             _    -> ok
         end).
-
-% for features specific to Erlang/OTP version 21.x (and later versions)
--ifdef(OTP_RELEASE).
--define(ERLANG_OTP_VERSION_21_FEATURES, true).
--endif.
-
-% Get the stacktrace in a way that is backwards compatible
--ifdef(ERLANG_OTP_VERSION_21_FEATURES).
--define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
-        ErrorType:Error:ErrorStackTrace ->).
--else.
--define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
-        ErrorType:Error ->
-            ErrorStackTrace = erlang:get_stacktrace(),).
--endif.
 
 %% @spec home() -> Directory
 %% @doc Returns the configured `home' directory, or a best guess (`$CWD')
@@ -285,8 +273,12 @@ verify_directories() ->
 %% @end
 %%
 verify_dir(Directory) ->
-    ok = filelib:ensure_dir(filename:join(Directory, "dummy")),
-    Directory.
+    case filelib:ensure_dir(filename:join(Directory, "dummy")) of
+        ok ->
+            Directory;
+        {error, Reason} ->
+            error({verify_dir, {Reason, Directory}}, [Directory])
+    end.
 
 ok({ok, Result}) ->
     Result;
@@ -476,6 +468,8 @@ expand_env(Vs, L, A, V) when is_list(L) ->
             %% [expand_env(Vs, X, A) || X <- L]
             expand_env_l(Vs, L, A, V)
     end;
+expand_env(Vs, M, A, V) when is_map(M) ->
+    maps:from_list(expand_env_l(Vs, maps:to_list(M), A, V));
 expand_env(Vs, B, A, V) when is_binary(B) ->
     do_expand_env(B, Vs, A, binary, V);
 expand_env(_, X, _, _) ->
@@ -647,7 +641,7 @@ patch_app(A, Vsn, LibDirs) ->
     case find_app(A, LibDirs) of
         [_|_] = Found ->
             {_ActualVsn, Dir} = pick_vsn(A, Found, Vsn),
-            error_logger:info_msg("[~p vsn ~p] code:add_patha(~s)~n", [A, _ActualVsn, Dir]),
+            error_logger:info_msg("[~p vsn ~p] code:add_patha(~s)", [A, _ActualVsn, Dir]),
             code:add_patha(Dir);
         [] ->
             error(no_matching_vsn)
@@ -716,7 +710,7 @@ find_app(A, LibDirs) ->
     CurRoots = current_roots(),
     InLib = [P || P <- LibDirs,
                   is_app_dir(Astr, P)],
-    InRoots = lists:append([in_root(A, R) || R <- CurRoots]),
+    InRoots = lists:append([in_root(Astr, R) || R <- CurRoots]),
     setup_lib:sort_vsns(
       lists:usort(CurDir ++ InRoots ++ InLib), atom_to_list(A)).
 
@@ -725,38 +719,40 @@ to_string(A) when is_atom(A) ->
 to_string(A) when is_list(A) ->
     A.
 
-is_app_dir(A, D) ->
-    case lists:reverse(filename:split(D)) of
-        ["ebin", App|_] ->
-            case re:split(App, <<"-">>, [{return,list}]) of
-                [A|_] -> true;
-                _ -> false
-            end;
-        _ ->
-            false
-    end.
+is_app_dir(AStr, D) ->
+    Pat = AStr ++ "(-[0-9]+(\\..+)?)?/ebin\$",
+    re:run(D, Pat) =/= nomatch.
+    %% case lists:reverse(filename:split(D)) of
+    %%     ["ebin", App|_] ->
+    %%         case re:split(App, <<"-">>, [{return,list}]) of
+    %%             [A|_] -> true;
+    %%             _ -> false
+    %%         end;
+    %%     _ ->
+    %%         false
+    %% end.
 
 current_roots() ->
     CurPath = code:get_path(),
     roots_of(CurPath).
 
 roots_of(Path) ->
-    All = lists:foldr(
-            fun(D, Acc) ->
-                    case lists:reverse(filename:split(D)) of
-                        ["ebin",_| [_|_] = T] ->
-                            [filename:join(lists:reverse(T)) | Acc];
-                        _ ->
-                            Acc
-                    end
-            end, [], Path),
-    lists:usort(All).
+    lists:foldr(
+      fun(D, Acc) ->
+              case lists:reverse(filename:split(D)) of
+                  ["ebin",_| [_|_] = T] ->
+                      ordsets:add_element(filename:join(lists:reverse(T)), Acc);
+                  _ ->
+                      Acc
+              end
+      end, ordsets:new(), Path).
 
 in_root(A, R) ->
     Paths = filelib:wildcard(filename:join([R, "*", "ebin"])),
-    Pat = atom_to_list(A) ++ "-[\\.0-9]+/ebin\$",
-    [P || P <- Paths,
-          re:run(P, Pat) =/= nomatch].
+    [P || P <- Paths, is_app_dir(A, P)].
+    %% Pat = atom_to_list(A) ++ "(-[0-9]+(\\..+)?)?/ebin\$",
+    %% [P || P <- Paths,
+    %%       re:run(P, Pat) =/= nomatch].
 
 %% @spec reload_app(AppName::atom()) -> {ok, NotPurged} | {error, Reason}
 %%
@@ -820,7 +816,7 @@ reload_app(A, ToVsn0, LibDirs) ->
             if ToVsn == FromVsn ->
                     {error, same_version};
                true ->
-                    error_logger:info_msg("[~p vsn ~p] soft upgrade from ~p~n",
+                    error_logger:info_msg("[~p vsn ~p] soft upgrade from ~p",
                                           [A, ToVsn, FromVsn]),
                     reload_app(
                       A, FromVsn, filename:join(code:lib_dir(A), "ebin"),
@@ -895,7 +891,7 @@ make_appup_script(A, OldVsn, NewPath) ->
     end.
 
 read_app(F) ->
-    case file:consult(F) of
+    case setup_file:consult(F) of
         {ok, [App]} ->
             App;
         {error,_} = Error ->
@@ -905,7 +901,7 @@ read_app(F) ->
 %% slightly modified (and corrected!) version of release_handler:find_script/4.
 find_script(App, Dir, OldVsn, UpOrDown) ->
     Appup = filename:join([Dir, "ebin", atom_to_list(App)++".appup"]),
-    case file:consult(Appup) of
+    case setup_file:consult(Appup) of
         {ok, [{NewVsn, UpFromScripts, _DownToScripts}]} ->
             Scripts = case UpOrDown of
                           up -> UpFromScripts
@@ -949,14 +945,14 @@ intersection(A, B) ->
 %% stop, terminating all nodes automatically.
 %%
 run_setup() ->
-    error_logger:info_msg("Setup running ...~n", []),
+    error_logger:info_msg("Setup running ...", []),
     AbortOnError = check_abort_on_error(),
     try run_setup_()
     catch
-        ?STACKTRACE(error, Error, StackTrace)
-            error_logger:error_msg("Caught exception:~n"
-                                   "~p~n"
-                                   "~p~n", [Error, StackTrace]),
+        error:Error:Stacktrace ->
+            error_logger:error_report([{run_setup_failed, Error},
+                                       {abort_on_error, AbortOnError},
+                                       {stacktrace, Stacktrace}]),
             if AbortOnError ->
                     erlang:error(Error);
                true ->
@@ -966,12 +962,12 @@ run_setup() ->
 
 run_setup_() ->
     Res = maybe_verify_directories(),
-    error_logger:info_msg("Directories verified. Res = ~p~n", [Res]),
+    error_logger:info_msg("Directories verified. Res = ~p", [Res]),
     Mode = mode(),
     Hooks = find_hooks(Mode),
-    run_selected_hooks(Hooks),
+    run_selected_hooks(Mode, Hooks, _Recheck = true),
     error_logger:info_msg(
-      "Setup finished processing hooks (Mode=~p)...~n", [Mode]),
+      "Setup finished processing hooks (Mode=~p)...", [Mode]),
     ok.
 
 %% @hidden
@@ -995,6 +991,21 @@ main(Args) ->
 %% - Create the database at phase 100
 %% - Create tables (or configure schema) at 200
 %% - Populate the database at 300
+%%
+%% Using the `setup' environment variable `modes', it is possible to
+%% define a mode that includes all hooks from different modes.
+%% The format is `[{M1, [M2,...]}]'. The expansion is done recursively,
+%% so a mode entry in the right-hand side of a pair can expand into other
+%% modes. In order to be included in the final list of modes, an expanding
+%% mode needs to include itself in the right-hand side. For example:
+%%
+%% - Applying `a' to `[{a, [b]}]' returns `[b]'
+%% - Applying `a' to `[{a, [a,b]}]' returns `[a,b]'
+%% - Applying `a' to `[{a, [a,b]},{b,[c,d]}]' returns `[a,c,d]'
+%%
+%% A typical application of this would be `[{test, [normal, test]}]', where
+%% starting in the `test' mode would cause all `normal' and all `test' hooks
+%% to be executed.
 %% @end
 %%
 find_hooks() ->
@@ -1011,38 +1022,70 @@ find_hooks(Mode) when is_atom(Mode) ->
 %% @doc Find all setup hooks for `Mode' in `Applications'.
 %% @end
 find_hooks(Mode, Applications) ->
+    find_hooks_(maybe_expand_mode(Mode), Applications).
+
+maybe_expand_mode(Mode) ->
+    maybe_expand_mode(Mode, app_get_env(setup, modes, [])).
+
+maybe_expand_mode(Mode, Modes) ->
+    maybe_expand_mode(Mode, Modes, ordsets:new()).
+
+maybe_expand_mode(Mode, Modes, Acc) ->
+    case lists:keyfind(Mode, 1, Modes) of
+        {_, Ms} ->
+            Modes1 = lists:keydelete(Mode, 1, Modes),
+            lists:foldl(
+                      fun(M, Acc1) ->
+                              maybe_expand_mode(M, Modes1, Acc1)
+                      end, Acc, Ms);
+        false ->
+            ordsets:add_element(Mode, Acc)
+    end.
+
+find_hooks_(Modes, Applications) ->
     lists:foldl(
       fun(A, Acc) ->
               case app_get_env(A, '$setup_hooks') of
                   {ok, Hooks} ->
                       lists:foldl(
-                        fun({Mode1, [{_, {_,_,_}}|_] = L}, Acc1)
-                              when Mode1 =:= Mode ->
-                                find_hooks_(Mode, A, L, Acc1);
-                           ({Mode1, [{_, [{_, _, _}|_]}|_] = L}, Acc1)
-                              when Mode1 =:= Mode ->
-                                find_hooks_(Mode, A, L, Acc1);
-                           ({N, {_, _, _} = MFA}, Acc1) when Mode=:=setup ->
-                                orddict:append(N, MFA, Acc1);
-                           ({N, [{_, _, _}|_] = L}, Acc1)
-                              when Mode=:=setup ->
-                                lists:foldl(
-                                  fun(MFA, Acc2) ->
-                                          orddict:append(N, MFA, Acc2)
-                                  end, Acc1, L);
-                           (_, Acc1) ->
-                                Acc1
+                        fun(H, Acc1) ->
+                                f_find_hooks_(H, A, Modes, Acc1)
                         end, Acc, Hooks);
                   _ ->
                       Acc
               end
       end, orddict:new(), Applications).
 
-find_hooks_(Mode, A, L, Acc1) ->
+f_find_hooks_(Hook, A, Modes, Acc) ->
+    IsSetup = lists:member(setup, Modes),
+    case Hook of
+        {Mode1, [{_, {_,_,_}}|_] = L} ->
+            case lists:member(Mode1, Modes) of
+                true -> find_hooks_1(Mode1, A, L, Acc);
+                false -> Acc
+            end;
+        {Mode1, [{_, [{_, _, _}|_]}|_] = L} ->
+            case lists:member(Mode1, Modes) of
+                true -> find_hooks_1(Mode1, A, L, Acc);
+                false -> Acc
+            end;
+        {N, {_, _, _} = MFA} when IsSetup ->
+            orddict:append(N, MFA, Acc);
+        {N, [{_, _, _}|_] = L} when IsSetup ->
+            lists:foldl(
+              fun(MFA, Acc1) ->
+                      orddict:append(N, MFA, Acc1)
+              end, Acc, L);
+        _ ->
+            Acc
+    end.
+
+
+find_hooks_1(Mode, A, L, Acc1) ->
     lists:foldl(
       fun({N, {_,_,_} = MFA}, Acc2) ->
               orddict:append(N, MFA, Acc2);
-         ({N, [{_,_,_}|_] = MFAs}, Acc2) when is_list(MFAs) ->
+         ({N, [{_,_,_}|_] = MFAs}, Acc2) ->
               lists:foldl(
                 fun({_,_,_} = MFA1, Acc3) ->
                         orddict:append(
@@ -1106,9 +1149,9 @@ run_hooks(Apps) ->
 %% @end
 run_hooks(Mode, Apps) ->
     Hooks = find_hooks(Mode, Apps),
-    run_selected_hooks(Hooks).
+    run_selected_hooks(Mode, Hooks).
 
-%% @spec run_selected_hooks(Hooks) -> ok
+%% @spec run_selected_hooks(Mode, Hooks) -> ok
 %% @doc Execute specified setup hooks in order
 %%
 %% Exceptions are caught and printed. This might/should be improved, but the
@@ -1117,15 +1160,38 @@ run_hooks(Mode, Apps) ->
 %% remembered and reflected at the end.
 %% @end
 %%
-run_selected_hooks(Hooks) ->
+run_selected_hooks(Mode, Hooks) ->
+    run_selected_hooks(Mode, Hooks, false).
+
+%% @spec run_selected_hooks(Mode, Hooks, Recheck) -> ok
+%% @doc Execute specified hooks in order, re-checking after each completed phase
+%% for new hooks (new applications may have been loaded as a result of running their
+%% hooks.) Only phases higher than the ones already run will be considered after each
+%% re-check.
+run_selected_hooks(Mode, Hooks, Recheck) when is_atom(Mode), is_list(Hooks) ->
     AbortOnError = check_abort_on_error(),
-    lists:foreach(
-      fun({Phase, MFAs}) ->
-              error_logger:info_msg("Setup phase ~p~n", [Phase]),
-              lists:foreach(fun({M, F, A}) ->
-                                    try_apply(M, F, A, AbortOnError)
-                            end, MFAs)
-      end, Hooks).
+    case Recheck of
+        true ->
+            run_and_recheck(Hooks, Mode, AbortOnError, []);
+        false ->
+            lists:foreach(fun(Ph) -> run_phase(Ph, Mode, AbortOnError) end, Hooks)
+    end.
+
+run_phase({Phase, MFAs}, Mode, AbortOnError) ->
+    error_logger:info_msg("Setup phase [~p] ~p~n", [Mode, Phase]),
+    lists:foreach(fun({M, F, A}) ->
+                          try_apply(M, F, A, AbortOnError)
+                  end, MFAs).
+
+run_and_recheck([{PhaseNo, _MFAs} = Phase|_], Mode, AbortOnError, Visited) ->
+    ok = run_phase(Phase, Mode, AbortOnError),
+    Visited1 = [PhaseNo | Visited],
+    NMax = lists:max(Visited1),
+    Hooks = [LaterPhase || {N, _} = LaterPhase <- find_hooks(Mode),
+                           N > NMax],
+    run_and_recheck(Hooks, Mode, AbortOnError, Visited1);
+run_and_recheck([], _, _, _) ->
+    ok.
 
 check_abort_on_error() ->
     case app_get_env(setup, abort_on_error) of
@@ -1142,8 +1208,8 @@ try_apply(M, F, A, Abort) ->
                    fun() ->
                            exit(try {ok, apply(M, F, A)}
                                 catch
-                                    ?STACKTRACE(Type, Exception, StackTrace)
-                                        {error, {Type, Exception, StackTrace}}
+                                    Type:Exception:Stacktrace ->
+                                        {error, {Type, Exception, Stacktrace}}
                                 end)
                    end),
     receive
@@ -1151,12 +1217,12 @@ try_apply(M, F, A, Abort) ->
             case Return of
                 {ok, Result} ->
                     report_result(Result, M, F, A);
-                {error, {Type, Exception, StackTrace}} ->
-                    report_error(Type, Exception, StackTrace, M, F, A),
+                {error, {Type, Exception, Stacktrace}} ->
+                    report_error(Type, Exception, Stacktrace, M, F, A),
                     if Abort ->
                             error_logger:error_msg(
                               "Abort on error is set. Terminating sequence~n",[]),
-                            error(Exception);
+                            error({Exception, Stacktrace});
                        true ->
                             ok
                     end
@@ -1167,7 +1233,7 @@ report_result(Result, M, F, A) ->
     MFAString = format_mfa(M, F, A),
     error_logger:info_msg(MFAString ++ "-> ~p~n", [Result]).
 
-report_error(Type, Error, StackTrace, M, F, A) ->
+report_error(Type, Error, Stacktrace, M, F, A) ->
     ErrTypeStr = case Type of
                      error -> "ERROR: ";
                      throw -> "THROW: ";
@@ -1175,7 +1241,7 @@ report_error(Type, Error, StackTrace, M, F, A) ->
                  end,
     MFAString = format_mfa(M, F, A),
     error_logger:error_msg(MFAString ++ "-> " ++ ErrTypeStr ++ "~p~n~p~n",
-                           [Error, StackTrace]).
+                           [Error, Stacktrace]).
 
 
 format_mfa(M, F, A) ->
@@ -1191,6 +1257,8 @@ format_arg(A) ->
 
 %% @spec applications() -> [atom()]
 %% @doc Find all applications - either from the boot script or all loaded apps.
+%% The applications list is sorted in top application order, where included
+%% applications follow directly after the top application they are included in.
 %% @end
 %%
 applications() ->
@@ -1306,7 +1374,7 @@ env_diff([]) ->
     [].
 
 fetch_env(AppF) ->
-    case file:consult(AppF) of
+    case setup_file:consult(AppF) of
         {ok, [{application,_,Terms}]} ->
             proplists:get_value(env, Terms, []);
         {error, Reason} ->
@@ -1339,11 +1407,14 @@ lib_dirs() ->
 lib_dirs(Env) ->
     case os:getenv(Env) of
         L when is_list(L) ->
-            LibDirs = split_paths(L, path_separator(), [], []),
-            get_user_lib_dirs_1(LibDirs);
+            lib_dirs_under_path(L);
         false ->
             []
     end.
+
+lib_dirs_under_path(L) ->
+    LibDirs = split_paths(L, path_separator(), [], []),
+    get_user_lib_dirs_1(LibDirs).
 
 path_separator() ->
     case os:type() of
@@ -1465,36 +1536,38 @@ make_path(BundleDir,[Bundle|Tail],Res,Bs) ->
     Dir = filename:append(BundleDir,Bundle),
     Ebin = filename:append(Dir,"ebin"),
     %% First try with /ebin
-    case erl_prim_loader:read_file_info(Ebin) of
-        {ok,#file_info{type=directory}} ->
+    case is_dir(Ebin) of
+        true ->
             make_path(BundleDir,Tail,[Ebin|Res],[Bundle|Bs]);
-        _ ->
-            %% Second try with archive
-            Ext = archive_extension(),
-            Base = filename:basename(Dir, Ext),
-            Ebin2 = filename:join([filename:dirname(Dir), Base ++ Ext,
-                                   Base, "ebin"]),
-            Ebins =
-                case split(Base, "-") of
-                    [_, _|_] = Toks ->
-                        AppName = join(lists:sublist(Toks, length(Toks)-1),"-"),
-                        Ebin3 = filename:join([filename:dirname(Dir), Base ++ Ext, AppName, "ebin"]),
-                        [Ebin3, Ebin2, Dir];
-                    _ ->
-                        [Ebin2, Dir]
-                end,
-            try_ebin_dirs(Ebins,BundleDir,Tail,Res,Bundle, Bs)
+        false ->
+            Ebins = ebins_in_archive(Dir),
+            make_path(BundleDir, Tail, Ebins ++ Res, [Bundle|Bs])
     end.
 
-try_ebin_dirs([Ebin | Ebins],BundleDir,Tail,Res,Bundle,Bs) ->
-    case erl_prim_loader:read_file_info(Ebin) of
-        {ok,#file_info{type=directory}} ->
-            make_path(BundleDir,Tail,[Ebin|Res],[Bundle|Bs]);
+ebins_in_archive(Dir) ->
+    case setup_file:list_dir(Dir) of
+        {ok, Fs} ->
+            lists:foldr(
+              fun(F, Acc) ->
+                      Ebin = filename:join([Dir, F, "ebin"]),
+                      case is_dir(Ebin) of
+                          true ->
+                              [Ebin | Acc];
+                          false ->
+                              Acc
+                      end
+              end, [], Fs);
         _ ->
-            try_ebin_dirs(Ebins,BundleDir,Tail,Res,Bundle,Bs)
-    end;
-try_ebin_dirs([],BundleDir,Tail,Res,_Bundle,Bs) ->
-    make_path(BundleDir,Tail,Res,Bs).
+            []
+    end.
+
+is_dir(D) ->
+    case erl_prim_loader:read_file_info(D) of
+        {ok, #file_info{type = directory}} ->
+            true;
+        _ ->
+            false
+    end.
 
 archive_extension() ->
     init:archive_extension().
@@ -1579,10 +1652,10 @@ code_lib_dir(App) when is_list(App); is_binary(App) ->
 %% -- The main difference: call erl_eval:exprs() with a local_function handler
 
 file_script(File, Bs) ->
-    case file:open(File, [read]) of
+    case setup_file:open(File, [read]) of
         {ok, Fd} ->
             R = eval_stream(Fd, return, Bs),
-            _ = file:close(Fd),
+            _ = setup_file:close(Fd),
             R;
         Error ->
             Error
@@ -1599,8 +1672,9 @@ eval_stream2({ok,Form,EndLine}, Fd, H, Last, E, Bs0) ->
     try erl_eval:exprs(Form, Bs0, local_func_handler()) of
         {value,V,Bs} ->
             eval_stream(Fd, H, EndLine, {V}, E, Bs)
-    catch ?STACKTRACE(Class, Reason, StackTrace)
-            Error = {EndLine,?MODULE,{Class,Reason,StackTrace}},
+    catch
+        Class:Reason:Stacktrace ->
+            Error = {EndLine,?MODULE,{Class,Reason, Stacktrace}},
             eval_stream(Fd, H, EndLine, Last, [Error|E], Bs0)
     end;
 eval_stream2({error,What,EndLine}, Fd, H, Last, E, Bs) ->
@@ -1617,7 +1691,7 @@ eval_stream2({eof,EndLine}, _Fd, H, Last, E, _Bs) ->
             {error, hd(lists:reverse(E))}
     end.
 
-%% -- end file:script/2 copy-paste
+%% %% -- end file:script/2 copy-paste
 
 local_func_handler() ->
     {eval, fun local_func/3}.
@@ -1668,10 +1742,25 @@ setup_test_() ->
              application:unload(setup)
      end,
      [
+      ?_test(t_expand_modes()),
       ?_test(t_find_hooks()),
+      ?_test(t_find_hooks_1()),
       ?_test(t_expand_vars()),
       ?_test(t_nested_includes())
      ]}.
+
+t_expand_modes() ->
+    [a] = maybe_expand_mode(a, []),
+    [a] = maybe_expand_mode(a, [{a, [a]}]),
+    [a,b,c] = maybe_expand_mode(a, [{a, [a,b]},
+                                    {b, [b,c]}]),
+    [b] = maybe_expand_mode(a, [{a, [b]}]),
+    [a,b,c] = maybe_expand_mode(a, [{a, [a,b]},
+                                    {b, [b,c]},
+                                    {c, [c,a]}]),
+    [c,d] = maybe_expand_mode(a, [{a, [b]},
+                                  {b, [c,d]}]),
+    ok.
 
 t_find_hooks() ->
     application:set_env(setup, '$setup_hooks',
@@ -1692,6 +1781,36 @@ t_find_hooks() ->
             {a,hook,[100,3]}]},
      {200, [{a,hook,[200,1]}]}] = SetupHooks,
     ok.
+
+t_find_hooks_1() ->
+    application:set_env(setup, modes, [{test, [setup, normal, test]}]),
+    application:set_env(setup, '$setup_hooks',
+                        [{100, [{a, hook, [100,1]},
+                                {a, hook, [100,2]}]},
+                         {200, [{a, hook, [200,1]}]},
+                         {upgrade, [{100, [{a, upgrade_hook, [100,1]}]}]},
+                         {setup, [{100, [{a, hook, [100,3]}]}]},
+                         {normal, [{300, {a, normal_hook, [300,1]}}]},
+                         {test, [{400, {a, test_hook, [400,1]}}]}
+                        ]),
+    NormalHooks = find_hooks(normal),
+    [{300, [{a, normal_hook, [300,1]}]}] = NormalHooks,
+    UpgradeHooks = find_hooks(upgrade),
+    [{100, [{a, upgrade_hook, [100,1]}]}] = UpgradeHooks,
+    SetupHooks = find_hooks(setup),
+    [{100, [{a,hook,[100,1]},
+            {a,hook,[100,2]},
+            {a,hook,[100,3]}]},
+     {200, [{a,hook,[200,1]}]}] = SetupHooks,
+    TestHooks = find_hooks(test),
+    [{100, [{a,hook,[100,1]},
+            {a,hook,[100,2]},
+            {a,hook,[100,3]}]},
+     {200, [{a,hook,[200,1]}]},
+     {300, [{a,normal_hook, [300,1]}]},
+     {400, [{a,test_hook, [400,1]}]}] = TestHooks,
+     ok.
+
 
 t_expand_vars() ->
     %% global env

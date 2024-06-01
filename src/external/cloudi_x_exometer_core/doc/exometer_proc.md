@@ -107,7 +107,7 @@ Apply process_flag-specific options.
 ### spawn_process/2 ###
 
 <pre><code>
-spawn_process(Name::<a href="exometer.md#type-name">exometer:name()</a>, F::fun(() -&gt; no_return())) -&gt; pid()
+spawn_process(Name::<a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>, F::fun(() -&gt; no_return())) -&gt; pid()
 </code></pre>
 <br />
 

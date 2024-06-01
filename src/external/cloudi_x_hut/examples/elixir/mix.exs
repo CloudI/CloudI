@@ -7,7 +7,7 @@ defmodule HutExampleElixir.Mixfile do
      elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps]
+     deps: deps()]
   end
 
   def application do
@@ -16,7 +16,7 @@ defmodule HutExampleElixir.Mixfile do
 
   defp deps do
     [
-      {:hut_example, path: "../basic", compile: "gmake compile_example_elixir"}
+      {:hut_example, path: "../basic", compile: "make compile_example_elixir"}
     ]
   end
 end

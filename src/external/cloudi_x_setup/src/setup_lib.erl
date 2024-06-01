@@ -92,7 +92,7 @@ sort_vsns(Dirs, AppStr) ->
                end,
                lists:foldr(
                  fun(D, Acc) ->
-                         case file:consult(
+                         case setup_file:consult(
                                 filename:join(D, AppF)) of
                              {ok, [{_, _, Attrs}]} ->
                                  {_, Vsn} = lists:keyfind(vsn, 1, Attrs),

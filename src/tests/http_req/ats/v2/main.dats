@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2021 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2021-2024 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 #include "share/atspre_staload.hats"
 #include "cloudi.hats"
 
-vtypedef state_type = int
+vtypedef state_type = unit
 
 fn
 request
@@ -100,7 +100,7 @@ fn
 task
     (thread_index: uint):
     void = let
-    var state_value: int = 0
+    var state_value: unit = unit()
 in
     case+ $CLOUDI.new(thread_index, state_value, true) of
       | ~$CLOUDI.Ok(api) => let

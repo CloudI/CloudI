@@ -36,7 +36,6 @@
   % external dependencies: parse transformations
   "external/cloudi_x_parse_trans",
   % external dependencies
-  "external/cloudi_x_bear",
   "external/cloudi_x_certifi",
   "external/cloudi_x_cowboy",
   "external/cloudi_x_cowboy1",
@@ -48,7 +47,6 @@
   "external/cloudi_x_exometer_core", % compile behaviour modules first
   "external/cloudi_x_exometer",
   "external/cloudi_x_exometer_influxdb",
-  "external/cloudi_x_folsom",
   "external/cloudi_x_hackney",
   "external/cloudi_x_hut",
   "external/cloudi_x_idna",

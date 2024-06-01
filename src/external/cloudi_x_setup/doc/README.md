@@ -6,7 +6,7 @@ __Authors:__ Ulf Wiger ([`ulf@wiger.net`](mailto:ulf@wiger.net)).
 
 Generic setup utility for Erlang-based systems
 
-[![Build Status](https://travis-ci.org/uwiger/setup.svg)](https://travis-ci.org/uwiger/setup)
+[![Build Status](https://github.com/uwiger/setup/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/uwiger/setup/actions/workflows/ci.yml)
 
 
 ## Introduction ##
@@ -28,7 +28,7 @@ system, with a set of conventions allowing each component to provide
 callbacks for different steps in the installation procedure.
 
 The callbacks are defined through OTP application environment variables,
-which can easily be overriden at install time.
+which can easily be overridden at install time.
 
 
 ## The setup_gen utility ##
@@ -117,9 +117,7 @@ in [`setup`](setup.md).
 
 <table width="100%" border="0" summary="list of modules">
 <tr><td><a href="setup.md" class="module">setup</a></td></tr>
-<tr><td><a href="setup_app.md" class="module">setup_app</a></td></tr>
+<tr><td><a href="setup_file.md" class="module">setup_file</a></td></tr>
 <tr><td><a href="setup_gen.md" class="module">setup_gen</a></td></tr>
-<tr><td><a href="setup_lib.md" class="module">setup_lib</a></td></tr>
-<tr><td><a href="setup_srv.md" class="module">setup_srv</a></td></tr>
-<tr><td><a href="setup_sup.md" class="module">setup_sup</a></td></tr></table>
+<tr><td><a href="setup_lib.md" class="module">setup_lib</a></td></tr></table>
 

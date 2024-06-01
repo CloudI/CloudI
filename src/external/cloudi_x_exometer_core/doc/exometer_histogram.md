@@ -87,7 +87,7 @@ to determine the percentiles `90` and up.
 ### behaviour/0 ###
 
 <pre><code>
-behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
+behaviour() -&gt; <a href="http://www.erlang.org/doc/man/exometer.html#type-behaviour">exometer:behaviour()</a>
 </code></pre>
 <br />
 
@@ -187,9 +187,6 @@ Return value: `[Result1, Result2]`, where the results are
 insert the values. `Time2` is the time it took to calculate all default
 datapoints. The data set is shuffled between the two runs.
 
-To assess the accuracy of the reported percentiles, use e.g.
-`bear:get_statistics(exometer_histogram:test_series())` as a reference.
-
 <a name="test_series-0"></a>
 
 ### test_series/0 ###
@@ -201,7 +198,7 @@ test_series() -&gt; [integer()]
 
 Create a series of values for histogram testing.
 
-These are the properties of the current test set:
+These are the properties of the current test set (note: bear no longer in use):
 
 ```erlang
 

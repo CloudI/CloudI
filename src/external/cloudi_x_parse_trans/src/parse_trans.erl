@@ -83,6 +83,10 @@
                      type/1
                     ]).
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -record(context, {module,
                   function,
                   arity,
@@ -99,12 +103,6 @@
             rpt_error(R, F, I, Trace),
             throw({error,get_pos(I),{R, Trace}})
         end).
-
--ifdef(OTP_RELEASE).
--define(WITH_STACKTRACE(T, R, S), T:R:S ->).
--else.
--define(WITH_STACKTRACE(T, R, S), T:R -> S = erlang:get_stacktrace(),).
--endif.
 
 -export_type([forms/0]).
 
@@ -186,7 +184,7 @@ plain_transform1(Fun, [F|Fs]) when is_atom(element(1,F)) ->
         {done, NewF} ->
             [NewF | Fs];
         {error, Reason} ->
-            error(Reason, F, [{form, F}]);
+            erlang:error(Reason, F, [{form, F}]);
         NewF when is_tuple(NewF) ->
             [NewF | plain_transform1(Fun, Fs)]
     end;
@@ -206,13 +204,14 @@ plain_transform1(_, F) ->
 %% @end
 %%
 -spec get_pos(list()) ->
-    integer().
+    erl_anno:location().
 get_pos(I) when is_list(I) ->
     case proplists:get_value(form, I) of
         undefined ->
             ?DUMMY_LINE;
         Form ->
-            erl_syntax:get_pos(Form)
+            Anno = erl_syntax:get_pos(Form),
+            erl_anno:location(Anno)
     end.
 
 
@@ -328,7 +327,7 @@ do(Transform, Fun, Acc, Forms, Options) ->
             optionally_pretty_print(NewForms1, Options, Context),
             {NewForms1, Acc1}
     catch
-        ?WITH_STACKTRACE(error, Reason, ST)
+        error:Reason:ST ->
             {error,
              [{File, [{?DUMMY_LINE, ?MODULE,
                        {Reason, ST}}]}]};
@@ -348,7 +347,7 @@ top(F, Forms, Options) ->
             optionally_pretty_print(NewForms1, Options, Context),
             NewForms1
     catch
-        ?WITH_STACKTRACE(error, Reason, ST)
+        error:Reason:ST ->
             {error,
              [{File, [{?DUMMY_LINE, ?MODULE,
                        {Reason, ST}}]}]};
@@ -461,7 +460,8 @@ renumber_(T, Prev) when is_tuple(T) ->
     case is_form(T) of
         true ->
             New = Prev+1,
-            T1 = setelement(2, T, New),
+            NewE2 = update_line(element(2, T), New),
+            T1 = setelement(2, T, NewE2),
             {Res, NewAcc} = renumber_(tuple_to_list(T1), New),
             {list_to_tuple(Res), NewAcc};
         false ->
@@ -479,6 +479,16 @@ is_form(T) ->
     catch
         error:_ ->
             false
+    end.
+
+update_line(Element2, Line) ->
+    case erl_anno:is_anno(Element2) of
+        true ->
+            erl_anno:set_line(Line, Element2);
+        false -> % location
+            A = erl_anno:new(Element2),
+            NewA = erl_anno:set_line(Line, A),
+            erl_anno:location(NewA)
     end.
 
 option_value(Key, Options, Result) ->
@@ -499,7 +509,7 @@ option_value(Key, Options, Result) ->
 %%% @spec (Fun, Forms, Acc, Options) -> NewAcc
 %%% Fun = function()
 %%% @doc
-%%% Equvalent to do_inspect(Fun,Acc,Forms,initial_context(Forms,Options)).
+%%% Equivalent to do_inspect(Fun,Acc,Forms,initial_context(Forms,Options)).
 %%% @end
 %%%
 -spec inspect(insp_f(), A, forms(), options()) ->
@@ -568,7 +578,7 @@ get_orig_syntax_tree(File) ->
         {ok, Forms} ->
             Forms;
         Err ->
-            error(error_reading_file, ?HERE, [{File,Err}])
+            erlang:error(error_reading_file, ?HERE, [{File,Err}])
     end.
 
 %%% @spec (Tree) -> Forms
@@ -736,14 +746,14 @@ format_exception(Class, Reason) ->
 %%% Note that a stacktrace is generated inside this function.
 %%% @end
 format_exception(Class, Reason, Lines) ->
-    ST = erlang:process_info(self(), current_stacktrace),
+    {current_stacktrace, ST} = erlang:process_info(self(), current_stacktrace),
     PrintF = fun(Term, I) ->
                      io_lib_pretty:print(
                        Term, I, columns(), ?LINEMAX, ?CHAR_MAX,
                        record_print_fun())
              end,
     StackF = fun(_, _, _) -> false end,
-    lines(Lines, lib:format_exception(
+    lines(Lines, erl_error:format_exception(
                    1, Class, Reason, ST, StackF, PrintF)).
 
 columns() ->
@@ -874,14 +884,15 @@ this_form_df(F, Form, Context, Acc) ->
 apply_F(F, Type, Form, Context, Acc) ->
     try F(Type, Form, Context, Acc)
     catch
-        ?WITH_STACKTRACE(error, Reason, ST)
+        error:Reason:ST ->
             ?ERROR(Reason,
                    ?HERE,
                    [{type, Type},
                     {context, Context},
                     {acc, Acc},
                     {apply_f, F},
-                    {form, Form}] ++ [{stack, ST}],
+                    {form, Form},
+                    {stack, ST}],
                    ST)
     end.
 
@@ -945,3 +956,13 @@ format_error(Error) ->
 
 format_error_(Error) ->
     lists:flatten(io_lib:fwrite("~p", [Error])).
+
+
+%% EUnit
+-ifdef(TEST).
+
+format_exeption_test() ->
+    [_,_,_] = format_exception(error, {error, foo}, 3),
+    ok.
+
+-endif.

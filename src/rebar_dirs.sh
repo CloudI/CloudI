@@ -34,7 +34,6 @@ REBAR_DIRS="\
     lib/cloudi_service_udp \
     lib/cloudi_service_validate \
     lib/cloudi_service_validate_config \
-    external/cloudi_x_bear \
     external/cloudi_x_certifi \
     external/cloudi_x_cowboy \
     external/cloudi_x_cowboy1 \
@@ -46,7 +45,6 @@ REBAR_DIRS="\
     external/cloudi_x_exometer \
     external/cloudi_x_exometer_core \
     external/cloudi_x_exometer_influxdb \
-    external/cloudi_x_folsom \
     external/cloudi_x_hackney \
     external/cloudi_x_hut \
     external/cloudi_x_idna \

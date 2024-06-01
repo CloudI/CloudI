@@ -52,12 +52,13 @@ attr_name(F) ->
 
 create_new_f(Forms, #st{vars = Vs}, C) ->
     Arity = length(Vs),
-    Form = {function, 1, new, Arity,
-	    [{clause, 1,
-	      [{var,1,V} || V <- Vs],
+    Anno1 = erl_anno:new(1),
+    Form = {function, Anno1, new, Arity,
+	    [{clause, Anno1,
+	      [{var,Anno1,V} || V <- Vs],
 	      [],
-	      [{tuple, 1, [{atom, 1, parse_trans:context(module, C)},
-			   {tuple, 1, [{var,1,V} || V <- Vs]}]}
+	      [{tuple, Anno1, [{atom, Anno1, parse_trans:context(module, C)},
+                               {tuple, Anno1, [{var,Anno1,V} || V <- Vs]}]}
 	      ]}
 	    ]},
     parse_trans:do_insert_forms(above, [Form], Forms, C).
@@ -75,14 +76,15 @@ wrap_funs(Forms, #st{vars = Vs, funs = Fs}, C) ->
       end, Forms, Fs).
 
 wrap_fun(function, Form, _, Acc, F, A, Vs,Mod) ->
+    Anno1 = erl_anno:new(1),
     case erl_syntax:revert(Form) of
-	{function, L, F, A, Cs} ->
-	    {{function, L, F, A + 1,
-	      [{clause, Lc,
-		Args ++ [{tuple,1,[{atom,1,Mod},
-				   {tuple,1,
-				    fix_vars(Vs, F, A, Clause)}]}], Gs, B}
-	       || {clause, Lc, Args, Gs, B} = Clause <- Cs]},
+	{function, Anno, F, A, Cs} ->
+	    {{function, Anno, F, A + 1,
+	      [{clause, AnnoLc,
+		Args ++ [{tuple,Anno1,[{atom,Anno1,Mod},
+                                       {tuple,Anno1,
+                                        fix_vars(Vs, F, A, Clause)}]}], Gs, B}
+	       || {clause, AnnoLc, Args, Gs, B} = Clause <- Cs]},
 	     false, Acc};
 	_ ->
 	    {Form, false, Acc}
@@ -92,8 +94,9 @@ wrap_fun(_, Form, _, Acc, _, _, _, _) ->
 
 fix_vars(Vars, F, A, Clause) ->
     %% erl_syntax_lib:variables/1 doesn't seem to work with just a clause...
-    Used = sets:to_list(erl_syntax_lib:variables({function,1,F,A,[Clause]})),
-    [{var, 1, fix_var(V, Used)} || V <- Vars].
+    Anno1 = erl_anno:new(1),
+    Used = sets:to_list(erl_syntax_lib:variables({function,Anno1,F,A,[Clause]})),
+    [{var, Anno1, fix_var(V, Used)} || V <- Vars].
 
 fix_var(V, Used) ->
     case lists:member(V, Used) of
@@ -104,6 +107,7 @@ fix_var(V, Used) ->
 
 
 export_funs(Forms, #st{vars = Vs, funs = Fs}, C) ->
-    New = [{attribute,1,export,[{new,length(Vs)}]},
-	   {attribute,1,export,[{F,A+1} || {F,A} <- Fs]}],
+    Anno1 = erl_anno:new(1),
+    New = [{attribute,Anno1,export,[{new,length(Vs)}]},
+	   {attribute,Anno1,export,[{F,A+1} || {F,A} <- Fs]}],
     parse_trans:do_insert_forms(above, New, Forms, C).

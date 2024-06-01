@@ -54,7 +54,7 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 ### find_auto_template/1 ###
 
 <pre><code>
-find_auto_template(Name::<a href="exometer.md#type-name">exometer:name()</a>) -&gt; #exometer_entry{} | false
+find_auto_template(Name::<a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>) -&gt; #exometer_entry{} | false
 </code></pre>
 <br />
 

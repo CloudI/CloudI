@@ -1,7 +1,7 @@
 -module(lc).
 -export([f/1]).
 
-f(X) ->
+f(_X) ->
     [fun(_) ->
-	     erlang:now()
-     end || {Y1,Y2} <- [{1,a},{2,b}]].
+	     erlang:timestamp()
+     end || {_Y1,_Y2} <- [{1,a},{2,b}]].

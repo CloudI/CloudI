@@ -2,7 +2,7 @@
 
 @doc Generic setup utility for Erlang-based systems
 
-[![Build Status](https://travis-ci.org/uwiger/setup.svg)](https://travis-ci.org/uwiger/setup)
+[![Build Status](https://github.com/uwiger/setup/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/uwiger/setup/actions/workflows/ci.yml)
 
 <h2>Introduction</h2>
 
@@ -23,7 +23,7 @@ system, with a set of conventions allowing each component to provide
 callbacks for different steps in the installation procedure.
 
 The callbacks are defined through OTP application environment variables,
-which can easily be overriden at install time.
+which can easily be overridden at install time.
 
 <h2>The setup_gen utility</h2>
 

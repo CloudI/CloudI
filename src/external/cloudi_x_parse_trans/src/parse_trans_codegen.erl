@@ -152,7 +152,8 @@ parse_transform(Forms, Options) ->
 
 xform_fun(application, Form, _Ctxt, Acc) ->
     MFA = erl_syntax_lib:analyze_application(Form),
-    L = erl_syntax:get_pos(Form),
+    Anno = erl_syntax:get_pos(Form),
+    L = erl_anno:line(Anno),
     case MFA of
         {codegen, {gen_module, 3}} ->
             [NameF, ExportsF, FunsF] =
@@ -271,11 +272,12 @@ gen_function_(NameF, FunF, AltF, L, Acc) ->
     case erl_syntax:type(FunF) of
         T when T==implicit_fun; T==fun_expr ->
             {Arity, Clauses} = gen_function_clauses(T, NameF, FunF, L, Acc),
-            {tuple, 1, [{atom, 1, function},
-                        {integer, 1, L},
-                        NameF,
-                        {integer, 1, Arity},
-                        substitute(abstract(Clauses))]};
+            A1 = erl_anno:new(1),
+            {tuple, A1, [{atom, A1, function},
+                         {integer, A1, L},
+                         NameF,
+                         {integer, A1, Arity},
+                         substitute(abstract(Clauses))]};
         list_comp ->
             %% Extract the fun from the LC
             [Template] = parse_trans:revert(
@@ -303,31 +305,32 @@ gen_function_(NameF, FunF, AltF, L, Acc) ->
                 [erl_syntax:generator(
                    rename_vars(VarMap, gen_pattern(G)),
                    gen_body(G)) || G <- Body],
+            A1 = erl_anno:new(1),
             [RevLC] = parse_trans:revert(
                         [erl_syntax:list_comp(
-                           {call, 1,
-                            {'fun',1,
+                           {call, A1,
+                            {'fun',A1,
                              {clauses,
-                              [{clause,1,[{var,1,V} || V <- Vars],[],
+                              [{clause,A1,[{var,A1,V} || V <- Vars],[],
                                 [substitute(
                                    abstract(Clauses))]
                                }]}
-                            }, [{var,1,V} || V <- Vars1]}, Body1)]),
+                            }, [{var,A1,V} || V <- Vars1]}, Body1)]),
             AltC = case AltF of
-                       [] -> {nil,1};
+                       [] -> {nil,A1};
                        _ ->
                            {Arity, AltC1} = gen_function_clauses(
                                               erl_syntax:type(AltF),
                                               NameF, AltF, L, Acc),
                            substitute(abstract(AltC1))
                    end,
-            {tuple,1,[{atom,1,function},
-                      {integer, 1, L},
-                      NameF,
-                      {integer, 1, Arity},
-                      {call, 1, {remote, 1, {atom, 1, lists},
-                                 {atom,1,flatten}},
-                       [{op, 1, '++', RevLC, AltC}]}]}
+            {tuple,A1,[{atom,A1,function},
+                       {integer, A1, L},
+                       NameF,
+                       {integer, A1, Arity},
+                       {call, A1, {remote, A1, {atom, A1, lists},
+                                  {atom,A1,flatten}},
+                        [{op, A1, '++', RevLC, AltC}]}]}
     end.
 
 gen_pattern(G) ->
@@ -373,23 +376,32 @@ abstract(ClauseForms) ->
 
 substitute({tuple,L0,
             [{atom,_,tuple},
-             {integer,_,L},
+             Loc,
              {cons,_,
-              {tuple,_,[{atom,_,atom},{integer,_,_},{atom,_,'$var'}]},
+              {tuple,_,[{atom,_,atom},_LocA,{atom,_,'$var'}]},
               {cons,_,
-               {tuple,_,[{atom,_,var},{integer,_,_},{atom,_,V}]},
-               {nil,_}}}]}) ->
+               {tuple,_,[{atom,_,var},_LocB,{atom,_,V}]},
+               {nil,_}}}]}) when element(1, Loc) == tuple; % Erlang 24+
+                                 element(1, Loc) == integer ->
+    AbstConcreteLoc =
+        case Loc of
+            {integer, _, L} ->
+                {integer, L0, L};
+            {tuple, _, [{integer, _, L}, {integer, _, C}]} ->
+                {tuple, L0, [{integer, L0, L}, {integer, L0, C}]}
+        end,
     {call, L0, {remote,L0,{atom,L0,erl_parse},
                 {atom,L0,abstract}},
-     [{var, L0, V}, {integer, L0, L}]};
-substitute({tuple,L0,
+     [{var, L0, V}, AbstConcreteLoc]};
+substitute({tuple,L0, % Erlang 24: {Line,Col}
             [{atom,_,tuple},
-             {integer,_,_},
+             Loc,
              {cons,_,
-              {tuple,_,[{atom,_,atom},{integer,_,_},{atom,_,'$form'}]},
+              {tuple,_,[{atom,_,atom},_LocA,{atom,_,'$form'}]},
               {cons,_,
-               {tuple,_,[{atom,_,var},{integer,_,_},{atom,_,F}]},
-               {nil,_}}}]}) ->
+               {tuple,_,[{atom,_,var},_LocB,{atom,_,F}]},
+               {nil,_}}}]}) when element(1, Loc) == tuple; % Erlang 24+
+                                 element(1, Loc) == integer ->
     {var, L0, F};
 substitute([]) ->
     [];

@@ -1,8 +1,9 @@
 -module(ct_expand_test).
 
--export([f/0]).
+-export([f/0, g/0, h/0, i/0, fixture/0]).
 
 -compile({parse_transform, ct_expand}).
+-compile({ct_expand_trace, [x]}).
 -pt_pp_src(true).
 
 f() ->
@@ -29,7 +30,8 @@ fixture() ->
 jsx_consult("my_file.json", _) ->
     M0 = maps:from_list([]),
     M0#{<<"k">> => [42]
-       ,#{1=>1} => {"s", 4.2}
+       , 1 => a
+       ,#{2=>2, 1=>1} => {"s", 4.2}
        }.
 
 zip([H1|T1], [H2|T2]) ->

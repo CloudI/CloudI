@@ -57,7 +57,7 @@ main(X1::[string()]) -&gt; any()
 ### pp_beam/1 ###
 
 <pre><code>
-pp_beam(Beam::<a href="#type-filename">filename()</a>) -&gt; string() | {error, Reason}
+pp_beam(Beam::<a href="/home/uwiger/uw/kernel/doc/file.md#type-filename">file:filename()</a>) -&gt; ok | {error, any()}
 </code></pre>
 <br />
 
@@ -69,7 +69,7 @@ the pretty-printed corresponding erlang source code.
 ### pp_beam/2 ###
 
 <pre><code>
-pp_beam(Beam::<a href="#type-filename">filename()</a>, Out::<a href="#type-filename">filename()</a>) -&gt; ok | {error, Reason}
+pp_beam(F::<a href="/home/uwiger/uw/kernel/doc/file.md#type-filename">file:filename()</a>, Out::<a href="/home/uwiger/uw/kernel/doc/file.md#type-filename">file:filename()</a>) -&gt; ok | {error, any()}
 </code></pre>
 <br />
 
@@ -81,7 +81,7 @@ Erlang source code, storing it in the file Out.
 ### pp_src/2 ###
 
 <pre><code>
-pp_src(Forms0::Forms, Out::<a href="#type-filename">filename()</a>) -&gt; ok
+pp_src(Forms0::<a href="/home/uwiger/uw/parse_trans/doc/parse_trans.md#type-forms">parse_trans:forms()</a>, F::<a href="/home/uwiger/uw/kernel/doc/file.md#type-filename">file:filename()</a>) -&gt; ok
 </code></pre>
 <br />
 

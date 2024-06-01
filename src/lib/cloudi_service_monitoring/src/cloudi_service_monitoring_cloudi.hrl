@@ -8,21 +8,30 @@
         service_f :: start_internal | start_external,
         service_a :: cloudi_core_i_spawn:arguments_execution(),
         process_index :: non_neg_integer(),
-        count_process :: pos_integer(), % count_process_dynamic updates this
-        count_thread :: pos_integer(),
+        process_count :: pos_integer(),
+        thread_count :: pos_integer(),
         scope :: atom(),
+        % pids is only accurate (in this record) on the pid lookup (find2)
+        % due to the overwrite of #service{} for the key1 ServiceId value
         pids :: list(pid()),
         os_pid :: undefined | pos_integer(),
         monitor :: undefined | reference(),
-        time_start :: cloudi_timestamp:native_monotonic(),
-        time_restart :: undefined | cloudi_timestamp:native_monotonic(),
-        time_terminate :: undefined | cloudi_timestamp:native_monotonic(),
+        time_start
+            :: cloudi_timestamp:native_monotonic(),
+        time_restart
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        time_terminate = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
         restart_count_total :: non_neg_integer(),
-        restart_count :: non_neg_integer(),
-        restart_times :: list(cloudi_timestamp:seconds_monotonic()),
+        restart_count = 0 :: non_neg_integer(),
+        restart_times = [] :: list(cloudi_timestamp:seconds_monotonic()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
         restart_all :: boolean(),
         restart_delay :: tuple() | false,
+        critical :: boolean(),
+        % from the supervisor behavior documentation:
+        % If more than MaxR restarts occur within MaxT seconds,
+        % the supervisor terminates all child processes...
         max_r :: non_neg_integer(),
         max_t :: non_neg_integer()
     }).

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-06-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_monitoring bug from critical service configuration
+      option addition (2.0.6 and 2.0.7)
+    * Update exometer_core, hut, parse_trans, setup
+    * Remove folsom and bear due to removal from exometer_core
+
 2024-04-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve ATS CloudI API function effect tags comment

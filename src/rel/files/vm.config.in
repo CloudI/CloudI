@@ -37,13 +37,13 @@
   ]},
  {cloudi_x_exometer, [
     {defaults, [
-        {['_'], function  , [{module, cloudi_x_exometer_function}]},
-        {['_'], counter   , [{module, cloudi_x_exometer}]},
-        {['_'], histogram , [{module, cloudi_x_exometer_histogram}]},
-        {['_'], spiral    , [{module, cloudi_x_exometer_spiral}]},
-        {['_'], duration  , [{module, cloudi_x_exometer_folsom}]},
-        {['_'], meter     , [{module, cloudi_x_exometer_folsom}]},
-        {['_'], gauge     , [{module, cloudi_x_exometer_folsom}]}
+        {['_'], function    , [{module, cloudi_x_exometer_function}]},
+        {['_'], counter     , [{module, cloudi_x_exometer}]},
+        {['_'], fast_counter, [{module, cloudi_x_exometer}]},
+        {['_'], gauge       , [{module, cloudi_x_exometer}]},
+        {['_'], histogram   , [{module, cloudi_x_exometer_histogram}]},
+        {['_'], spiral      , [{module, cloudi_x_exometer_spiral}]},
+        {['_'], duration    , [{module, cloudi_x_exometer_duration}]}
      ]},
     {report, []}
   ]},

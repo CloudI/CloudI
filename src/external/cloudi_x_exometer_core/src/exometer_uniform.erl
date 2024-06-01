@@ -51,7 +51,7 @@ behaviour() ->
 
 probe_init(Name, _Type, Options) ->
     St = process_opts(#st { name = Name }, [ {percentiles, [ 50, 75, 90, 95, 99, 999 ]} ] ++ Options),
-    EtsRef = ets:new(uniform, [ set, { keypos, 2 } ]),
+    EtsRef = ets:new(uniform, [ set, {keypos, 2}, {read_concurrency, true}, {write_concurrency, true} ]),
 
     %% Setup random seed, if not already done.
     case get(random_seed) of
@@ -105,7 +105,7 @@ probe_update(Value, St) ->
 
 probe_reset(St) ->
     ets:delete(St#st.ets_ref),
-    EtsRef = ets:new(uniform, [ set, { keypos, 2 } ]),
+    EtsRef = ets:new(uniform, [ set, { keypos, 2 }, {read_concurrency, true}, {write_concurrency, true} ]),
     {ok, St#st { ets_ref = EtsRef, cur_sz = 0 }}.
 
 probe_sample(_St) ->

@@ -77,7 +77,7 @@ sample_fun() = fun((<a href="#type-timestamp">timestamp()</a>, <a href="#type-va
 
 
 <pre><code>
-timestamp() = <a href="exometer_util.md#type-timestamp">exometer_util:timestamp()</a>
+timestamp() = <a href="http://www.erlang.org/doc/man/exometer_util.html#type-timestamp">exometer_util:timestamp()</a>
 </code></pre>
 
 
@@ -146,6 +146,11 @@ Apart from the specified timestamp, this function works just like
 
 <pre><code>
 add_element(TS::<a href="#type-timestamp">timestamp()</a>, Evt::<a href="#type-value">value()</a>, Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}, Wrap::true) -&gt; {boolean(), #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}}
+</code></pre>
+<br />
+
+<pre><code>
+add_element(TS::<a href="#type-timestamp">timestamp()</a>, Evt::<a href="#type-value">value()</a>, Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}, Wrap::false) -&gt; #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}
 </code></pre>
 <br />
 

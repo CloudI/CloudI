@@ -123,7 +123,7 @@ update_tref(Name, TRef) ->
 ensure_table() ->
     case ets:info(?TABLE, name) of
         undefined ->
-            ets:new(?TABLE, [set, public, named_table, {keypos, 2}]);
+            ets:new(?TABLE, [set, public, named_table, {keypos, 2}, {read_concurrency, true}, {write_concurrency, true}]);
         _ ->
             true
     end.

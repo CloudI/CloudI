@@ -303,7 +303,7 @@ options.
 
 
 <pre><code>
-datapoint() = <a href="exometer.md#type-datapoint">exometer:datapoint()</a>
+datapoint() = <a href="http://www.erlang.org/doc/man/exometer.html#type-datapoint">exometer:datapoint()</a>
 </code></pre>
 
 

@@ -6,7 +6,7 @@
 
 start() ->
     % Ensure hut is started so all app env are available
-    ok = application:start(hut),
+    ok = application:ensure_started(hut),
     ?log(info, "Testing hut log levels with type ~s", [?log_type]),
     lists:foreach(
       fun

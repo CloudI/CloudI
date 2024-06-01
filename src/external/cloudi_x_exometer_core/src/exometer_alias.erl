@@ -51,10 +51,14 @@
 -record(alias, {key, alias, entry, dp}).
 -record(st, {}).
 
+%% copied from re.erl (not an exported type)
+-type mp() :: {re_pattern, _, _, _, _}.
+
+
 -type alias()    :: atom() | binary().
 -type name()     :: exometer:name().
 -type dp()       :: exometer:datapoint().
--type regexp()   :: iodata() | re:mp().
+-type regexp()   :: iodata() | mp().
 -type acc()      :: any().
 -type fold_fun() :: fun((alias(), name(), dp(), acc()) -> acc()).
 -type reason()   :: any().

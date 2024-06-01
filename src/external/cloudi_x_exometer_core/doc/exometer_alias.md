@@ -53,7 +53,7 @@ alias() = atom() | binary()
 
 
 <pre><code>
-dp() = <a href="exometer.md#type-datapoint">exometer:datapoint()</a>
+dp() = <a href="http://www.erlang.org/doc/man/exometer.html#type-datapoint">exometer:datapoint()</a>
 </code></pre>
 
 
@@ -69,11 +69,21 @@ fold_fun() = fun((<a href="#type-alias">alias()</a>, <a href="#type-name">name()
 
 
 
+### <a name="type-mp">mp()</a> ###
+
+
+<pre><code>
+mp() = {re_pattern, term(), term(), term(), term()}
+</code></pre>
+
+
+
+
 ### <a name="type-name">name()</a> ###
 
 
 <pre><code>
-name() = <a href="exometer.md#type-name">exometer:name()</a>
+name() = <a href="http://www.erlang.org/doc/man/exometer.html#type-name">exometer:name()</a>
 </code></pre>
 
 
@@ -93,7 +103,7 @@ reason() = any()
 
 
 <pre><code>
-regexp() = iodata() | <a href="re.md#type-mp">re:mp()</a>
+regexp() = iodata() | <a href="#type-mp">mp()</a>
 </code></pre>
 
 

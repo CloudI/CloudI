@@ -23,7 +23,7 @@ __Behaviours:__ [`exometer_probe`](exometer_probe.md).
 ### behaviour/0 ###
 
 <pre><code>
-behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
+behaviour() -&gt; <a href="http://www.erlang.org/doc/man/exometer.html#type-behaviour">exometer:behaviour()</a>
 </code></pre>
 <br />
 

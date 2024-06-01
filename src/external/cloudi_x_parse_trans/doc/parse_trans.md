@@ -99,12 +99,12 @@ xform_f_rec() = fun((<a href="#type-type">type()</a>, <a href="#type-form">form(
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#context-2">context/2</a></td><td>
 Accessor function for the Context record.</td></tr><tr><td valign="top"><a href="#depth_first-4">depth_first/4</a></td><td></td></tr><tr><td valign="top"><a href="#do_depth_first-4">do_depth_first/4</a></td><td></td></tr><tr><td valign="top"><a href="#do_insert_forms-4">do_insert_forms/4</a></td><td></td></tr><tr><td valign="top"><a href="#do_inspect-4">do_inspect/4</a></td><td></td></tr><tr><td valign="top"><a href="#do_transform-4">do_transform/4</a></td><td></td></tr><tr><td valign="top"><a href="#error-3">error/3</a></td><td>.</td></tr><tr><td valign="top"><a href="#export_function-3">export_function/3</a></td><td></td></tr><tr><td valign="top"><a href="#format_error-1">format_error/1</a></td><td></td></tr><tr><td valign="top"><a href="#format_exception-2">format_exception/2</a></td><td>Equivalent to <a href="#format_exception-3"><tt>format_exception(Class, Reason, 4)</tt></a>.</td></tr><tr><td valign="top"><a href="#format_exception-3">format_exception/3</a></td><td>Produces a few lines of user-friendly formatting of exception info.</td></tr><tr><td valign="top"><a href="#function_exists-3">function_exists/3</a></td><td>
 Checks whether the given function is defined in Forms.</td></tr><tr><td valign="top"><a href="#get_attribute-2">get_attribute/2</a></td><td>
-Returns the value of the first occurence of attribute A.</td></tr><tr><td valign="top"><a href="#get_attribute-3">get_attribute/3</a></td><td></td></tr><tr><td valign="top"><a href="#get_file-1">get_file/1</a></td><td>
+Returns the value of the first occurrence of attribute A.</td></tr><tr><td valign="top"><a href="#get_attribute-3">get_attribute/3</a></td><td></td></tr><tr><td valign="top"><a href="#get_file-1">get_file/1</a></td><td>
 Returns the name of the file being compiled.</td></tr><tr><td valign="top"><a href="#get_module-1">get_module/1</a></td><td>
 Returns the name of the module being compiled.</td></tr><tr><td valign="top"><a href="#get_orig_syntax_tree-1">get_orig_syntax_tree/1</a></td><td>.</td></tr><tr><td valign="top"><a href="#get_pos-1">get_pos/1</a></td><td>
 Tries to retrieve the line number from an erl_syntax form.</td></tr><tr><td valign="top"><a href="#initial_context-2">initial_context/2</a></td><td>
 Initializes a context record.</td></tr><tr><td valign="top"><a href="#inspect-4">inspect/4</a></td><td>
-Equvalent to do_inspect(Fun,Acc,Forms,initial_context(Forms,Options)).</td></tr><tr><td valign="top"><a href="#optionally_pretty_print-3">optionally_pretty_print/3</a></td><td></td></tr><tr><td valign="top"><a href="#plain_transform-2">plain_transform/2</a></td><td>
+Equivalent to do_inspect(Fun,Acc,Forms,initial_context(Forms,Options)).</td></tr><tr><td valign="top"><a href="#optionally_pretty_print-3">optionally_pretty_print/3</a></td><td></td></tr><tr><td valign="top"><a href="#plain_transform-2">plain_transform/2</a></td><td>
 Performs a transform of <code>Forms</code> using the fun <code>Fun(Form)</code>.</td></tr><tr><td valign="top"><a href="#pp_beam-1">pp_beam/1</a></td><td>
 Reads debug_info from the beam file Beam and returns a string containing
 the pretty-printed corresponding erlang source code.</td></tr><tr><td valign="top"><a href="#pp_beam-2">pp_beam/2</a></td><td>
@@ -122,10 +122,9 @@ Makes one pass.</td></tr></table>
 ### context/2 ###
 
 <pre><code>
-context(X1::Attr, Context) -&gt; any()
+context(X1::atom(), Context::#context{}) -&gt; term()
 </code></pre>
-
-<ul class="definitions"><li><code>Attr = module | function | arity | options</code></li></ul>
+<br />
 
 Accessor function for the Context record.
 
@@ -179,10 +178,9 @@ do_transform(F::<a href="#type-xform_f_rec">xform_f_rec()</a>, Acc::term(), Form
 ### error/3 ###
 
 <pre><code>
-error(R::Reason, F::Form, I::Info) -&gt; <a href="#type-throw">throw()</a>
+error(R::string(), F::any(), I::[{any(), any()}]) -&gt; none()
 </code></pre>
-
-<ul class="definitions"><li><code>Info = [{Key, Value}]</code></li></ul>
+<br />
 
 Used to report errors detected during the parse transform.
 
@@ -237,7 +235,7 @@ Note that a stacktrace is generated inside this function.
 ### function_exists/3 ###
 
 <pre><code>
-function_exists(Fname::atom(), Arity::integer(), Forms) -&gt; boolean()
+function_exists(Fname::atom(), Arity::integer(), Forms::<a href="#type-forms">forms()</a>) -&gt; boolean()
 </code></pre>
 <br />
 
@@ -248,12 +246,11 @@ Checks whether the given function is defined in Forms.
 ### get_attribute/2 ###
 
 <pre><code>
-get_attribute(A, Forms) -&gt; any()
+get_attribute(A::atom(), Forms::[any()]) -&gt; none | [<a href="/home/uwiger/uw/syntax_tools/doc/erl_syntax.md#type-syntaxTree">erl_syntax:syntaxTree()</a>]
 </code></pre>
+<br />
 
-<ul class="definitions"><li><code>A = atom()</code></li></ul>
-
-Returns the value of the first occurence of attribute A.
+Returns the value of the first occurrence of attribute A.
 
 <a name="get_attribute-3"></a>
 
@@ -266,7 +263,7 @@ Returns the value of the first occurence of attribute A.
 ### get_file/1 ###
 
 <pre><code>
-get_file(Forms) -&gt; string()
+get_file(Forms::<a href="#type-forms">forms()</a>) -&gt; string()
 </code></pre>
 <br />
 
@@ -277,7 +274,7 @@ Returns the name of the file being compiled.
 ### get_module/1 ###
 
 <pre><code>
-get_module(Forms) -&gt; atom()
+get_module(Forms::[any()]) -&gt; atom()
 </code></pre>
 <br />
 
@@ -288,7 +285,7 @@ Returns the name of the module being compiled.
 ### get_orig_syntax_tree/1 ###
 
 <pre><code>
-get_orig_syntax_tree(File) -&gt; Forms
+get_orig_syntax_tree(File::string()) -&gt; <a href="#type-forms">forms()</a>
 </code></pre>
 <br />
 
@@ -302,7 +299,7 @@ uses epp_dodger).
 ### get_pos/1 ###
 
 <pre><code>
-get_pos(I::list()) -&gt; integer()
+get_pos(I::list()) -&gt; <a href="/home/uwiger/uw/stdlib/doc/erl_anno.md#type-location">erl_anno:location()</a>
 </code></pre>
 <br />
 
@@ -314,7 +311,7 @@ Tries to retrieve the line number from an erl_syntax form. Returns a
 ### initial_context/2 ###
 
 <pre><code>
-initial_context(Forms, Options) -&gt; #context{}
+initial_context(Forms::<a href="#type-forms">forms()</a>, Options::<a href="#type-options">options()</a>) -&gt; #context{}
 </code></pre>
 <br />
 
@@ -328,12 +325,11 @@ name and the options passed to the transform function.
 ### inspect/4 ###
 
 <pre><code>
-inspect(F::Fun, Acc::Forms, Forms::Acc, Options) -&gt; NewAcc
+inspect(F::<a href="#type-insp_f">insp_f()</a>, A, Forms::<a href="#type-forms">forms()</a>, Options::<a href="#type-options">options()</a>) -&gt; A
 </code></pre>
+<br />
 
-<ul class="definitions"><li><code>Fun = function()</code></li></ul>
-
-Equvalent to do_inspect(Fun,Acc,Forms,initial_context(Forms,Options)).
+Equivalent to do_inspect(Fun,Acc,Forms,initial_context(Forms,Options)).
 
 <a name="optionally_pretty_print-3"></a>
 
@@ -389,7 +385,7 @@ Example - This transform fun would convert all instances of `P ! Msg` to
 ### pp_beam/1 ###
 
 <pre><code>
-pp_beam(Beam::<a href="file.md#type-filename">file:filename()</a>) -&gt; string() | {error, Reason}
+pp_beam(Beam::<a href="/home/uwiger/uw/kernel/doc/file.md#type-filename">file:filename()</a>) -&gt; ok
 </code></pre>
 <br />
 
@@ -401,7 +397,7 @@ the pretty-printed corresponding erlang source code.
 ### pp_beam/2 ###
 
 <pre><code>
-pp_beam(Beam::<a href="#type-filename">filename()</a>, Out::<a href="#type-filename">filename()</a>) -&gt; ok | {error, Reason}
+pp_beam(F::<a href="/home/uwiger/uw/kernel/doc/file.md#type-filename">file:filename()</a>, Out::<a href="/home/uwiger/uw/kernel/doc/file.md#type-filename">file:filename()</a>) -&gt; ok
 </code></pre>
 <br />
 
@@ -413,7 +409,7 @@ Erlang source code, storing it in the file Out.
 ### pp_src/2 ###
 
 <pre><code>
-pp_src(Res::Forms, Out::<a href="#type-filename">filename()</a>) -&gt; ok
+pp_src(Res::<a href="#type-forms">forms()</a>, F::string()) -&gt; ok
 </code></pre>
 <br />
 
@@ -470,7 +466,7 @@ using the function [`format_exception/2`](#format_exception-2).
 ### revert/1 ###
 
 <pre><code>
-revert(Tree) -&gt; Forms
+revert(Tree::<a href="#type-forms">forms()</a>) -&gt; <a href="#type-forms">forms()</a>
 </code></pre>
 <br />
 
@@ -527,10 +523,9 @@ top(F::function(), Forms::<a href="#type-forms">forms()</a>, Options::list()) -&
 ### transform/4 ###
 
 <pre><code>
-transform(Fun, Acc, Forms, Options) -&gt; {TransformedForms, NewAcc}
+transform(Fun::<a href="#type-xform_f_rec">xform_f_rec()</a>, Acc, Forms::<a href="#type-forms">forms()</a>, Options::<a href="#type-options">options()</a>) -&gt; {<a href="#type-forms">forms()</a>, Acc} | {error, list()}
 </code></pre>
-
-<ul class="definitions"><li><code>Fun = function()</code></li><li><code>Options = [{Key, Value}]</code></li></ul>
+<br />
 
 Makes one pass
 
