@@ -73,7 +73,8 @@
          code_path_add/2,
          code_path_remove/2,
          code_path/1,
-         code_status/1]).
+         code_status/1,
+         code_status_reset/1]).
 
 -include("cloudi_service_api.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -2296,6 +2297,23 @@ code_status(Timeout)
         {error, _} = Error ->
             Error
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reset the code status runtime_cloudi_changes data.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec code_status_reset(Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error, timeout | noproc | shutdown}.
+
+code_status_reset(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout >= ?TIMEOUT_SERVICE_API_MIN) andalso
+           (Timeout =< ?TIMEOUT_SERVICE_API_MAX)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:code_status_reset(Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

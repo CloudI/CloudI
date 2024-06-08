@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-06-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the CloudI Service API code_status_reset function to clear
+      old entries in the runtime_cloudi_changes list
+
 2024-06-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_monitoring bug from critical service configuration

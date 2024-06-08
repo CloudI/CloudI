@@ -72,6 +72,7 @@
          code_path_remove/2,
          code_path/1,
          code_status/3,
+         code_status_reset/1,
          service_start/3,
          service_stop/3,
          service_restart/2,
@@ -145,6 +146,7 @@
     {
         node_name :: nonempty_string(),
         time_start :: cloudi_timestamp:native_monotonic(),
+        time_status :: cloudi_timestamp:native_monotonic(),
         terminate_timeout :: pos_integer(),
         configuration :: #config{}
     }).
@@ -279,6 +281,9 @@ code_status(TimeNative, TimeOffset, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {code_status,
                                  TimeNative, TimeOffset}, Timeout)).
+
+code_status_reset(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE, code_status_reset, Timeout)).
 
 -spec service_start(#config_service_internal{} |
                     #config_service_external{},
@@ -429,6 +434,7 @@ init([TerminateTimeout, Config]) ->
     NodeName = cloudi_core_i_nodes:node_name(node()),
     {ok, #state{node_name = NodeName,
                 time_start = TimeStart,
+                time_status = TimeStart,
                 terminate_timeout = TerminateTimeout,
                 configuration = Config}}.
 
@@ -673,19 +679,24 @@ handle_call(code_path, _,
 
 handle_call({code_status, TimeNative, TimeOffset}, _,
             #state{time_start = TimeStart,
+                   time_status = TimeStatus,
                    configuration = Config} = State) ->
     #config{services = Services} = Config,
     SecondsNow = cloudi_timestamp:convert(TimeNative + TimeOffset,
                                           native, second),
-    SecondsStart = SecondsNow -
-                   cloudi_timestamp:convert(TimeNative - TimeStart,
-                                            native, second),
-    case code_status_files(Services, SecondsStart, SecondsNow) of
+    SecondsStatus = SecondsNow -
+                    cloudi_timestamp:convert(TimeNative - TimeStatus,
+                                             native, second),
+    case code_status_files(Services, SecondsStatus, SecondsNow) of
         {ok, RuntimeChanges} ->
             {reply, {ok, TimeStart, RuntimeChanges}, State};
         {error, _} = Error ->
             {reply, Error, State}
     end;
+
+handle_call(code_status_reset, _, State) ->
+    TimeStatus = cloudi_timestamp:native_monotonic(),
+    {reply, ok, State#state{time_status = TimeStatus}};
 
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
@@ -1490,13 +1501,13 @@ service_format(Service) ->
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 
-code_status_files(Services, SecondsStart, SecondsNow) ->
-    code_status_files(Services, [], SecondsStart, SecondsNow).
+code_status_files(Services, SecondsStatus, SecondsNow) ->
+    code_status_files(Services, [], SecondsStatus, SecondsNow).
 
 code_status_files([], ChangedFiles, _, _) ->
     {ok, code_status_files_result(ChangedFiles)};
 code_status_files([Service | Services], ChangedFiles,
-                  SecondsStart, SecondsNow) ->
+                  SecondsStatus, SecondsNow) ->
     {Type, FilePath} = case Service of
         #config_service_internal{file_path = FilePathValue}
         when FilePathValue /= undefined ->
@@ -1511,15 +1522,15 @@ code_status_files([Service | Services], ChangedFiles,
         {ok, #file_info{mtime = MTime}} ->
             {IDs, ServicesNew} = code_status_files_filter(Services, Service),
             if
-                MTime > SecondsStart ->
+                MTime > SecondsStatus ->
                     ChangedFile = {SecondsNow - MTime, Type, FilePath, IDs},
                     code_status_files(ServicesNew,
                                       lists:umerge(ChangedFiles,
                                                    [ChangedFile]),
-                                      SecondsStart, SecondsNow);
+                                      SecondsStatus, SecondsNow);
                 true ->
                     code_status_files(ServicesNew, ChangedFiles,
-                                      SecondsStart, SecondsNow)
+                                      SecondsStatus, SecondsNow)
             end;
         {error, Reason} ->
             {error, {file, {FilePath, Reason}}}
