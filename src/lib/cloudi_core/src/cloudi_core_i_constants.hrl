@@ -83,7 +83,7 @@
 -define(LOGGER_METADATA_PDICT_KEY, cloudi_logger_metadata).
 
 % process dictionary keys used by Erlang/OTP source code
--define(PROCESS_DESCRIPTION_PDICT_KEY, '$process_description').
+-define(PROCESS_DESCRIPTION_PDICT_KEY, '$process_label').
 
 % create the locally registered name for a cpg scope
 % (in a way that does not cause conflict with custom cpg scopes)
