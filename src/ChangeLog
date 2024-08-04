@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-08-03 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi script check for when Distributed Erlang
+      takes a longer time to start (net_setuptime seconds)
+
 2024-06-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Erlang process description in process dictionary for use in

@@ -116,6 +116,14 @@ case "$1" in
             echo "Node is already running!"
             exit 1
         fi
+        if [ -f "$CLOUDI_PID_FILE" ]; then
+            PID=`cat "$CLOUDI_PID_FILE"`
+            kill -0 "$PID" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo "Node is starting!"
+                exit 1
+            fi
+        fi
         START_OPTION="console"
         HEART_OPTION="start"
         # CloudI run_erl logging settings
