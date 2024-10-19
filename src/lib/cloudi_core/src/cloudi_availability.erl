@@ -428,26 +428,40 @@ durations_view_index(day, T, TimeOffset) ->
     1 + TimeHH * 2 + TimeMM div 30.
 
 durations_view_new(TNow, TPeriod, TimeOffset) ->
-    % Size does not include the | character
-    {Size,
+    TNowSystem = TNow + TimeOffset,
+    % SizeView does not include the | character
+    {SizeView,
+     SizeT,
      TCharacter} = if
         TPeriod =:= year ->
             {36,
+             36,
              ?NATIVE_TIME_IN_MONTH div 3}; % 1/3rd of a month per character
         TPeriod =:= month ->
+            {{DateYYYY, DateMM, _},
+             _} = cloudi_timestamp:datetime_utc(TNowSystem),
+            DaysPrevious = if
+                DateMM == 1 ->
+                    calendar:last_day_of_the_month(DateYYYY - 1, 12);
+                true ->
+                    calendar:last_day_of_the_month(DateYYYY, DateMM - 1)
+            end,
             {31,
+             DaysPrevious,
              ?NATIVE_TIME_IN_DAY}; % 1 day per character
         TPeriod =:= week ->
             {42,
+             42,
              ?NATIVE_TIME_IN_DAY div 6}; % 4 hours per character
         TPeriod =:= day ->
             {48,
+             48,
              ?NATIVE_TIME_IN_DAY div 48} % 30 minutes per character
     end,
     % TStart is the beginning of the current character in the view
-    TStart = TNow - abs(TNow + TimeOffset) rem TCharacter,
-    {TStart - (Size - 1) * TCharacter,
-     erlang:list_to_tuple(lists:duplicate(Size, $ ))}.
+    TStart = TNow - abs(TNowSystem) rem TCharacter,
+    {TStart - (SizeT - 1) * TCharacter,
+     erlang:list_to_tuple(lists:duplicate(SizeView, $ ))}.
 
 durations_view_to_string(View, TNow, TPeriod, TimeOffset) ->
     I = durations_view_index(TPeriod, TNow, TimeOffset),
