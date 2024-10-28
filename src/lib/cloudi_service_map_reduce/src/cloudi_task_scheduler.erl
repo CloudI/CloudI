@@ -273,7 +273,7 @@ task_done([_ | _] = Name, {_, PidOld} = PatternPidOld, TaskId, TimeoutNew,
                     TaskSize;
                 TimeoutSource =:= cloudi_task_size ->
                     cloudi_task_size:put(PidOld, TaskCost,
-                                         erlang:min(Elapsed, 1) / 3600000,
+                                         erlang:max(Elapsed, 1) / 3600000,
                                          TaskSize)
             end,
             {ok, Elapsed,
