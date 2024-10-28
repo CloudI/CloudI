@@ -6,6 +6,7 @@
    {vsn, "@VERSION@"},
    {modules, [
         cloudi_service_map_reduce,
+        cloudi_task_scheduler,
         cloudi_task_size
         ]},
    {registered, []},

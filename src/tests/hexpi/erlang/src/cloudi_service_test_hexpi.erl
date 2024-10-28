@@ -50,9 +50,6 @@
 
 -define(NAME_PGSQL,          "/db/pgsql/cloudi_tests").
 -define(NAME_MYSQL,          "/db/mysql/cloudi_tests").
--define(NAME_MEMCACHED,      "/db/memcached").
--define(NAME_TOKYOTYRANT,    "/db/tokyotyrant").
--define(NAME_COUCHDB,        "/db/couchdb").
 -define(NAME_FILESYSTEM,     "/tests/http_req/hexpi.txt/post").
 
 % example runtimes for
@@ -74,24 +71,16 @@
             :: pos_integer(),
         index_end
             :: pos_integer(),
-        task_size
-            :: cloudi_task_size:state(),
+        task_scheduler
+            :: cloudi_task_scheduler:state(),
         use_pgsql = false
             :: boolean(),
         use_mysql = false
-            :: boolean(),
-        use_memcached = false
-            :: boolean(),
-        use_tokyotyrant = false
-            :: boolean(),
-        use_couchdb = false
             :: boolean(),
         use_filesystem = false
             :: boolean(),
         map_done = false
             :: boolean(),
-        timeout_max
-            :: cloudi_service:timeout_value_milliseconds(),
         destination = "/tests/hexpi"
             :: cloudi_service:service_name(),
         step = ?PI_DIGIT_STEP_SIZE,
@@ -121,78 +110,78 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                                     IterationsMin, IterationsMax,
                                     TargetTimeMin,
                                     TargetTimeMin, TargetTimeMax),
-    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
+    TaskScheduler = cloudi_task_scheduler:new(Dispatcher, TaskSize),
     {ok, setup(#state{index = IndexStart,
                       index_start = IndexStart,
                       index_end = IndexEnd,
-                      task_size = TaskSize,
-                      timeout_max = TimeoutMax}, Dispatcher)}.
+                      task_scheduler = TaskScheduler}, Dispatcher)}.
 
 cloudi_service_map_reduce_send(#state{map_done = true} = State, _) ->
     {done, State};
 cloudi_service_map_reduce_send(#state{index = Index,
                                       index_end = IndexEnd,
-                                      task_size = TaskSize,
+                                      task_scheduler = TaskScheduler,
                                       destination = Name,
                                       step = Step} = State,
                                Dispatcher)
     when is_pid(Dispatcher) ->
-    case cloudi_service:get_pid(Dispatcher, Name) of
-        {ok, {_, Pid} = PatternPid} ->
-            {Iterations, Timeout} = cloudi_task_size:get(Pid, TaskSize),
-            IndexStr = erlang:integer_to_list(Index),
-            IndexBin = erlang:list_to_binary(IndexStr),
+    TaskId = IndexBin = erlang:integer_to_binary(Index),
+    case cloudi_task_scheduler:get_pid(Dispatcher, Name, TaskId,
+                                       TaskScheduler) of
+        {ok, PatternPid, Timeout, TaskCost, TaskSchedulerNew} ->
+            Iterations = TaskCost,
             Request = <<Iterations:32/unsigned-integer-native,
                         Step:32/unsigned-integer-native,
                         IndexBin/binary>>,
             SendArgs = [Dispatcher, Name, Request, Timeout, PatternPid],
-            ?LOG_INFO("~p iterations starting at digit ~p",
-                      [Iterations, Index]),
+            ?LOG_INFO("~p iterations starting at digit ~s",
+                      [Iterations, IndexBin]),
             IndexNew = Index + Step * Iterations,
             {ok, SendArgs,
              State#state{index = IndexNew,
+                         task_scheduler = TaskSchedulerNew,
                          map_done = (IndexNew > IndexEnd)}};
         {error, _} = Error ->
             Error
     end.
 
 cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
-                                  Timeout, {_, PidOld}],
-                                 #state{task_size = TaskSize,
-                                        timeout_max = TimeoutMax,
+                                  Timeout, PatternPidOld],
+                                 #state{task_scheduler = TaskScheduler,
                                         destination = Name} = State) ->
-
-    case cloudi_service:get_pid(Dispatcher, Name) of
-        {ok, PatternPid} ->
-            <<_Iterations:32/unsigned-integer-native,
-              _Step:32/unsigned-integer-native,
-              IndexBin/binary>> = Request,
-            IndexStr = erlang:binary_to_list(IndexBin),
+    <<_Iterations:32/unsigned-integer-native,
+      _Step:32/unsigned-integer-native,
+      IndexBin/binary>> = Request,
+    TaskId = IndexBin,
+    case cloudi_task_scheduler:get_pid_retry(Dispatcher, Name, PatternPidOld,
+                                             TaskId, TaskScheduler) of
+        {ok, PatternPid, TimeoutNew, TaskSchedulerNew} ->
             ?LOG_INFO("index ~s result timeout (after ~p ms)",
-                      [IndexStr, Timeout]),
-            TaskSizeNew = cloudi_task_size:reduce(PidOld, 0.9, TaskSize),
-            TimeoutNew = erlang:min(Timeout * 2, TimeoutMax),
+                      [IndexBin, Timeout]),
             {ok, [Dispatcher, Name, Request, TimeoutNew, PatternPid],
-             State#state{task_size = TaskSizeNew}};
+             State#state{task_scheduler = TaskSchedulerNew}};
         {error, _} = Error ->
             Error
     end.
 
-cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
+cloudi_service_map_reduce_recv([_, Name, Request, _, PatternPidOld],
                                _ResponseInfo, Response,
-                               Timeout, TransId,
-                               #state{task_size = TaskSize} = State,
-                               Dispatcher)
-    when is_integer(Timeout), is_binary(TransId) ->
-    <<Iterations:32/unsigned-integer-native,
+                               TimeoutNew, _TransId,
+                               #state{task_scheduler = TaskScheduler} = State,
+                               Dispatcher) ->
+    <<_Iterations:32/unsigned-integer-native,
       _Step:32/unsigned-integer-native,
       IndexBin/binary>> = Request,
+    TaskId = IndexBin,
     ?LOG_INFO("index ~s result received (~w map-reduce seconds elapsed)",
               [IndexBin, cloudi_service_map_reduce:elapsed_seconds()]),
-    <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
-    TaskSizeNew = cloudi_task_size:put(Pid, Iterations, ElapsedTime, TaskSize),
-    StateNew = reduce_send(IndexBin, PiResult, ElapsedTime, Pid,
-                           State#state{task_size = TaskSizeNew},
+    <<_ElapsedTime:32/float-native, PiResult/binary>> = Response,
+    {ok, _,
+     TaskSchedulerNew} = cloudi_task_scheduler:task_done(Name, PatternPidOld,
+                                                         TaskId, TimeoutNew,
+                                                         TaskScheduler),
+    StateNew = reduce_send(IndexBin, PiResult,
+                           State#state{task_scheduler = TaskSchedulerNew},
                            Dispatcher),
     reduce_done_check(StateNew, Dispatcher).
 
@@ -216,9 +205,6 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
     Pgsql = service_name_pattern_pid(?NAME_PGSQL, Dispatcher),
     Mysql = service_name_pattern_pid(?NAME_MYSQL, Dispatcher),
-    Memcached = service_name_pattern_pid(?NAME_MEMCACHED, Dispatcher),
-    Tokyotyrant = service_name_pattern_pid(?NAME_TOKYOTYRANT, Dispatcher),
-    Couchdb = service_name_pattern_pid(?NAME_COUCHDB, Dispatcher),
     Filesystem = service_name_pattern_pid(?NAME_FILESYSTEM, Dispatcher),
 
     SQLDrop = sql_drop(),
@@ -245,22 +231,15 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     end,
     State#state{use_pgsql = is_tuple(Pgsql),
                 use_mysql = is_tuple(Mysql),
-                use_memcached = is_tuple(Memcached),
-                use_tokyotyrant = is_tuple(Tokyotyrant),
-                use_couchdb = is_tuple(Couchdb),
                 use_filesystem = is_tuple(Filesystem),
                 queue = QueueN}.
 
-reduce_send(DigitIndex, PiResult, ElapsedTime, Pid,
+reduce_send(DigitIndex, PiResult,
             #state{use_pgsql = UsePgsql,
                    use_mysql = UseMysql,
-                   use_memcached = UseMemcached,
-                   use_tokyotyrant = UseTokyotyrant,
-                   use_couchdb = UseCouchdb,
                    use_filesystem = UseFilesystem,
                    queue = Queue0} = State, Dispatcher)
-    when is_binary(DigitIndex), is_binary(PiResult), is_float(ElapsedTime),
-         is_pid(Pid) ->
+    when is_binary(DigitIndex), is_binary(PiResult) ->
     Queue2 = if
         UsePgsql == true ->
             {ok, Queue1} = cloudi_queue:send(Dispatcher, ?NAME_PGSQL,
@@ -279,47 +258,19 @@ reduce_send(DigitIndex, PiResult, ElapsedTime, Pid,
         true ->
             Queue2
     end,
-    Queue6 = if
-        UseMemcached == true ->
-            {ok, Queue5} = cloudi_queue:send(Dispatcher, ?NAME_MEMCACHED,
-                                             memcached(DigitIndex, PiResult),
-                                             Queue4),
-            Queue5;
-        true ->
-            Queue4
-    end,
-    Queue8 = if
-        UseTokyotyrant == true ->
-            {ok, Queue7} = cloudi_queue:send(Dispatcher,
-                                             ?NAME_TOKYOTYRANT,
-                                             tokyotyrant(DigitIndex, PiResult),
-                                             Queue6),
-            Queue7;
-        true ->
-            Queue6
-    end,
-    Queue10 = if
-        UseCouchdb == true ->
-            {ok, Queue9} = cloudi_queue:send(Dispatcher, ?NAME_COUCHDB,
-                                             couchdb(DigitIndex, Pid),
-                                             Queue8),
-            Queue9;
-        true ->
-            Queue8
-    end,
     QueueN = if
         UseFilesystem == true ->
             {FilesystemRequestInfo,
              FilesystemRequest} = filesystem(DigitIndex, PiResult),
-            {ok, Queue11} = cloudi_queue:send(Dispatcher,
-                                              ?NAME_FILESYSTEM,
-                                              FilesystemRequestInfo,
-                                              FilesystemRequest,
-                                              undefined, undefined,
-                                              Queue10),
-            Queue11;
+            {ok, Queue5} = cloudi_queue:send(Dispatcher,
+                                             ?NAME_FILESYSTEM,
+                                             FilesystemRequestInfo,
+                                             FilesystemRequest,
+                                             undefined, undefined,
+                                             Queue4),
+            Queue5;
         true ->
-            Queue10
+            Queue4
     end,
     State#state{queue = QueueN}.
 
@@ -351,19 +302,6 @@ sql_insert(DigitIndex, PiResult) ->
                                    "(digit_index, data) "
                                    "VALUES (~s, '~s');",
                                    [DigitIndex, PiResult]).
-
-memcached(DigitIndex, PiResult) ->
-    cloudi_string:format_to_list("{set, \"~s\", <<\"~s\">>}",
-                                 [DigitIndex, PiResult]).
-
-tokyotyrant(DigitIndex, PiResult) ->
-    cloudi_string:format_to_list("{put, \"~s\", <<\"~s\">>}",
-                                 [DigitIndex, PiResult]).
-
-couchdb(DigitIndex, Pid) ->
-    cloudi_string:format_to_list("{update_document, \"pi_state\","
-                                 " [{<<\"~s\", <<\"~s\">>}]}",
-                                 [erlang:pid_to_list(Pid), DigitIndex]).
 
 filesystem(DigitIndex, PiResult) ->
     {[{<<"range">>, <<"bytes=", DigitIndex/binary, "-">>}], PiResult}.

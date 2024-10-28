@@ -44,6 +44,7 @@
 %% external interface
 -export([new/7,
          get/2,
+         reduce/2,
          reduce/3,
          put/4]).
 
@@ -57,14 +58,14 @@
 -record(cloudi_task_size,
     {
         task_count :: pos_integer(), % count of concurrent tasks
-        task_size_initial :: integer(), % count to control task size
-        task_size_min :: integer(),
-        task_size_max :: integer(),
+        task_size_initial :: pos_integer(), % count to control task size
+        task_size_min :: pos_integer(),
+        task_size_max :: pos_integer(),
         target_time :: float(), % in hours
         target_time_min :: float(), % in hours
         target_time_max :: float(), % in hours
-        target_time_incr = 0 :: integer(),
-        target_time_decr = 0 :: integer(),
+        target_time_incr = 0 :: non_neg_integer(),
+        target_time_decr = 0 :: non_neg_integer(),
         lookup = #{} :: #{node() := #node{}}
     }).
 
@@ -87,9 +88,9 @@
 %%-------------------------------------------------------------------------
 
 -spec new(TaskCount :: pos_integer(),
-          TaskSizeInitial :: integer(),
-          TaskSizeMin :: integer(),
-          TaskSizeMax :: integer(),
+          TaskSizeInitial :: pos_integer(),
+          TaskSizeMin :: pos_integer(),
+          TaskSizeMax :: pos_integer(),
           TargetTimeInitial :: float(),
           TargetTimeMin :: float(),
           TargetTimeMax :: float()) ->
@@ -100,7 +101,7 @@ new(TaskCount,
     TargetTimeInitial, TargetTimeMin, TargetTimeMax)
     when is_integer(TaskCount), TaskCount > 0,
          is_integer(TaskSizeInitial),
-         is_integer(TaskSizeMin), is_integer(TaskSizeMax),
+         is_integer(TaskSizeMin), TaskSizeMin > 0, is_integer(TaskSizeMax),
          TaskSizeInitial >= TaskSizeMin, TaskSizeInitial =< TaskSizeMax,
          is_float(TargetTimeInitial), TargetTimeInitial > 0.0,
          is_float(TargetTimeMin), is_float(TargetTimeMax),
@@ -122,7 +123,7 @@ new(TaskCount,
 
 -spec get(Pid :: pid(),
           State :: state()) ->
-    {TaskSize :: integer(),
+    {TaskSize :: pos_integer(),
      Timeout :: cloudi_service:timeout_value_milliseconds()}.
 
 get(Pid,
@@ -144,6 +145,19 @@ get(Pid,
         error ->
             {TaskSizeInitial, Timeout}
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reduce the task size by 10% after a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec reduce(Pid :: pid(),
+             State :: state()) ->
+    state().
+
+reduce(Pid, State) ->
+    reduce(Pid, 0.9, State).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -182,7 +196,7 @@ reduce(Pid, Multiplier,
 %%-------------------------------------------------------------------------
 
 -spec put(Pid :: pid(),
-          TaskSize :: integer(),
+          TaskSize :: pos_integer(),
           ElapsedTime :: float(),
           State :: state()) ->
     state().
