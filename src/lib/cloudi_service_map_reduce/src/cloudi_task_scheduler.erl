@@ -77,7 +77,7 @@
         speed = 1.0 :: float(),
         speed_count = 0 :: non_neg_integer(),
         alive = true :: boolean(),
-        requests = #{} :: #{task_id() := task_cost()}
+        requests = #{} :: #{task_id() := #request{}}
     }).
 
 -record(cloudi_task_scheduler,

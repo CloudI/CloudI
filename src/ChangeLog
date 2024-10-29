@@ -1,10 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-10-29 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_task_scheduler Erlang type specification
+
 2024-10-27 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_task_scheduler to the cloudi_service_map_reduce
       Erlang/OTP application with usage in the hexpi integration test
+      (to efficiently allocate map service requests to service
+       processes/threads among heterogenous nodes)
 
 2024-10-18 Michael Truog   <mjtruog at protonmail dot com>
 
