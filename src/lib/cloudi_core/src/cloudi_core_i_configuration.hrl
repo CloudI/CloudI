@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -275,6 +275,13 @@
         % service request, causing the service to restart (if possible)
         % (i.e., ensure the service request handler terminates)
         fatal_timeout = false
+            :: boolean(),
+        % should the service request handler's execution be interrupted?
+        % if set to false, service termination will be delayed until
+        % the current service request is done
+        % (only used for critical global state handling with
+        %  service source code that has no infinite delays).
+        fatal_timeout_interrupt = true
             :: boolean(),
         % provide an offset on the fatal timeout value to avoid premature
         % failure of the service when the service request is handled during a

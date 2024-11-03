@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-11-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the fatal_timeout_interrupt service configuration option to
+      allow a service request response when set to false
+      (defaults to true which is consistent with past functionality)
+        * Only used for critical global state handling with
+          service source code that has no infinite delays
+    * Add cloudi_statistics:describe_distribution/1 raised_cosine result
+    * Update cloudi_service_monitoring due to service state change
+    * Improve cloudi_task_scheduler logic in cloudi_service_map_reduce
+
 2024-10-29 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_task_scheduler Erlang type specification

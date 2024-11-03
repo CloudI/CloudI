@@ -197,9 +197,9 @@ basic_update(ProcessInfo0) ->
 services_state(Timeout) ->
     try sys:get_state(cloudi_core_i_services_monitor, Timeout) of
         State ->
-            8 = erlang:tuple_size(State),
-            state = erlang:element(1, State),
-            {ok, erlang:element(2, State)}
+            8 = tuple_size(State),
+            state = element(1, State),
+            {ok, element(2, State)}
     catch
         exit:{Reason, _} ->
             {error, Reason}
@@ -556,11 +556,11 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
              ReductionsNow,
              RequestPidInfo,
              InfoPidInfo,
-             ProcessInfoN} = case erlang:tuple_size(State) of
-                31 -> % duo_mode == false
-                    state = erlang:element(1, State),
-                    RequestPid = erlang:element(24, State),
-                    InfoPid = erlang:element(25, State),
+             ProcessInfoN} = case tuple_size(State) of
+                32 -> % duo_mode == false
+                    state = element(1, State),
+                    RequestPid = element(25, State),
+                    InfoPid = element(26, State),
                     {RequestPidInfoValue,
                      ProcessInfo1} = if
                         RequestPid =:= undefined ->
@@ -577,21 +577,21 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         is_pid(InfoPid) ->
                             process_info_update(InfoPid, ProcessInfo1)
                     end,
-                    {maps:size(erlang:element(3, State)),  % send_timeouts
-                     erlang:element(10, State),            % queued
-                     erlang:element(11, State),            % queued_size
-                     erlang:element(12, State),            % queued_word_size
-                     erlang:element(13, State),            % queued_info
+                    {maps:size(element(3, State)),  % send_timeouts
+                     element(11, State),            % queued
+                     element(12, State),            % queued_size
+                     element(13, State),            % queued_word_size
+                     element(14, State),            % queued_info
                      ServiceMemory,
                      ServiceMessages,
                      ServiceReductionsNow,
                      RequestPidInfoValue,
                      InfoPidInfoValue,
                      ProcessInfo2};
-                16 -> % duo_mode == true
-                    state_duo = erlang:element(1, State),
-                    Dispatcher =  erlang:element(14, State),
-                    RequestPid = erlang:element(15, State),
+                17 -> % duo_mode == true
+                    state_duo = element(1, State),
+                    Dispatcher =  element(15, State),
+                    RequestPid = element(16, State),
                     {RequestPidInfoValue,
                      ProcessInfo1} = if
                         RequestPid =:= undefined ->
@@ -605,9 +605,9 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                                         ServiceReductionsNow},
                     DispatcherOutgoing = case service_state(Dispatcher) of
                         {ok, DispatcherState} -> % gen_server/proc_lib
-                            31 = erlang:tuple_size(DispatcherState),
-                            state = erlang:element(1, DispatcherState),
-                            maps:size(erlang:element(3, DispatcherState));
+                            32 = tuple_size(DispatcherState),
+                            state = element(1, DispatcherState),
+                            maps:size(element(3, DispatcherState));
                         {error, _} ->
                             undefined
                     end,
@@ -639,10 +639,10 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                              ProcessInfo2}
                     end,
                     {DispatcherOutgoing,
-                     erlang:element(7, State),   % queued
-                     erlang:element(8, State),   % queued_size
-                     erlang:element(9, State),   % queued_word_size
-                     erlang:element(10, State),  % queued_info
+                     element(8, State),   % queued
+                     element(9, State),   % queued_size
+                     element(10, State),  % queued_word_size
+                     element(11, State),  % queued_info
                      MemoryValue,
                      MessagesValue,
                      ReductionsNowValue,
@@ -740,12 +740,12 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         QueuedEmptySize, MetricPrefix) ->
     case service_state(Pid) of
         {ok, {_, State}} -> % gen_statem
-            42 = erlang:tuple_size(State),
-            state = erlang:element(1, State),
-            Outgoing = maps:size(erlang:element(3, State)),  % send_timeouts
-            QueuedRequests = erlang:element(10, State),      % queued
-            QueuedRequestsSize0 = erlang:element(11, State), % queued_size
-            WordSize = erlang:element(12, State),            % queued_word_size
+            43 = tuple_size(State),
+            state = element(1, State),
+            Outgoing = maps:size(element(3, State)),  % send_timeouts
+            QueuedRequests = element(11, State),      % queued
+            QueuedRequestsSize0 = element(12, State), % queued_size
+            WordSize = element(13, State),            % queued_word_size
             QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
             QueuedRequestsSizeN = if
                 QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->

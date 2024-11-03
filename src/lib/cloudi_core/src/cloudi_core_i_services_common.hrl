@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -487,13 +487,13 @@ fatal_timer_start(_, _,
                   #config_service_options{
                       fatal_timeout = false}) ->
     undefined;
-fatal_timer_start(Timeout, Dispatcher,
+fatal_timer_start(Timeout, ResultPid,
                   #config_service_options{
                       fatal_timeout = true,
                       fatal_timeout_delay = FatalTimeoutDelay}) ->
     FatalTimeout = erlang:min(Timeout + FatalTimeoutDelay,
                               ?TIMEOUT_MAX_ERLANG),
-    erlang:send_after(FatalTimeout, Dispatcher,
+    erlang:send_after(FatalTimeout, ResultPid,
                       'cloudi_service_fatal_timeout').
 
 fatal_timer_end(undefined) ->

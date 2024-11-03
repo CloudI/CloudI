@@ -110,103 +110,106 @@
         async_responses = #{}
             :: #{cloudi:trans_id() := {binary(), binary()}} |
                list({cloudi:trans_id(), {binary(), binary()}}),
-        % ( 7) pending update configuration
+        % ( 7) deferred stop reason to use when done processing
+        stop = undefined
+            :: atom(),
+        % ( 8) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
-        % ( 8) is the external service OS process thread suspended?
+        % ( 9) is the external service OS process thread suspended?
         suspended = #suspended{}
             :: #suspended{},
-        % ( 9) is the external service OS process thread busy?
+        % (10) is the external service OS process thread busy?
         queue_requests = true :: boolean(),
-        % (10) queued incoming service requests
+        % (11) queued incoming service requests
         queued = cloudi_x_pqueue4:new()
             :: cloudi_x_pqueue4:cloudi_x_pqueue4(
                    cloudi:message_service_request()) |
                list({cloudi:priority_value(), any()}),
-        % (11) queued size in bytes
+        % (12) queued size in bytes
         queued_size = 0 :: non_neg_integer(),
-        % (12) erlang:system_info(wordsize) cached
+        % (13) erlang:system_info(wordsize) cached
         queued_word_size :: pos_integer(),
 
         % state record fields unique to the external thread Erlang process:
 
-        % (13) external thread connection protocol
+        % (14) external thread connection protocol
         protocol = undefined :: undefined | tcp | udp | local,
-        % (14) external thread connection port
+        % (15) external thread connection port
         port = undefined :: undefined | non_neg_integer(),
-        % (15) wait for cloudi_core_i_services_monitor:process_init_begin/2
+        % (16) wait for cloudi_core_i_services_monitor:process_init_begin/2
         % to send cloudi_service_init_begin when all of the service instance
         % processes have been spawned
         initialize = false :: boolean(),
-        % (16) udp incoming data port
+        % (17) udp incoming data port
         incoming_port = undefined :: undefined | inet:port_number(),
-        % (17) tcp listener
+        % (18) tcp listener
         listener = undefined,
-        % (18) tcp acceptor
+        % (19) tcp acceptor
         acceptor = undefined,
-        % (19) local socket filesystem path
+        % (20) local socket filesystem path
         socket_path = undefined :: undefined | string(),
-        % (20) common socket options
+        % (21) common socket options
         socket_options = undefined :: undefined | list(),
-        % (21) data socket
+        % (22) data socket
         socket = undefined,
-        % (22) service state for executing aspect functions
+        % (23) service state for executing aspect functions
         % (as assigned from aspect function execution)
         service_state = undefined,
-        % (23) request data currently being processed by the OS process
+        % (24) request data currently being processed by the OS process
         request_data = undefined
             :: undefined |
                {cloudi:message_service_request(),
                 fun((cloudi:timeout_value_milliseconds()) ->
                     cloudi:timeout_value_milliseconds())},
-        % (24) 0-based index of the process in all service instance processes
+        % (25) 0-based index of the process in all service instance processes
         process_index :: non_neg_integer(),
-        % (25) current count of all Erlang processes for the service instance
+        % (26) current count of all Erlang processes for the service instance
         process_count :: pos_integer(),
-        % (26) command line of OS execve
+        % (27) command line of OS execve
         command_line :: list(string()),
-        % (27) subscribe/unsubscribe name prefix set in service configuration
+        % (28) subscribe/unsubscribe name prefix set in service configuration
         prefix :: cloudi:service_name_pattern(),
-        % (28) pre-poll() timeout in the external service thread
+        % (29) pre-poll() timeout in the external service thread
         timeout_init
             :: cloudi_service_api:timeout_initialize_value_milliseconds(),
-        % (29) default timeout for send_async set in service configuration
+        % (30) default timeout for send_async set in service configuration
         timeout_async
             :: cloudi_service_api:timeout_send_async_value_milliseconds(),
-        % (30) default timeout for send_sync set in service configuration
+        % (31) default timeout for send_sync set in service configuration
         timeout_sync
             :: cloudi_service_api:timeout_send_sync_value_milliseconds(),
-        % (31) post-poll() timeout in the external service thread
+        % (32) post-poll() timeout in the external service thread
         timeout_term
             :: cloudi_service_api:timeout_terminate_value_milliseconds(),
-        % (32) OS process pid for SIGKILL
+        % (33) OS process pid for SIGKILL
         os_pid = undefined :: undefined | pos_integer(),
-        % (33) udp keepalive succeeded
+        % (34) udp keepalive succeeded
         keepalive = undefined :: undefined | received,
-        % (34) init timeout handler
+        % (35) init timeout handler
         init_timer :: undefined | reference(),
-        % (35) timeout enforcement of fatal_timeout
+        % (36) timeout enforcement of fatal_timeout
         fatal_timer = undefined :: undefined | reference(),
-        % (36) transaction id (UUIDv1) generator
+        % (37) transaction id (UUIDv1) generator
         uuid_generator :: cloudi_x_uuid:state(),
-        % (37) how service destination lookups occur for a service request send
+        % (38) how service destination lookups occur for a service request send
         dest_refresh :: cloudi_service_api:dest_refresh(),
-        % (38) cached cpg data for lazy destination refresh methods
+        % (39) cached cpg data for lazy destination refresh methods
         cpg_data
             :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
-        % (39) old subscriptions to remove after an update's initialization
+        % (40) old subscriptions to remove after an update's initialization
         subscribed = []
             :: list({cloudi:service_name_pattern(), pos_integer()}),
-        % (40) ACL lookup for denied destinations
+        % (41) ACL lookup for denied destinations
         dest_deny
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % (41) ACL lookup for allowed destinations
+        % (42) ACL lookup for allowed destinations
         dest_allow
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % (42) service configuration options
+        % (43) service configuration options
         options
             :: #config_service_options{} |
                cloudi_service_api:service_options_external()
@@ -215,20 +218,27 @@
 -record(state_socket,
     {
         % write/read fields
-        protocol :: tcp | udp | local,
-        port :: non_neg_integer(),
-        incoming_port = undefined :: undefined | inet:port_number(),
-        listener = undefined,
-        acceptor = undefined,
-        socket_path = undefined :: undefined | string(),
-        socket_options :: list(),
-        socket = undefined,
+        protocol
+            :: tcp | udp | local,
+        port
+            :: non_neg_integer(),
+        incoming_port
+            :: undefined | inet:port_number(),
+        listener,
+        acceptor,
+        socket_path
+            :: undefined | string(),
+        socket_options
+            :: list(),
+        socket,
         % read-only fields
-        timeout_term = undefined
+        timeout_term
             :: undefined |
                cloudi_service_api:timeout_terminate_value_milliseconds(),
-        os_pid = undefined :: undefined | pos_integer(),
-        cgroup = undefined :: cloudi_service_api:cgroup_external()
+        os_pid
+            :: undefined | pos_integer(),
+        cgroup
+            :: cloudi_service_api:cgroup_external()
     }).
 
 -dialyzer({no_improper_lists,
@@ -625,9 +635,10 @@ handle_event(EventType, EventContent, StateName, State) ->
     end;
 
 'HANDLE'(connection,
-         {'forward_async', NameNext, RequestInfoNext, RequestNext,
+         {ForwardType, NameNext, RequestInfoNext, RequestNext,
           TimeoutNext, PriorityNext, TransId, Source},
          #state{dispatcher = Dispatcher,
+                stop = StopReason,
                 service_state = ServiceState,
                 request_data = {{SendType, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
@@ -642,7 +653,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                     response_timeout_immediate_max =
                         ResponseTimeoutImmediateMax,
                     scope = Scope,
-                    aspects_request_after = AspectsAfter}} = State) ->
+                    aspects_request_after = AspectsAfter}} = State)
+    when ForwardType =:= 'forward_async';
+         ForwardType =:= 'forward_sync' ->
     true = cloudi_x_trie:is_bytestring(NameNext),
     true = is_integer(TimeoutNext),
     true = (TimeoutNext >= 0) andalso
@@ -650,8 +663,14 @@ handle_event(EventType, EventContent, StateName, State) ->
     true = is_integer(PriorityNext),
     true = (PriorityNext >= ?PRIORITY_HIGH) andalso
            (PriorityNext =< ?PRIORITY_LOW),
-    true = (SendType =:= 'cloudi_service_send_async'),
-    Type = send_async,
+    Type = if
+        ForwardType =:= 'forward_async' ->
+            SendType = 'cloudi_service_send_async',
+            send_async;
+        ForwardType =:= 'forward_sync' ->
+            SendType = 'cloudi_service_send_sync',
+            send_sync
+    end,
     Result = {forward, NameNext,
               RequestInfoNext, RequestNext,
               TimeoutNext, PriorityNext},
@@ -669,6 +688,15 @@ handle_event(EventType, EventContent, StateName, State) ->
             ok = fatal_timer_end(FatalTimer),
             ok = case destination_allowed(NameNext, DestDeny, DestAllow) of
                 true ->
+                    {ForwardRetryType,
+                     ForwardRetryInterval} = if
+                        ForwardType =:= 'forward_async' ->
+                            {'cloudi_service_forward_async_retry',
+                             ?FORWARD_ASYNC_INTERVAL};
+                        ForwardType =:= 'forward_sync' ->
+                            {'cloudi_service_forward_sync_retry',
+                             ?FORWARD_SYNC_INTERVAL}
+                    end,
                     case destination_get(DestRefresh, Scope, NameNext, Source,
                                          Groups, TimeoutNew) of
                         {error, timeout} ->
@@ -679,12 +707,12 @@ handle_event(EventType, EventContent, StateName, State) ->
                                                  TimeoutNew, TransId, Source,
                                                  ResponseTimeoutImmediateMax);
                         {error, _}
-                            when TimeoutNew >= ?FORWARD_ASYNC_INTERVAL ->
-                            Retry = {'cloudi_service_forward_async_retry',
+                            when TimeoutNew >= ForwardRetryInterval ->
+                            Retry = {ForwardRetryType,
                                      NameNext, RequestInfoNext, RequestNext,
-                                     TimeoutNew - ?FORWARD_ASYNC_INTERVAL,
+                                     TimeoutNew - ForwardRetryInterval,
                                      PriorityNext, TransId, Source},
-                            erlang:send_after(?FORWARD_ASYNC_INTERVAL,
+                            erlang:send_after(ForwardRetryInterval,
                                               Dispatcher, Retry),
                             ok;
                         {error, _} ->
@@ -702,99 +730,15 @@ handle_event(EventType, EventContent, StateName, State) ->
                 false ->
                     ok
             end,
-            {keep_state,
-             process_queues(State#state{service_state = ServiceStateNew,
-                                        request_data = undefined,
-                                        fatal_timer = undefined})};
-        {stop, Reason, ServiceStateNew} ->
-            ok = fatal_timer_end(FatalTimer),
-            {stop, Reason,
-             State#state{service_state = ServiceStateNew,
-                         request_data = undefined,
-                         fatal_timer = undefined}}
-    end;
-
-'HANDLE'(connection,
-         {'forward_sync', NameNext, RequestInfoNext, RequestNext,
-          TimeoutNext, PriorityNext, TransId, Source},
-         #state{dispatcher = Dispatcher,
-                service_state = ServiceState,
-                request_data = {{SendType, Name, Pattern, RequestInfo, Request,
-                                 Timeout, Priority, TransId, Source},
-                                RequestTimeoutF},
-                fatal_timer = FatalTimer,
-                dest_refresh = DestRefresh,
-                cpg_data = Groups,
-                dest_deny = DestDeny,
-                dest_allow = DestAllow,
-                options = #config_service_options{
-                    request_name_lookup = RequestNameLookup,
-                    response_timeout_immediate_max =
-                        ResponseTimeoutImmediateMax,
-                    scope = Scope,
-                    aspects_request_after = AspectsAfter}} = State) ->
-    true = cloudi_x_trie:is_bytestring(NameNext),
-    true = is_integer(TimeoutNext),
-    true = (TimeoutNext >= 0) andalso
-           (TimeoutNext =< ?TIMEOUT_MAX_ERLANG),
-    true = is_integer(PriorityNext),
-    true = (PriorityNext >= ?PRIORITY_HIGH) andalso
-           (PriorityNext =< ?PRIORITY_LOW),
-    true = (SendType =:= 'cloudi_service_send_sync'),
-    Type = send_sync,
-    Result = {forward, NameNext, RequestInfoNext, RequestNext,
-              TimeoutNext, PriorityNext},
-    case aspects_request_after(AspectsAfter, Type,
-                               Name, Pattern, RequestInfo, Request,
-                               Timeout, Priority, TransId, Source,
-                               Result, ServiceState) of
-        {ok, ServiceStateNew} ->
-            TimeoutNew = if
-                TimeoutNext == Timeout ->
-                    RequestTimeoutF(Timeout);
+            StateNew = State#state{service_state = ServiceStateNew,
+                                   request_data = undefined,
+                                   fatal_timer = undefined},
+            if
+                StopReason =:= undefined ->
+                    {keep_state, process_queues(StateNew)};
                 true ->
-                    TimeoutNext
-            end,
-            ok = fatal_timer_end(FatalTimer),
-            ok = case destination_allowed(NameNext, DestDeny, DestAllow) of
-                true ->
-                    case destination_get(DestRefresh, Scope, NameNext, Source,
-                                         Groups, TimeoutNew) of
-                        {error, timeout} ->
-                            ok;
-                        {error, _}
-                            when RequestNameLookup =:= async ->
-                            return_null_response(SendType, Name, Pattern,
-                                                 TimeoutNew, TransId, Source,
-                                                 ResponseTimeoutImmediateMax);
-                        {error, _}
-                            when TimeoutNew >= ?FORWARD_SYNC_INTERVAL ->
-                            Retry = {'cloudi_service_forward_sync_retry',
-                                     NameNext, RequestInfoNext, RequestNext,
-                                     TimeoutNew - ?FORWARD_SYNC_INTERVAL,
-                                     PriorityNext, TransId, Source},
-                            erlang:send_after(?FORWARD_SYNC_INTERVAL,
-                                              Dispatcher, Retry),
-                            ok;
-                        {error, _} ->
-                            ok;
-                        {ok, PatternNext, PidNext}
-                            when TimeoutNew >= ?FORWARD_DELTA ->
-                            PidNext ! {SendType, NameNext, PatternNext,
-                                       RequestInfoNext, RequestNext,
-                                       TimeoutNew - ?FORWARD_DELTA,
-                                       PriorityNext, TransId, Source},
-                            ok;
-                        _ ->
-                            ok
-                    end;
-                false ->
-                    ok
-            end,
-            {keep_state,
-             process_queues(State#state{service_state = ServiceStateNew,
-                                        request_data = undefined,
-                                        fatal_timer = undefined})};
+                    {stop, StopReason, StateNew}
+            end;
         {stop, Reason, ServiceStateNew} ->
             ok = fatal_timer_end(FatalTimer),
             {stop, Reason,
@@ -806,7 +750,8 @@ handle_event(EventType, EventContent, StateName, State) ->
 'HANDLE'(connection,
          {ReturnType, Name, Pattern, ResponseInfo, Response,
           TimeoutNext, TransId, Source},
-         #state{service_state = ServiceState,
+         #state{stop = StopReason,
+                service_state = ServiceState,
                 request_data = {{_, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
                                 RequestTimeoutF},
@@ -860,10 +805,15 @@ handle_event(EventType, EventContent, StateName, State) ->
                               TimeoutNew, TransId, Source},
                     ok
             end,
-            {keep_state,
-             process_queues(State#state{service_state = ServiceStateNew,
-                                        request_data = undefined,
-                                        fatal_timer = undefined})};
+            StateNew = State#state{service_state = ServiceStateNew,
+                                   request_data = undefined,
+                                   fatal_timer = undefined},
+            if
+                StopReason =:= undefined ->
+                    {keep_state, process_queues(StateNew)};
+                true ->
+                    {stop, StopReason, StateNew}
+            end;
         {stop, Reason, ServiceStateNew} ->
             ok = fatal_timer_end(FatalTimer),
             {stop, Reason,
@@ -925,64 +875,41 @@ handle_event(EventType, EventContent, StateName, State) ->
                        Timeout, Priority, State);
 
 'HANDLE'(info,
-         {'cloudi_service_forward_async_retry', Name, RequestInfo, Request,
+         {ForwardRetryType, Name, RequestInfo, Request,
           Timeout, Priority, TransId, Source},
          #state{dispatcher = Dispatcher,
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 options = #config_service_options{
                     request_name_lookup = RequestNameLookup,
-                    scope = Scope}}) ->
-    case destination_get(DestRefresh, Scope, Name, Source, Groups, Timeout) of
-        {error, timeout} ->
-            ok;
-        {error, _} when RequestNameLookup =:= async ->
-            ok;
-        {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
-            erlang:send_after(?FORWARD_ASYNC_INTERVAL, Dispatcher,
-                              {'cloudi_service_forward_async_retry',
-                               Name, RequestInfo, Request,
-                               Timeout - ?FORWARD_ASYNC_INTERVAL,
-                               Priority, TransId, Source}),
-            ok;
-        {error, _} ->
-            ok;
-        {ok, Pattern, PidNext} when Timeout >= ?FORWARD_DELTA ->
-            PidNext ! {'cloudi_service_send_async', Name, Pattern,
-                       RequestInfo, Request,
-                       Timeout - ?FORWARD_DELTA,
-                       Priority, TransId, Source},
-            ok;
-        _ ->
-            ok
+                    scope = Scope}})
+    when ForwardRetryType =:= 'cloudi_service_forward_async_retry';
+         ForwardRetryType =:= 'cloudi_service_forward_sync_retry' ->
+    {SendType,
+     ForwardRetryInterval} = if
+        ForwardRetryType =:= 'cloudi_service_forward_async_retry' ->
+            {'cloudi_service_send_async',
+             ?FORWARD_ASYNC_INTERVAL};
+        ForwardRetryType =:= 'cloudi_service_forward_sync_retry' ->
+            {'cloudi_service_send_sync',
+             ?FORWARD_SYNC_INTERVAL}
     end,
-    keep_state_and_data;
-
-'HANDLE'(info,
-         {'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
-          Timeout, Priority, TransId, Source},
-         #state{dispatcher = Dispatcher,
-                dest_refresh = DestRefresh,
-                cpg_data = Groups,
-                options = #config_service_options{
-                    request_name_lookup = RequestNameLookup,
-                    scope = Scope}}) ->
     case destination_get(DestRefresh, Scope, Name, Source, Groups, Timeout) of
         {error, timeout} ->
             ok;
         {error, _} when RequestNameLookup =:= async ->
             ok;
-        {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
-            erlang:send_after(?FORWARD_SYNC_INTERVAL, Dispatcher,
-                              {'cloudi_service_forward_sync_retry',
+        {error, _} when Timeout >= ForwardRetryInterval ->
+            erlang:send_after(ForwardRetryInterval, Dispatcher,
+                              {ForwardRetryType,
                                Name, RequestInfo, Request,
-                               Timeout - ?FORWARD_SYNC_INTERVAL,
+                               Timeout - ForwardRetryInterval,
                                Priority, TransId, Source}),
             ok;
         {error, _} ->
             ok;
         {ok, Pattern, PidNext} when Timeout >= ?FORWARD_DELTA ->
-            PidNext ! {'cloudi_service_send_sync', Name, Pattern,
+            PidNext ! {SendType, Name, Pattern,
                        RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
                        Priority, TransId, Source},
@@ -1360,6 +1287,20 @@ handle_event(EventType, EventContent, StateName, State) ->
      State#state{options = ConfigOptions#config_service_options{
                      rate_request_max = RateRequestNew}}};
 
+'HANDLE'(info, 'cloudi_service_fatal_timeout',
+         #state{queue_requests = QueueRequests,
+                options = #config_service_options{
+                    fatal_timeout_interrupt =
+                        FatalTimeoutInterrupt}} = State) ->
+    if
+        QueueRequests =:= false orelse
+        FatalTimeoutInterrupt =:= true ->
+            {stop, fatal_timeout};
+        QueueRequests =:= true ->
+            {keep_state,
+             State#state{stop = fatal_timeout}}
+    end;
+
 'HANDLE'(info, {'cloudi_service_suspended', SuspendPending, Suspend},
          #state{dispatcher = Dispatcher,
                 suspended = SuspendedOld,
@@ -1648,9 +1589,6 @@ handle_info({'EXIT', _, Reason}, _, _) ->
 
 handle_info('cloudi_service_init_timeout', _, _) ->
     {stop, timeout};
-
-handle_info('cloudi_service_fatal_timeout', _, _) ->
-    {stop, fatal_timeout};
 
 handle_info({'cloudi_service_update', UpdatePending, _}, _,
             #state{dispatcher = Dispatcher,
@@ -2273,9 +2211,7 @@ socket_recv(#state_socket{protocol = udp,
         {udp_closed, Socket} ->
             {error, socket_closed};
         'cloudi_service_init_timeout' ->
-            {error, timeout};
-        'cloudi_service_fatal_timeout' ->
-            {error, fatal_timeout}
+            {error, timeout}
     end;
 socket_recv(#state_socket{protocol = Protocol,
                           listener = Listener,
@@ -2295,9 +2231,7 @@ socket_recv(#state_socket{protocol = Protocol,
         {inet_async, Listener, Acceptor, _} ->
             {error, inet_async};
         'cloudi_service_init_timeout' ->
-            {error, timeout};
-        'cloudi_service_fatal_timeout' ->
-            {error, fatal_timeout}
+            {error, timeout}
     end.
 
 socket_recv_term(StateSocket) ->

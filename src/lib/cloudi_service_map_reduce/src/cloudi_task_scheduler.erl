@@ -117,16 +117,15 @@ get_pid(Dispatcher, [_ | _] = Name, TaskId,
     case cloudi_service:get_pids(Dispatcher, Name) of
         {ok, PatternPids} ->
             DestinationList = get_pid_update(Name, PatternPids, Destinations),
-            case get_pid_store_task_size(DestinationList,
-                                         Name, TaskId,
-                                         TaskSize, Destinations) of
-                {PatternPid, Timeout, TaskCost, DestinationsNew} ->
-                    {ok, PatternPid, Timeout, TaskCost,
-                     State#cloudi_task_scheduler{
-                         destinations = DestinationsNew}};
-                error ->
-                    {error, all_dead}
-            end;
+            {PatternPid,
+             Timeout,
+             TaskCost,
+             DestinationsNew} = get_pid_store_task_size(DestinationList,
+                                                        Name, TaskId,
+                                                        TaskSize, Destinations),
+            {ok, PatternPid, Timeout, TaskCost,
+             State#cloudi_task_scheduler{
+                 destinations = DestinationsNew}};
         {error, _} = Error ->
             Error
     end.
@@ -154,18 +153,17 @@ get_pid(Dispatcher, [_ | _] = Name, TaskId, TaskCost,
     case cloudi_service:get_pids(Dispatcher, Name) of
         {ok, PatternPids} ->
             DestinationList = get_pid_update(Name, PatternPids, Destinations),
-            case get_pid_store_task_cost(DestinationList,
-                                         Name, TaskId, TaskCost,
-                                         TimeoutDefault,
-                                         Timeouts, Destinations) of
-                {PatternPid, Timeout, TimeoutsNew, DestinationsNew} ->
-                    {ok, PatternPid, Timeout,
-                     State#cloudi_task_scheduler{
-                         timeouts = TimeoutsNew,
-                         destinations = DestinationsNew}};
-                error ->
-                    {error, all_dead}
-            end;
+            {PatternPid,
+             Timeout,
+             TimeoutsNew,
+             DestinationsNew} = get_pid_store_task_cost(DestinationList,
+                                                        Name, TaskId, TaskCost,
+                                                        TimeoutDefault,
+                                                        Timeouts, Destinations),
+            {ok, PatternPid, Timeout,
+             State#cloudi_task_scheduler{
+                 timeouts = TimeoutsNew,
+                 destinations = DestinationsNew}};
         {error, _} = Error ->
             Error
     end.
@@ -305,6 +303,7 @@ get_pid_update_destinations([], DestinationList, PatternPidsLookup) ->
          #destination{task_cost_pending = TaskCostPending,
                       speed = Speed,
                       alive = Alive} = Destination,
+         true = Alive,
          SortKey = sort_key(SubscribeCount, TaskCostPending, Speed, Alive),
          lists:keymerge(#destination.sort_key,
                         DestinationListNew,
@@ -355,9 +354,8 @@ get_pid_update_destinations(DestinationList, PatternPidsLookup) ->
     get_pid_update_destinations(lists:reverse(DestinationList), [],
                                 PatternPidsLookup).
 
-get_pid_store_task_size([#destination{alive = false} | _], _, _, _, _) ->
-    error;
-get_pid_store_task_size([#destination{pattern_pid = {_, Pid}} = Destination |
+get_pid_store_task_size([#destination{pattern_pid = {_, Pid},
+                                      alive = true} = Destination |
                          DestinationList],
                         Name, TaskId,
                         TaskSize, Destinations) ->
@@ -370,9 +368,8 @@ get_pid_store_task_size([#destination{pattern_pid = {_, Pid}} = Destination |
                                       Destinations),
     {PatternPid, Timeout, TaskCost, DestinationsNew}.
 
-get_pid_store_task_cost([#destination{alive = false} | _], _, _, _, _, _, _) ->
-    error;
-get_pid_store_task_cost([#destination{pattern_pid = PatternPid} = Destination |
+get_pid_store_task_cost([#destination{pattern_pid = PatternPid,
+                                      alive = true} = Destination |
                          DestinationList],
                         Name, TaskId, TaskCost,
                         TimeoutDefault, Timeouts, Destinations) ->
@@ -421,6 +418,7 @@ get_pid_store_timeout({_, Pid}, TimeoutDefault, Timeouts) ->
     end.
 
 get_pid_lookup([], PatternPidsLookup) ->
+    true = map_size(PatternPidsLookup) > 0,
     PatternPidsLookup;
 get_pid_lookup([PatternPid | PatternPids], PatternPidsLookup) ->
     PatternPidsLookupNew = maps:update_with(PatternPid, fun(SubscribeCount) ->
@@ -428,7 +426,7 @@ get_pid_lookup([PatternPid | PatternPids], PatternPidsLookup) ->
     end, 1, PatternPidsLookup),
     get_pid_lookup(PatternPids, PatternPidsLookupNew).
 
-get_pid_lookup(PatternPids) ->
+get_pid_lookup([_ | _] = PatternPids) ->
     get_pid_lookup(PatternPids, maps:new()).
 
 task_remove(TimeoutNew, Name, PatternPidOld, TaskId, Destinations) ->

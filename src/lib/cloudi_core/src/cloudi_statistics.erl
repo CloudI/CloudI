@@ -90,7 +90,7 @@
 %%%------------------------------------------------------------------------
 
 -type describe_distribution() ::
-    normal | uniform | logistic | exponential |
+    normal | uniform | logistic | raised_cosine | exponential |
     gamma_family | log_normal_family | undefined.
 -type describe_kurtosis() ::
     leptokurtic | platykurtic | mesokurtic | undefined.
@@ -558,12 +558,21 @@ describe_distribution_0(Skewness, SkewnessLow, SkewnessHigh,
                         Kurtosis, KurtosisLow, KurtosisHigh, State)
     when SkewnessLow < 0 andalso SkewnessHigh > 0 ->
     if
-        KurtosisLow < 0 andalso KurtosisHigh > 0 ->
+        KurtosisLow < 0 andalso
+        KurtosisHigh > 0 ->
             {normal, State};
-        KurtosisLow < -1.2 andalso KurtosisHigh > -1.2 ->
+        KurtosisLow < -1.2 andalso
+        KurtosisHigh > -1.2 ->
             {uniform, State};
-        KurtosisLow < 1.2 andalso KurtosisHigh > 1.2 ->
+        KurtosisLow < 1.2 andalso
+        KurtosisHigh > 1.2 ->
             {logistic, State};
+        KurtosisLow < -0.5937628755982794 andalso
+        KurtosisHigh > -0.5937628755982794 ->
+            % -0.5937628755982794 =
+            % (6 * (90 - math:pow(math:pi(), 4))) /
+            % (5 * math:pow(math:pow(math:pi(), 2) - 6, 2))
+            {raised_cosine, State};
         true ->
             describe_distribution_1(Skewness, SkewnessLow, SkewnessHigh,
                                     Kurtosis, KurtosisLow, KurtosisHigh, State)
@@ -572,7 +581,8 @@ describe_distribution_0(Skewness, SkewnessLow, SkewnessHigh,
                         Kurtosis, KurtosisLow, KurtosisHigh, State)
     when SkewnessLow < 2 andalso SkewnessHigh > 2 ->
     if
-        KurtosisLow < 6 andalso KurtosisHigh > 6 ->
+        KurtosisLow < 6 andalso
+        KurtosisHigh > 6 ->
             {exponential, State};
         true ->
             describe_distribution_1(Skewness, SkewnessLow, SkewnessHigh,
@@ -613,7 +623,8 @@ skewness_check(TestL, TestType, TestF,
         true ->
             TestKurtosisLow = TestF(SkewnessLow),
             TestKurtosisHigh = TestF(SkewnessHigh),
-            TestKurtosisLow < Kurtosis andalso TestKurtosisHigh > Kurtosis
+            TestKurtosisLow < Kurtosis andalso
+            TestKurtosisHigh > Kurtosis
     end,
     if
         Passed =:= true ->
