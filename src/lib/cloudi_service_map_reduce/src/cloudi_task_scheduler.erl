@@ -53,7 +53,7 @@
          new/1,
          new/2,
          nodes_speed/1,
-         task_done/5]).
+         task_done/4]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -116,14 +116,16 @@ get_pid(Dispatcher, [_ | _] = Name, TaskId,
                                destinations = Destinations} = State)
     when element(1, TaskSize) =:= cloudi_task_size ->
     case cloudi_service:get_pids(Dispatcher, Name) of
-        {ok, PatternPids} ->
-            DestinationList = get_pid_update(Name, PatternPids, Destinations),
+        {ok, [{Pattern, _} | _] = PatternPids} ->
+            DestinationList = get_pid_update(Pattern, PatternPids,
+                                             Destinations),
             {PatternPid,
              Timeout,
              TaskCost,
              DestinationsNew} = get_pid_store_task_size(DestinationList,
-                                                        Name, TaskId,
-                                                        TaskSize, Destinations),
+                                                        Pattern,
+                                                        TaskId, TaskSize,
+                                                        Destinations),
             {ok, PatternPid, Timeout, TaskCost,
              State#cloudi_task_scheduler{
                  destinations = DestinationsNew}};
@@ -152,13 +154,15 @@ get_pid(Dispatcher, [_ | _] = Name, TaskId, TaskCost,
                                destinations = Destinations} = State)
     when is_integer(TaskCost), TaskCost > 0 ->
     case cloudi_service:get_pids(Dispatcher, Name) of
-        {ok, PatternPids} ->
-            DestinationList = get_pid_update(Name, PatternPids, Destinations),
+        {ok, [{Pattern, _} | _] = PatternPids} ->
+            DestinationList = get_pid_update(Pattern, PatternPids,
+                                             Destinations),
             {PatternPid,
              Timeout,
              TimeoutsNew,
              DestinationsNew} = get_pid_store_task_cost(DestinationList,
-                                                        Name, TaskId, TaskCost,
+                                                        Pattern,
+                                                        TaskId, TaskCost,
                                                         TimeoutDefault,
                                                         Timeouts, Destinations),
             {ok, PatternPid, Timeout,
@@ -189,7 +193,7 @@ get_pid_retry(Dispatcher, [_ | _] = Name, {_, PidOld} = PatternPidOld, TaskId,
                                      task_size = TaskSize,
                                      timeouts = Timeouts,
                                      destinations = Destinations} = State) ->
-    case task_remove(undefined, Name, PatternPidOld, TaskId, Destinations) of
+    case task_remove(undefined, PatternPidOld, TaskId, Destinations) of
         {TaskCost, TimeoutOld, TimeoutSource, undefined, DestinationsNew} ->
             TaskSizeNew = if
                 TimeoutSource =:= timeouts ->
@@ -258,15 +262,33 @@ new(Dispatcher, TaskSize)
     #{node() := float()}.
 
 nodes_speed(#cloudi_task_scheduler{destinations = Destinations}) ->
-    cloudi_x_trie:fold(fun(_Name, DestinationList, Nodes) ->
-        lists:foldl(fun(Destination, NodesNext) ->
+    PidSpeedN = cloudi_x_trie:fold(fun(_Pattern, DestinationList, PidSpeed0) ->
+        lists:foldl(fun(Destination, PidSpeed1) ->
+            % if pids appear multiple times (due to separate patterns)
+            % the separate speeds are merged below
             #destination{pattern_pid = {_, Pid},
-                         speed = Speed} = Destination,
-            maps:update_with(node(Pid), fun(SpeedSum) ->
-                SpeedSum + Speed
-            end, Speed, NodesNext)
-        end, Nodes, DestinationList)
-    end, #{}, Destinations).
+                         speed = SpeedA,
+                         speed_count = SpeedCountA} = Destination,
+            maps:update_with(Pid, fun({SpeedB, SpeedCountB} = ValueB) ->
+                if
+                    SpeedCountA == 0 ->
+                        ValueB;
+                    SpeedCountB == 0 ->
+                        {SpeedA, SpeedCountA};
+                    true ->
+                        SpeedCount = SpeedCountA + SpeedCountB,
+                        SpeedDelta = (SpeedA - SpeedB) / SpeedCount,
+                        Speed = SpeedB + SpeedCountA * SpeedDelta,
+                        {Speed, SpeedCount}
+                end
+            end, {SpeedA, SpeedCountA}, PidSpeed1)
+        end, PidSpeed0, DestinationList)
+    end, #{}, Destinations),
+    maps:fold(fun(Pid, {Speed, _}, Nodes) ->
+        maps:update_with(node(Pid), fun(SpeedSum) ->
+            SpeedSum + Speed
+        end, Speed, Nodes)
+    end, #{}, PidSpeedN).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -274,19 +296,18 @@ nodes_speed(#cloudi_task_scheduler{destinations = Destinations}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec task_done(Name :: cloudi:service_name(),
-                PatternPidOld :: cloudi:pattern_pid(),
+-spec task_done(PatternPidOld :: cloudi:pattern_pid(),
                 TaskId :: task_id(),
                 TimeoutNew :: cloudi:timeout_value_milliseconds(),
                 State :: #cloudi_task_scheduler{}) ->
     {ok, cloudi:timeout_value_milliseconds(), #cloudi_task_scheduler{}} |
     {error, any()}.
 
-task_done([_ | _] = Name, {_, PidOld} = PatternPidOld, TaskId, TimeoutNew,
+task_done({_, PidOld} = PatternPidOld, TaskId, TimeoutNew,
           #cloudi_task_scheduler{task_size = TaskSize,
                                  destinations = Destinations} = State)
     when is_integer(TimeoutNew), TimeoutNew >= 0 ->
-    case task_remove(TimeoutNew, Name, PatternPidOld, TaskId, Destinations) of
+    case task_remove(TimeoutNew, PatternPidOld, TaskId, Destinations) of
         {TaskCost, _, TimeoutSource, Elapsed, DestinationsNew}
             when is_integer(Elapsed) ->
             TaskSizeNew = if
@@ -308,9 +329,9 @@ task_done([_ | _] = Name, {_, PidOld} = PatternPidOld, TaskId, TimeoutNew,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-get_pid_update(Name, PatternPids, Destinations) ->
+get_pid_update(Pattern, PatternPids, Destinations) ->
     PatternPidsLookup = get_pid_lookup(PatternPids),
-    case cloudi_x_trie:find(Name, Destinations) of
+    case cloudi_x_trie:find(Pattern, Destinations) of
         {ok, DestinationList} ->
             get_pid_update_destinations(DestinationList,
                                         PatternPidsLookup);
@@ -377,33 +398,31 @@ get_pid_update_destinations(DestinationList, PatternPidsLookup) ->
     get_pid_update_destinations(lists:reverse(DestinationList), [],
                                 PatternPidsLookup).
 
-get_pid_store_task_size([#destination{pattern_pid = {_, Pid},
+get_pid_store_task_size([#destination{pattern_pid = {Pattern, Pid},
                                       alive = true} = Destination |
                          DestinationList],
-                        Name, TaskId,
-                        TaskSize, Destinations) ->
+                        Pattern, TaskId, TaskSize,
+                        Destinations) ->
     {TaskCost, Timeout} = cloudi_task_size:get(Pid, TaskSize),
     TimeoutSource = cloudi_task_size,
     {PatternPid,
      DestinationsNew} = get_pid_store(Destination, DestinationList,
-                                      Name, TaskId,
-                                      TaskCost, Timeout, TimeoutSource,
-                                      Destinations),
+                                      Pattern, TaskId, TaskCost,
+                                      Timeout, TimeoutSource, Destinations),
     {PatternPid, Timeout, TaskCost, DestinationsNew}.
 
-get_pid_store_task_cost([#destination{pattern_pid = PatternPid,
+get_pid_store_task_cost([#destination{pattern_pid = {Pattern, _} = PatternPid,
                                       alive = true} = Destination |
                          DestinationList],
-                        Name, TaskId, TaskCost,
+                        Pattern, TaskId, TaskCost,
                         TimeoutDefault, Timeouts, Destinations) ->
     {Timeout,
      TimeoutsNew} = get_pid_store_timeout(PatternPid, TimeoutDefault, Timeouts),
     TimeoutSource = timeouts,
     {PatternPid,
      DestinationsNew} = get_pid_store(Destination, DestinationList,
-                                      Name, TaskId,
-                                      TaskCost, Timeout, TimeoutSource,
-                                      Destinations),
+                                      Pattern, TaskId, TaskCost,
+                                      Timeout, TimeoutSource, Destinations),
     {PatternPid, Timeout, TimeoutsNew, DestinationsNew}.
 
 get_pid_store(#destination{pattern_pid = PatternPid,
@@ -413,7 +432,8 @@ get_pid_store(#destination{pattern_pid = PatternPid,
                            alive = Alive,
                            requests = Requests} = Destination,
               DestinationList,
-              Name, TaskId, TaskCost, Timeout, TimeoutSource, Destinations) ->
+              Pattern, TaskId, TaskCost,
+              Timeout, TimeoutSource, Destinations) ->
     Request = #request{task_cost = TaskCost,
                        timeout = Timeout,
                        timeout_source = TimeoutSource},
@@ -426,7 +446,7 @@ get_pid_store(#destination{pattern_pid = PatternPid,
                          requests = RequestsNew},
     DestinationListNew = lists:keymerge(#destination.sort_key,
                                         DestinationList, [DestinationNew]),
-    DestinationsNew = cloudi_x_trie:store(Name, DestinationListNew,
+    DestinationsNew = cloudi_x_trie:store(Pattern, DestinationListNew,
                                           Destinations),
     {PatternPid, DestinationsNew}.
 
@@ -452,8 +472,8 @@ get_pid_lookup([PatternPid | PatternPids], PatternPidsLookup) ->
 get_pid_lookup([_ | _] = PatternPids) ->
     get_pid_lookup(PatternPids, maps:new()).
 
-task_remove(TimeoutNew, Name, PatternPidOld, TaskId, Destinations) ->
-    case cloudi_x_trie:find(Name, Destinations) of
+task_remove(TimeoutNew, {Pattern, _} =  PatternPidOld, TaskId, Destinations) ->
+    case cloudi_x_trie:find(Pattern, Destinations) of
         {ok, DestinationList} ->
             case lists:keytake(PatternPidOld, #destination.pattern_pid,
                                DestinationList) of
@@ -489,7 +509,7 @@ task_remove(TimeoutNew, Name, PatternPidOld, TaskId, Destinations) ->
                                                  speed_count = SpeedCountNew,
                                                  requests = RequestsNew},
                             {TaskCost, TimeoutOld, TimeoutSource, Elapsed,
-                             cloudi_x_trie:store(Name,
+                             cloudi_x_trie:store(Pattern,
                                  lists:keymerge(#destination.sort_key,
                                                 DestinationListNew,
                                                 [DestinationNew]),
@@ -531,8 +551,12 @@ speed(TaskCost, TimeoutOld, TimeoutNew, Speed, SpeedCount) ->
         Elapsed > 0 ->
             TaskCost / Elapsed
     end,
-    % speed is an average value, calculated with a moving average
-    SpeedCountNew = SpeedCount + 1,
-    SpeedNew = Speed + (SpeedSample - Speed) / SpeedCountNew,
-    {Elapsed, SpeedNew, SpeedCountNew}.
-
+    if
+        SpeedCount == 0 ->
+            {Elapsed, Speed, 1};
+        SpeedCount > 0 ->
+            % speed is an average value, calculated with a moving average
+            SpeedCountNew = SpeedCount + 1,
+            SpeedNew = Speed + (SpeedSample - Speed) / SpeedCountNew,
+            {Elapsed, SpeedNew, SpeedCountNew}
+    end.

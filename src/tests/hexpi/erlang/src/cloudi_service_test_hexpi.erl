@@ -164,7 +164,7 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
             Error
     end.
 
-cloudi_service_map_reduce_recv([_, Name, Request, _, PatternPidOld],
+cloudi_service_map_reduce_recv([_, _, Request, _, PatternPidOld],
                                _ResponseInfo, Response,
                                TimeoutNew, _TransId,
                                #state{task_scheduler = TaskScheduler} = State,
@@ -177,7 +177,7 @@ cloudi_service_map_reduce_recv([_, Name, Request, _, PatternPidOld],
               [IndexBin, cloudi_service_map_reduce:elapsed_seconds()]),
     <<_ElapsedTime:32/float-native, PiResult/binary>> = Response,
     {ok, _,
-     TaskSchedulerNew} = cloudi_task_scheduler:task_done(Name, PatternPidOld,
+     TaskSchedulerNew} = cloudi_task_scheduler:task_done(PatternPidOld,
                                                          TaskId, TimeoutNew,
                                                          TaskScheduler),
     StateNew = reduce_send(IndexBin, PiResult,

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-11-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_task_scheduler logic
+
 2024-11-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add a check for the fatal_timeout_interrupt service configuration
