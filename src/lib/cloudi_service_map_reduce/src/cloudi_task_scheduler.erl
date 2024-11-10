@@ -485,11 +485,11 @@ task_remove(TimeoutNew, {Pattern, _} =  PatternPidOld, TaskId, Destinations) ->
                                   timeout_source = TimeoutSource},
                          RequestsNew} ->
                             TaskCostPendingNew = TaskCostPending - TaskCost,
-                             {Elapsed, SpeedNew, SpeedCountNew} = if
-                                 TimeoutNew =:= undefined ->
-                                     {undefined, Speed, SpeedCount};
-                                 is_integer(TimeoutNew) ->
-                                     speed(TaskCost, TimeoutOld, TimeoutNew,
+                            {Elapsed, SpeedNew, SpeedCountNew} = if
+                                TimeoutNew =:= undefined ->
+                                    {undefined, Speed, SpeedCount};
+                                is_integer(TimeoutNew) ->
+                                    speed(TaskCost, TimeoutOld, TimeoutNew,
                                            Speed, SpeedCount)
                             end,
                             SortKeyNew = sort_key(SubscribeCount,
@@ -547,9 +547,9 @@ speed(TaskCost, TimeoutOld, TimeoutNew, Speed, SpeedCount) ->
     end,
     if
         SpeedCount == 0 ->
-            {Elapsed, Speed, 1};
+            {Elapsed, SpeedSample, 1};
         SpeedCount > 0 ->
-            % speed is an average value, calculated with a moving average
+            % speed is an average value
             SpeedCountNew = SpeedCount + 1,
             SpeedNew = Speed + (SpeedSample - Speed) / SpeedCountNew,
             {Elapsed, SpeedNew, SpeedCountNew}
