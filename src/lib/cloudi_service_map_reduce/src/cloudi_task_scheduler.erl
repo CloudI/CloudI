@@ -123,7 +123,6 @@ get_pid(Dispatcher, [_ | _] = Name, TaskId,
              Timeout,
              TaskCost,
              DestinationsNew} = get_pid_store_task_size(DestinationList,
-                                                        Pattern,
                                                         TaskId, TaskSize,
                                                         Destinations),
             {ok, PatternPid, Timeout, TaskCost,
@@ -161,7 +160,6 @@ get_pid(Dispatcher, [_ | _] = Name, TaskId, TaskCost,
              Timeout,
              TimeoutsNew,
              DestinationsNew} = get_pid_store_task_cost(DestinationList,
-                                                        Pattern,
                                                         TaskId, TaskCost,
                                                         TimeoutDefault,
                                                         Timeouts, Destinations),
@@ -354,10 +352,10 @@ get_pid_update_destinations([], DestinationList, PatternPidsLookup) ->
                         [Destination#destination{sort_key = SortKey}])
     end, DestinationList, PatternPidsLookup);
 get_pid_update_destinations([#destination{pattern_pid = PatternPid,
-                             subscribe_count = SubscribeCountOld,
-                             task_cost_pending = TaskCostPending,
-                             speed = Speed,
-                             requests = Requests} = Destination |
+                                          subscribe_count = SubscribeCountOld,
+                                          task_cost_pending = TaskCostPending,
+                                          speed = Speed,
+                                          requests = Requests} = Destination |
                              DestinationListOld],
                             DestinationList, PatternPidsLookup) ->
     case maps:take(PatternPid, PatternPidsLookup) of
@@ -398,41 +396,39 @@ get_pid_update_destinations(DestinationList, PatternPidsLookup) ->
     get_pid_update_destinations(lists:reverse(DestinationList), [],
                                 PatternPidsLookup).
 
-get_pid_store_task_size([#destination{pattern_pid = {Pattern, Pid},
+get_pid_store_task_size([#destination{pattern_pid = {_, Pid} = PatternPid,
                                       alive = true} = Destination |
                          DestinationList],
-                        Pattern, TaskId, TaskSize,
+                        TaskId, TaskSize,
                         Destinations) ->
     {TaskCost, Timeout} = cloudi_task_size:get(Pid, TaskSize),
     TimeoutSource = cloudi_task_size,
-    {PatternPid,
-     DestinationsNew} = get_pid_store(Destination, DestinationList,
-                                      Pattern, TaskId, TaskCost,
-                                      Timeout, TimeoutSource, Destinations),
+    DestinationsNew = get_pid_store(Destination, DestinationList,
+                                    TaskId, TaskCost,
+                                    Timeout, TimeoutSource, Destinations),
     {PatternPid, Timeout, TaskCost, DestinationsNew}.
 
-get_pid_store_task_cost([#destination{pattern_pid = {Pattern, _} = PatternPid,
+get_pid_store_task_cost([#destination{pattern_pid = PatternPid,
                                       alive = true} = Destination |
                          DestinationList],
-                        Pattern, TaskId, TaskCost,
+                        TaskId, TaskCost,
                         TimeoutDefault, Timeouts, Destinations) ->
     {Timeout,
      TimeoutsNew} = get_pid_store_timeout(PatternPid, TimeoutDefault, Timeouts),
     TimeoutSource = timeouts,
-    {PatternPid,
-     DestinationsNew} = get_pid_store(Destination, DestinationList,
-                                      Pattern, TaskId, TaskCost,
-                                      Timeout, TimeoutSource, Destinations),
+    DestinationsNew = get_pid_store(Destination, DestinationList,
+                                    TaskId, TaskCost,
+                                    Timeout, TimeoutSource, Destinations),
     {PatternPid, Timeout, TimeoutsNew, DestinationsNew}.
 
-get_pid_store(#destination{pattern_pid = PatternPid,
+get_pid_store(#destination{pattern_pid = {Pattern, _},
                            subscribe_count = SubscribeCount,
                            task_cost_pending = TaskCostPending,
                            speed = Speed,
                            alive = Alive,
                            requests = Requests} = Destination,
               DestinationList,
-              Pattern, TaskId, TaskCost,
+              TaskId, TaskCost,
               Timeout, TimeoutSource, Destinations) ->
     Request = #request{task_cost = TaskCost,
                        timeout = Timeout,
@@ -446,9 +442,7 @@ get_pid_store(#destination{pattern_pid = PatternPid,
                          requests = RequestsNew},
     DestinationListNew = lists:keymerge(#destination.sort_key,
                                         DestinationList, [DestinationNew]),
-    DestinationsNew = cloudi_x_trie:store(Pattern, DestinationListNew,
-                                          Destinations),
-    {PatternPid, DestinationsNew}.
+    cloudi_x_trie:store(Pattern, DestinationListNew, Destinations).
 
 get_pid_store_timeout({_, Pid}, TimeoutDefault, Timeouts) ->
     PidNode = node(Pid),
