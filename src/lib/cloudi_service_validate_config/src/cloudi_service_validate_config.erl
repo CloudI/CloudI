@@ -208,13 +208,13 @@ validate_service_option([{Name, _} | Options], Count0,
                         AbleToSend, AbleToReceive,
                         ServiceId, ErrorLogLevel) ->
     Count1 = if
+        AbleToSend =:= false,
         Name =:= priority_default orelse
         Name =:= dest_refresh_start orelse
         Name =:= dest_refresh_delay orelse
         Name =:= request_name_lookup orelse
         Name =:= request_timeout_immediate_max orelse
-        Name =:= response_timeout_adjustment,
-        AbleToSend =:= false ->
+        Name =:= response_timeout_adjustment ->
             ?LOG(ErrorLogLevel,
                  "unable to send with option ~p set~n ~p",
                  [Name, service_id(ServiceId)]),
@@ -223,6 +223,7 @@ validate_service_option([{Name, _} | Options], Count0,
             Count0
     end,
     CountN = if
+        AbleToReceive =:= false,
         Name =:= queue_limit orelse
         Name =:= queue_size orelse
         Name =:= rate_request_max orelse
@@ -231,10 +232,10 @@ validate_service_option([{Name, _} | Options], Count0,
         Name =:= count_process_dynamic orelse
         Name =:= fatal_exceptions orelse
         Name =:= fatal_timeout orelse
+        Name =:= fatal_timeout_interrupt orelse
         Name =:= fatal_timeout_delay orelse
         Name =:= aspects_request_before orelse
-        Name =:= aspects_request_after,
-        AbleToReceive =:= false ->
+        Name =:= aspects_request_after ->
             ?LOG(ErrorLogLevel,
                  "unable to receive with option ~p set~n ~p",
                  [Name, service_id(ServiceId)]),
