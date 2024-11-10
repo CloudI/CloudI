@@ -5,6 +5,7 @@
 
     * Add a check for the fatal_timeout_interrupt service configuration
       option to cloudi_service_validate_config
+    * Add cloudi_task_scheduler:nodes_speed/1 function
 
 2024-11-02 Michael Truog   <mjtruog at protonmail dot com>
 

@@ -52,6 +52,7 @@
          get_pid_retry/5,
          new/1,
          new/2,
+         nodes_speed/1,
          task_done/5]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -244,6 +245,28 @@ new(Dispatcher, TaskSize)
     #cloudi_task_scheduler{timeout_max = TimeoutMax,
                            timeout_default = TimeoutDefault,
                            task_size = TaskSize}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the total speed per node.===
+%% The total speed is the total TaskCost processed per millisecond
+%% (based on each service process' average speed).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_speed(#cloudi_task_scheduler{}) ->
+    #{node() := float()}.
+
+nodes_speed(#cloudi_task_scheduler{destinations = Destinations}) ->
+    cloudi_x_trie:fold(fun(_Name, DestinationList, Nodes) ->
+        lists:foldl(fun(Destination, NodesNext) ->
+            #destination{pattern_pid = {_, Pid},
+                         speed = Speed} = Destination,
+            maps:update_with(node(Pid), fun(SpeedSum) ->
+                SpeedSum + Speed
+            end, Speed, NodesNext)
+        end, Nodes, DestinationList)
+    end, #{}, Destinations).
 
 %%-------------------------------------------------------------------------
 %% @doc
