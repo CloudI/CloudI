@@ -577,7 +577,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         is_pid(InfoPid) ->
                             process_info_update(InfoPid, ProcessInfo1)
                     end,
-                    {maps:size(element(3, State)),  % send_timeouts
+                    {map_size(element(3, State)),   % send_timeouts
                      element(11, State),            % queued
                      element(12, State),            % queued_size
                      element(13, State),            % queued_word_size
@@ -607,7 +607,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         {ok, DispatcherState} -> % gen_server/proc_lib
                             32 = tuple_size(DispatcherState),
                             state = element(1, DispatcherState),
-                            maps:size(element(3, DispatcherState));
+                            map_size(element(3, DispatcherState));
                         {error, _} ->
                             undefined
                     end,
@@ -742,7 +742,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
         {ok, {_, State}} -> % gen_statem
             43 = tuple_size(State),
             state = element(1, State),
-            Outgoing = maps:size(element(3, State)),  % send_timeouts
+            Outgoing = map_size(element(3, State)),   % send_timeouts
             QueuedRequests = element(11, State),      % queued
             QueuedRequestsSize0 = element(12, State), % queued_size
             WordSize = element(13, State),            % queued_word_size
@@ -881,7 +881,7 @@ services_metrics(CountInternal, CountExternal,
                 ScopeCountExternal) | ScopeMetrics]
     end,
     [metric(gauge, [scopes, count],
-            maps:size(Scopes)),
+            map_size(Scopes)),
      metric(gauge, [concurrency],
             ConcurrencyInternal + ConcurrencyExternal),
      metric(gauge, [count],

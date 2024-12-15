@@ -403,7 +403,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
     case maps:take(TransId, MapRequests) of
         {#map_send{send_args = [_ | SendArgs]},
          MapRequestsNew} ->
-            ok = callback_info_set(maps:size(MapRequestsNew),
+            ok = callback_info_set(map_size(MapRequestsNew),
                                    TimeRunningStart, ElapsedSeconds),
             case MapReduceModule:
                  cloudi_service_map_reduce_recv([Dispatcher | SendArgs],
@@ -522,7 +522,7 @@ map_resend(#map_send{send_args = [_ | SendArgsTail],
                   time_running = TimeRunningStart,
                   elapsed_seconds = ElapsedSeconds} = State, Dispatcher) ->
     SendArgs = [Dispatcher | SendArgsTail],
-    ok = callback_info_set(maps:size(MapRequests),
+    ok = callback_info_set(map_size(MapRequests),
                            TimeRunningStart, ElapsedSeconds),
     case MapReduceModule:
          cloudi_service_map_reduce_resend(SendArgs, MapReduceState) of
@@ -545,7 +545,7 @@ map_info(Request, State, Dispatcher) ->
            map_requests = MapRequests,
            time_running = TimeRunningStart,
            elapsed_seconds = ElapsedSeconds} = State,
-    ok = callback_info_set(maps:size(MapRequests),
+    ok = callback_info_set(map_size(MapRequests),
                            TimeRunningStart, ElapsedSeconds),
     case MapReduceModule:
          cloudi_service_map_reduce_info(Request, MapReduceState, Dispatcher) of
@@ -607,7 +607,7 @@ map_check_continue(#state{map_reduce_module = MapReduceModule,
     end.
 
 map_check_done(#state{map_requests = MapRequests} = State) ->
-    case maps:size(MapRequests) of
+    case map_size(MapRequests) of
         0 ->
             {stop, shutdown, State};
         _ ->

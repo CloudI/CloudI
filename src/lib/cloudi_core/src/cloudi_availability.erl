@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @copyright 2018-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_availability).
@@ -105,7 +105,7 @@ durations_new() ->
     non_neg_integer().
 
 durations_size(DurationsLookup) ->
-    maps:size(DurationsLookup).
+    map_size(DurationsLookup).
 
 -spec durations_state(Key :: any(),
                       DurationsLookup :: durations(any())) ->

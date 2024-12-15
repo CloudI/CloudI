@@ -69,7 +69,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -90,8 +90,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2017-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_crdt).
@@ -2130,7 +2130,7 @@ read({is_key, Key}, Data) ->
 read(keys, Data) ->
     maps:keys(Data);
 read(size, Data) ->
-    maps:size(Data);
+    map_size(Data);
 read(values, Data) ->
     maps:values(Data).
 
@@ -2609,7 +2609,7 @@ vclock_new() ->
 vclock_average(VClock) ->
     maps:fold(fun(_, Value, Sum) ->
         Sum + Value
-    end, 0, VClock) / maps:size(VClock).
+    end, 0, VClock) / map_size(VClock).
 
 -spec vclocks_current(NodeIds :: list(node_id()),
                       VClocks :: vclocks()) ->

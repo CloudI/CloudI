@@ -112,7 +112,7 @@
                list({cloudi:trans_id(), {binary(), binary()}}),
         % ( 7) deferred stop reason to use when done processing
         stop = undefined
-            :: atom(),
+            :: atom() | {shutdown, atom()},
         % ( 8) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
@@ -1264,15 +1264,13 @@ handle_event(EventType, EventContent, StateName, State) ->
                      count_process_dynamic = CountProcessDynamicNew}}};
 
 'HANDLE'(info, 'cloudi_count_process_dynamic_terminate_check',
-         #state{dispatcher = Dispatcher,
-                queue_requests = QueueRequests}) ->
+         #state{queue_requests = QueueRequests} = State) ->
+    StopReason = {shutdown, cloudi_count_process_dynamic_terminate},
     if
         QueueRequests =:= false ->
-            {stop, {shutdown, cloudi_count_process_dynamic_terminate}};
+            {stop, StopReason};
         QueueRequests =:= true ->
-            erlang:send_after(?COUNT_PROCESS_DYNAMIC_INTERVAL, Dispatcher,
-                              'cloudi_count_process_dynamic_terminate_check'),
-            keep_state_and_data
+            {keep_state, State#state{stop = StopReason}}
     end;
 
 'HANDLE'(info, 'cloudi_count_process_dynamic_terminate_now', _) ->
@@ -1292,13 +1290,13 @@ handle_event(EventType, EventContent, StateName, State) ->
                 options = #config_service_options{
                     fatal_timeout_interrupt =
                         FatalTimeoutInterrupt}} = State) ->
+    StopReason = fatal_timeout,
     if
         QueueRequests =:= false orelse
         FatalTimeoutInterrupt =:= true ->
-            {stop, fatal_timeout};
+            {stop, StopReason};
         QueueRequests =:= true ->
-            {keep_state,
-             State#state{stop = fatal_timeout}}
+            {keep_state, State#state{stop = StopReason}}
     end;
 
 'HANDLE'(info, {'cloudi_service_suspended', SuspendPending, Suspend},

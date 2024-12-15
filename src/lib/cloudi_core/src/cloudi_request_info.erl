@@ -29,7 +29,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -50,8 +50,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2014-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request_info).
@@ -302,7 +302,7 @@ module_test_() ->
 t_text_pairs() ->
     <<>> = key_value_new([]),
     <<>> = key_value_new([], text_pairs),
-    0 = maps:size(key_value_parse(<<>>)),
+    0 = map_size(key_value_parse(<<>>)),
     KeyValues0 = [{atom_key, atom_value},
                   {atom_key, "list_value"},
                   {atom_key, <<"binary_value">>},
@@ -344,7 +344,7 @@ t_text_pairs() ->
 
 t_binary_pairs() ->
     <<0>> = key_value_new([], binary_pairs),
-    0 = maps:size(key_value_parse(<<0>>)),
+    0 = map_size(key_value_parse(<<0>>)),
     KeyValues0 = [{atom_key, atom_value},
                   {atom_key, "list_value"},
                   {atom_key, <<"binary_value">>},

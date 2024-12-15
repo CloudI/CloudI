@@ -109,7 +109,7 @@
                      {cloudi:response_info(), cloudi:response()}}),
         % ( 7) deferred stop reason to use when done processing
         stop = undefined
-            :: atom(),
+            :: atom() | {shutdown, atom()},
         % ( 8) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
@@ -196,7 +196,7 @@
                list({cloudi:trans_id(), reference()}),
         % ( 4) deferred stop reason to use when done processing
         stop = undefined
-            :: atom(),
+            :: atom() | {shutdown, atom()},
         % ( 5) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
@@ -1427,16 +1427,14 @@ handle_info('cloudi_count_process_dynamic_terminate',
                                  CountProcessDynamicNew}}});
 
 handle_info('cloudi_count_process_dynamic_terminate_check',
-            #state{dispatcher = Dispatcher,
-                   queue_requests = QueueRequests,
+            #state{queue_requests = QueueRequests,
                    duo_mode_pid = undefined} = State) ->
+    StopReason = {shutdown, cloudi_count_process_dynamic_terminate},
     if
         QueueRequests =:= false ->
-            {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
+            {stop, StopReason, State};
         QueueRequests =:= true ->
-            erlang:send_after(?COUNT_PROCESS_DYNAMIC_INTERVAL, Dispatcher,
-                              'cloudi_count_process_dynamic_terminate_check'),
-            hibernate_check({noreply, State})
+            hibernate_check({noreply, State#state{stop = StopReason}})
     end;
 
 handle_info('cloudi_count_process_dynamic_terminate_now',
@@ -1550,12 +1548,13 @@ handle_info('cloudi_service_fatal_timeout',
                    options = #config_service_options{
                        fatal_timeout_interrupt =
                            FatalTimeoutInterrupt}} = State) ->
+    StopReason = fatal_timeout,
     if
         QueueRequests =:= false orelse
         FatalTimeoutInterrupt =:= true ->
-            {stop, fatal_timeout, State};
+            {stop, StopReason, State};
         QueueRequests =:= true ->
-            hibernate_check({noreply, State#state{stop = fatal_timeout}})
+            hibernate_check({noreply, State#state{stop = StopReason}})
     end;
 
 handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
@@ -3781,17 +3780,14 @@ duo_handle_info({'cloudi_count_process_dynamic_update', _} = Update,
     {noreply, State};
 
 duo_handle_info('cloudi_count_process_dynamic_terminate_check',
-                #state_duo{duo_mode_pid = DuoModePid,
-                           queue_requests = QueueRequests} = State) ->
-    % count_process_dynamic does not have terminate set within the duo_mode_pid
-    % (not yet necessary)
+                #state_duo{queue_requests = QueueRequests} = State) ->
+    % count_process_dynamic_terminate_set is not called inside the duo_mode_pid
+    StopReason = {shutdown, cloudi_count_process_dynamic_terminate},
     if
         QueueRequests =:= false ->
-            {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
+            {stop, StopReason, State};
         QueueRequests =:= true ->
-            erlang:send_after(?COUNT_PROCESS_DYNAMIC_INTERVAL, DuoModePid,
-                              'cloudi_count_process_dynamic_terminate_check'),
-            {noreply, State}
+            {noreply, State#state_duo{stop = StopReason}}
     end;
 
 duo_handle_info('cloudi_count_process_dynamic_terminate_now', State) ->
@@ -3812,12 +3808,13 @@ duo_handle_info('cloudi_service_fatal_timeout',
                            options = #config_service_options{
                                fatal_timeout_interrupt =
                                    FatalTimeoutInterrupt}} = State) ->
+    StopReason = fatal_timeout,
     if
         QueueRequests =:= false orelse
         FatalTimeoutInterrupt =:= true ->
-            {stop, fatal_timeout, State};
+            {stop, StopReason, State};
         QueueRequests =:= true ->
-            {noreply, State#state_duo{stop = fatal_timeout}}
+            {noreply, State#state_duo{stop = StopReason}}
     end;
 
 duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspend},

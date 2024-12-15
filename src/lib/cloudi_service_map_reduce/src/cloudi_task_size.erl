@@ -42,11 +42,12 @@
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([new/7,
-         get/2,
+-export([get/2,
+         new/7,
+         put/4,
          reduce/2,
          reduce/3,
-         put/4]).
+         task_count/1]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -83,40 +84,6 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Get a new task size lookup.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec new(TaskCount :: pos_integer(),
-          TaskSizeInitial :: pos_integer(),
-          TaskSizeMin :: pos_integer(),
-          TaskSizeMax :: pos_integer(),
-          TargetTimeInitial :: float(),
-          TargetTimeMin :: float(),
-          TargetTimeMax :: float()) ->
-    state().
-
-new(TaskCount,
-    TaskSizeInitial, TaskSizeMin, TaskSizeMax,
-    TargetTimeInitial, TargetTimeMin, TargetTimeMax)
-    when is_integer(TaskCount), TaskCount > 0,
-         is_integer(TaskSizeInitial),
-         is_integer(TaskSizeMin), TaskSizeMin > 0, is_integer(TaskSizeMax),
-         TaskSizeInitial >= TaskSizeMin, TaskSizeInitial =< TaskSizeMax,
-         is_float(TargetTimeInitial), TargetTimeInitial > 0.0,
-         is_float(TargetTimeMin), is_float(TargetTimeMax),
-         TargetTimeInitial >= TargetTimeMin,
-         TargetTimeInitial =< TargetTimeMax ->
-    #cloudi_task_size{task_count = TaskCount,
-                      task_size_initial = TaskSizeInitial,
-                      task_size_min = TaskSizeMin,
-                      task_size_max = TaskSizeMax,
-                      target_time = TargetTimeInitial,
-                      target_time_min = TargetTimeMin,
-                      target_time_max = TargetTimeMax}.
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Get the task size information.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -148,45 +115,37 @@ get(Pid,
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Reduce the task size by 10% after a timeout.===
+%% ===Get a new task size lookup.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec reduce(Pid :: pid(),
-             State :: state()) ->
+-spec new(TaskCount :: pos_integer(),
+          TaskSizeInitial :: pos_integer(),
+          TaskSizeMin :: pos_integer(),
+          TaskSizeMax :: pos_integer(),
+          TargetTimeInitial :: float(),
+          TargetTimeMin :: float(),
+          TargetTimeMax :: float()) ->
     state().
 
-reduce(Pid, State) ->
-    reduce(Pid, 0.9, State).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Reduce the task size after a timeout.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec reduce(Pid :: pid(),
-             Multiplier :: float(),
-             State :: state()) ->
-    state().
-
-reduce(Pid, Multiplier,
-       #cloudi_task_size{task_size_min = TaskSizeMin,
-                         task_size_max = TaskSizeMax,
-                         lookup = Lookup} = State)
-    when is_pid(Pid), is_float(Multiplier),
-         Multiplier > 0.0, Multiplier =< 1.0 ->
-    Node = node(Pid),
-    case maps:find(Node, Lookup) of
-        {ok, #node{task_size = TaskSize} = NodeState} ->
-            {_, TaskSizeNew} = task_size_clamp(TaskSize * Multiplier,
-                                               TaskSizeMin, TaskSizeMax),
-            NodeStateNew = NodeState#node{task_size = TaskSizeNew},
-            State#cloudi_task_size{lookup = maps:put(Node, NodeStateNew,
-                                                     Lookup)};
-        error ->
-            State
-    end.
+new(TaskCount,
+    TaskSizeInitial, TaskSizeMin, TaskSizeMax,
+    TargetTimeInitial, TargetTimeMin, TargetTimeMax)
+    when is_integer(TaskCount), TaskCount > 0,
+         is_integer(TaskSizeInitial),
+         is_integer(TaskSizeMin), TaskSizeMin > 0, is_integer(TaskSizeMax),
+         TaskSizeInitial >= TaskSizeMin, TaskSizeInitial =< TaskSizeMax,
+         is_float(TargetTimeInitial), TargetTimeInitial > 0.0,
+         is_float(TargetTimeMin), is_float(TargetTimeMax),
+         TargetTimeInitial >= TargetTimeMin,
+         TargetTimeInitial =< TargetTimeMax ->
+    #cloudi_task_size{task_count = TaskCount,
+                      task_size_initial = TaskSizeInitial,
+                      task_size_min = TaskSizeMin,
+                      task_size_max = TaskSizeMax,
+                      target_time = TargetTimeInitial,
+                      target_time_min = TargetTimeMin,
+                      target_time_max = TargetTimeMax}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -247,6 +206,60 @@ put(Pid, TaskSize, ElapsedTime,
                            target_time_incr = TargetTimeIncrNew,
                            target_time_decr = TargetTimeDecrNew,
                            lookup = LookupNew}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reduce the task size by 10% after a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec reduce(Pid :: pid(),
+             State :: state()) ->
+    state().
+
+reduce(Pid, State) ->
+    reduce(Pid, 0.9, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Reduce the task size after a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec reduce(Pid :: pid(),
+             Multiplier :: float(),
+             State :: state()) ->
+    state().
+
+reduce(Pid, Multiplier,
+       #cloudi_task_size{task_size_min = TaskSizeMin,
+                         task_size_max = TaskSizeMax,
+                         lookup = Lookup} = State)
+    when is_pid(Pid), is_float(Multiplier),
+         Multiplier > 0.0, Multiplier =< 1.0 ->
+    Node = node(Pid),
+    case maps:find(Node, Lookup) of
+        {ok, #node{task_size = TaskSize} = NodeState} ->
+            {_, TaskSizeNew} = task_size_clamp(TaskSize * Multiplier,
+                                               TaskSizeMin, TaskSizeMax),
+            NodeStateNew = NodeState#node{task_size = TaskSizeNew},
+            State#cloudi_task_size{lookup = maps:put(Node, NodeStateNew,
+                                                     Lookup)};
+        error ->
+            State
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the task count used for initialization.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec task_count(state()) ->
+    pos_integer().
+
+task_count(#cloudi_task_size{task_count = TaskCount}) ->
+    TaskCount.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

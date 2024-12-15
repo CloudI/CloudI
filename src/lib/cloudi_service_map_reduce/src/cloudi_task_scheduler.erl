@@ -81,11 +81,17 @@
         requests = #{} :: #{task_id() := #request{}}
     }).
 
+-type schedule() :: greedy | min_max.
+
 -record(cloudi_task_scheduler,
     {
         timeout_max :: pos_integer(),
         timeout_default :: pos_integer(),
+        task_count :: undefined | pos_integer(),
         task_size :: undefined | tuple(),
+        schedule :: schedule(),
+        task_cost_min = undefined :: task_cost() | undefined,
+        task_cost_max = undefined :: task_cost() | undefined,
         timeouts = #{} :: #{node() := pos_integer()},
         destinations = cloudi_x_trie:new() :: cloudi_x_trie:cloudi_x_trie()
     }).
@@ -112,17 +118,33 @@
     {error, any()}.
 
 get_pid(Dispatcher, [_ | _] = Name, TaskId,
-        #cloudi_task_scheduler{task_size = TaskSize,
+        #cloudi_task_scheduler{task_count = TaskCount,
+                               task_size = TaskSize,
+                               schedule = Schedule,
+                               task_cost_min = TaskCostMin,
+                               task_cost_max = TaskCostMax,
                                destinations = Destinations} = State)
     when element(1, TaskSize) =:= cloudi_task_size ->
     case cloudi_service:get_pids(Dispatcher, Name) of
         {ok, [{Pattern, _} | _] = PatternPids} ->
-            DestinationList = get_pid_update(Pattern, PatternPids,
-                                             Destinations),
+            {DestinationList,
+             DestinationListSize,
+             DestinationListAlive} = get_pid_update(Pattern, PatternPids,
+                                                    Destinations),
+            {Destination,
+             DestinationListNew} = get_pid_schedule(Schedule,
+                                                    DestinationList,
+                                                    DestinationListSize,
+                                                    DestinationListAlive,
+                                                    undefined,
+                                                    TaskCostMin,
+                                                    TaskCostMax,
+                                                    TaskCount),
             {PatternPid,
              Timeout,
              TaskCost,
-             DestinationsNew} = get_pid_store_task_size(DestinationList,
+             DestinationsNew} = get_pid_store_task_size(Destination,
+                                                        DestinationListNew,
                                                         TaskId, TaskSize,
                                                         Destinations),
             {ok, PatternPid, Timeout, TaskCost,
@@ -149,17 +171,33 @@ get_pid(Dispatcher, [_ | _] = Name, TaskId,
 
 get_pid(Dispatcher, [_ | _] = Name, TaskId, TaskCost,
         #cloudi_task_scheduler{timeout_default = TimeoutDefault,
+                               task_count = TaskCount,
+                               schedule = Schedule,
+                               task_cost_min = TaskCostMin,
+                               task_cost_max = TaskCostMax,
                                timeouts = Timeouts,
                                destinations = Destinations} = State)
     when is_integer(TaskCost), TaskCost > 0 ->
     case cloudi_service:get_pids(Dispatcher, Name) of
         {ok, [{Pattern, _} | _] = PatternPids} ->
-            DestinationList = get_pid_update(Pattern, PatternPids,
-                                             Destinations),
+            {DestinationList,
+             DestinationListSize,
+             DestinationListAlive} = get_pid_update(Pattern, PatternPids,
+                                                    Destinations),
+            {Destination,
+             DestinationListNew} = get_pid_schedule(Schedule,
+                                                    DestinationList,
+                                                    DestinationListSize,
+                                                    DestinationListAlive,
+                                                    TaskCost,
+                                                    TaskCostMin,
+                                                    TaskCostMax,
+                                                    TaskCount),
             {PatternPid,
              Timeout,
              TimeoutsNew,
-             DestinationsNew} = get_pid_store_task_cost(DestinationList,
+             DestinationsNew} = get_pid_store_task_cost(Destination,
+                                                        DestinationListNew,
                                                         TaskId, TaskCost,
                                                         TimeoutDefault,
                                                         Timeouts, Destinations),
@@ -227,7 +265,9 @@ new(Dispatcher) ->
     TimeoutDefault = cloudi_service:timeout_async(Dispatcher),
     #cloudi_task_scheduler{timeout_max = TimeoutMax,
                            timeout_default = TimeoutDefault,
-                           task_size = undefined}.
+                           task_count = undefined,
+                           task_size = undefined,
+                           schedule = greedy}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -236,7 +276,7 @@ new(Dispatcher) ->
 %%-------------------------------------------------------------------------
 
 -spec new(Dispatcher :: cloudi_service:dispatcher(),
-          TaskSize :: tuple()) ->
+          tuple() | pos_integer()) ->
     #cloudi_task_scheduler{}.
 
 new(Dispatcher, TaskSize)
@@ -244,9 +284,50 @@ new(Dispatcher, TaskSize)
     true = undefined > 0.0, % for the sort_key
     TimeoutMax = cloudi_service:timeout_max(Dispatcher),
     TimeoutDefault = cloudi_service:timeout_async(Dispatcher),
+    TaskCount = cloudi_task_size:task_count(TaskSize),
     #cloudi_task_scheduler{timeout_max = TimeoutMax,
                            timeout_default = TimeoutDefault,
-                           task_size = TaskSize}.
+                           task_count = TaskCount,
+                           task_size = TaskSize,
+                           schedule = min_max};
+new(Dispatcher, Options)
+    when is_list(Options) ->
+    true = undefined > 0.0, % for the sort_key
+    Defaults = [
+        {task_count,                   undefined},
+        {task_size,                    undefined},
+        {schedule,                     min_max}],
+    [TaskCount0, TaskSize0,
+     Schedule] = cloudi_proplists:take_values(Defaults, Options),
+    TaskSizeN = if
+        is_tuple(TaskSize0) ->
+            true = element(1, TaskSize0) =:= cloudi_task_size,
+            TaskSize0;
+        TaskSize0 =:= undefined ->
+            undefined
+    end,
+    TaskCountN = if
+        is_integer(TaskCount0) andalso TaskCount0 > 0 ->
+            TaskCount0;
+        is_tuple(TaskSizeN) ->
+            cloudi_task_size:task_count(TaskSizeN);
+        TaskCount0 =:= undefined ->
+            undefined
+    end,
+    if
+        Schedule =:= greedy ->
+            ok;
+        Schedule =:= min_max ->
+            true = is_integer(TaskCountN),
+            ok
+    end,
+    TimeoutMax = cloudi_service:timeout_max(Dispatcher),
+    TimeoutDefault = cloudi_service:timeout_async(Dispatcher),
+    #cloudi_task_scheduler{timeout_max = TimeoutMax,
+                           timeout_default = TimeoutDefault,
+                           task_count = TaskCountN,
+                           task_size = TaskSizeN,
+                           schedule = Schedule}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -303,6 +384,8 @@ nodes_speed(#cloudi_task_scheduler{destinations = Destinations}) ->
 
 task_done({_, PidOld} = PatternPidOld, TaskId, TimeoutNew,
           #cloudi_task_scheduler{task_size = TaskSize,
+                                 task_cost_min = TaskCostMin,
+                                 task_cost_max = TaskCostMax,
                                  destinations = Destinations} = State)
     when is_integer(TimeoutNew), TimeoutNew >= 0 ->
     case task_remove(TimeoutNew, PatternPidOld, TaskId, Destinations) of
@@ -313,11 +396,17 @@ task_done({_, PidOld} = PatternPidOld, TaskId, TimeoutNew,
                     TaskSize;
                 TimeoutSource =:= cloudi_task_size ->
                     cloudi_task_size:put(PidOld, TaskCost,
-                                         erlang:max(Elapsed, 1) / 3600000,
+                                         max(Elapsed, 1) / 3600000,
                                          TaskSize)
             end,
+            {TaskCostMinNew,
+             TaskCostMaxNew} = task_done_update(TaskCost,
+                                                TaskCostMin,
+                                                TaskCostMax),
             {ok, Elapsed,
              State#cloudi_task_scheduler{task_size = TaskSizeNew,
+                                         task_cost_min = TaskCostMinNew,
+                                         task_cost_max = TaskCostMaxNew,
                                          destinations = DestinationsNew}};
         error ->
             {error, not_found}
@@ -337,8 +426,14 @@ get_pid_update(Pattern, PatternPids, Destinations) ->
             get_pid_update_destinations([], PatternPidsLookup)
     end.
 
-get_pid_update_destinations([], DestinationList, PatternPidsLookup) ->
-    maps:fold(fun(PatternPid, SubscribeCount, DestinationListNew) ->
+get_pid_update_destinations([], DestinationList,
+                            DestinationListSize, DestinationListAlive,
+                            PatternPidsLookup) ->
+    PatternPidsLookupSize = map_size(PatternPidsLookup),
+    DestinationListSizeNew = DestinationListSize + PatternPidsLookupSize,
+    DestinationListAliveNew = DestinationListAlive + PatternPidsLookupSize,
+    DestinationListNew = maps:fold(fun(PatternPid, SubscribeCount,
+                                       DestinationListNext) ->
          Destination = #destination{sort_key = undefined,
                                     pattern_pid = PatternPid,
                                     subscribe_count = SubscribeCount},
@@ -348,16 +443,19 @@ get_pid_update_destinations([], DestinationList, PatternPidsLookup) ->
          true = Alive,
          SortKey = sort_key(SubscribeCount, TaskCostPending, Speed, Alive),
          lists:keymerge(#destination.sort_key,
-                        DestinationListNew,
+                        DestinationListNext,
                         [Destination#destination{sort_key = SortKey}])
-    end, DestinationList, PatternPidsLookup);
+    end, DestinationList, PatternPidsLookup),
+    {DestinationListNew, DestinationListSizeNew, DestinationListAliveNew};
 get_pid_update_destinations([#destination{pattern_pid = PatternPid,
                                           subscribe_count = SubscribeCountOld,
                                           task_cost_pending = TaskCostPending,
                                           speed = Speed,
                                           requests = Requests} = Destination |
                              DestinationListOld],
-                            DestinationList, PatternPidsLookup) ->
+                            DestinationList,
+                            DestinationListSize, DestinationListAlive,
+                            PatternPidsLookup) ->
     case maps:take(PatternPid, PatternPidsLookup) of
         {SubscribeCount, PatternPidsLookupNew} ->
             Alive = true,
@@ -372,6 +470,8 @@ get_pid_update_destinations([#destination{pattern_pid = PatternPid,
                                                 [DestinationNew]),
             get_pid_update_destinations(DestinationListOld,
                                         DestinationListNew,
+                                        DestinationListSize + 1,
+                                        DestinationListAlive + 1,
                                         PatternPidsLookupNew);
         error when map_size(Requests) > 0 ->
             Alive = false,
@@ -385,20 +485,103 @@ get_pid_update_destinations([#destination{pattern_pid = PatternPid,
                                                 [DestinationNew]),
             get_pid_update_destinations(DestinationListOld,
                                         DestinationListNew,
+                                        DestinationListSize + 1,
+                                        DestinationListAlive,
                                         PatternPidsLookup);
         error ->
             get_pid_update_destinations(DestinationListOld,
                                         DestinationList,
+                                        DestinationListSize,
+                                        DestinationListAlive,
                                         PatternPidsLookup)
     end.
 
 get_pid_update_destinations(DestinationList, PatternPidsLookup) ->
-    get_pid_update_destinations(lists:reverse(DestinationList), [],
+    get_pid_update_destinations(lists:reverse(DestinationList), [], 0, 0,
                                 PatternPidsLookup).
 
-get_pid_store_task_size([#destination{pattern_pid = {_, Pid} = PatternPid,
-                                      alive = true} = Destination |
-                         DestinationList],
+get_pid_schedule(greedy,
+                 [Destination | DestinationList],
+                 _, _, _, _, _, _) ->
+    {Destination, DestinationList};
+get_pid_schedule(min_max,
+                 [#destination{alive = true,
+                               requests = Requests} = Destination |
+                  DestinationList],
+                 DestinationListSize, DestinationListAlive,
+                 TaskCost, TaskCostMin, TaskCostMax, TaskCount) ->
+    TaskCostFraction = task_cost_fraction(TaskCost, TaskCostMin, TaskCostMax),
+    if
+        TaskCostFraction =:= 1.0;
+        DestinationListAlive == 1 ->
+            {Destination, DestinationList};
+        true ->
+            % TaskCount is the concurrency as an integer
+            TasksPerDestination = TaskCount div DestinationListSize,
+            IndexPick = round(DestinationListAlive * (1.0 - TaskCostFraction)),
+            Index = 0,
+            IndexOffset = if
+                map_size(Requests) < TasksPerDestination ->
+                    Index - IndexPick;
+                true ->
+                    undefined
+            end,
+            get_pid_schedule_min_max(DestinationList, [],
+                                     Destination, IndexOffset, Index,
+                                     IndexPick, TasksPerDestination)
+
+    end.
+
+get_pid_schedule_min_max([], DestinationListPrevious,
+                         DestinationPrevious, _, _, _, _) ->
+    {DestinationPrevious, DestinationListPrevious};
+get_pid_schedule_min_max([#destination{alive = Alive,
+                                       requests = Requests} = Destination |
+                          DestinationListNew] = DestinationList,
+                         DestinationListPrevious,
+                         DestinationPrevious, IndexOffsetPrevious, Index,
+                         IndexPick, TasksPerDestination) ->
+    IndexNew = Index + 1,
+    IndexOffset = IndexNew - IndexPick,
+    if
+        Alive =:= false;
+        abs(IndexOffset) > abs(IndexOffsetPrevious) ->
+            {DestinationPrevious,
+             lists:keymerge(#destination.sort_key,
+                            DestinationList, DestinationListPrevious)};
+        Alive =:= true ->
+            {DestinationPreviousNew,
+             IndexOffsetPreviousNew,
+             DestinationListPreviousNew} = if
+                map_size(Requests) < TasksPerDestination ->
+                    % Pick this destination because the TaskCost,
+                    % in its historical min/max range, is associated
+                    % with this destination's current expected time
+                    % processing tasks.  That means the largest TaskCost
+                    % values are allocated to the destinations that have the
+                    % least work to do based on their current tasks and speed.
+                    {Destination,
+                     IndexOffset,
+                     lists:keymerge(#destination.sort_key,
+                                    DestinationListPrevious,
+                                    [DestinationPrevious])};
+                true ->
+                    {DestinationPrevious,
+                     IndexOffsetPrevious,
+                     lists:keymerge(#destination.sort_key,
+                                    DestinationListPrevious,
+                                    [Destination])}
+            end,
+            get_pid_schedule_min_max(DestinationListNew,
+                                     DestinationListPreviousNew,
+                                     DestinationPreviousNew,
+                                     IndexOffsetPreviousNew, IndexNew,
+                                     IndexPick, TasksPerDestination)
+    end.
+
+get_pid_store_task_size(#destination{pattern_pid = {_, Pid} = PatternPid,
+                                     alive = true} = Destination,
+                        DestinationList,
                         TaskId, TaskSize,
                         Destinations) ->
     {TaskCost, Timeout} = cloudi_task_size:get(Pid, TaskSize),
@@ -408,9 +591,9 @@ get_pid_store_task_size([#destination{pattern_pid = {_, Pid} = PatternPid,
                                     Timeout, TimeoutSource, Destinations),
     {PatternPid, Timeout, TaskCost, DestinationsNew}.
 
-get_pid_store_task_cost([#destination{pattern_pid = PatternPid,
-                                      alive = true} = Destination |
-                         DestinationList],
+get_pid_store_task_cost(#destination{pattern_pid = PatternPid,
+                                     alive = true} = Destination,
+                        DestinationList,
                         TaskId, TaskCost,
                         TimeoutDefault, Timeouts, Destinations) ->
     {Timeout,
@@ -490,7 +673,7 @@ task_remove(TimeoutNew, {Pattern, _} =  PatternPidOld, TaskId, Destinations) ->
                                     {undefined, Speed, SpeedCount};
                                 is_integer(TimeoutNew) ->
                                     speed(TaskCost, TimeoutOld, TimeoutNew,
-                                           Speed, SpeedCount)
+                                          Speed, SpeedCount)
                             end,
                             SortKeyNew = sort_key(SubscribeCount,
                                                   TaskCostPendingNew,
@@ -518,15 +701,45 @@ task_remove(TimeoutNew, {Pattern, _} =  PatternPidOld, TaskId, Destinations) ->
             error
     end.
 
+task_done_update(TaskCost, TaskCostMin, TaskCostMax) ->
+    TaskCostMinNew = if
+        TaskCostMin =:= undefined ->
+            TaskCost;
+        is_integer(TaskCostMin) ->
+            min(TaskCost, TaskCostMin)
+    end,
+    TaskCostMaxNew = if
+        TaskCostMax =:= undefined ->
+            TaskCost;
+        is_integer(TaskCostMax) ->
+            max(TaskCost, TaskCostMax)
+    end,
+    {TaskCostMinNew, TaskCostMaxNew}.
+
 increase_timeout({_, PidOld}, TimeoutOld, TimeoutMax, Timeouts) ->
     PidNode = node(PidOld),
     case maps:find(PidNode, Timeouts) of
         {ok, Timeout} when Timeout > TimeoutOld ->
             Timeouts;
         _ ->
-            TimeoutNew = erlang:min(TimeoutOld * 2, TimeoutMax),
+            TimeoutNew = min(TimeoutOld * 2, TimeoutMax),
             maps:put(PidNode, TimeoutNew, Timeouts)
     end.
+
+task_cost_fraction(undefined, _, _) ->
+    1.0;
+task_cost_fraction(_, undefined, _) ->
+    1.0;
+task_cost_fraction(_, _, undefined) ->
+    1.0;
+task_cost_fraction(TaskCost, TaskCostMin, _)
+    when TaskCost =< TaskCostMin ->
+    0.0;
+task_cost_fraction(TaskCost, _, TaskCostMax)
+    when TaskCost >= TaskCostMax ->
+    1.0;
+task_cost_fraction(TaskCost, TaskCostMin, TaskCostMax) ->
+    (TaskCost - TaskCostMin) / (TaskCostMax - TaskCostMin).
 
 sort_key(SubscribeCount, TaskCostPending, Speed, Alive) ->
     if

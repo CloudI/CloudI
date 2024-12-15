@@ -34,7 +34,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2024 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -55,8 +55,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2015-2024 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -1049,7 +1049,7 @@ size(Dispatcher,
      #cloudi_queue{ordered_requests = OrderedRequests,
                    requests = Requests})
     when is_pid(Dispatcher) ->
-    queue:len(OrderedRequests) + maps:size(Requests).
+    queue:len(OrderedRequests) + map_size(Requests).
 
 %%-------------------------------------------------------------------------
 %% @doc
