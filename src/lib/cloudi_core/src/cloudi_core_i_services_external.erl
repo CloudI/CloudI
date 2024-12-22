@@ -638,7 +638,6 @@ handle_event(EventType, EventContent, StateName, State) ->
          {ForwardType, NameNext, RequestInfoNext, RequestNext,
           TimeoutNext, PriorityNext, TransId, Source},
          #state{dispatcher = Dispatcher,
-                stop = StopReason,
                 service_state = ServiceState,
                 request_data = {{SendType, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
@@ -733,12 +732,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             StateNew = State#state{service_state = ServiceStateNew,
                                    request_data = undefined,
                                    fatal_timer = undefined},
-            if
-                StopReason =:= undefined ->
-                    {keep_state, process_queues(StateNew)};
-                true ->
-                    {stop, StopReason, StateNew}
-            end;
+            {keep_state, process_queues(StateNew)};
         {stop, Reason, ServiceStateNew} ->
             ok = fatal_timer_end(FatalTimer),
             {stop, Reason,
@@ -750,8 +744,7 @@ handle_event(EventType, EventContent, StateName, State) ->
 'HANDLE'(connection,
          {ReturnType, Name, Pattern, ResponseInfo, Response,
           TimeoutNext, TransId, Source},
-         #state{stop = StopReason,
-                service_state = ServiceState,
+         #state{service_state = ServiceState,
                 request_data = {{_, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
                                 RequestTimeoutF},
@@ -808,12 +801,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             StateNew = State#state{service_state = ServiceStateNew,
                                    request_data = undefined,
                                    fatal_timer = undefined},
-            if
-                StopReason =:= undefined ->
-                    {keep_state, process_queues(StateNew)};
-                true ->
-                    {stop, StopReason, StateNew}
-            end;
+            {keep_state, process_queues(StateNew)};
         {stop, Reason, ServiceStateNew} ->
             ok = fatal_timer_end(FatalTimer),
             {stop, Reason,
@@ -1264,12 +1252,15 @@ handle_event(EventType, EventContent, StateName, State) ->
                      count_process_dynamic = CountProcessDynamicNew}}};
 
 'HANDLE'(info, 'cloudi_count_process_dynamic_terminate_check',
-         #state{queue_requests = QueueRequests} = State) ->
+         #state{update_plan = UpdatePlan,
+                suspended = Suspended,
+                queue_requests = QueueRequests} = State) ->
     StopReason = {shutdown, cloudi_count_process_dynamic_terminate},
+    StopDelayed = stop_delayed(UpdatePlan, Suspended, QueueRequests),
     if
-        QueueRequests =:= false ->
+        StopDelayed =:= false ->
             {stop, StopReason};
-        QueueRequests =:= true ->
+        StopDelayed =:= true ->
             {keep_state, State#state{stop = StopReason}}
     end;
 
@@ -1286,16 +1277,19 @@ handle_event(EventType, EventContent, StateName, State) ->
                      rate_request_max = RateRequestNew}}};
 
 'HANDLE'(info, 'cloudi_service_fatal_timeout',
-         #state{queue_requests = QueueRequests,
+         #state{update_plan = UpdatePlan,
+                suspended = Suspended,
+                queue_requests = QueueRequests,
                 options = #config_service_options{
                     fatal_timeout_interrupt =
                         FatalTimeoutInterrupt}} = State) ->
     StopReason = fatal_timeout,
+    StopDelayed = stop_delayed(UpdatePlan, FatalTimeoutInterrupt,
+                               Suspended, QueueRequests),
     if
-        QueueRequests =:= false orelse
-        FatalTimeoutInterrupt =:= true ->
+        StopDelayed =:= false ->
             {stop, StopReason};
-        QueueRequests =:= true ->
+        StopDelayed =:= true ->
             {keep_state, State#state{stop = StopReason}}
     end;
 
@@ -1583,6 +1577,9 @@ handle_info({cloudi_cpg_data, Groups}, _,
     {keep_state, State#state{cpg_data = Groups}};
 
 handle_info({'EXIT', _, Reason}, _, _) ->
+    {stop, Reason};
+
+handle_info({'cloudi_service_stop', Reason}, _, _) ->
     {stop, Reason};
 
 handle_info('cloudi_service_init_timeout', _, _) ->
@@ -2048,7 +2045,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                 fatal_timer = FatalTimer,
                                 options = ConfigOptionsNew};
                 {stop, Reason, ServiceStateNew} ->
-                    Dispatcher ! {'EXIT', Dispatcher, Reason},
+                    Dispatcher ! {'cloudi_service_stop', Reason},
                     State#state{recv_timeouts = RecvTimeoutsNew,
                                 service_state = ServiceStateNew,
                                 fatal_timer = FatalTimer,
@@ -2099,7 +2096,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                 fatal_timer = FatalTimer,
                                 options = ConfigOptionsNew};
                 {stop, Reason, ServiceStateNew} ->
-                    Dispatcher ! {'EXIT', Dispatcher, Reason},
+                    Dispatcher ! {'cloudi_service_stop', Reason},
                     State#state{recv_timeouts = RecvTimeoutsNew,
                                 service_state = ServiceStateNew,
                                 fatal_timer = FatalTimer,
@@ -2159,12 +2156,15 @@ process_update(#state{dispatcher = Dispatcher,
     end.
 
 process_queues(#state{dispatcher = Dispatcher,
+                      stop = StopReason,
                       update_plan = UpdatePlan,
                       suspended = #suspended{
                           processing = Processing} = Suspended,
                       service_state = ServiceState,
                       options = Options} = State)
-    when Processing orelse is_record(UpdatePlan, config_service_update) ->
+    when Processing orelse
+         UpdatePlan /= undefined orelse
+         StopReason /= undefined ->
     {SuspendedNew,
      ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
     case update_now(UpdatePlan, Dispatcher) of
@@ -2172,6 +2172,11 @@ process_queues(#state{dispatcher = Dispatcher,
             process_update(State#state{update_plan = UpdatePlanNew,
                                        suspended = SuspendedNew,
                                        service_state = ServiceStateNew});
+        {false, undefined} when StopReason /= undefined ->
+            Dispatcher ! {'cloudi_service_stop', StopReason},
+            State#state{update_plan = undefined,
+                        suspended = SuspendedNew,
+                        service_state = ServiceStateNew};
         {false, UpdatePlanNew} ->
             State#state{update_plan = UpdatePlanNew,
                         suspended = SuspendedNew,

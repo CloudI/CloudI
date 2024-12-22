@@ -841,27 +841,15 @@ handle_cast(Request, State) ->
 
 handle_info({'cloudi_service_request_success', RequestResponse,
              ServiceStateNew},
-            #state{dispatcher = Dispatcher,
-                   stop = StopReason} = State) ->
+            #state{dispatcher = Dispatcher} = State) ->
     ok = handle_module_request_success(RequestResponse, Dispatcher),
     StateNew = State#state{service_state = ServiceStateNew},
-    if
-        StopReason =:= undefined ->
-            hibernate_check({noreply, process_queues(StateNew)});
-        true ->
-            {stop, StopReason, StateNew}
-    end;
+    hibernate_check({noreply, process_queues(StateNew)});
 
 handle_info({'cloudi_service_info_success',
-             ServiceStateNew},
-            #state{stop = StopReason} = State) ->
+             ServiceStateNew}, State) ->
     StateNew = State#state{service_state = ServiceStateNew},
-    if
-        StopReason =:= undefined ->
-            hibernate_check({noreply, process_queues(StateNew)});
-        true ->
-            {stop, StopReason, StateNew}
-    end;
+    hibernate_check({noreply, process_queues(StateNew)});
 
 handle_info({'cloudi_service_request_failure',
              Type, Error, Stack, ServiceStateNew}, State) ->
@@ -1427,13 +1415,16 @@ handle_info('cloudi_count_process_dynamic_terminate',
                                  CountProcessDynamicNew}}});
 
 handle_info('cloudi_count_process_dynamic_terminate_check',
-            #state{queue_requests = QueueRequests,
+            #state{update_plan = UpdatePlan,
+                   suspended = Suspended,
+                   queue_requests = QueueRequests,
                    duo_mode_pid = undefined} = State) ->
     StopReason = {shutdown, cloudi_count_process_dynamic_terminate},
+    StopDelayed = stop_delayed(UpdatePlan, Suspended, QueueRequests),
     if
-        QueueRequests =:= false ->
+        StopDelayed =:= false ->
             {stop, StopReason, State};
-        QueueRequests =:= true ->
+        StopDelayed =:= true ->
             hibernate_check({noreply, State#state{stop = StopReason}})
     end;
 
@@ -1542,18 +1533,24 @@ handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~tp", [Pid, Reason]),
     {stop, Reason, State};
 
+handle_info({'cloudi_service_stop', Reason}, State) ->
+    {stop, Reason, State};
+
 handle_info('cloudi_service_fatal_timeout',
-            #state{queue_requests = QueueRequests,
+            #state{update_plan = UpdatePlan,
+                   suspended = Suspended,
+                   queue_requests = QueueRequests,
                    duo_mode_pid = undefined,
                    options = #config_service_options{
                        fatal_timeout_interrupt =
                            FatalTimeoutInterrupt}} = State) ->
     StopReason = fatal_timeout,
+    StopDelayed = stop_delayed(UpdatePlan, FatalTimeoutInterrupt,
+                               Suspended, QueueRequests),
     if
-        QueueRequests =:= false orelse
-        FatalTimeoutInterrupt =:= true ->
+        StopDelayed =:= false ->
             {stop, StopReason, State};
-        QueueRequests =:= true ->
+        StopDelayed =:= true ->
             hibernate_check({noreply, State#state{stop = StopReason}})
     end;
 
@@ -2954,12 +2951,15 @@ process_update(#state{dispatcher = Dispatcher,
     process_queues(StateNew#state{update_plan = undefined}).
 
 process_queues(#state{dispatcher = Dispatcher,
+                      stop = StopReason,
                       update_plan = UpdatePlan,
                       suspended = #suspended{
                           processing = Processing} = Suspended,
                       service_state = ServiceState,
                       options = Options} = State)
-    when Processing orelse is_record(UpdatePlan, config_service_update) ->
+    when Processing orelse
+         UpdatePlan /= undefined orelse
+         StopReason /= undefined ->
     {SuspendedNew,
      ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
     case update_now(UpdatePlan, Dispatcher) of
@@ -2967,6 +2967,11 @@ process_queues(#state{dispatcher = Dispatcher,
             process_update(State#state{update_plan = UpdatePlanNew,
                                        suspended = SuspendedNew,
                                        service_state = ServiceStateNew});
+        {false, undefined} when StopReason /= undefined ->
+            Dispatcher ! {'cloudi_service_stop', StopReason},
+            State#state{update_plan = undefined,
+                        suspended = SuspendedNew,
+                        service_state = ServiceStateNew};
         {false, UpdatePlanNew} ->
             State#state{update_plan = UpdatePlanNew,
                         suspended = SuspendedNew,
@@ -3528,16 +3533,10 @@ duo_handle_info({'cloudi_service_return_sync',
 
 duo_handle_info({'cloudi_service_request_success', RequestResponse,
                  ServiceStateNew},
-                #state_duo{dispatcher = Dispatcher,
-                           stop = StopReason} = State) ->
+                #state_duo{dispatcher = Dispatcher} = State) ->
     ok = handle_module_request_success(RequestResponse, Dispatcher),
     StateNew = State#state_duo{service_state = ServiceStateNew},
-    if
-        StopReason =:= undefined ->
-            {noreply, duo_process_queues(StateNew)};
-        true ->
-            {stop, StopReason, StateNew}
-    end;
+    {noreply, duo_process_queues(StateNew)};
 
 duo_handle_info({'cloudi_service_request_failure',
                  Type, Error, Stack, ServiceStateNew}, State) ->
@@ -3600,6 +3599,9 @@ duo_handle_info({'EXIT', Dispatcher, Reason},
 
 duo_handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~tp", [Pid, Reason]),
+    {stop, Reason, State};
+
+duo_handle_info({'cloudi_service_stop', Reason}, State) ->
     {stop, Reason, State};
 
 duo_handle_info({SendType, Name, Pattern, RequestInfo, Request,
@@ -3780,13 +3782,16 @@ duo_handle_info({'cloudi_count_process_dynamic_update', _} = Update,
     {noreply, State};
 
 duo_handle_info('cloudi_count_process_dynamic_terminate_check',
-                #state_duo{queue_requests = QueueRequests} = State) ->
+                #state_duo{update_plan = UpdatePlan,
+                           suspended = Suspended,
+                           queue_requests = QueueRequests} = State) ->
     % count_process_dynamic_terminate_set is not called inside the duo_mode_pid
     StopReason = {shutdown, cloudi_count_process_dynamic_terminate},
+    StopDelayed = stop_delayed(UpdatePlan, Suspended, QueueRequests),
     if
-        QueueRequests =:= false ->
+        StopDelayed =:= false ->
             {stop, StopReason, State};
-        QueueRequests =:= true ->
+        StopDelayed =:= true ->
             {noreply, State#state_duo{stop = StopReason}}
     end;
 
@@ -3804,16 +3809,19 @@ duo_handle_info('cloudi_rate_request_max_rate',
                          rate_request_max = RateRequestNew}}};
 
 duo_handle_info('cloudi_service_fatal_timeout',
-                #state_duo{queue_requests = QueueRequests,
+                #state_duo{update_plan = UpdatePlan,
+                           suspended = Suspended,
+                           queue_requests = QueueRequests,
                            options = #config_service_options{
                                fatal_timeout_interrupt =
                                    FatalTimeoutInterrupt}} = State) ->
     StopReason = fatal_timeout,
+    StopDelayed = stop_delayed(UpdatePlan, FatalTimeoutInterrupt,
+                               Suspended, QueueRequests),
     if
-        QueueRequests =:= false orelse
-        FatalTimeoutInterrupt =:= true ->
+        StopDelayed =:= false ->
             {stop, StopReason, State};
-        QueueRequests =:= true ->
+        StopDelayed =:= true ->
             {noreply, State#state_duo{stop = StopReason}}
     end;
 
@@ -4051,12 +4059,15 @@ duo_process_update(#state_duo{duo_mode_pid = DuoModePid,
     duo_process_queues(StateNew#state_duo{update_plan = undefined}).
 
 duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
+                              stop = StopReason,
                               update_plan = UpdatePlan,
                               suspended = #suspended{
                                   processing = Processing} = Suspended,
                               service_state = ServiceState,
                               options = Options} = State)
-    when Processing orelse is_record(UpdatePlan, config_service_update) ->
+    when Processing orelse
+         UpdatePlan /= undefined orelse
+         StopReason /= undefined ->
     {SuspendedNew,
      ServiceStateNew} = suspended_idle(Suspended, ServiceState, Options),
     case update_now(UpdatePlan, DuoModePid) of
@@ -4065,6 +4076,11 @@ duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
                                    update_plan = UpdatePlanNew,
                                    suspended = SuspendedNew,
                                    service_state = ServiceStateNew});
+        {false, undefined} when StopReason /= undefined ->
+            DuoModePid ! {'cloudi_service_stop', StopReason},
+            State#state_duo{update_plan = undefined,
+                            suspended = SuspendedNew,
+                            service_state = ServiceStateNew};
         {false, UpdatePlanNew} ->
             State#state_duo{update_plan = UpdatePlanNew,
                             suspended = SuspendedNew,

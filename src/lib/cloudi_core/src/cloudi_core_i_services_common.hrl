@@ -640,6 +640,23 @@ update_pid_options([{Name, ValueOld} = PidOptionOld |
             update_pid_options(PidOptionsOld, PidOptions, PidDefault)
     end.
 
+stop_delayed(#config_service_update{}, _, _, _) ->
+    % an update should not be interrupted with an immediate stop
+    true;
+stop_delayed(_, true = _FatalTimeoutInterrupt, _, _) ->
+    % fatal_timeout_interrupt is immediate unless an update_plan is
+    % being processed (updates should always be non-blocking)
+    false;
+stop_delayed(_, _,
+             #suspended{processing = true,
+                        busy = SuspendedWhileBusy}, _) ->
+    SuspendedWhileBusy;
+stop_delayed(_, _, _, QueueRequests) ->
+    QueueRequests.
+
+stop_delayed(UpdatePlan, Suspended, QueueRequests) ->
+    stop_delayed(UpdatePlan, false, Suspended, QueueRequests).
+
 aspects_terminate_before([], _, _, ServiceState) ->
     ServiceState;
 aspects_terminate_before([{M, F} = Aspect | L],
