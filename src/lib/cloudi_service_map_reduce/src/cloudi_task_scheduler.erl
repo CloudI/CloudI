@@ -520,27 +520,32 @@ get_pid_schedule(min_max,
             TasksPerDestination = TaskCount div DestinationListSize,
             IndexPick = round(DestinationListAlive * (1.0 - TaskCostFraction)),
             Index = 0,
-            IndexOffset = if
-                map_size(Requests) < TasksPerDestination ->
-                    Index - IndexPick;
+            RequestsSize = map_size(Requests),
+            {IndexOffset,
+             TasksLimit} = if
+                RequestsSize < TasksPerDestination ->
+                    {Index - IndexPick,
+                     RequestsSize + 1};
                 true ->
-                    undefined
+                    {undefined,
+                     TasksPerDestination}
             end,
             get_pid_schedule_min_max(DestinationList, [],
                                      Destination, IndexOffset, Index,
-                                     IndexPick, TasksPerDestination)
+                                     TasksLimit, IndexPick)
 
     end.
 
 get_pid_schedule_min_max([], DestinationListPrevious,
                          DestinationPrevious, _, _, _, _) ->
-    {DestinationPrevious, DestinationListPrevious};
+    {DestinationPrevious,
+     DestinationListPrevious};
 get_pid_schedule_min_max([#destination{alive = Alive,
                                        requests = Requests} = Destination |
                           DestinationListNew] = DestinationList,
                          DestinationListPrevious,
                          DestinationPrevious, IndexOffsetPrevious, Index,
-                         IndexPick, TasksPerDestination) ->
+                         TasksLimit, IndexPick) ->
     IndexNew = Index + 1,
     IndexOffset = IndexNew - IndexPick,
     if
@@ -550,10 +555,12 @@ get_pid_schedule_min_max([#destination{alive = Alive,
              lists:keymerge(#destination.sort_key,
                             DestinationList, DestinationListPrevious)};
         Alive =:= true ->
+            RequestsSize = map_size(Requests),
             {DestinationPreviousNew,
              IndexOffsetPreviousNew,
+             TasksLimitNew,
              DestinationListPreviousNew} = if
-                map_size(Requests) < TasksPerDestination ->
+                RequestsSize < TasksLimit ->
                     % Pick this destination because the TaskCost,
                     % in its historical min/max range, is associated
                     % with this destination's current expected time
@@ -562,12 +569,14 @@ get_pid_schedule_min_max([#destination{alive = Alive,
                     % least work to do based on their current tasks and speed.
                     {Destination,
                      IndexOffset,
+                     RequestsSize + 1,
                      lists:keymerge(#destination.sort_key,
                                     DestinationListPrevious,
                                     [DestinationPrevious])};
                 true ->
                     {DestinationPrevious,
                      IndexOffsetPrevious,
+                     TasksLimit,
                      lists:keymerge(#destination.sort_key,
                                     DestinationListPrevious,
                                     [Destination])}
@@ -576,7 +585,7 @@ get_pid_schedule_min_max([#destination{alive = Alive,
                                      DestinationListPreviousNew,
                                      DestinationPreviousNew,
                                      IndexOffsetPreviousNew, IndexNew,
-                                     IndexPick, TasksPerDestination)
+                                     TasksLimitNew, IndexPick)
     end.
 
 get_pid_store_task_size(#destination{pattern_pid = {_, Pid} = PatternPid,

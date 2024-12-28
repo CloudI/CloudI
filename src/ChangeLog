@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2024-12-28 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_task_scheduler min_max schedule mode
+
 2024-12-21 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the fatal_timeout_interrupt == false functionality
