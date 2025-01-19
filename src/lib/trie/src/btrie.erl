@@ -18,7 +18,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -39,8 +39,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2020 Michael Truog
-%%% @version 2.0.1 {@date} {@time}
+%%% @copyright 2010-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(btrie).
@@ -244,7 +244,7 @@ test() ->
     error = btrie:find_prefix_longest(<<"bar">>, RootNode4),
     {ok, <<"aaaaaaaaaaa">>, 4} = btrie:find_prefix_longest(<<"aaaaaaaaaaaaaaaaaaaaaddddddaa">>, RootNode4),
     2.5 = btrie:fetch(<<"aaaa">>, RootNode5),
-    {'EXIT', {if_clause, _}} = (catch btrie:fetch(<<"aaaa">>, RootNode4)),
+    {error, if_clause} = ?EXCEPTION(btrie:fetch(<<"aaaa">>, RootNode4)),
     RootNode4 = btrie:erase(<<"a">>, btrie:erase(<<"aaaa">>, RootNode5)),
     true = btrie:is_key(<<"aaaa">>, RootNode5),
     false = btrie:is_key(<<"aaaa">>, RootNode4),

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2013-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_tcp).
@@ -173,6 +173,10 @@
                cloudi_x_pqueue4:cloudi_x_pqueue4(
                    cloudi:message_service_request())
     }).
+
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -319,7 +323,7 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                            _Dispatcher)
     when ConnectionCount >= ConnectionMax ->
     true = inet_db:register_socket(Socket, inet_tcp),
-    catch gen_tcp:close(Socket),
+    ok = ?CATCH(gen_tcp:close(Socket)),
     ?LOG_WARN("max_connections (~p) reached!", [ConnectionMax]),
     case prim_inet:async_accept(Listener, -1) of
         {ok, NewAcceptor} ->
@@ -393,7 +397,7 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
             ConnectionCount + 1;
         {error, Reason} ->
             ?LOG_ERROR("socket accept error: ~p", [Reason]),
-            catch gen_tcp:close(Socket),
+            ok = ?CATCH(gen_tcp:close(Socket)),
             ConnectionCount
     end,
     case prim_inet:async_accept(Listener, -1) of
@@ -420,7 +424,7 @@ cloudi_service_terminate(_Reason, _Timeout, undefined) ->
     ok;
 cloudi_service_terminate(_Reason, _Timeout,
                          #state{listener = Listener}) ->
-    catch gen_tcp:close(Listener),
+    ok = ?CATCH(gen_tcp:close(Listener)),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -787,7 +791,7 @@ socket_loop_terminate(Reason,
         true ->
             ?LOG_ERROR("socket ~p error: ~p", [Socket, Reason])
     end,
-    catch gen_tcp:close(Socket),
+    ok = ?CATCH(gen_tcp:close(Socket)),
     Service ! socket_closed,
     erlang:unlink(Service),
     erlang:exit(Reason).

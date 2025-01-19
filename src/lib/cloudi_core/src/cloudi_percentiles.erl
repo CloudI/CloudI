@@ -16,7 +16,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2022-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -37,8 +37,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2022-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_percentiles).
@@ -250,7 +250,7 @@ t_basic() ->
     StateA10 = add(95.0925, StateA9),
     StateA11 = add(Maximum, StateA10),
     StateA12 = add(95.1682, StateA11),
-    {'EXIT', {function_clause, _}} = (catch calculate([], StateA12)),
+    {error, function_clause} = ?EXCEPTION(calculate([], StateA12)),
     [Minimum,
      Minimum,
      Minimum,

@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @copyright 2014-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
@@ -119,6 +119,12 @@
 -ifndef(CLOUDI_TEST_TIMEOUT).
 -define(CLOUDI_TEST_TIMEOUT, 10). % seconds
 -endif.
+-define(EXCEPTION(E),
+        (fun() ->
+             try E, no_exception
+             catch ErrorType:Error -> {ErrorType, Error}
+             end
+         end)()).
 -define(VSN, {"test", "version", "(any erlang term data can be used)"}).
 -define(SERVICE_PREFIX1, "/").
 -define(SERVICE_SUFFIX1, "service_name").
@@ -1373,28 +1379,28 @@ t_cloudi_args_type_1(_Config) ->
     "." = cloudi_args_type:service_name_suffix("*.", "..."),
     % Pattern
     "." = cloudi_args_type:service_name_pattern_suffix("/*/", "/*/."),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_suffix("/*/", "/*/.")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_suffix("/*/", "/*/.")),
     "." = cloudi_args_type:service_name_pattern_suffix("/*", "/*."),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_suffix("/*", "/*.")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_suffix("/*", "/*.")),
     % errors
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_suffix("/*/", "//.")),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_pattern_suffix("/*/", "//.")),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_suffix("/*/", "/*")),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_pattern_suffix("/*/", "/*")),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_suffix("", ".")),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_pattern_suffix("", ".")),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_suffix(".", "")),
-    {'EXIT', badarg} = (catch cloudi_args_type:
-                              service_name_pattern_suffix(".", "")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_suffix("/*/", "//.")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_pattern_suffix("/*/", "//.")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_suffix("/*/", "/*")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_pattern_suffix("/*/", "/*")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_suffix("", ".")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_pattern_suffix("", ".")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_suffix(".", "")),
+    {exit, badarg} = ?EXCEPTION(cloudi_args_type:
+                                service_name_pattern_suffix(".", "")),
     ok.
 
 t_cloudi_service_name_1(_Config) ->
@@ -1409,9 +1415,9 @@ t_cloudi_service_name_1(_Config) ->
     "." = cloudi_service_name:suffix("/*/", "/*/."),
     "." = cloudi_service_name:suffix("/*", "/*."),
     % errors
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "//.")),
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "/*")),
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix("", ".")),
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix(".", "")),
+    {exit, badarg} = ?EXCEPTION(cloudi_service_name:suffix("/*/", "//.")),
+    {exit, badarg} = ?EXCEPTION(cloudi_service_name:suffix("/*/", "/*")),
+    {exit, badarg} = ?EXCEPTION(cloudi_service_name:suffix("", ".")),
+    {exit, badarg} = ?EXCEPTION(cloudi_service_name:suffix(".", "")),
     ok.
 

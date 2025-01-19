@@ -20,7 +20,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,8 +41,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2010-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -1995,7 +1995,7 @@ test() ->
      "aaaaaaaaaaa",
      4} = trie:find_prefix_longest("aaaaaaaaaaaaaaaaaaaaaddddddaa", RootNode4),
     2.5 = trie:fetch("aaaa", RootNode5),
-    {'EXIT', {if_clause, _}} = (catch trie:fetch("aaaa", RootNode4)),
+    {error, if_clause} = ?EXCEPTION(trie:fetch("aaaa", RootNode4)),
     RootNode4 = trie:erase("a", trie:erase("aaaa", RootNode5)),
     {2.5, RootNodePre4} = trie:take("aaaa", RootNode5),
     {0, RootNode4} = trie:take("a", RootNodePre4),
@@ -2042,9 +2042,9 @@ test() ->
     ["aba",
      "aaa"
      ] = trie:fold_match("a*a", fun(K, _, L) -> [K | L] end, [], RootNode4),
-    {'EXIT', badarg} = (catch trie:fold_match("a**a",
-                                              fun(K, _, L) -> [K | L] end,
-                                              [], RootNode4)),
+    {exit, badarg} = ?EXCEPTION(trie:fold_match("a**a",
+                                                 fun(K, _, L) -> [K | L] end,
+                                                 [], RootNode4)),
     RootNode6 = trie:new([
         {"*",      1},
         {"aa*",    2},
@@ -2069,12 +2069,12 @@ test() ->
     {ok,"aa*a*",4} = trie:find_match2("aababb", RootNode6),
     {ok,"aa*a*",4} = trie:find_match2("aabbab", RootNode6),
     {ok,"aa*a*",4} = trie:find_match2("aabbabb", RootNode6),
-    {'EXIT',badarg} = (catch trie:find_match("aa*", RootNode6)),
-    {'EXIT',badarg} = (catch trie:find_match("aaaa*", RootNode6)),
-    {'EXIT',badarg} = (catch trie:find_match("aaaaa*", RootNode6)),
-    {'EXIT',badarg} = (catch trie:find_match2("aa*", RootNode6)),
-    {'EXIT',badarg} = (catch trie:find_match2("aaaa*", RootNode6)),
-    {'EXIT',badarg} = (catch trie:find_match2("aaaaa*", RootNode6)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match("aa*", RootNode6)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match("aaaa*", RootNode6)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match("aaaaa*", RootNode6)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match2("aa*", RootNode6)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match2("aaaa*", RootNode6)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match2("aaaaa*", RootNode6)),
     ["aa"] = trie:pattern_parse("aa*", "aaaa"),
     ["b"] = trie:pattern_parse("aa*", "aab"),
     ["b"] = trie:pattern_parse("aa*b", "aabb"),
@@ -2150,17 +2150,17 @@ test() ->
     false = trie:is_pattern("abcde?f"),
     true = trie:is_pattern("abc*d*ef"),
     true = trie:is_pattern_bytes("abc*d*ef"),
-    {'EXIT',badarg} = (catch trie:is_pattern("abc**ef")),
+    {exit, badarg} = ?EXCEPTION(trie:is_pattern("abc**ef")),
     false = trie:is_pattern2("abcdef"),
     true = trie:is_pattern2("abc?def"),
     true = trie:is_pattern2("abc?d*ef"),
     true = trie:is_pattern2("abcd*ef"),
     true = trie:is_pattern2_bytes("abcd*ef"),
-    {'EXIT',badarg} = (catch trie:is_pattern2("abc**ef")),
-    {'EXIT',badarg} = (catch trie:is_pattern2("abc??ef")),
-    {'EXIT',badarg} = (catch trie:is_pattern2("abc?*ef")),
-    {'EXIT',badarg} = (catch trie:is_pattern2("abc*?ef")),
-    {'EXIT',badarg} = (catch trie:is_pattern2("abcef?")),
+    {exit, badarg} = ?EXCEPTION(trie:is_pattern2("abc**ef")),
+    {exit, badarg} = ?EXCEPTION(trie:is_pattern2("abc??ef")),
+    {exit, badarg} = ?EXCEPTION(trie:is_pattern2("abc?*ef")),
+    {exit, badarg} = ?EXCEPTION(trie:is_pattern2("abc*?ef")),
+    {exit, badarg} = ?EXCEPTION(trie:is_pattern2("abcef?")),
     RootNode7 = trie:from_list([{"00", zeros}, {"11", ones}]),
     RootNode8 = trie:from_list([{"0", zero}, {"1", one}]),
     ["00"] = trie:fetch_keys_similar("02", RootNode7),
@@ -2201,9 +2201,9 @@ test() ->
     {ok,"/?/b",4} = trie:find_match2("/a/b", RootNode12),
     {ok,"/?/b",4} = trie:find_match2("/aa/b", RootNode12),
     {ok,"/?/b",4} = trie:find_match2("/ab/b", RootNode12),
-    {'EXIT',badarg} = (catch trie:find_match2("/?a", RootNode12)),
-    {'EXIT',badarg} = (catch trie:find_match2("/?b", RootNode12)),
-    {'EXIT',badarg} = (catch trie:find_match2("/?a", RootNode12)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match2("/?a", RootNode12)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match2("/?b", RootNode12)),
+    {exit, badarg} = ?EXCEPTION(trie:find_match2("/?a", RootNode12)),
     {ok,"/?/a",3} = trie:find_match2("/alba-white/a", RootNode12),
     {ok,"/*/a",5} = trie:find_match2("/alba/white/a", RootNode12),
     RootNode13 = trie:new([

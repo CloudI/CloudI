@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2016-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2016-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2016-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2016-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 -module(syslog_socket).
 -author('mjtruog at protonmail dot com').
@@ -119,6 +119,10 @@
             hostname = undefined :: undefined | string(),
             os_pid = undefined :: undefined | string()
         }).
+
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -717,15 +721,15 @@ transport_close(#state{socket = undefined}) ->
 transport_close(#state{transport = Transport,
                        socket = Socket})
     when Transport =:= local; Transport =:= udp ->
-    _ = (catch gen_udp:close(Socket)),
+    ok = ?CATCH(gen_udp:close(Socket)),
     ok;
 transport_close(#state{transport = tcp,
                        socket = Socket}) ->
-    _ = (catch gen_tcp:close(Socket)),
+    ok = ?CATCH(gen_tcp:close(Socket)),
     ok;
 transport_close(#state{transport = tls,
                        socket = Socket}) ->
-    _ = (catch ssl:close(Socket)),
+    ok = ?CATCH(ssl:close(Socket)),
     ok.
 
 hostname() ->

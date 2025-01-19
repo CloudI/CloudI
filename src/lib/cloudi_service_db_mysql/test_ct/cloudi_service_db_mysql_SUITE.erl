@@ -27,6 +27,9 @@
 -ifndef(CLOUDI_LONG_TEST_TIMEOUT).
 -define(CLOUDI_LONG_TEST_TIMEOUT, 60). % minutes
 -endif.
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 -define(DEFAULT_MYSQL_HOST, "127.0.0.1").
 -define(DEFAULT_MYSQL_PORT, 3306).
 
@@ -241,7 +244,7 @@ test_condition(L, LongTestTimeout)
     case gen_tcp:connect(?DEFAULT_MYSQL_HOST,
                          ?DEFAULT_MYSQL_PORT, []) of
         {ok, Socket} ->
-            catch gen_tcp:close(Socket),
+            ok = ?CATCH(gen_tcp:close(Socket)),
             L;
         {error, econnrefused} ->
             error_logger:error_msg("unable to test ~p",

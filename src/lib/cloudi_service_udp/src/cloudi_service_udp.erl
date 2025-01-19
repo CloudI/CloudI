@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2013-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_udp).
@@ -67,6 +67,10 @@
         source_address,
         source_port
     }).
+
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -161,7 +165,7 @@ cloudi_service_terminate(_Reason, _Timeout, undefined) ->
     ok;
 cloudi_service_terminate(_Reason, _Timeout,
                          #state{socket = Socket}) ->
-    catch gen_udp:close(Socket),
+    ok = ?CATCH(gen_udp:close(Socket)),
     ok.
 
 %%%------------------------------------------------------------------------

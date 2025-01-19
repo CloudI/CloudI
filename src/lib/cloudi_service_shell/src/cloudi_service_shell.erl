@@ -17,7 +17,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2019-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2019-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -38,8 +38,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2019-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @copyright 2019-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_shell).
@@ -105,6 +105,10 @@
         kill_signal_terminate :: pos_integer() | undefined,
         debug_level :: off | trace | debug | info | warn | error | fatal
     }).
+
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -269,9 +273,9 @@ cloudi_service_terminate(_Reason, _Timeout,
                          #state{interactive = Shell}) ->
     if
         Shell =:= undefined ->
-            true;
+            ok;
         is_port(Shell) ->
-            catch erlang:port_close(Shell)
+            ?CATCH(erlang:port_close(Shell))
     end,
     ok.
 
@@ -343,7 +347,7 @@ isolated_request(Exec, Timeout,
     ShellOutput = isolated_request_output(Shell, [], KillSignalTerminate),
     ok = kill_timer_stop(KillTimer, Shell),
     ok = kill_on_exit_stop(KillOnExit),
-    catch erlang:port_close(Shell),
+    ok = ?CATCH(erlang:port_close(Shell)),
     ShellOutput.
 
 isolated_request_output(Shell, Output, KillSignalTerminate) ->

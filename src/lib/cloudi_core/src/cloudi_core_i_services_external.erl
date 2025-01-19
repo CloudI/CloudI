@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2024 Michael Truog
+%%% @copyright 2011-2025 Michael Truog
 %%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -2347,7 +2347,7 @@ socket_accept({inet_async, Listener, Acceptor, {ok, Socket}},
     when Protocol =:= tcp; Protocol =:= local ->
     ok = socket_accept_connection(Protocol, Socket),
     ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
-    catch gen_tcp:close(Listener),
+    ?CATCH(gen_tcp:close(Listener)),
     StateSocket#state_socket{listener = undefined,
                              acceptor = undefined,
                              socket = Socket}.
@@ -2419,12 +2419,12 @@ socket_close(#state_socket{protocol = Protocol,
         Socket =:= undefined ->
             ok;
         true ->
-            catch gen_tcp:close(Socket)
+            ?CATCH(gen_tcp:close(Socket))
     end,
-    catch gen_tcp:close(Listener),
+    ?CATCH(gen_tcp:close(Listener)),
     if
         Protocol =:= local ->
-            catch file_delete(SocketPath);
+            ?CATCH(file_delete(SocketPath));
         true ->
             ok
     end,
@@ -2436,7 +2436,7 @@ socket_close(#state_socket{protocol = udp,
         Socket =:= undefined ->
             ok;
         true ->
-            catch gen_udp:close(Socket)
+            ?CATCH(gen_udp:close(Socket))
     end,
     ok = os_pid_unset(StateSocket),
     ok.

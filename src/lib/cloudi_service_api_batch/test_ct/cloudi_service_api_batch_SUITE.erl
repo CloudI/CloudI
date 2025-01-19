@@ -62,11 +62,11 @@ cloudi_service_init(Args, _Prefix, _Timeout, _Dispatcher) ->
     NewMode = if
         Mode =:= send_parent_value_1 ->
             Parent ! Value,
-            erlang:send_after(500, self(), send_parent_value_1),
+            erlang:send_after(105, self(), send_parent_value_1),
             send_parent_value_1;
         Mode =:= send_parent_value_2 ->
             Parent ! Value,
-            erlang:send_after(500, self(), send_parent_value_2),
+            erlang:send_after(105, self(), send_parent_value_2),
             send_parent_value_2;
         Mode =:= send_parent_value_3 ->
             Parent ! Value,
@@ -172,7 +172,8 @@ init_per_testcase(TestCase, Config)
                 {timeout_init, limit_min},
                 {max_t, 1},
                 {options,
-                 [{automatic_loading, false}]}]
+                 [{automatic_loading, false},
+                  {timeout_terminate, limit_min}]}]
                || Value <- [987453, 12, 467]]}]}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
@@ -198,7 +199,8 @@ init_per_testcase(TestCase, Config)
                 {timeout_init, limit_min},
                 {max_t, 1},
                 {options,
-                 [{automatic_loading, false}]}]
+                 [{automatic_loading, false},
+                  {timeout_terminate, limit_min}]}]
                || Value <- [987453, 12, 467]]}]}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
@@ -248,7 +250,8 @@ t_batch_1(_Config) ->
                  {timeout_init, limit_min},
                  {max_t, 1},
                  {options,
-                  [{automatic_loading, false}]}] || Value0 <- Values0],
+                  [{automatic_loading, false},
+                   {timeout_terminate, limit_min}]}] || Value0 <- Values0],
     QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
     {{ok, QueuedCount0},
      _Context1} = cloudi_service_api_batch:services_add(Context0,
@@ -272,7 +275,8 @@ t_batch_2(_Config) ->
                  {timeout_init, limit_min},
                  {max_t, 1},
                  {options,
-                  [{automatic_loading, false}]}] || Value0 <- Values0],
+                  [{automatic_loading, false},
+                   {timeout_terminate, limit_min}]}] || Value0 <- Values0],
     QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
     {{ok, QueuedCount0},
      _Context1} = cloudi_service_api_batch:services_add(Context0,
@@ -292,10 +296,11 @@ t_batch_3(_Config) ->
                   [{mode, send_parent_value_3},
                    {parent, self()},
                    {value, Value0}]},
-                 {timeout_init, limit_min},
+                 {timeout_init, 496},
                  {max_t, 10},
                  {options,
-                  [{automatic_loading, false}]}] || Value0 <- Values0],
+                  [{automatic_loading, false},
+                   {timeout_terminate, limit_min}]}] || Value0 <- Values0],
     QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
     {{ok, QueuedCount0},
      _Context1} = cloudi_service_api_batch:services_add(Context0,
@@ -304,7 +309,7 @@ t_batch_3(_Config) ->
                                                         Configs0),
     {ok, Received0} = receive_messages(6), % 5 restarts on error
     true = Received0 == [987453, 987453, 987453, 987453, 987453, 987453],
-    nothing = receive Something -> Something after 1000 -> nothing end,
+    nothing = receive Something -> Something after 10 -> nothing end,
     ok.
 
 t_batch_4(_Config) ->
@@ -317,10 +322,11 @@ t_batch_4(_Config) ->
                    {parent, self()},
                    {value, Value0}]},
                  {count_process, 2},
-                 {timeout_init, limit_min},
+                 {timeout_init, 496},
                  {max_t, 10},
                  {options,
-                  [{automatic_loading, false}]}] || Value0 <- Values0],
+                  [{automatic_loading, false},
+                   {timeout_terminate, limit_min}]}] || Value0 <- Values0],
     QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
     {{ok, QueuedCount0},
      _Context1} = cloudi_service_api_batch:services_add(Context0,
@@ -331,7 +337,7 @@ t_batch_4(_Config) ->
     % due to restart_all == false
     true = Received0 == [987453, 987453,
                          987453, 987453, 987453, 987453, 987453],
-    nothing = receive Something -> Something after 1000 -> nothing end,
+    nothing = receive Something -> Something after 10 -> nothing end,
     ok.
 
 t_stop_when_done_1(Config) ->
@@ -365,7 +371,8 @@ t_batch_add_error_1(_Config) ->
                  {timeout_init, limit_min},
                  {max_t, 1},
                  {options,
-                  [{automatic_loading, false}]}] || Value0 <- Values0],
+                  [{automatic_loading, false},
+                   {timeout_terminate, limit_min}]}] || Value0 <- Values0],
     {{ok, {error, purged}},
      _Context1} = cloudi_service_api_batch:services_add(Context0,
                                                         ?SERVICE_PREFIX,
@@ -388,6 +395,6 @@ receive_messages(Count, L) ->
         Message ->
             receive_messages(Count - 1, [Message | L])
     after
-        10000 ->
+        ?CLOUDI_TEST_TIMEOUT * 1000 ->
             {error, timeout}
     end.

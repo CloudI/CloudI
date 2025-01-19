@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2022 Michael Truog
-%%% @version 2.0.5 {@date} {@time}
+%%% @copyright 2009-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -1122,7 +1122,7 @@ terminate(_, #state{file_fd = FileFd,
                     stdout = StdoutPort,
                     syslog = Syslog,
                     log_time_offset_monitor = Monitor}) ->
-    _ = (catch file:close(FileFd)),
+    ok = ?CATCH(file:close(FileFd)),
     ok = stdout_close(StdoutPort),
     ok = syslog_close(Syslog),
     true = erlang:demonitor(Monitor),
@@ -2164,7 +2164,7 @@ stdout_open(true) ->
 stdout_close(undefined) ->
     ok;
 stdout_close(StdoutPort) when is_port(StdoutPort) ->
-    _ = (catch erlang:port_close(StdoutPort)),
+    ok = ?CATCH(erlang:port_close(StdoutPort)),
     ok.
 
 syslog_open(undefined, _, State) ->

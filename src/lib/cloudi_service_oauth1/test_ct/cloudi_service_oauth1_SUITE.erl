@@ -32,6 +32,9 @@
 -ifndef(CLOUDI_LONG_TEST_TIMEOUT).
 -define(CLOUDI_LONG_TEST_TIMEOUT, 60). % minutes
 -endif.
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 -define(DEFAULT_PGSQL_HOST, "127.0.0.1").
 -define(DEFAULT_PGSQL_PORT, 5432).
 -define(DEFAULT_RIAK_HOST, "127.0.0.1").
@@ -597,7 +600,7 @@ test_condition_db(L, Host, Port, ErrorReason, LongTestTimeout)
     when LongTestTimeout > 0 ->
     case gen_tcp:connect(Host, Port, []) of
         {ok, Socket} ->
-            catch gen_tcp:close(Socket),
+            ok = ?CATCH(gen_tcp:close(Socket)),
             L;
         {error, econnrefused} ->
             error_logger:error_msg("unable to test ~p",

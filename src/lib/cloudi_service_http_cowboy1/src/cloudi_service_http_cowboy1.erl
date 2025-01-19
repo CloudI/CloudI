@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2021 Michael Truog
-%%% @version 2.0.2 {@date} {@time}
+%%% @copyright 2012-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy1).
@@ -202,6 +202,10 @@
 -define(ERLANG_OTP_VERSION_24_FEATURES, true).
 -endif.
 -endif.
+
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -602,7 +606,7 @@ cloudi_service_terminate(_Reason, _Timeout, undefined) ->
     ok;
 cloudi_service_terminate(_Reason, _Timeout,
                          #state{service = Service}) ->
-    _ = (catch cloudi_x_cowboy1:stop_listener(Service)),
+    ok = ?CATCH(cloudi_x_cowboy1:stop_listener(Service)),
     ok.
 
 %%%------------------------------------------------------------------------

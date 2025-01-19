@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2020 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -72,6 +72,13 @@
 -define(TYPE_PREFIX(X, Y), binary_prefix(X, Y)).
 -endif.
 -endif.
+
+-define(EXCEPTION(E),
+        (fun() ->
+             try E, no_exception
+             catch ErrorType:Error -> {ErrorType, Error}
+             end
+         end)()).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

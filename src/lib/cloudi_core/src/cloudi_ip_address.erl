@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2021 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2021 Michael Truog
-%%% @version 2.0.3 {@date} {@time}
+%%% @copyright 2013-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_ip_address).
@@ -271,9 +271,9 @@ t_from_string() ->
 
 t_patterns() ->
     ["?.?.?.?"] = patterns("0.0.0.0/0"),
-    {'EXIT', {{badmatch,false}, _}} = (catch patterns("10.0.0.0/0")),
+    {error, {badmatch, false}} = ?EXCEPTION(patterns("10.0.0.0/0")),
     ["10.?.?.?"] = patterns("10.0.0.0/8"),
-    {'EXIT', {{badmatch,false}, _}} = (catch patterns("10.1.0.0/8")),
+    {error, {badmatch, false}} = ?EXCEPTION(patterns("10.1.0.0/8")),
     ["192.168.?.?"] = patterns("192.168.0.0/16"),
     ["fd00:?:?:?:?:?:?:?"] = patterns("fd00::/16"),
     ["172.16.?.?", "172.17.?.?", "172.18.?.?", "172.19.?.?", "172.20.?.?",

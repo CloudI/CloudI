@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2024 Michael Truog
+%%% @copyright 2011-2025 Michael Truog
 %%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -3452,7 +3452,7 @@ sys_get_status_duo_mode(undefined, _) ->
     undefined;
 sys_get_status_duo_mode(DuoModePid, Timeout)
     when is_pid(DuoModePid) ->
-    case catch sys:get_status(DuoModePid, Timeout) of
+    try sys:get_status(DuoModePid, Timeout) of
         {status, DuoModePid,
          {module, cloudi_core_i_services_internal} = ModuleTuple,
          StatusItems} ->
@@ -3462,6 +3462,9 @@ sys_get_status_duo_mode(DuoModePid, Timeout)
                                            [duo_mode_format_status(State)]),
             {status, DuoModePid, ModuleTuple, StatusItemsNew};
         _ ->
+            timeout
+    catch
+        _:_ ->
             timeout
     end.
 

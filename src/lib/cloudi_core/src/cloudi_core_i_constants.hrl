@@ -3,7 +3,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -144,8 +144,12 @@
 -define(DBL_MAX, 1.7976931348623158e+308).
 
 % for gen_server:call/3 and similar functions that exit on timeout or noproc
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
+-define(CATCH_EXIT(E),
+        try E catch exit:{Reason, _} -> {error, Reason} end).
+
+% avoid misuse of old catch with a macro
+-define(CATCH(E),
+        try E, ok catch _:_ -> ok end).
 
 % time-related constants
 % average length of a Gregorian year is 365 + 1/4 - 1/100 + 1/400

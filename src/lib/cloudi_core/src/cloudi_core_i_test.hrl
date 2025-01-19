@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2020-2022 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2020-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -38,3 +38,9 @@
 -define(TEST_TIMEOUT, 20). % seconds
 -endif.
 
+-define(EXCEPTION(E),
+        (fun() ->
+             try E, no_exception
+             catch ErrorType:Error -> {ErrorType, Error}
+             end
+         end)()).
