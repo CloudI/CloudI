@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2025 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -1129,17 +1129,19 @@ let api
         Error (error)
       | Ok (buffer_size) ->
         let terminate_exception = not terminate_return_value
-        and socket = fd_of_int (thread_index + 3)
+        and socket_high = fd_of_int (thread_index + 1024)
+        and socket_low = fd_of_int (thread_index + 3)
         and use_header = (protocol <> "udp")
         and fragment_size = buffer_size
         and fragment_recv = Bytes.create buffer_size
         and callbacks = Hashtbl.create 1024
         and buffer_recv = Buffer.create buffer_size
         and timeout_terminate = 10 (* TIMEOUT_TERMINATE_MIN *) in
+        Unix.dup2 socket_high socket_low ;
         let api = Instance.make
           ~state:state
           ~terminate_exception:terminate_exception
-          ~socket:socket
+          ~socket:socket_low
           ~use_header:use_header
           ~fragment_size:fragment_size
           ~fragment_recv:fragment_recv

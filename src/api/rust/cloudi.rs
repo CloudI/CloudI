@@ -5,7 +5,7 @@
 
 // MIT License
 //
-// Copyright (c) 2023 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2023-2025 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -285,7 +285,7 @@ impl<'s, S: 's> API<'s, S> {
         let buffer_size =
             getenv_to_u32("CLOUDI_API_INIT_BUFFER_SIZE")? as usize;
         let buffer_recv = Vec::with_capacity(buffer_size);
-        let fd: c_int = (thread_index + 3) as i32;
+        let fd: c_int = (thread_index + 1024) as i32;
         let (socket_kind, use_header) = match protocol.as_str() {
             "tcp" | "local" => {
                 (SocketKind::TCP(unsafe { TcpStream::from_raw_fd(fd) }), true)

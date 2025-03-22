@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -149,17 +149,17 @@ public class API
             API.getenvToUnsignedInt("CLOUDI_API_INIT_BUFFER_SIZE");
         if (protocol.compareTo("tcp") == 0)
         {
-            this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
+            this.fd_in = this.fd_out = API.storeFD(thread_index + 1024);
             this.use_header = true;
         }
         else if (protocol.compareTo("udp") == 0)
         {
-            this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
+            this.fd_in = this.fd_out = API.storeFD(thread_index + 1024);
             this.use_header = false;
         }
         else if (protocol.compareTo("local") == 0)
         {
-            this.fd_in = this.fd_out = API.storeFD(thread_index + 3);
+            this.fd_in = this.fd_out = API.storeFD(thread_index + 1024);
             this.use_header = true;
         }
         else

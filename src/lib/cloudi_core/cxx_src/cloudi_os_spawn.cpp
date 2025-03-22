@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -888,19 +888,24 @@ int32_t spawn(char protocol,
     {
         ::exit(spawn_status::invalid_input);
     }
+    // Avoid file descriptors in the [3..1023] range to avoid
+    // causing problems for older source code relying on select use
+    // because FD_SETSIZE can be hard-coded to 1024
+    // (e.g., in typesizes.h on Linux)
+    uint32_t const fd_min = 1024;
     int fds_fork_exit[2] = {-1, -1};
     int fds_stdout[2] = {-1, -1};
     int fds_stderr[2] = {-1, -1};
     if (::pipe(fds_fork_exit) == -1)
         ::exit(spawn_status::errno_pipe());
-    if (static_cast<uint32_t>(fds_fork_exit[1]) < ports_len + 3)
+    if (static_cast<uint32_t>(fds_fork_exit[1]) < ports_len + fd_min)
     {
         // ensure the fork_exit fd doesn't conflict with a thread's socket fd
-        if (::dup2(fds_fork_exit[1], ports_len + 3) == -1)
+        if (::dup2(fds_fork_exit[1], ports_len + fd_min) == -1)
             ::exit(spawn_status::errno_dup());
         if (::close(fds_fork_exit[1]) == -1)
             ::exit(spawn_status::errno_close());
-        fds_fork_exit[1] = ports_len + 3;
+        fds_fork_exit[1] = ports_len + fd_min;
     }
     if (::pipe(fds_stdout) == -1)
         ::exit(spawn_status::errno_pipe());
@@ -967,13 +972,13 @@ int32_t spawn(char protocol,
                     fork_exit(spawn_status::socket_unknown, fds_fork_exit[1]);
             }
 
-            if (static_cast<size_t>(sockfd) != i + 3)
+            if (static_cast<size_t>(sockfd) != i + fd_min)
             {
-                if (::dup2(sockfd, i + 3) == -1)
+                if (::dup2(sockfd, i + fd_min) == -1)
                     fork_exit(spawn_status::errno_dup(), fds_fork_exit[1]);
                 if (::close(sockfd) == -1)
                     fork_exit(spawn_status::errno_close(), fds_fork_exit[1]);
-                sockfd = i + 3;
+                sockfd = i + fd_min;
             }
             
             if (domain == PF_INET)

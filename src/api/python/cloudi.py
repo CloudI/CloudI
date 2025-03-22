@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -94,17 +94,17 @@ class API(object):
         buffer_size = API.__getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE')
         if protocol_str == 'tcp':
             self.__s = socket.fromfd(
-                thread_index + 3, socket.AF_INET, socket.SOCK_STREAM
+                thread_index + 1024, socket.AF_INET, socket.SOCK_STREAM
             )
             self.__use_header = True
         elif protocol_str == 'udp':
             self.__s = socket.fromfd(
-                thread_index + 3, socket.AF_INET, socket.SOCK_DGRAM
+                thread_index + 1024, socket.AF_INET, socket.SOCK_DGRAM
             )
             self.__use_header = False
         elif protocol_str == 'local':
             self.__s = socket.fromfd(
-                thread_index + 3, socket.AF_UNIX, socket.SOCK_STREAM
+                thread_index + 1024, socket.AF_UNIX, socket.SOCK_STREAM
             )
             self.__use_header = True
         else:

@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -45,15 +45,18 @@ module CloudI
             protocol = API.getenv('CLOUDI_API_INIT_PROTOCOL')
             buffer_size = API.getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE')
             if protocol == 'tcp'
-                @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
+                @s = IO.for_fd(thread_index + 1024,
+                               File::RDWR, autoclose: false)
                 @s.sync = true
                 @use_header = true
             elsif protocol == 'udp'
-                @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
+                @s = IO.for_fd(thread_index + 1024,
+                               File::RDWR, autoclose: false)
                 @s.sync = true
                 @use_header = false
             elsif protocol == 'local'
-                @s = IO.for_fd(thread_index + 3, File::RDWR, autoclose: false)
+                @s = IO.for_fd(thread_index + 1024,
+                               File::RDWR, autoclose: false)
                 @s.sync = true
                 @use_header = true
             else

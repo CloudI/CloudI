@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2025 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -87,7 +87,7 @@ class API
             throw new InvalidInputException();
         }
         $buffer_size = self::getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE');
-        $this->s = fopen('php://fd/' . strval($thread_index + 3), 'rwb');
+        $this->s = fopen('php://fd/' . strval($thread_index + 1024), 'rwb');
         if ($protocol_str == 'tcp')
             $this->use_header = true;
         elseif ($protocol_str == 'udp')

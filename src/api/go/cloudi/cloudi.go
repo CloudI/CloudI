@@ -5,7 +5,7 @@ package cloudi
 //
 // MIT License
 //
-// Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2025 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -122,7 +122,7 @@ func API(threadIndex uint32, state interface{}) (*Instance, error) {
 		nativeEndian = binary.LittleEndian
 	}
 	var socket net.Conn
-	socket, err = net.FileConn(os.NewFile(uintptr(threadIndex+3), strconv.Itoa(int(threadIndex))))
+	socket, err = net.FileConn(os.NewFile(uintptr(threadIndex + 1024), strconv.Itoa(int(threadIndex))))
 	if err != nil {
 		return nil, err
 	}

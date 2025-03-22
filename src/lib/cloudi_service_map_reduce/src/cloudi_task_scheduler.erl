@@ -14,11 +14,26 @@
 %%%
 %%% The cloudi_task_scheduler source code assumes the TaskCost has a
 %%% linear relationship with the elapsed time.
+%%%
+%%% Using the min_max schedule algorithm instead of the
+%%% greedy schedule algorithm is best due to more fully utilizing
+%%% each node based on the node's speed.  The performance difference is
+%%% subtle but the maximum latency will be lower
+%%% (providing better fault-tolerance) while the average latency is
+%%% slightly higher with negative skewness.  The latency kurtosis is lower
+%%% and the total TaskCost processed per millisecond is higher due to more
+%%% fully utilizing each node.  The total runtime can be the same for both
+%%% schedule algorithms when no outages occur but temporary outages can
+%%% cause the min_max schedule algorithm to provide a smaller total runtime
+%%% (due to better decisions becoming available with the outages).
+%%% Smaller TaskCost values should be used in the beginning while
+%%% Erlang process speeds are being determined, to avoid causing higher
+%%% latency.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2024-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -39,7 +54,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2024 Michael Truog
+%%% @copyright 2024-2025 Michael Truog
 %%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 

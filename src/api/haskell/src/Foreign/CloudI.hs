@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2023 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2025 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -220,7 +220,7 @@ api threadIndex state terminateReturnValueOpt = do
             let terminateReturnValue = fromMaybe True terminateReturnValueOpt
                 terminateException = not terminateReturnValue
                 bufferSize = read bufferSizeStr :: Int
-                fd = C.CInt $ fromIntegral (threadIndex + 3)
+                fd = C.CInt $ fromIntegral (threadIndex + 1024)
                 useHeader = protocol /= "udp"
                 timeoutTerminate' = 10 -- TIMEOUT_TERMINATE_MIN
                 initTerms = Erlang.OtpErlangAtom (Char8.pack "init")

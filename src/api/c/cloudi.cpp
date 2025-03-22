@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -604,17 +604,17 @@ int cloudi_initialize(cloudi_instance_t * api,
     api->state = state;
     if (::strcmp(protocol, "tcp") == 0)
     {
-        api->fd = thread_index + 3;
+        api->fd = thread_index + 1024;
         api->use_header = 1;
     }
     else if (::strcmp(protocol, "udp") == 0)
     {
-        api->fd = thread_index + 3;
+        api->fd = thread_index + 1024;
         //api->use_header = 0;
     }
     else if (::strcmp(protocol, "local") == 0)
     {
-        api->fd = thread_index + 3;
+        api->fd = thread_index + 1024;
         api->use_header = 1;
     }
     else

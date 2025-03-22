@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2025 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -260,7 +260,7 @@ CloudI.API = function API (thread_index, callback) {
     else {
         throw new InvalidInputException();
     }
-    API._socket = new net.Socket({fd: (thread_index + 3),
+    API._socket = new net.Socket({fd: (thread_index + 1024),
                                   readable: true,
                                   writable: true});
     API._initialization_complete = false;

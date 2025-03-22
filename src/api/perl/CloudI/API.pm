@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2023 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2025 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -83,7 +83,7 @@ sub new
         die CloudI::InvalidInputException->new();
     }
     my $buffer_size = _getenv_to_uint('CLOUDI_API_INIT_BUFFER_SIZE');
-    my $s = IO::Handle->new_from_fd($thread_index + 3, 'r+');
+    my $s = IO::Handle->new_from_fd($thread_index + 1024, 'r+');
     $s->autoflush(1);
     my $use_header;
     if ($protocol eq 'tcp')
