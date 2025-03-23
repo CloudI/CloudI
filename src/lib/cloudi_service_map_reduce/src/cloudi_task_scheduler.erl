@@ -18,14 +18,14 @@
 %%% Using the min_max schedule algorithm instead of the
 %%% greedy schedule algorithm is best due to more fully utilizing
 %%% each node based on the node's speed.  The performance difference is
-%%% subtle but the maximum latency will be lower
+%%% subtle but the maximum latency will be minimized
 %%% (providing better fault-tolerance) while the average latency is
 %%% slightly higher with negative skewness.  The latency kurtosis is lower
 %%% and the total TaskCost processed per millisecond is higher due to more
 %%% fully utilizing each node.  The total runtime can be the same for both
 %%% schedule algorithms when no outages occur but temporary outages can
 %%% cause the min_max schedule algorithm to provide a smaller total runtime
-%%% (due to better decisions becoming available with the outages).
+%%% (due to better decisions becoming available with each outage).
 %%% Smaller TaskCost values should be used in the beginning while
 %%% Erlang process speeds are being determined, to avoid causing higher
 %%% latency.
