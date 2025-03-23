@@ -5,6 +5,9 @@
 
     * Change CloudI API file descriptors to avoid [3..1023]
       so that range is reserved for older source code using select
+    * Add cloudi_service CT tests for fatal_timeout
+      service configuration options
+      (fatal_timeout_interrupt and fatal_timeout_delay)
     * Add cloudi_task_scheduler min_max/greedy comment
 
 2025-01-18 Michael Truog   <mjtruog at protonmail dot com>

@@ -87,6 +87,9 @@
          t_service_internal_stop_normal_2/1,
          t_service_internal_stop_normal_3/1,
          t_service_internal_stop_normal_4/1,
+         t_service_internal_fatal_timeout_1/1,
+         t_service_internal_fatal_timeout_2/1,
+         t_service_internal_fatal_timeout_3/1,
          t_cloudi_args_type_1/1,
          t_cloudi_service_name_1/1]).
 
@@ -158,6 +161,7 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, _Timeout, Dispatcher) ->
         Mode =:= idle ->
             idle;
         Mode =:= reply;
+        Mode =:= reply_timeout;
         Mode =:= terminate_sleep;
         Mode =:= pid ->
             ok = cloudi_service:subscribe(Dispatcher,
@@ -242,6 +246,13 @@ cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                                      count = Count} = State,
                               _Dispatcher) ->
     {reply, Count, State};
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              ?REQUEST_INFO1, ?REQUEST1,
+                              Timeout, _Priority, _TransId, _Pid,
+                              #state{mode = reply_timeout} = State,
+                              _Dispatcher) ->
+    receive after Timeout + 100 -> ok end,
+    {reply, ?RESPONSE_INFO1, ?RESPONSE1, State};
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               <<>>, <<>>,
                               _Timeout, _Priority, _TransId, _Pid,
@@ -360,7 +371,10 @@ groups() ->
        t_service_internal_stop_normal_1,
        t_service_internal_stop_normal_2,
        t_service_internal_stop_normal_3,
-       t_service_internal_stop_normal_4]},
+       t_service_internal_stop_normal_4,
+       t_service_internal_fatal_timeout_1,
+       t_service_internal_fatal_timeout_2,
+       t_service_internal_fatal_timeout_3]},
      {cloudi_modules_1, [parallel],
       [t_cloudi_args_type_1,
        t_cloudi_service_name_1]}].
@@ -616,6 +630,48 @@ init_per_testcase(TestCase, Config)
                              {duo_mode, true},
                              {request_pid_uses, infinity},
                              {info_pid_uses, infinity}]}
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_fatal_timeout_1) ->
+    ok = init_per_testcase(TestCase),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using the record configuration format (from cloudi_service_api.hrl)
+        #internal{prefix = ?SERVICE_PREFIX1,
+                  module = ?MODULE,
+                  args = [{mode, reply_timeout}],
+                  options = [{automatic_loading, false},
+                             {fatal_timeout, true},
+                             {fatal_timeout_interrupt, true},
+                             {fatal_timeout_delay, 0}]}
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_fatal_timeout_2) ->
+    ok = init_per_testcase(TestCase),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using the record configuration format (from cloudi_service_api.hrl)
+        #internal{prefix = ?SERVICE_PREFIX1,
+                  module = ?MODULE,
+                  args = [{mode, reply_timeout}],
+                  options = [{automatic_loading, false},
+                             {fatal_timeout, true},
+                             {fatal_timeout_interrupt, false},
+                             {fatal_timeout_delay, 0}]}
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_fatal_timeout_3) ->
+    ok = init_per_testcase(TestCase),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using the record configuration format (from cloudi_service_api.hrl)
+        #internal{prefix = ?SERVICE_PREFIX1,
+                  module = ?MODULE,
+                  args = [{mode, reply_timeout}],
+                  options = [{automatic_loading, false},
+                             {fatal_timeout, true},
+                             {fatal_timeout_interrupt, true},
+                             {fatal_timeout_delay, 200}]}
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config) ->
@@ -1364,6 +1420,71 @@ service_internal_stop(StopType, Reason) ->
         {'DOWN', InfoPidMonitor, process, InfoPid, Reason} ->
             ok
     end,
+    ok.
+
+t_service_internal_fatal_timeout_1(_Config) ->
+    Context0 = cloudi:new([{timeout_async, 499}, % limit_min
+                           {timeout_sync, 1000}]),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {{ok, {_, Service}},
+     Context1} = cloudi:get_pid(Context0,
+                                ServiceName),
+    true = erlang:is_process_alive(Service),
+    {{ok, TransId},
+     Context2} = cloudi:send_async(Context1,
+                                   ServiceName,
+                                   ?REQUEST_INFO1, ?REQUEST1,
+                                   undefined, undefined),
+    receive after 499 + 200 -> ok end,
+    {{error, timeout},
+     _Context3} = cloudi:recv_async(Context2, TransId),
+    false = erlang:is_process_alive(Service),
+    ok.
+
+t_service_internal_fatal_timeout_2(_Config) ->
+    Context0 = cloudi:new([{timeout_async, 499}, % limit_min
+                           {timeout_sync, 1000}]),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {{ok, {_, Service}},
+     Context1} = cloudi:get_pid(Context0,
+                                ServiceName),
+    true = erlang:is_process_alive(Service),
+    {{ok, TransId},
+     Context2} = cloudi:send_async(Context1,
+                                   ServiceName,
+                                   ?REQUEST_INFO1, ?REQUEST1,
+                                   undefined, undefined),
+    receive after 499 + 200 -> ok end,
+    {{ok, ?RESPONSE_INFO1, ?RESPONSE1, TransId},
+     _Context3} = cloudi:recv_async(Context2, TransId),
+    false = erlang:is_process_alive(Service),
+    ok.
+
+t_service_internal_fatal_timeout_3(_Config) ->
+    Context0 = cloudi:new([{timeout_async, 499}, % limit_min
+                           {timeout_sync, 1000}]),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {{ok, {_, Service}},
+     Context1} = cloudi:get_pid(Context0,
+                                ServiceName),
+    true = erlang:is_process_alive(Service),
+    {{ok, TransId0},
+     Context2} = cloudi:send_async(Context1,
+                                   ServiceName,
+                                   ?REQUEST_INFO1, ?REQUEST1,
+                                   undefined, undefined),
+    {{ok, ?RESPONSE_INFO1, ?RESPONSE1, TransId0},
+     Context3} = cloudi:recv_async(Context2, TransId0),
+    {{ok, TransId1},
+     Context4} = cloudi:send_async(Context3,
+                                   ServiceName,
+                                   ?REQUEST_INFO1, ?REQUEST1,
+                                   undefined, undefined),
+    true = TransId1 /= TransId0,
+    {{ok, ?RESPONSE_INFO1, ?RESPONSE1, TransId1},
+     _Context5} = cloudi:recv_async(Context4, TransId1),
+    receive after 499 + 200 -> ok end,
+    true = erlang:is_process_alive(Service),
     ok.
 
 t_cloudi_args_type_1(_Config) ->
