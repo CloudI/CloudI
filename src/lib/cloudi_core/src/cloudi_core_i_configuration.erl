@@ -540,16 +540,16 @@
                                             ?LOGGER_FILE_SYNC_MIN,
                                             ?LOGGER_FILE_SYNC_MAX)).
 
--define(LOGGER_NTP_STATUS_PERIOD_ASSIGN(ReconnectDelay),
-        ?LIMIT_ASSIGN_SECONDS(ReconnectDelay,
+-define(LOGGER_NTP_STATUS_PERIOD_ASSIGN(NtpStatusPeriod),
+        ?LIMIT_ASSIGN_SECONDS(NtpStatusPeriod,
                               ?LOGGER_NTP_STATUS_PERIOD_MIN,
                               ?LOGGER_NTP_STATUS_PERIOD_MAX)).
--define(LOGGER_NTP_STATUS_PERIOD_FORMAT(ReconnectDelay),
-        ?LIMIT_FORMAT_SECONDS(ReconnectDelay,
+-define(LOGGER_NTP_STATUS_PERIOD_FORMAT(NtpStatusPeriod),
+        ?LIMIT_FORMAT_SECONDS(NtpStatusPeriod,
                               ?LOGGER_NTP_STATUS_PERIOD_MIN,
                               ?LOGGER_NTP_STATUS_PERIOD_MAX)).
--define(LOGGER_NTP_STATUS_PERIOD_GUARD(ReconnectDelay),
-        ?LIMIT_GUARD_SECONDS(ReconnectDelay,
+-define(LOGGER_NTP_STATUS_PERIOD_GUARD(NtpStatusPeriod),
+        ?LIMIT_GUARD_SECONDS(NtpStatusPeriod,
                              ?LOGGER_NTP_STATUS_PERIOD_MIN,
                              ?LOGGER_NTP_STATUS_PERIOD_MAX)).
 
@@ -1755,6 +1755,7 @@ logging(#config{logging = #config_logging{
                               redirect = Redirect,
                               syslog = Syslog,
                               formatters = Formatters,
+                              ntp_status = NtpStatus,
                               log_time_offset = LogTimeOffset,
                               aspects_log_before = AspectsLogBefore,
                               aspects_log_after = AspectsLogAfter}}) ->
@@ -1973,25 +1974,62 @@ logging(#config{logging = #config_logging{
             [{formatters, FormattersList1} | LoggingList9]
 
     end,
-    LoggingList11 = if
-        LogTimeOffset =:= Defaults#config_logging.log_time_offset ->
-            LoggingList10;
-        true ->
-            [{log_time_offset, LogTimeOffset} | LoggingList10]
+    LoggingList11 = case NtpStatus of
+        #config_logging_ntp_status{host = NtpStatusHost,
+                                   port = NtpStatusPort,
+                                   period = NtpStatusPeriod} ->
+            NtpStatusDefaults = #config_logging_ntp_status{},
+            NtpStatusList0 = [],
+            NtpStatusList1 = if
+                NtpStatusHost =:=
+                NtpStatusDefaults#config_logging_ntp_status.host ->
+                    NtpStatusList0;
+                true ->
+                    [{host, NtpStatusHost} | NtpStatusList0]
+            end,
+            NtpStatusList2 = if
+                NtpStatusPort =:=
+                NtpStatusDefaults#config_logging_ntp_status.port ->
+                    NtpStatusList1;
+                true ->
+                    [{port, NtpStatusPort} | NtpStatusList1]
+            end,
+            NtpStatusList3 = if
+                NtpStatusPeriod =:=
+                NtpStatusDefaults#config_logging_ntp_status.period ->
+                    NtpStatusList2;
+                true ->
+                    [{period,
+                      ?LOGGER_NTP_STATUS_PERIOD_FORMAT(NtpStatusPeriod)} |
+                     NtpStatusList2]
+            end,
+            if
+                NtpStatusList3 == [] ->
+                    LoggingList10;
+                true ->
+                    [{ntp_status,
+                      lists:reverse(NtpStatusList3)} | LoggingList10]
+            end
     end,
     LoggingList12 = if
-        AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
+        LogTimeOffset =:= Defaults#config_logging.log_time_offset ->
             LoggingList11;
         true ->
-            [{aspects_log_before, AspectsLogBefore} | LoggingList11]
+            [{log_time_offset, LogTimeOffset} | LoggingList11]
     end,
     LoggingList13 = if
-        AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
+        AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
             LoggingList12;
         true ->
-            [{aspects_log_after, AspectsLogAfter} | LoggingList12]
+            [{aspects_log_before, AspectsLogBefore} | LoggingList12]
     end,
-    lists:reverse(LoggingList13).
+    LoggingList14 = if
+        AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
+            LoggingList13;
+        true ->
+            [{aspects_log_after, AspectsLogAfter} | LoggingList13]
+    end,
+    lists:reverse(LoggingList14).
 
 -spec code_path_add(Path :: string(),
                     Config :: #config{}) ->
@@ -5933,6 +5971,8 @@ logging_validate_redirect(Redirect) ->
             Error
     end.
 
+logging_validate_ntp_status(#config_logging_ntp_status{} = Default) ->
+    {ok, Default};
 logging_validate_ntp_status([]) ->
     {ok, #config_logging_ntp_status{}};
 logging_validate_ntp_status([_ | _] = Value) ->
@@ -6670,7 +6710,7 @@ uuid_generator() ->
                                {mac_address, MacAddress},
                                {variant, Variant}]).
 
--type eval_value() :: number() | atom() | list().
+-type eval_value() :: any().
 -spec eval(L :: nonempty_list({eval_value(),
                                fun((eval_value()) ->
                                    {ok, any()} | {error, any()})})) ->
@@ -6681,8 +6721,7 @@ eval([_ | _] = L) ->
 
 eval([], Output) ->
     erlang:list_to_tuple([ok | lists:reverse(Output)]);
-eval([{Value, F} | L], Output)
-    when is_number(Value) orelse is_atom(Value) orelse is_list(Value) ->
+eval([{Value, F} | L], Output) ->
     case F(Value) of
         {ok, ValueNew} ->
             eval(L, [ValueNew | Output]);

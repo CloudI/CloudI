@@ -168,8 +168,8 @@
             :: undefined | #config_logging_formatters{},
         % NTP status logging is always enabled due to the
         % importance of time synchronization
-        ntp_status = []
-            :: [] | #config_logging_ntp_status{},
+        ntp_status = #config_logging_ntp_status{}
+            :: #config_logging_ntp_status{},
         % log when Erlang system time has changed with the amount
         log_time_offset = off
             :: cloudi_service_api:loglevel(),
