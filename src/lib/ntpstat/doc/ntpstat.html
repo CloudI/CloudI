@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module ntpstat</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module ntpstat</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="NTP_client_ntpstat_functionality">NTP client ntpstat functionality</a></h3>
+   Functionality similar to executing the following shell commands:
+   $ ntpstat
+   $ chronyc -n tracking
+   $ ntpq -c 'timeout 5' -c raw -c 'rv 0' 127.0.0.1.
+<p>Copyright © 2025 Michael Truog</p>
+
+<p><b>Version:</b> 2.0.8 May 15 2025 20:44:11
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><code>mjtruog at protonmail dot com</code></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="NTP_client_ntpstat_functionality">NTP client ntpstat functionality</a></h3>
+   Functionality similar to executing the following shell commands:
+   $ ntpstat
+   $ chronyc -n tracking
+   $ ntpq -c 'timeout 5' -c raw -c 'rv 0' 127.0.0.1
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-bytestring">bytestring()</a></h3>
+<p><code>bytestring() = [byte()]</code></p>
+
+
+<h3 class="typedecl"><a name="type-options">options()</a></h3>
+<p><code>options() = [{host, <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>} | {port, <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>}]</code></p>
+
+
+<h3 class="typedecl"><a name="type-status">status()</a></h3>
+<p><code>status() = #status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}</code></p>
+
+
+<h3 class="typedecl"><a name="type-status_error">status_error()</a></h3>
+<p><code>status_error() = clock_unsynchronized | clock_unknown</code></p>
+<p> ntpstatus exit status 2</p>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#destroy-1">destroy/1</a></td><td>
+  <h4><a name="Destroy_ntpstat_status.">Destroy ntpstat status.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#main-1">main/1</a></td><td>
+  <h4><a name="Escript_Main_Function.">Escript Main Function.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#message-1">message/1</a></td><td>
+  <h4><a name="Get_the_current_ntpstat_output_message_if_it_exists.">Get the current ntpstat output message if it exists.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_ntpstat_status.">Create ntpstat status.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Create_ntpstat_status_with_options.">Create ntpstat status with options.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update-2">update/2</a></td><td>
+  <h4><a name="Update_ntpstat_status.">Update ntpstat status.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="destroy-1">destroy/1</a></h3>
+<div class="spec">
+<p><code>destroy(Status::#status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}) -&gt; ok</code><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Destroy_ntpstat_status.">Destroy ntpstat status.</a></h4>
+</p>
+
+<h3 class="function"><a name="main-1">main/1</a></h3>
+<div class="spec">
+<p><code>main(X1::[string()]) -&gt; no_return()</code><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Escript_Main_Function.">Escript Main Function.</a></h4>
+</p>
+
+<h3 class="function"><a name="message-1">message/1</a></h3>
+<div class="spec">
+<p><code>message(Status::#status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}) -&gt; <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> | undefined</code><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Get_the_current_ntpstat_output_message_if_it_exists.">Get the current ntpstat output message if it exists.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><code>new() -&gt; #status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}</code><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Create_ntpstat_status.">Create ntpstat status.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><code>new(Options::<a href="#type-options" docgen-rel="seetype" docgen-href="#options/0">options()</a>) -&gt; #status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}</code><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Create_ntpstat_status_with_options.">Create ntpstat status with options.</a></h4>
+</p>
+
+<h3 class="function"><a name="update-2">update/2</a></h3>
+<div class="spec">
+<p><code>update(Timeout::timeout(), Status::#status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}) -&gt; {ok, #status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}} | {error, <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a>, #status{error = <a href="#type-status_error" docgen-rel="seetype" docgen-href="#status_error/0">status_error()</a> | undefined, restart = boolean(), message = <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>, host = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-ip_address" docgen-rel="seetype" docgen-href="kernel:inet#ip_address/0">inet:ip_address()</a> | <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-hostname" docgen-rel="seetype" docgen-href="kernel:inet#hostname/0">inet:hostname()</a>, port = <a href="/home/george/organized/work/erlang/kernel/doc/inet.html#type-port_number" docgen-rel="seetype" docgen-href="kernel:inet#port_number/0">inet:port_number()</a>, socket = <a href="/home/george/organized/work/erlang/kernel/doc/gen_udp.html#type-socket" docgen-rel="seetype" docgen-href="kernel:gen_udp#socket/0">gen_udp:socket()</a> | undefined, socket_error = any(), sequence = pos_integer(), leap_indicator = non_neg_integer() | undefined, clock_source = non_neg_integer() | undefined, count = non_neg_integer() | undefined, code = non_neg_integer() | undefined, payload = #{<a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a> := <a href="#type-bytestring" docgen-rel="seetype" docgen-href="#bytestring/0">bytestring()</a>} | undefined}}</code><br></p>
+<p> </p>
+</div><p>
+  <h4><a name="Update_ntpstat_status.">Update ntpstat status.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

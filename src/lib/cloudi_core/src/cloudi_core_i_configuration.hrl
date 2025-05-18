@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,6 +41,16 @@
             :: list(atom()),
         releases = []
             :: list(string())
+    }).
+
+-record(config_logging_ntp_status,
+    {
+        host = {127,0,0,1}
+            :: cloudi_service_api:logging_ntp_status_host(),
+        port = 123
+            :: cloudi_service_api:logging_ntp_status_port(),
+        period = 1
+            :: cloudi_service_api:logging_ntp_status_period()
     }).
 
 -record(config_logging_syslog,
@@ -156,6 +166,10 @@
         % use custom formatters for log output
         formatters = undefined
             :: undefined | #config_logging_formatters{},
+        % NTP status logging is always enabled due to the
+        % importance of time synchronization
+        ntp_status = []
+            :: [] | #config_logging_ntp_status{},
         % log when Erlang system time has changed with the amount
         log_time_offset = off
             :: cloudi_service_api:loglevel(),

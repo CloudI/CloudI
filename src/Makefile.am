@@ -41,6 +41,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/erlang_term/src \
      -d $(top_srcdir)/lib/key2value/src \
      -d $(top_srcdir)/lib/keys1value/src \
+     -d $(top_srcdir)/lib/ntpstat/src \
      -d $(top_srcdir)/lib/pqueue/src \
      -d $(top_srcdir)/lib/pqueue/test \
      -d $(top_srcdir)/lib/quickrand/src \
@@ -247,6 +248,7 @@ dialyze: all \
               lib/erlang_term/ebin \
               lib/key2value/ebin \
               lib/keys1value/ebin \
+              lib/ntpstat/ebin \
               lib/pqueue/ebin \
               lib/quickrand/ebin \
               lib/reltool_util/ebin \
@@ -315,6 +317,7 @@ dialyze-internal: all \
               lib/erlang_term/ebin \
               lib/key2value/ebin \
               lib/keys1value/ebin \
+              lib/ntpstat/ebin \
               lib/pqueue/ebin \
               lib/quickrand/ebin \
               lib/reltool_util/ebin \

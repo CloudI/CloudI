@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2024 Michael Truog
+%%% @copyright 2011-2025 Michael Truog
 %%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -1290,6 +1290,14 @@
                {output_max_t, max_t()} |
                {formatter, module() | undefined} |
                {formatter_config, list()})}).
+-type logging_ntp_status() :: ok | clock_unsynchronized | clock_unknown.
+-type logging_ntp_status_host() :: inet:ip_address() | inet:hostname().
+-type logging_ntp_status_port() :: inet:port_number().
+-type logging_ntp_status_period() :: period().
+-type logging_ntp_status_set_proplist() ::
+    list({host, logging_ntp_status_host()} |
+         {port, logging_ntp_status_port()} |
+         {period, logging_ntp_status_period()}).
 -type iso8601() ::
     cloudi_timestamp:iso8601().
 -type iso8601_seconds() ::
@@ -1298,31 +1306,33 @@
 -type seconds_change_string() ::
     nonempty_list($a..$z | $0..$9 | $. | $  | $+ | $-).
 -type logging_status() ::
-    list({queue_mode, async | sync | overload} |
-         {queue_mode_sync_last_start, iso8601()} |
-         {queue_mode_sync_last_start_event, iso8601()} |
-         {queue_mode_sync_last_end, iso8601()} |
-         {queue_mode_sync_last_end_event, iso8601()} |
-         {queue_mode_sync_last_total, nanoseconds_string()} |
-         {queue_mode_overload_last_start, iso8601()} |
-         {queue_mode_overload_last_start_event, iso8601()} |
-         {queue_mode_overload_last_end, iso8601()} |
-         {queue_mode_overload_last_end_event, iso8601()} |
-         {queue_mode_overload_last_total, nanoseconds_string()} |
-         {time_offset_last_change, seconds_change_string()} |
-         {time_offset_last_event, iso8601()} |
-         {file_messages_fatal, integer_string_gt_0()} |
-         {file_messages_error, integer_string_gt_0()} |
-         {file_messages_warn, integer_string_gt_0()} |
-         {file_messages_info, integer_string_gt_0()} |
-         {file_messages_debug, integer_string_gt_0()} |
-         {file_messages_trace, integer_string_gt_0()} |
-         {file_sync_fail_count, integer_string_gt_0()} |
-         {file_sync_fail_types, nonempty_list(atom())} |
-         {file_write_fail_count, integer_string_gt_0()} |
-         {file_write_fail_types, nonempty_list(atom())} |
-         {file_read_fail_count, integer_string_gt_0()} |
-         {file_read_fail_types, nonempty_list(atom())}).
+    nonempty_list({queue_mode, async | sync | overload} |
+                  {queue_mode_sync_last_start, iso8601()} |
+                  {queue_mode_sync_last_start_event, iso8601()} |
+                  {queue_mode_sync_last_end, iso8601()} |
+                  {queue_mode_sync_last_end_event, iso8601()} |
+                  {queue_mode_sync_last_total, nanoseconds_string()} |
+                  {queue_mode_overload_last_start, iso8601()} |
+                  {queue_mode_overload_last_start_event, iso8601()} |
+                  {queue_mode_overload_last_end, iso8601()} |
+                  {queue_mode_overload_last_end_event, iso8601()} |
+                  {queue_mode_overload_last_total, nanoseconds_string()} |
+                  {ntp_status, logging_ntp_status()} |
+                  {ntp_status_time, iso8601_seconds()} |
+                  {time_offset_last_change, seconds_change_string()} |
+                  {time_offset_last_event, iso8601()} |
+                  {file_messages_fatal, integer_string_gt_0()} |
+                  {file_messages_error, integer_string_gt_0()} |
+                  {file_messages_warn, integer_string_gt_0()} |
+                  {file_messages_info, integer_string_gt_0()} |
+                  {file_messages_debug, integer_string_gt_0()} |
+                  {file_messages_trace, integer_string_gt_0()} |
+                  {file_sync_fail_count, integer_string_gt_0()} |
+                  {file_sync_fail_types, nonempty_list(atom())} |
+                  {file_write_fail_count, integer_string_gt_0()} |
+                  {file_write_fail_types, nonempty_list(atom())} |
+                  {file_read_fail_count, integer_string_gt_0()} |
+                  {file_read_fail_types, nonempty_list(atom())}).
 -type logging_proplist() ::
     nonempty_list({file, nonempty_string() | undefined} |
                   {file_sync, logging_file_sync_period()} |
@@ -1334,6 +1344,7 @@
                   {queue_mode_sync, pos_integer()} |
                   {queue_mode_overload, pos_integer()} |
                   {formatters, logging_formatters_set_proplist() | undefined} |
+                  {ntp_status, logging_ntp_status_set_proplist()} |
                   {log_time_offset, loglevel()} |
                   {aspects_log_before, list(aspect_log_before())} |
                   {aspects_log_after, list(aspect_log_after())}).
@@ -1352,6 +1363,11 @@
               logging_syslog_port/0,
               logging_syslog_set_proplist/0,
               logging_formatters_set_proplist/0,
+              logging_ntp_status/0,
+              logging_ntp_status_host/0,
+              logging_ntp_status_port/0,
+              logging_ntp_status_period/0,
+              logging_ntp_status_set_proplist/0,
               seconds_change_string/0,
               logging_status/0,
               logging_proplist/0]).

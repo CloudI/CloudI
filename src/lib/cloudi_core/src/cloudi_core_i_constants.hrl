@@ -149,7 +149,7 @@
 
 % avoid misuse of old catch with a macro
 -define(CATCH(E),
-        try E, ok catch _:_ -> ok end).
+        try _ = E, ok catch _:_ -> ok end).
 
 % time-related constants
 % average length of a Gregorian year is 365 + 1/4 - 1/100 + 1/400
@@ -557,6 +557,10 @@
 % logger options limits (milliseconds)
 -define(LOGGER_FILE_SYNC_MIN, 0).
 -define(LOGGER_FILE_SYNC_MAX, 60000).
+
+% logger NTP status period limits (seconds)
+-define(LOGGER_NTP_STATUS_PERIOD_MIN, 1).
+-define(LOGGER_NTP_STATUS_PERIOD_MAX, ?TIMEOUT_MAX_ERLANG div 1000).
 
 % periodic connection checks to determine if the udp connection is still active
 % must be a short time since this impacts MaxR and MaxT.  However, this time

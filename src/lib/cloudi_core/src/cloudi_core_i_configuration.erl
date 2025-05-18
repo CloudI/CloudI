@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,7 +30,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2024 Michael Truog
+%%% @copyright 2009-2025 Michael Truog
 %%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -276,8 +276,14 @@
      logging_queue_mode_sync_value |
      logging_queue_mode_overload_invalid |
      logging_log_time_offset_invalid, any()} |
+    error_reason_logging_ntp_status_set_configuration() |
     error_reason_logging_syslog_set_configuration() |
     error_reason_logging_formatters_set_configuration().
+-type error_reason_logging_ntp_status_set_configuration() ::
+    {logging_ntp_status_invalid |
+     logging_ntp_status_host_invalid |
+     logging_ntp_status_port_invalid |
+     logging_ntp_status_period_invalid, any()}.
 -type error_reason_logging_syslog_set_configuration() ::
     {logging_syslog_invalid |
      logging_syslog_identity_invalid |
@@ -533,6 +539,19 @@
         ?LIMIT_GUARD_MILLISECONDS_60000_MAX(FileSync,
                                             ?LOGGER_FILE_SYNC_MIN,
                                             ?LOGGER_FILE_SYNC_MAX)).
+
+-define(LOGGER_NTP_STATUS_PERIOD_ASSIGN(ReconnectDelay),
+        ?LIMIT_ASSIGN_SECONDS(ReconnectDelay,
+                              ?LOGGER_NTP_STATUS_PERIOD_MIN,
+                              ?LOGGER_NTP_STATUS_PERIOD_MAX)).
+-define(LOGGER_NTP_STATUS_PERIOD_FORMAT(ReconnectDelay),
+        ?LIMIT_FORMAT_SECONDS(ReconnectDelay,
+                              ?LOGGER_NTP_STATUS_PERIOD_MIN,
+                              ?LOGGER_NTP_STATUS_PERIOD_MAX)).
+-define(LOGGER_NTP_STATUS_PERIOD_GUARD(ReconnectDelay),
+        ?LIMIT_GUARD_SECONDS(ReconnectDelay,
+                             ?LOGGER_NTP_STATUS_PERIOD_MIN,
+                             ?LOGGER_NTP_STATUS_PERIOD_MAX)).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -5765,12 +5784,13 @@ logging_proplist(Value) ->
         {redirect, Logging#config_logging.redirect},
         {syslog, Logging#config_logging.syslog},
         {formatters, Logging#config_logging.formatters},
+        {ntp_status, Logging#config_logging.ntp_status},
         {log_time_offset, Logging#config_logging.log_time_offset},
         {aspects_log_before, Logging#config_logging.aspects_log_before},
         {aspects_log_after, Logging#config_logging.aspects_log_after}],
     case cloudi_proplists:take_values(Defaults, Value) of
         [Level, _, _, _, _, _, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
@@ -5778,63 +5798,63 @@ logging_proplist(Value) ->
             {error, {logging_level_invalid,
                      Level}};
         [_, QueueModeAsync, _, _, _, _, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not (is_integer(QueueModeAsync) andalso
                       (QueueModeAsync > 0)) ->
             {error, {logging_queue_mode_async_invalid,
                      QueueModeAsync}};
         [_, _, QueueModeSync, _, _, _, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not (is_integer(QueueModeSync) andalso
                       (QueueModeSync > 0)) ->
             {error, {logging_queue_mode_sync_invalid,
                      QueueModeSync}};
         [_, _, _, QueueModeOverload, _, _, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not (is_integer(QueueModeOverload) andalso
                       (QueueModeOverload > ?LOGGER_MODE_OVERLOAD_OFFSET)) ->
             {error, {logging_queue_mode_overload_invalid,
                      QueueModeOverload}};
         [_, QueueModeAsync, QueueModeSync, _, _, _, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not (QueueModeAsync < QueueModeSync) ->
             {error, {logging_queue_mode_async_value,
                      QueueModeAsync}};
         [_, _, QueueModeSync, QueueModeOverload, _, _, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not (QueueModeSync < QueueModeOverload) ->
             {error, {logging_queue_mode_sync_value,
                      QueueModeSync}};
         [_, _, _, _, File, _, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not ((is_list(File) andalso
                        is_integer(hd(File))) orelse
                       (File =:= undefined))->
             {error, {logging_file_invalid,
                      File}};
         [_, _, _, _, _, FileSync, _, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not ?LOGGER_FILE_SYNC_GUARD(FileSync) ->
             {error, {logging_file_sync_invalid,
                      FileSync}};
         [_, _, _, _, _, _, Stdout, _, _, _,
-         _, _, _]
+         _, _, _, _]
             when not is_boolean(Stdout) ->
             {error, {logging_stdout_invalid,
                      Stdout}};
         [_, _, _, _, _, _, _, Redirect, _, _,
-         _, _, _]
+         _, _, _, _]
             when not is_atom(Redirect) ->
             {error, {logging_redirect_invalid,
                      Redirect}};
         [_, _, _, _, _, _, _, _, Syslog, _,
-         _, _, _]
+         _, _, _, _]
             when not ((Syslog =:= undefined) orelse
                       is_list(Syslog)) ->
             {error, {logging_syslog_invalid,
                      Syslog}};
         [_, _, _, _, _, _, _, _, _, _,
-         LogTimeOffset, _, _]
+         _, LogTimeOffset, _, _]
             when not ((LogTimeOffset =:= fatal) orelse
                       (LogTimeOffset =:= error) orelse
                       (LogTimeOffset =:= warn) orelse
@@ -5846,7 +5866,7 @@ logging_proplist(Value) ->
                      LogTimeOffset}};
         [Level, QueueModeAsync, QueueModeSync, QueueModeOverload,
          File, FileSync, Stdout, Redirect, Syslog, Formatters,
-         LogTimeOffset, AspectsLogBefore, AspectsLogAfter] ->
+         NtpStatus, LogTimeOffset, AspectsLogBefore, AspectsLogAfter] ->
             FileNew = if
                 Level =:= undefined ->
                     undefined;
@@ -5860,9 +5880,9 @@ logging_proplist(Value) ->
                 true ->
                     Level
             end,
-            case logging_validate(Redirect, Syslog, Formatters,
+            case logging_validate(Redirect, Syslog, Formatters, NtpStatus,
                                   AspectsLogBefore, AspectsLogAfter) of
-                {ok, Redirect, SyslogConfig, FormattersConfig,
+                {ok, Redirect, SyslogConfig, FormattersConfig, NtpStatusNew,
                      AspectsLogBeforeNew, AspectsLogAfterNew} ->
                     LoggingNew = Logging#config_logging{
                                      level = LevelNew,
@@ -5875,6 +5895,7 @@ logging_proplist(Value) ->
                                      redirect = Redirect,
                                      syslog = SyslogConfig,
                                      formatters = FormattersConfig,
+                                     ntp_status = NtpStatusNew,
                                      log_time_offset = LogTimeOffset,
                                      aspects_log_before = AspectsLogBeforeNew,
                                      aspects_log_after = AspectsLogAfterNew},
@@ -5883,11 +5904,11 @@ logging_proplist(Value) ->
                     Error
             end;
         [_, _, _, _, _, _, _, _, _, _,
-         _, _, _ | Extra] ->
+         _, _, _, _ | Extra] ->
             {error, {logging_invalid, Extra}}
     end.
 
-logging_validate(Redirect, Syslog, Formatters,
+logging_validate(Redirect, Syslog, Formatters, NtpStatus,
                  AspectsLogBefore, AspectsLogAfter) ->
     eval([{Redirect,
            fun logging_validate_redirect/1},
@@ -5895,6 +5916,8 @@ logging_validate(Redirect, Syslog, Formatters,
            fun logging_validate_syslog/1},
           {Formatters,
            fun logging_validate_formatters/1},
+          {NtpStatus,
+           fun logging_validate_ntp_status/1},
           {AspectsLogBefore,
            fun logging_validate_aspects_log_before/1},
           {AspectsLogAfter,
@@ -5908,6 +5931,45 @@ logging_validate_redirect(Redirect) ->
             {ok, Redirect};
         {error, _} = Error ->
             Error
+    end.
+
+logging_validate_ntp_status([]) ->
+    {ok, #config_logging_ntp_status{}};
+logging_validate_ntp_status([_ | _] = Value) ->
+    NtpStatusConfig = #config_logging_ntp_status{},
+    Defaults = [
+        {host,
+         NtpStatusConfig#config_logging_ntp_status.host},
+        {port,
+         NtpStatusConfig#config_logging_ntp_status.port},
+        {period,
+         NtpStatusConfig#config_logging_ntp_status.period}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Host, _, _]
+            when not ((is_list(Host) andalso is_integer(hd(Host))) orelse
+                      (is_tuple(Host) andalso
+                       ((tuple_size(Host) == 4) orelse
+                        (tuple_size(Host) == 8)))) ->
+            {error, {logging_ntp_status_host_invalid,
+                     Host}};
+        [_, Port, _]
+            when not (is_integer(Port) andalso
+                      (Port > 0) andalso (Port =< 65535)) ->
+            {error, {logging_ntp_status_port_invalid,
+                     Port}};
+        [_, _, Period]
+            when not ?LOGGER_NTP_STATUS_PERIOD_GUARD(Period) ->
+            {error, {logging_ntp_status_period_invalid,
+                     Period}};
+        [Host, Port, Period] ->
+            PeriodNew = ?LOGGER_NTP_STATUS_PERIOD_ASSIGN(Period),
+            {ok,
+             NtpStatusConfig#config_logging_ntp_status{
+                host = Host,
+                port = Port,
+                period = PeriodNew}};
+        [_, _, _ | Extra] ->
+            {error, {logging_ntp_status_invalid, Extra}}
     end.
 
 logging_validate_syslog(undefined) ->

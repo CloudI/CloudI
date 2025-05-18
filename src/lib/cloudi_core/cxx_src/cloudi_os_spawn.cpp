@@ -803,6 +803,16 @@ namespace
         int status;
         if ((status = GEPD::init()))
             return status;
+        uint32_t const fd_limit_min = 16384;
+        if (::dup2(0, fd_limit_min) == -1)
+        {
+            std::cerr << "OS file descriptor limit =< " << fd_limit_min <<
+                " !" << std::endl;
+        }
+        else
+        {
+            ::close(fd_limit_min);
+        }
         int count;
         while ((status = GEPD::wait(count,
                                     erlang_buffer,

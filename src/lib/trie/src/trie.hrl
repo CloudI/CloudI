@@ -75,7 +75,7 @@
 
 -define(EXCEPTION(E),
         (fun() ->
-             try E, no_exception
+             try _ = E, no_exception
              catch ErrorType:Error -> {ErrorType, Error}
              end
          end)()).

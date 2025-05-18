@@ -122,7 +122,7 @@
 
 % avoid misuse of old catch with a macro
 -define(CATCH(E),
-        try E, ok catch _:_ -> ok end).
+        try _ = E, ok catch _:_ -> ok end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

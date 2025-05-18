@@ -38,6 +38,7 @@
   "lib/erlang_term",
   "lib/key2value",
   "lib/keys1value",
+  "lib/ntpstat",
   "lib/pqueue",
   "lib/quickrand",
   "lib/reltool_util",

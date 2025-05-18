@@ -50,6 +50,15 @@ Erlang `keys1value`
 - `Fri Oct 27 06:13:06 UTC 2023`
 - `MIT`
 
+Erlang `ntpstat`
+----------------
+`Erlang ntpstat Client Interface`
+
+- `https://github.com/okeuday/ntpstat`
+- `commit 80e5a8d3fb4b82f37b71edd503ef42d88e869793`
+- `Sun May 18 04:21:17 UTC 2025`
+- `MIT`
+
 Erlang `pqueue`
 ---------------
 `Erlang Priority Queues`
@@ -91,8 +100,8 @@ Erlang `syslog_socket`
 `Erlang syslog Client Interface`
 
 - `https://github.com/okeuday/syslog_socket`
-- `commit 5d82b979cb361f9304e697e172c3b7d0b5d58a35 (v2.0.7)`
-- `Fri Oct 27 06:13:06 UTC 2023`
+- `commit 29b8c2f4ea08d2c840a0c27bccf09efddac66d25`
+- `Sun May 18 04:21:17 UTC 2025`
 - `MIT`
 
 Erlang `trie`
@@ -100,8 +109,8 @@ Erlang `trie`
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
-- `commit ec35838d7030a2adb7f04dc9bbc04af01ac9a84e (v2.0.7)`
-- `Fri Oct 27 06:13:06 UTC 2023`
+- `commit 0cf9c913b5e0f39a46c763a2168077d2c4dfd0e9`
+- `Sun May 18 04:21:17 UTC 2025`
 - `MIT`
 
 Erlang `uuid`

@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2025-05-17 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add ntp_status functionality to CloudI logging so the NTP server
+      time synchronization is monitored alongside the Erlang VM time_offset
+        * Error log output occurs when NTP is not synchronized
+    * Add error log output when external services support is available
+      (?CLOUDI_CORE_STANDALONE is not defined) and the maximum number of
+      file descriptors is less than or equal to 16384
+    * Add ntpstat
+    * Update trie
+    * Update syslog_socket
+
 2025-03-23 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve cloudi_task_scheduler min_max/greedy comment
@@ -9,6 +21,9 @@
 
     * Change CloudI API file descriptors to avoid [3..1023]
       so that range is reserved for older source code using select
+        * This change requires the file descriptor limit of the shell
+          to be higher than 1024 when using external services
+          (65536 is a higher value that is commonly used)
     * Add cloudi_service CT tests for fatal_timeout
       service configuration options
       (fatal_timeout_interrupt and fatal_timeout_delay)

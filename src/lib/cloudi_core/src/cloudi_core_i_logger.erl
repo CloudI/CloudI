@@ -130,6 +130,14 @@
             :: undefined | #config_logging_formatters{},
         formatters_level
             :: undefined | cloudi_service_api:loglevel(),
+        ntp_status
+            :: pid(),
+        ntp_status_value = undefined
+            :: undefined | cloudi_service_api:logging_ntp_status(),
+        ntp_status_time = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        ntp_status_cleared = true
+            :: boolean(),
         log_time_offset
             :: cloudi_service_api:loglevel(),
         log_time_offset_nanoseconds
@@ -664,6 +672,7 @@ init([#config_logging{file = FilePath,
                       queue_mode_sync = QueueModeSync,
                       queue_mode_overload = QueueModeOverload,
                       redirect = NodeLogger,
+                      ntp_status = NtpStatusConfig,
                       syslog = SyslogConfig,
                       formatters = FormattersConfig,
                       log_time_offset = LogTimeOffset,
@@ -679,6 +688,7 @@ init([#config_logging{file = FilePath,
         #config_logging_formatters{level = FormattersLevel0} ->
             FormattersLevel0
     end,
+    Self = self(),
     #state{mode = Mode} = State =
         #state{file_sync = FileSync,
                stdout = StdoutPort,
@@ -688,6 +698,7 @@ init([#config_logging{file = FilePath,
                queue_mode_overload = QueueModeOverload,
                formatters = FormattersConfig,
                formatters_level = FormattersLevel,
+               ntp_status = ntp_status_open(NtpStatusConfig, Self),
                log_time_offset = LogTimeOffset,
                log_time_offset_nanoseconds = time_offset_nanoseconds(),
                log_time_offset_monitor = erlang:monitor(time_offset,
@@ -695,7 +706,7 @@ init([#config_logging{file = FilePath,
                aspects_log_before = AspectsLogBefore,
                aspects_log_after = AspectsLogAfter,
                logger_node = node(),
-               logger_self = self()},
+               logger_self = Self},
     {SyslogResult,
      #state{syslog_level = SyslogLevel} = StateNext} = syslog_open(SyslogConfig,
                                                                    false,
@@ -764,6 +775,9 @@ handle_call(status, _,
                    mode_overload_end = OverloadEnd,
                    mode_overload_end_event = OverloadEndEvent,
                    mode_overload_total = OverloadTotal,
+                   ntp_status_value = NtpStatusValue,
+                   ntp_status_time = NtpStatusTime,
+                   ntp_status_cleared = NtpStatusCleared,
                    time_offset_change = TimeOffsetChange,
                    time_offset_event = TimeOffsetEvent,
                    file_counts = FileCounts,
@@ -847,8 +861,19 @@ handle_call(status, _,
               TimeOffsetEvent} | Status8]
     end,
     Status10 = if
-        OverloadStart =:= undefined ->
+        NtpStatusCleared =:= true ->
             Status9;
+        NtpStatusCleared =:= false ->
+            NtpStatusDateTimeUTC = cloudi_timestamp:
+                                   datetime_utc(NtpStatusTime + TimeOffset),
+            [{ntp_status,
+              NtpStatusValue},
+             {ntp_status_time,
+              datetime_to_string(NtpStatusDateTimeUTC)} | Status9]
+    end,
+    Status11 = if
+        OverloadStart =:= undefined ->
+            Status10;
         OverloadEnd =:= undefined ->
             OverloadStartMicroSeconds = cloudi_timestamp:
                                         convert(OverloadStart + TimeOffset,
@@ -856,7 +881,7 @@ handle_call(status, _,
             [{queue_mode_overload_last_start,
               microseconds_to_string(OverloadStartMicroSeconds)},
              {queue_mode_overload_last_start_event,
-              OverloadStartEvent} | Status9];
+              OverloadStartEvent} | Status10];
         is_list(OverloadTotal) ->
             OverloadStartMicroSeconds = cloudi_timestamp:
                                         convert(OverloadStart + TimeOffset,
@@ -873,11 +898,11 @@ handle_call(status, _,
              {queue_mode_overload_last_end_event,
               OverloadEndEvent},
              {queue_mode_overload_last_total,
-              OverloadTotal} | Status9]
+              OverloadTotal} | Status10]
     end,
-    Status11 = if
+    Status12 = if
         SyncStart =:= undefined ->
-            Status10;
+            Status11;
         SyncEnd =:= undefined ->
             SyncStartMicroSeconds = cloudi_timestamp:
                                     convert(SyncStart + TimeOffset,
@@ -885,7 +910,7 @@ handle_call(status, _,
             [{queue_mode_sync_last_start,
               microseconds_to_string(SyncStartMicroSeconds)},
              {queue_mode_sync_last_start_event,
-              SyncStartEvent} | Status10];
+              SyncStartEvent} | Status11];
         is_list(SyncTotal) ->
             SyncStartMicroSeconds = cloudi_timestamp:
                                     convert(SyncStart + TimeOffset,
@@ -902,9 +927,9 @@ handle_call(status, _,
              {queue_mode_sync_last_end_event,
               SyncEndEvent},
              {queue_mode_sync_last_total,
-              SyncTotal} | Status10]
+              SyncTotal} | Status11]
     end,
-    StatusN = [{queue_mode, Mode} | Status11],
+    StatusN = [{queue_mode, Mode} | Status12],
     {reply, {ok, StatusN}, State};
 handle_call(status_reset, _, State) ->
     {reply, ok,
@@ -918,6 +943,7 @@ handle_call(status_reset, _, State) ->
                  mode_overload_end = undefined,
                  mode_overload_end_event = undefined,
                  mode_overload_total = undefined,
+                 ntp_status_cleared = true,
                  time_offset_change = undefined,
                  time_offset_event = undefined,
                  file_counts = #{},
@@ -1108,6 +1134,13 @@ handle_info({terminate, Reason, TerminateTimeMax} = Terminate,
             _ = erlang:send_after(TerminateDelay, Self, Terminate),
             {noreply, State}
     end;
+handle_info({ntp, NtpStatusValueNew, NtpStatusTimeNew}, State) ->
+    case ntp_status_event(NtpStatusValueNew, NtpStatusTimeNew, State) of
+        {ok, StateNew} ->
+            {noreply, StateNew};
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
+    end;
 handle_info(file_sync, State) ->
     case log_file_sync(State) of
         {ok, StateNew} ->
@@ -1121,10 +1154,12 @@ handle_info(Request, State) ->
 terminate(_, #state{file_fd = FileFd,
                     stdout = StdoutPort,
                     syslog = Syslog,
+                    ntp_status = NtpStatus,
                     log_time_offset_monitor = Monitor}) ->
     ok = ?CATCH(file:close(FileFd)),
     ok = stdout_close(StdoutPort),
     ok = syslog_close(Syslog),
+    ok = ntp_status_close(NtpStatus),
     true = erlang:demonitor(Monitor),
     ok.
 
@@ -1155,6 +1190,7 @@ log_config_set(#config_logging{file = FilePath,
                                redirect = NodeLogger,
                                syslog = SyslogConfig,
                                formatters = FormattersConfig,
+                               ntp_status = NtpStatusConfig,
                                log_time_offset = LogTimeOffset,
                                aspects_log_before = AspectsLogBefore,
                                aspects_log_after = AspectsLogAfter},
@@ -1163,7 +1199,8 @@ log_config_set(#config_logging{file = FilePath,
                 {FilePath, fun log_config_file_set/2},
                 {Stdout, fun log_config_stdout_set/2},
                 {SyslogConfig, fun log_config_syslog_set/2},
-                {FormattersConfig, fun log_config_formatters_set/2}],
+                {FormattersConfig, fun log_config_formatters_set/2},
+                {NtpStatusConfig, fun log_config_ntp_status_set/2}],
                State#state{file_sync = FileSync,
                            queue_pending = 0,
                            queue_mode_async = QueueModeAsync,
@@ -1288,6 +1325,13 @@ log_config_formatters_set(FormattersConfigNew,
         true ->
             {ok, SwitchF(State)}
     end.
+
+log_config_ntp_status_set(NtpStatusConfigNew,
+                          #state{ntp_status = NtpStatusOld,
+                                 logger_self = Self} = State) ->
+    ok = ntp_status_close(NtpStatusOld),
+    NtpStatusNew = ntp_status_open(NtpStatusConfigNew, Self),
+    {ok, State#state{ntp_status = NtpStatusNew}}.
 
 log_level_update(#state{main_level = MainLevel,
                         level = LevelOld,
@@ -2155,6 +2199,55 @@ load_interface_module(Level, Mode, Destination) when is_atom(Level) ->
         {error, _} = Error ->
             Error
     end.
+
+ntp_status_open(#config_logging_ntp_status{host = Host,
+                                           port = Port,
+                                           period = Period}, Self) ->
+    {ok,
+     NtpStatus} = cloudi_x_ntpstat_monitor:start_link(Self, Period,
+                                                      [{host, Host},
+                                                       {port, Port}]),
+    NtpStatus.
+
+ntp_status_close(NtpStatus) ->
+    true = erlang:unlink(NtpStatus),
+    cloudi_x_ntpstat_monitor:stop_link(NtpStatus).
+
+ntp_status_event(NtpStatusValueNew, NtpStatusTimeNew,
+                 #state{ntp_status_value = undefined} = State) ->
+    StateNew = State#state{ntp_status_value = NtpStatusValueNew,
+                           ntp_status_time = NtpStatusTimeNew,
+                           ntp_status_cleared = false},
+    if
+        NtpStatusValueNew =:= ok ->
+            ?LOG_T0_INFO("NTP status ~w",
+                         [NtpStatusValueNew], StateNew);
+        true ->
+            ?LOG_T0_ERROR("NTP status ~w error",
+                          [NtpStatusValueNew], StateNew)
+    end;
+ntp_status_event(NtpStatusValueNew, _,
+                 #state{ntp_status_value = NtpStatusValueNew} = State) ->
+    % ntp_status settings were changed but the status value didn't change
+    {ok, State};
+ntp_status_event(NtpStatusValueNew, NtpStatusTimeNew,
+                 #state{ntp_status_value = NtpStatusValueOld,
+                        ntp_status_time = NtpStatusTimeOld} = State) ->
+    NtpStatusTimeSeconds = cloudi_timestamp:
+                           convert(NtpStatusTimeNew - NtpStatusTimeOld,
+                                   native, second),
+    ResolvedStr = if
+        NtpStatusValueNew =:= ok ->
+            "resolved ";
+        true ->
+            ""
+    end,
+    ?LOG_T0_ERROR("NTP status ~w -> ~w ~serror after ~s",
+                  [NtpStatusValueOld, NtpStatusValueNew, ResolvedStr,
+                   cloudi_timestamp:seconds_to_string(NtpStatusTimeSeconds)],
+                  State#state{ntp_status_value = NtpStatusValueNew,
+                              ntp_status_time = NtpStatusTimeNew,
+                              ntp_status_cleared = false}).
 
 stdout_open(false) ->
     undefined;
