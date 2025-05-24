@@ -273,6 +273,7 @@ status_request(Timeout,
 
 status_validate(#status{leap_indicator = 3,
                         code = Code} = Status) ->
+    % RFC 1305, Appendix B, Section 2.2.1, System Event Code
     Restart = Code == 1,
     status_result_error(clock_unsynchronized, Restart, Status);
 status_validate(#status{clock_source = ClockSource,
@@ -398,7 +399,7 @@ payload_lookup_update(Payload, Value, Key, Lookup) ->
     ValueNew = lists:reverse(Value),
     payload_lookup(Payload, maps:put(KeyNew, ValueNew, Lookup)).
 
-% RFC 1305, Appendix B, Section 2.2.1
+% RFC 1305, Appendix B, Section 2.2.1, Clock Source
 clock_source(0) ->
     "unspecified";
 clock_source(1) ->

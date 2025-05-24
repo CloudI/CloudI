@@ -359,8 +359,7 @@ cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
             {noreply, State} ->
                 Service ! #init_end{state = State},
                 ok;
-            {stop, Reason, State} ->
-                true = Reason /= undefined,
+            {stop, {error, _} = Reason, State} ->
                 Service ! #init_end{state = State,
                                     error = Reason},
                 ok

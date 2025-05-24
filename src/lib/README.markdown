@@ -55,8 +55,8 @@ Erlang `ntpstat`
 `Erlang ntpstat Client Interface`
 
 - `https://github.com/okeuday/ntpstat`
-- `commit 80e5a8d3fb4b82f37b71edd503ef42d88e869793`
-- `Sun May 18 04:21:17 UTC 2025`
+- `commit 123f3de82f99124e87edf84f4b343f4b3ba4b997`
+- `Sat May 24 03:47:33 UTC 2025`
 - `MIT`
 
 Erlang `pqueue`

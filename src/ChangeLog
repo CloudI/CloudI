@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2025-05-23 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_service_map_reduce match type specification
+    * Update ntpstat
+
 2025-05-17 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add ntp_status functionality to CloudI logging so the NTP server
