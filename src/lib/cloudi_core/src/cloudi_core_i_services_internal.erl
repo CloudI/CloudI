@@ -3107,7 +3107,11 @@ handle_module_request_loop_normal(Uses, ResultPid) ->
          _Module, _ConfigOptions} = ModuleRequest ->
             handle_module_request_loop_normal(Uses,
                                               ModuleRequest,
-                                              ResultPid)
+                                              ResultPid);
+        {'EXIT', _, _} = Exit ->
+            % RequestPid should have trap_exit false!
+            ResultPid ! Exit,
+            handle_module_request_loop_normal(Uses, ResultPid)
     end.
 
 handle_module_request_loop_hibernate(Uses, ResultPid) ->
@@ -3132,7 +3136,11 @@ handle_module_request_loop_hibernate(Uses, ResultPid) ->
          _Module, _ConfigOptions} = ModuleRequest ->
             handle_module_request_loop_hibernate(Uses,
                                                  ModuleRequest,
-                                                 ResultPid)
+                                                 ResultPid);
+        {'EXIT', _, _} = Exit ->
+            % RequestPid should have trap_exit false!
+            ResultPid ! Exit,
+            handle_module_request_loop_hibernate(Uses, ResultPid)
     end.
 
 handle_module_request_loop_normal(Uses,
@@ -3244,7 +3252,11 @@ handle_module_info_loop_normal(Uses, ResultPid) ->
          _Module, _ConfigOptions} = ModuleInfo ->
             handle_module_info_loop_normal(Uses,
                                            ModuleInfo,
-                                           ResultPid)
+                                           ResultPid);
+        {'EXIT', _, _} = Exit ->
+            % InfoPid should have trap_exit false! (duo_mode == false)
+            ResultPid ! Exit,
+            handle_module_info_loop_normal(Uses, ResultPid)
     end.
 
 handle_module_info_loop_hibernate(Uses, ResultPid) ->
@@ -3266,7 +3278,11 @@ handle_module_info_loop_hibernate(Uses, ResultPid) ->
          _Module, _ConfigOptions} = ModuleInfo ->
             handle_module_info_loop_hibernate(Uses,
                                               ModuleInfo,
-                                              ResultPid)
+                                              ResultPid);
+        {'EXIT', _, _} = Exit ->
+            % InfoPid should have trap_exit false! (duo_mode == false)
+            ResultPid ! Exit,
+            handle_module_info_loop_hibernate(Uses, ResultPid)
     end.
 
 handle_module_info_loop_normal(Uses,
