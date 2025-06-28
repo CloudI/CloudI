@@ -55,16 +55,6 @@ unset ESOCK_USE_SOCKET_REGISTRY
 unset GLOBAL_HIGH_LEVEL_TRACE
 unset OTP_TEST_FEATURES
 
-# Default umask (u=rwx,g=rx,o=), if it wasn't provided to the configure script
-if [ -z "$CLOUDI_UMASK" ]; then
-    CLOUDI_UMASK="0027"
-fi
-
-# Default pid file path, if it wasn't provided to the configure script
-if [ -z "$CLOUDI_PID_FILE" ]; then
-    CLOUDI_PID_FILE="$ROOT_LOG_DIR/$CLOUDI_NODE_NAME.pid"
-fi
-
 # If the CloudI configuration causes a Distributed Erlang node connection to be
 # attempted during a stop or restart
 # (e.g., in cloudi_core_i_nodes.erl or nodefinder, due to the use of

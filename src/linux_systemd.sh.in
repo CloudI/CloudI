@@ -1,0 +1,78 @@
+#!/bin/sh
+
+# Use this script on Linux if you want to manage CloudI execution
+# with systemd.  Executing this script creates a systemd unit file
+# for systemd configuration.
+
+# Execute the script (after configure) with:
+# sh linux_systemd.sh
+
+OUTPUT_FILENAME="cloudi-systemd.service"
+
+# To prepare, it is necessary to increase the file descriptor limit
+# with modifications like:
+# $ sudo sh -c 'cat >> /etc/security/limits.conf <<EOF
+## (* does not include root)
+#*                -       nofile          65535
+#root             -       nofile          65535
+#EOF'
+# $ sudo sh -c 'cat >> /etc/systemd/system.conf <<EOF
+#DefaultLimitNOFILE=65535
+#EOF'
+
+# If you need a script to check whether PostgreSQL is running before
+# starting CloudI (or some similar startup validation), create that like:
+# $ sudo sh -c 'cat << EOF > /usr/local/bin/cloudi_prestart
+##!/bin/sh
+#until runuser -l postgres -c 'pg_isready' 2>/dev/null; do
+#    sleep 1
+#done
+#EOF'
+# $ sudo chmod +x /usr/local/bin/cloudi_prestart
+
+# To utilize the startup validation script, it needs to be added to the
+# cloudi-systemd.service output file with:
+#ExecStartPre=/usr/local/bin/cloudi_prestart
+
+# The cloudi-systemd.service output file is created below in the current
+# directory and will need to be moved into the appropriate path, e.g.:
+# $ sudo mv cloudi-systemd.service /etc/systemd/system/
+
+# To utilize the cloudi-systemd.service output file, use the sequence:
+# $ sudo systemctl daemon-reload
+# $ sudo systemctl enable cloudi-systemd.service
+# $ sudo systemctl start cloudi-systemd.service
+
+# Additional commands that are useful:
+# $ sudo systemctl status cloudi-systemd.service
+# $ sudo systemctl restart cloudi-systemd.service
+
+CLOUDI_EXECUTABLE="@cloudi_bindir@/cloudi"
+if [ ! -x "$CLOUDI_EXECUTABLE" ]; then
+    echo "$CLOUDI_EXECUTABLE does not exist!"
+    exit 1
+fi
+CLOUDI_PID_FILE="@CLOUDI_PID_FILE@"
+WORKING_DIRECTORY="@cloudi_logdir@"
+
+cat << EOF > cloudi-systemd.service
+[Unit]
+Description=CloudI SystemD Service
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=$CLOUDI_EXECUTABLE start
+ExecReload=$CLOUDI_EXECUTABLE restart
+ExecStop=$CLOUDI_EXECUTABLE stop
+PIDFile=$CLOUDI_PID_FILE
+User=root
+WorkingDirectory=$WORKING_DIRECTORY
+TimeoutSec=infinity
+Restart=no
+OOMPolicy=stop
+OOMScoreAdjust=-100
+
+[Install]
+WantedBy=multi-user.target
+EOF

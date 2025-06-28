@@ -915,10 +915,22 @@ AS_IF([test -n "$CLOUDI_ARG_NODE_COOKIE"],
       [CLOUDI_ARG_NODE_COOKIE="-setcookie cloudi"])
 AC_SUBST(CLOUDI_ARG_NODE_COOKIE)
 
+# Default umask (u=rwx,g=rx,o=), if it wasn't provided to the configure script
+if test "x$CLOUDI_UMASK" = "x"; then
+    CLOUDI_UMASK="0027"
+fi
+AC_SUBST(CLOUDI_UMASK)
+# Default pid file path, if it wasn't provided to the configure script
+if test "x$CLOUDI_PID_FILE" = "x" ; then
+    CLOUDI_PID_FILE="$cloudi_prefix/logs/$CLOUDI_NODE_NAME.pid"
+fi
+AC_SUBST(CLOUDI_PID_FILE)
+
 AC_CONFIG_FILES([
     cloudi_tests.conf
     cloudi_minimal.conf
     linux_setcap.sh
+    linux_systemd.sh
     rebar_src.config
     rebar_src_test.config
     reltool.config

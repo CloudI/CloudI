@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2025-06-28 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add linux_systemd.sh script for generating systemd configuration
+      for CloudI execution
+    * Improve cloudi script
+
 2025-06-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix for internal services that make the mistake of using
