@@ -49,7 +49,7 @@
             :: cloudi_service_api:logging_ntp_status_host(),
         port = 123
             :: cloudi_service_api:logging_ntp_status_port(),
-        period = 1
+        period = 1 % seconds
             :: cloudi_service_api:logging_ntp_status_period()
     }).
 

@@ -3,15 +3,15 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Services==
+%%% ==CloudI Services Monitor==
 %%% Manage all cloudi_core_i_spawn processes with monitors and their
-%%% configuration.  Perform process restarts but do not escalate failures
-%%% (only log failures).
+%%% configuration.  Perform process restarts, log process failures and
+%%% shutdown after a critical service fails.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @copyright 2011-2025 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -351,6 +351,9 @@ pids(ServiceId, Timeout)
 %%%------------------------------------------------------------------------
 
 init([]) ->
+    % for efficient service restarts it is best to have this process
+    % running with high priority
+    normal = erlang:process_flag(priority, high),
     {ok, #state{}}.
 
 handle_call({monitor, M, F, A, ProcessIndex, ProcessCount, ThreadCount,
