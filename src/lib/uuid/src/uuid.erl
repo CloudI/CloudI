@@ -4,7 +4,9 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==Erlang UUID Generation==
-%%% [http://www.ietf.org/rfc/rfc4122.txt] is the reference for official UUIDs.
+%%% [http://www.ietf.org/rfc/rfc9562.txt] is the reference for UUIDs
+%%% (replacing [http://www.ietf.org/rfc/rfc4122.txt]).
+%%%
 %%% This implementation provides a version 1 UUID that includes both the
 %%% Erlang pid identifier (ID, Serial, Creation) and the distributed Erlang
 %%% node name within the 48 bit node ID.  To make room for the Erlang pid
@@ -13,20 +15,21 @@
 %%% 3 NIC (Network Interface Controller) specific bytes) and
 %%% the distributed Erlang node name are bitwise-XORed down to 16 bits.
 %%% The Erlang pid is bitwise-XORed from 72 bits down to 32 bits.
-%%% The version 3 (MD5), version 4 (random), and version 5 (SHA)
-%%% methods are provided as specified within the RFC.
 %%%
-%%% The ordered version 1 variant is not present in the RFC,
-%%% though it is the most standards-compliant way of providing
-%%% timestamp UUID ordering.  Timestamp ordering has been used in many
-%%% non-standard UUID formats based on version 1 and typically limited to
-%%% the same data present in the version 1 UUID
-%%% (e.g., "Version 6" at http://gh.peabody.io/uuidv6/).
+%%% The version 3 (MD5), version 4 (random), and version 5 (SHA)
+%%% methods are provided as specified within RFC 4122.
+%%%
+%%% The ordered version 1 variant was used before the version 6 UUID
+%%% was defined by RFC 9562.  Use the version 6 UUID instead, if possible.
+%%%
+%%% The version 6 (ordered v1), version 7 (UNIX epoch), and version 8 (custom)
+%%% methods are provided as specified within RFC 9562.  The version 7 UUID
+%%% provides less time precision than version 1 and version 6 UUIDs.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2023 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2025 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -47,8 +50,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2023 Michael Truog
-%%% @version 2.0.6 {@date} {@time}
+%%% @copyright 2011-2025 Michael Truog
+%%% @version 2.0.7 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -79,6 +82,16 @@
          get_v5_compat/1,
          get_v5_compat/2,
          is_v5/1,
+         get_v6/1,
+         is_v6/1,
+         get_v7/2,
+         get_v7_time/1,
+         get_v7_time_ns/1,
+         get_v7_datetime/1,
+         is_v7/1,
+         get_v8/1,
+         get_v8/3,
+         is_v8/1,
          uuid_to_list/1,
          uuid_to_string/1,
          uuid_to_string/2,
@@ -117,11 +130,11 @@
 -else.
 -type timestamp_type_internal() :: 'erlang_now' | 'os'.
 -endif.
--type v1_variant() :: 'rfc4122' | 'ordered'.
+-type variant() :: 'rfc4122' | 'ordered' | 'rfc9562' | 'rfc'.
 
 -record(uuid_state,
     {
-        variant :: v1_variant(),
+        variant :: 'rfc' | 'ordered',
         node_id :: <<_:48>>,
         clock_seq :: 0..16383,
         timestamp_type :: timestamp_type_internal(),
@@ -163,7 +176,7 @@
 -define(TAG_NEW_PID_EXT, 88).
 
 % 16#01b21dd213814000 is the number of 100-ns intervals between the
-% UUID epoch 1582-10-15 00:00:00 and the UNIX epoch 1970-01-01 00:00:00.
+% v1 UUID epoch 1582-10-15 00:00:00 and the UNIX epoch 1970-01-01 00:00:00.
 -define(GREGORIAN_EPOCH_OFFSET, 16#01b21dd213814000).
 
 %%%------------------------------------------------------------------------
@@ -198,7 +211,7 @@ new(Pid) when is_pid(Pid) ->
           Options :: timestamp_type() |
                      list({timestamp_type, timestamp_type()} |
                           {mac_address, list(non_neg_integer())} |
-                          {variant, v1_variant()})) ->
+                          {variant, variant()})) ->
     state().
 
 new(Pid, TimestampType)
@@ -222,10 +235,15 @@ new(Pid, Options)
             mac_address()
     end,
     Variant = case lists:keyfind(variant, 1, Options) of
-        {variant, Value3} ->
-            Value3;
+        {variant, Value3}
+            when (Value3 =:= rfc4122) orelse
+                 (Value3 =:= rfc9562) orelse
+                 (Value3 =:= rfc) ->
+            rfc;
+        {variant, ordered} ->
+            ordered;
         false ->
-            rfc4122
+            rfc
     end,
 
     % make the version 1 UUID specific to the Erlang node and pid
@@ -262,13 +280,13 @@ new(Pid, Options)
               PidSR1, PidSR2, PidSR3, PidSR4]}
     end,
     Node32 = quickrand_hash:jenkins_32(NodeData, NodeCreationCount),
-    Node16 = (Node32 bsr 16) bxor (Node32 band 16#FFFF),
+    Node16 = (Node32 bsr 16) bxor (Node32 band 16#ffff),
     Pid32 = quickrand_hash:jenkins_32(PidData),
     NodeId = <<Node16:16/big-unsigned-integer,
                Pid32:32/big-unsigned-integer>>,
 
     ClockSeq = if
-        Variant =:= rfc4122 ->
+        Variant =:= rfc ->
             pseudo_random(16384) - 1;
         Variant =:= ordered ->
             pseudo_random(8192) - 1
@@ -304,7 +322,7 @@ new(Pid, Options)
 -spec get_v1(State :: state()) ->
     {uuid(), StateNew :: state()}.
 
-get_v1(#uuid_state{variant = rfc4122,
+get_v1(#uuid_state{variant = rfc,
                    node_id = NodeId,
                    clock_seq = ClockSeq,
                    timestamp_type = TimestampTypeInternal,
@@ -314,9 +332,9 @@ get_v1(#uuid_state{variant = rfc4122,
     % will be larger than 60 bits after 5236-03-31 21:21:00
     <<TimeHigh:12, TimeMid:16, TimeLow:32>> = <<Time:60>>,
     {<<TimeLow:32, TimeMid:16,
-       0:1, 0:1, 0:1, 1:1,  % version 1 bits
+       0:1, 0:1, 0:1, 1:1,         % version 1 bits
        TimeHigh:12,
-       1:1, 0:1,            % RFC 4122 variant bits
+       1:1, 0:1,                   % RFC 4122 variant bits
        ClockSeq:14,
        NodeId/binary>>,
      State#uuid_state{timestamp_last = Timestamp}};
@@ -330,9 +348,9 @@ get_v1(#uuid_state{variant = ordered,
     % will be larger than 60 bits after 5236-03-31 21:21:00
     <<TimeHigh:48, TimeLow:12>> = <<Time:60>>,
     {<<TimeHigh:48,
-       0:1, 0:1, 0:1, 1:1,  % version 1 bits
+       0:1, 0:1, 0:1, 1:1,         % version 1 bits
        TimeLow:12,
-       1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+       1:1, 1:1, 1:1,              % ordered (future definition) variant bits
        ClockSeq:13,
        NodeId/binary>>,
      State#uuid_state{timestamp_last = Timestamp}}.
@@ -407,16 +425,16 @@ get_v1_time_ns(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
     <<Time:60>> = case Value of
         <<TimeLow:32, TimeMid:16,
-          0:1, 0:1, 0:1, 1:1,  % version 1 bits
+          0:1, 0:1, 0:1, 1:1,      % version 1 bits
           TimeHigh:12,
-          1:1, 0:1,            % RFC 4122 variant bits
+          1:1, 0:1,                % RFC 4122 variant bits
           _:14,
           _:48>> ->
             <<TimeHigh:12, TimeMid:16, TimeLow:32>>;
         <<TimeHigh:48,
-          0:1, 0:1, 0:1, 1:1,  % version 1 bits
+          0:1, 0:1, 0:1, 1:1,      % version 1 bits
           TimeLow:12,
-          1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+          1:1, 1:1, 1:1,           % ordered (future definition) variant bits
           _:13,
           _:48>> ->
             <<TimeHigh:48, TimeLow:12>>
@@ -439,16 +457,16 @@ get_v1_time_ns(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
     <<Time:60>> = case Value of
         <<TimeLow:32, TimeMid:16,
-          0:1, 0:1, 0:1, 1:1,  % version 1 bits
+          0:1, 0:1, 0:1, 1:1,      % version 1 bits
           TimeHigh:12,
-          1:1, 0:1,            % RFC 4122 variant bits
+          1:1, 0:1,                % RFC 4122 variant bits
           _:14,
           _:48>> ->
             <<TimeHigh:12, TimeMid:16, TimeLow:32>>;
         <<TimeHigh:48,
-          0:1, 0:1, 0:1, 1:1,  % version 1 bits
+          0:1, 0:1, 0:1, 1:1,      % version 1 bits
           TimeLow:12,
-          1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+          1:1, 1:1, 1:1,           % ordered (future definition) variant bits
           _:13,
           _:48>> ->
             <<TimeHigh:48, TimeLow:12>>
@@ -519,16 +537,16 @@ get_v1_datetime(Value, MicroSecondsOffset)
     boolean().
 
 is_v1(<<_TimeLow:32, _TimeMid:16,
-        0:1, 0:1, 0:1, 1:1,  % version 1 bits
+        0:1, 0:1, 0:1, 1:1,        % version 1 bits
         _TimeHigh:12,
-        1:1, 0:1,            % RFC 4122 variant bits
+        1:1, 0:1,                  % RFC 4122 variant bits
         _ClockSeq:14,
         _NodeId:48>>) ->
     true;
 is_v1(<<_TimeHigh:48,
-        0:1, 0:1, 0:1, 1:1,  % version 1 bits
+        0:1, 0:1, 0:1, 1:1,        % version 1 bits
         _TimeLow:12,
-        1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+        1:1, 1:1, 1:1,             % ordered (future definition) variant bits
         _ClockSeq:13,
         _NodeId:48>>) ->
     true;
@@ -549,9 +567,9 @@ get_v3(Data) when is_binary(Data) ->
         crypto:hash(md5, Data),
     B4 = (B4a bxor B4b) bxor B4c,
     <<B1:48,
-      0:1, 0:1, 1:1, 1:1,  % version 3 bits
+      0:1, 0:1, 1:1, 1:1,          % version 3 bits
       B2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       B3:14,
       B4:48>>.
 
@@ -591,9 +609,9 @@ get_v3_compat(Data) when is_binary(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48>> =
         crypto:hash(md5, Data),
     <<B1:48,
-      0:1, 0:1, 1:1, 1:1,  % version 3 bits
+      0:1, 0:1, 1:1, 1:1,          % version 3 bits
       B2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       B3:14,
       B4:48>>.
 
@@ -630,9 +648,9 @@ get_v3_compat(Namespace, Data) when is_binary(Namespace) ->
     boolean().
 
 is_v3(<<_:48,
-        0:1, 0:1, 1:1, 1:1,  % version 3 bits
+        0:1, 0:1, 1:1, 1:1,        % version 3 bits
         _:12,
-        1:1, 0:1,            % RFC 4122 variant bits
+        1:1, 0:1,                  % RFC 4122 variant bits
         _:62>>) ->
     true;
 is_v3(_) ->
@@ -659,25 +677,25 @@ get_v4(strong) ->
     <<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>> =
         crypto:strong_rand_bytes(16),
     <<Rand1:48,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      0:1, 1:1, 0:1, 0:1,          % version 4 bits
       Rand2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       Rand3:62>>;
 get_v4(cached) ->
     <<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>> =
         quickrand_cache:rand_bytes(16),
     <<Rand1:48,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      0:1, 1:1, 0:1, 0:1,          % version 4 bits
       Rand2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       Rand3:62>>;
 get_v4(Cache) when element(1, Cache) =:= quickrand_cache ->
     {<<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>>, CacheNew} =
         quickrand_cache:rand_bytes(16, Cache),
     {<<Rand1:48,
-       0:1, 1:1, 0:1, 0:1,  % version 4 bits
+       0:1, 1:1, 0:1, 0:1,         % version 4 bits
        Rand2:12,
-       1:1, 0:1,            % RFC 4122 variant bits
+       1:1, 0:1,                   % RFC 4122 variant bits
        Rand3:62>>, CacheNew}.
 
 %%-------------------------------------------------------------------------
@@ -696,9 +714,9 @@ get_v4_urandom() ->
     Rand = quickrand:mwc256_128(16#4000000000000000000000000000000) - 1,
     <<Rand1:48, Rand2:12, Rand3:62>> = <<Rand:122>>,
     <<Rand1:48,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      0:1, 1:1, 0:1, 0:1,          % version 4 bits
       Rand2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       Rand3:62>>.
 
 %%-------------------------------------------------------------------------
@@ -711,9 +729,9 @@ get_v4_urandom() ->
     boolean().
 
 is_v4(<<_:48,
-        0:1, 1:1, 0:1, 0:1,  % version 4 bits
+        0:1, 1:1, 0:1, 0:1,        % version 4 bits
         _:12,
-        1:1, 0:1,            % RFC 4122 variant bits
+        1:1, 0:1,                  % RFC 4122 variant bits
         _:62>>) ->
     true;
 is_v4(_) ->
@@ -733,9 +751,9 @@ get_v5(Data) when is_binary(Data) ->
         crypto:hash(sha, Data),
     B4 = ((B4a bxor B4b) bxor B4c) bxor B4d,
     <<B1:48,
-      0:1, 1:1, 0:1, 1:1,  % version 5 bits
+      0:1, 1:1, 0:1, 1:1,          % version 5 bits
       B2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       B3:14,
       B4:48>>.
 
@@ -775,9 +793,9 @@ get_v5_compat(Data) when is_binary(Data) ->
     <<B1:48, _:4, B2:12, _:2, B3:14, B4:48, _:32>> =
         crypto:hash(sha, Data),
     <<B1:48,
-      0:1, 1:1, 0:1, 1:1,  % version 5 bits
+      0:1, 1:1, 0:1, 1:1,          % version 5 bits
       B2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       B3:14,
       B4:48>>.
 
@@ -814,12 +832,237 @@ get_v5_compat(Namespace, Data) when is_binary(Namespace) ->
     boolean().
 
 is_v5(<<_:48,
-        0:1, 1:1, 0:1, 1:1,  % version 5 bits
+        0:1, 1:1, 0:1, 1:1,        % version 5 bits
         _:12,
-        1:1, 0:1,            % RFC 4122 variant bits
+        1:1, 0:1,                  % RFC 4122 variant bits
         _:62>>) ->
     true;
 is_v5(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v6 UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v6(State :: state()) ->
+    {uuid(), StateNew :: state()}.
+
+get_v6(#uuid_state{variant = rfc,
+                   node_id = NodeId,
+                   clock_seq = ClockSeq,
+                   timestamp_type = TimestampTypeInternal,
+                   timestamp_last = TimestampLast} = State) ->
+    Timestamp = timestamp(TimestampTypeInternal, TimestampLast),
+    Time = Timestamp + ?GREGORIAN_EPOCH_OFFSET,
+    % will be larger than 60 bits after 5236-03-31 21:21:00
+    <<TimeHigh:48, TimeLow:12>> = <<Time:60>>,
+    {<<TimeHigh:48,
+       0:1, 1:1, 1:1, 0:1,         % version 6 bits
+       TimeLow:12,
+       1:1, 0:1,                   % RFC 9562 variant bits
+       ClockSeq:14,
+       NodeId/binary>>,
+     State#uuid_state{timestamp_last = Timestamp}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Is the binary a v6 UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_v6(Value :: any()) ->
+    boolean().
+
+is_v6(<<_:48,
+        0:1, 1:1, 1:1, 0:1,        % version 6 bits
+        _:12,
+        1:1, 0:1,                  % RFC 9562 variant bits
+        _:62>>) ->
+    true;
+is_v6(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v7 UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v7(Randomness :: 'zero' | 'strong' | 'cached' | 'urandom' |
+                           quickrand_cache:state(),
+             State :: state()) ->
+    {uuid(), StateNew :: state()} |
+    {uuid(), quickrand_cache:state(), StateNew :: state()}.
+
+get_v7(Randomness,
+       #uuid_state{variant = rfc,
+                   timestamp_type = TimestampTypeInternal,
+                   timestamp_last = TimestampLast} = State) ->
+    Timestamp = timestamp(TimestampTypeInternal, TimestampLast),
+    StateNew = State#uuid_state{timestamp_last = Timestamp},
+    % milliseconds since the UNIX epoch 1970-01-01 00:00:00
+    Time = Timestamp div 10000,
+    % will be larger than 48 bits after year 10889
+    TimeFraction = ((Timestamp rem 10000) * 16#fff) div 9999,
+    if
+        is_atom(Randomness) ->
+            Random = if
+                Randomness =:= zero ->
+                    0; % for increment
+                Randomness =:= strong ->
+                    <<_:2, RandomValue:62>> = crypto:strong_rand_bytes(8),
+                    RandomValue;
+                Randomness =:= cached ->
+                    <<_:2, RandomValue:62>> = quickrand_cache:rand_bytes(8),
+                    RandomValue;
+                Randomness =:= urandom ->
+                    quickrand:mwc256_64(16#4000000000000000) - 1
+            end,
+            {<<Time:48,
+               0:1, 1:1, 1:1, 1:1, % version 7 bits
+               TimeFraction:12,
+               1:1, 0:1,           % RFC 9562 variant bits
+               Random:62>>,
+             StateNew};
+        element(1, Randomness) =:= quickrand_cache ->
+            Cache = Randomness,
+            {<<_:2, Random:62>>,
+             CacheNew} = quickrand_cache:rand_bytes(8, Cache),
+            {<<Time:48,
+               0:1, 1:1, 1:1, 1:1, % version 7 bits
+               TimeFraction:12,
+               1:1, 0:1,           % RFC 9562 variant bits
+               Random:62>>,
+             CacheNew, StateNew}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current time value in a manner consistent with the v7 UUID.===
+%% The result is an integer in microseconds since the UNIX epoch.
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v7_time(timestamp_type() | state() | uuid()) ->
+    non_neg_integer().
+
+get_v7_time(Value) ->
+    get_v7_time_ns(Value) div 1000.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the current time value in a manner consistent with the v7 UUID.===
+%% The result is an integer in nanoseconds since the UNIX epoch.
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v7_time_ns(timestamp_type() | state() | uuid()) ->
+    non_neg_integer().
+
+get_v7_time_ns(<<Time:48,
+                 0:1, 1:1, 1:1, 1:1,
+                 TimeFraction:12,
+                 1:1, 0:1,
+                 _:62>>) ->
+    (Time * 10000 + (TimeFraction * 9999) div 16#fff) * 100;
+
+get_v7_time_ns(Value) ->
+    get_v1_time_ns(Value).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get an ISO8601 datetime in UTC from a v7 UUID's time value.===
+%% http://www.w3.org/TR/NOTE-datetime
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v7_datetime(Value :: timestamp_type() | state() | uuid() |
+                               erlang:timestamp()) ->
+    iso8601().
+
+get_v7_datetime(Value) ->
+    MicroSecondsTotal = get_v7_time(Value),
+    MegaSeconds = MicroSecondsTotal div 1000000000000,
+    Seconds = (MicroSecondsTotal div 1000000) - MegaSeconds * 1000000,
+    MicroSeconds = MicroSecondsTotal rem 1000000,
+    get_v1_datetime({MegaSeconds, Seconds, MicroSeconds}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Is the binary a v7 UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_v7(Value :: any()) ->
+    boolean().
+
+is_v7(<<_:48,
+        0:1, 1:1, 1:1, 1:1,        % version 7 bits
+        _:12,
+        1:1, 0:1,                  % RFC 9562 variant bits
+        _:62>>) ->
+    true;
+is_v7(_) ->
+    false.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v8 UUID from a single bitstring or an integer.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v8(Custom :: <<_:122>> | 0..16#3ffffffffffffffffffffffffffffff) ->
+    uuid().
+
+get_v8(<<CustomA:48/bitstring,
+         CustomB:12/bitstring,
+         CustomC:62/bitstring>>) ->
+    get_v8(CustomA, CustomB, CustomC);
+get_v8(Custom)
+    when is_integer(Custom), Custom >= 0,
+         Custom =< 16#3ffffffffffffffffffffffffffffff ->
+    get_v8(<<Custom:122>>).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a v8 UUID from 3 separate bitstrings.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v8(CustomA :: <<_:48>>,
+             CustomB :: <<_:12>>,
+             CustomC :: <<_:62>>) ->
+    uuid().
+
+get_v8(<<_:48/bitstring>> = CustomA,
+       <<_:12/bitstring>> = CustomB,
+       <<_:62/bitstring>> = CustomC) ->
+    <<CustomA:48/bitstring,
+      1:1, 0:1, 0:1, 0:1,          % version 8 bits
+      CustomB:12/bitstring,
+      1:1, 0:1,                    % RFC 9562 variant bits
+      CustomC:62/bitstring>>.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Is the binary a v8 UUID?===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_v8(Value :: any()) ->
+    boolean().
+
+is_v8(<<_:48,
+        1:1, 0:1, 0:1, 0:1,        % version 8 bits
+        _:12,
+        1:1, 0:1,                  % RFC 9562 variant bits
+        _:62>>) ->
+    true;
+is_v8(_) ->
     false.
 
 %%-------------------------------------------------------------------------
@@ -1008,21 +1251,22 @@ string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
 -spec is_uuid(any()) ->
     boolean().
 
-is_uuid(<<0:128>>) ->
-    true;
+is_uuid(?UUID_NIL) ->
+    true; % RFC 4122
+is_uuid(?UUID_MAX) ->
+    true; % RFC 9562
 is_uuid(<<_:48,
           Version:4/unsigned-integer,
           _:12,
-          1:1, 0:1,            % RFC 4122 variant bits
+          1:1, 0:1,                % variant bits for RFC 4122 and RFC 9562
           _:62>>) ->
     (Version == 1) orelse
-    (Version == 3) orelse
-    (Version == 4) orelse
-    (Version == 5);
+    ((Version >= 3) andalso
+     (Version =< 8));
 is_uuid(<<_:48,
           Version:4/unsigned-integer,
           _:12,
-          1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+          1:1, 1:1, 1:1,           % ordered (future definition) variant bits
           _:61>>) ->
     (Version == 1);
 is_uuid(_) ->
@@ -1030,23 +1274,25 @@ is_uuid(_) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Increment the clock sequence of v1 UUID state or a UUID.===
-%% Call to increment the clock sequence counter after the system clock has
-%% been set backwards (see the RFC).  This is only necessary
-%% if the `os' or `warp' timestamp_type is used with a v1 UUID.
-%% The v3, v4 and v5 UUIDs are supported for completeness.
+%% ===Increment UUID state or UUID contents.===
+%% Call to increment the v1 UUID clock sequence counter after the
+%% system clock has been set backwards.  This is only necessary if the
+%% `os' or `warp' timestamp_type is used with a v1 UUID.
+%% The v7 UUID increments its counter (rand_b).
+%% The v3, v4, v5 and v8 UUIDs are supported for completeness.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec increment(state() | uuid()) ->
     state() | uuid().
 
-increment(<<TimeLow:32, TimeMid:16,
-            0:1, 0:1, 0:1, 1:1,  % version 1 bits
-            TimeHigh:12,
-            1:1, 0:1,            % RFC 4122 variant bits
+increment(<<TimeA:48,
+            Version:4/unsigned-integer,
+            TimeB:12,
+            1:1, 0:1,              % variant bits for RFC 4122 and RFC 9562
             ClockSeq:14,
-            NodeId:48>>) ->
+            NodeId:48>>)
+    when (Version == 1) orelse (Version == 6) ->
     ClockSeqNext = ClockSeq + 1,
     ClockSeqNew = if
         ClockSeqNext == 16384 ->
@@ -1054,16 +1300,16 @@ increment(<<TimeLow:32, TimeMid:16,
         true ->
             ClockSeqNext
     end,
-    <<TimeLow:32, TimeMid:16,
-      0:1, 0:1, 0:1, 1:1,  % version 1 bits
-      TimeHigh:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+    <<TimeA:48,
+      Version:4/unsigned-integer,
+      TimeB:12,
+      1:1, 0:1,                    % variant bits for RFC 4122 and RFC 9562
       ClockSeqNew:14,
       NodeId:48>>;
 increment(<<TimeHigh:48,
-            0:1, 0:1, 0:1, 1:1,  % version 1 bits
+            0:1, 0:1, 0:1, 1:1,    % version 1 bits
             TimeLow:12,
-            1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+            1:1, 1:1, 1:1,         % ordered (future definition) variant bits
             ClockSeq:13,
             NodeId:48>>) ->
     ClockSeqNext = ClockSeq + 1,
@@ -1074,24 +1320,42 @@ increment(<<TimeHigh:48,
             ClockSeqNext
     end,
     <<TimeHigh:48,
-      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      0:1, 0:1, 0:1, 1:1,          % version 1 bits
       TimeLow:12,
-      1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+      1:1, 1:1, 1:1,               % ordered (future definition) variant bits
       ClockSeqNew:13,
       NodeId:48>>;
+increment(<<Time:48,
+            0:1, 1:1, 1:1, 1:1,    % version 7 bits
+            TimeFraction:12,
+            1:1, 0:1,              % RFC 9562 variant bits
+            Counter:62>>) ->
+    CounterNext = Counter + 1,
+    CounterNew = if
+        CounterNext == 16#4000000000000000 ->
+            0;
+        true ->
+            CounterNext
+    end,
+    <<Time:48,
+      0:1, 1:1, 1:1, 1:1,          % version 7 bits
+      TimeFraction:12,
+      1:1, 0:1,                    % RFC 9562 variant bits
+      CounterNew:62>>;
 increment(<<Rand1:48,
             Version:4/unsigned-integer,
             Rand2:12,
-            1:1, 0:1,            % RFC 4122 variant bits
+            1:1, 0:1,              % variant bits for RFC 4122 and RFC 9562
             Rand3:62>>)
-    when (Version == 4) orelse (Version == 5) orelse (Version == 3) ->
+    when (Version == 4) orelse (Version == 5) orelse
+         (Version == 3) orelse (Version == 8) ->
     <<Value:16/little-unsigned-integer-unit:8>> = <<Rand1:48,
                                                     Rand2:12,
                                                     Rand3:62,
                                                     0:6>>,
     ValueNext = Value + 1,
     ValueNew = if
-        ValueNext == 5316911983139663491615228241121378304 ->
+        ValueNext == 16#4000000000000000000000000000000 ->
             1;
         true ->
             ValueNext
@@ -1103,13 +1367,13 @@ increment(<<Rand1:48,
     <<Rand1New:48,
       Version:4/unsigned-integer,
       Rand2New:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       Rand3New:62>>;
 increment(#uuid_state{variant = Variant,
                       clock_seq = ClockSeq} = State) ->
     ClockSeqNext = ClockSeq + 1,
     ClockSeqNew = if
-        (Variant =:= rfc4122) andalso (ClockSeqNext == 16384);
+        (Variant =:= rfc) andalso (ClockSeqNext == 16384);
         (Variant =:= ordered) andalso (ClockSeqNext == 8192) ->
             0;
         true ->
@@ -1140,7 +1404,12 @@ mac_address() ->
     ok.
 
 test() ->
-    true = uuid:is_uuid(<<0:128>>),
+    ok = application:load(quickrand),
+    ok = quickrand:seed(),
+    ok = quickrand_cache:init(),
+    Randomness0 = quickrand_cache:new(),
+    true = uuid:is_uuid(?UUID_NIL),
+    true = uuid:is_uuid(?UUID_MAX),
     % version 1 tests
     % uuidgen -t ; date
     % "Fri Dec  7 19:13:58 PST 2012"
@@ -1149,9 +1418,9 @@ test() ->
     "4ea4b020-40e5-11e2-ac70-001fd0a5484e" =
         uuid:uuid_to_string(V1uuid1, standard),
     <<V1TimeLow1:32, V1TimeMid1:16,
-      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      0:1, 0:1, 0:1, 1:1,          % version 1 bits
       V1TimeHigh1:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       V1ClockSeq1:14,
       V1NodeId1/binary>> = V1uuid1,
     true = uuid:is_uuid(V1uuid1),
@@ -1183,9 +1452,9 @@ test() ->
         uuid:uuid_to_string(V1uuid2, nodash),
     "2012-12-08T03:42:40.199254Z" = uuid:get_v1_datetime(V1uuid2),
     <<V1TimeLow2:32, V1TimeMid2:16,
-      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      0:1, 0:1, 0:1, 1:1,          % version 1 bits
       V1TimeHigh2:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       V1ClockSeq2:14,
       V1NodeId2/binary>> = V1uuid2,
     true = uuid:is_v1(V1uuid2),
@@ -1202,14 +1471,14 @@ test() ->
         (V1Time2Bmega * 1000000 + V1Time2Bsec) * 1000000),
     true = (V1Time2Amega == V1Time2Bmega),
     true = (V1Time2Asec == V1Time2Bsec),
-    true = (V1Time2Amicro < V1Time2Bmicro) and
+    true = (V1Time2Amicro < V1Time2Bmicro) andalso
            ((V1Time2Amicro + 605) == V1Time2Bmicro),
     true = V1ClockSeq1 /= V1ClockSeq2,
     true = V1NodeId1 == V1NodeId2,
     {V1uuid3, _} = uuid:get_v1(uuid:new(self(), erlang)),
     V1uuid3timeB = uuid:get_v1_time(erlang),
     V1uuid3timeA = uuid:get_v1_time(V1uuid3),
-    true = (V1uuid3timeA < V1uuid3timeB) and
+    true = (V1uuid3timeA < V1uuid3timeB) andalso
            ((V1uuid3timeA + 1000) > V1uuid3timeB),
     true = is_number(uuid:get_v1_time(
         uuid:string_to_uuid("3ff0fc1e-c23b-11e2-b8a0-38607751fca5"))),
@@ -1219,19 +1488,14 @@ test() ->
         uuid:string_to_uuid("7134eede-c23b-11e2-a4a7-38607751fca5"))),
     true = is_number(uuid:get_v1_time(
         uuid:string_to_uuid("717003c0-c23b-11e2-83a4-38607751fca5"))),
-    {V1uuid4, _} = uuid:get_v1(uuid:new(self(), os)),
-    V1uuid4timeB = uuid:get_v1_time(os),
-    V1uuid4timeA = uuid:get_v1_time(V1uuid4),
-    true = (V1uuid4timeA < V1uuid4timeB) and
-           ((V1uuid4timeA + 1000) > V1uuid4timeB),
-    V1State0 = uuid:new(self()),
-    {V1uuid5,  V1State1} = uuid:get_v1(V1State0),
-    {V1uuid6,  V1State2} = uuid:get_v1(V1State1),
-    {V1uuid7,  V1State3} = uuid:get_v1(V1State2),
-    {V1uuid8,  V1State4} = uuid:get_v1(V1State3),
-    {V1uuid9,  V1State5} = uuid:get_v1(V1State4),
-    {V1uuid10, V1State6} = uuid:get_v1(V1State5),
-    {V1uuid11, _} = uuid:get_v1(V1State6),
+    State0 = uuid:new(self()),
+    {V1uuid5,  State1} = uuid:get_v1(State0),
+    {V1uuid6,  State2} = uuid:get_v1(State1),
+    {V1uuid7,  State3} = uuid:get_v1(State2),
+    {V1uuid8,  State4} = uuid:get_v1(State3),
+    {V1uuid9,  State5} = uuid:get_v1(State4),
+    {V1uuid10, State6} = uuid:get_v1(State5),
+    {V1uuid11, State7} = uuid:get_v1(State6),
     V1uuidL0 = [V1uuid5, V1uuid6, V1uuid7, V1uuid8,
                 V1uuid9, V1uuid10, V1uuid11],
     V1uuidL1 = [V1uuid11, V1uuid9, V1uuid8, V1uuid7,
@@ -1246,19 +1510,21 @@ test() ->
     V1uuidOrdered2 = uuid:increment(V1uuidOrdered1),
     true = uuid:is_v1(V1uuidOrdered2),
     <<_:48,
-      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      0:1, 0:1, 0:1, 1:1,          % version 1 bits
       _:12,
-      1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+      1:1, 1:1, 1:1,               % ordered (future definition) variant bits
       _:13,
       _:48>> = V1uuidOrdered2,
     V1OrderedState0 = uuid:new(self(), [{variant, ordered}]),
-    {V1uuidOrdered3, _} = uuid:get_v1(V1OrderedState0),
+    {V1uuidOrdered3, V1OrderedState1} = uuid:get_v1(V1OrderedState0),
     <<_:48,
-      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      0:1, 0:1, 0:1, 1:1,          % version 1 bits
       _:12,
-      1:1, 1:1, 1:1,       % ordered (future definition) variant bits
+      1:1, 1:1, 1:1,               % ordered (future definition) variant bits
       _:13,
       _:48>> = V1uuidOrdered3,
+    {V1uuidOrdered4, _} = uuid:get_v1(V1OrderedState1),
+    true = V1uuidOrdered4 > V1uuidOrdered3,
 
     % version 3 tests
     % $ python
@@ -1269,23 +1535,24 @@ test() ->
     "45a113acc7f230b090a5a399ab912716" =
         uuid:uuid_to_string(V3uuid1, nodash),
     <<V3uuid1A:48,
-      0:1, 0:1, 1:1, 1:1,  % version 3 bits
+      0:1, 0:1, 1:1, 1:1,          % version 3 bits
       V3uuid1B:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       V3uuid1C:14,
       V3uuid1D:48>> = V3uuid1,
     true = uuid:is_v3(V3uuid1),
+    true = uuid:is_uuid(V3uuid1),
     V3uuid2 = uuid:get_v3(?UUID_NAMESPACE_DNS, <<"test">>),
     true = (V3uuid2 == uuid:get_v3(dns, <<"test">>)),
     <<V3uuid2A:48,
-      0:1, 0:1, 1:1, 1:1,  % version 3 bits
+      0:1, 0:1, 1:1, 1:1,          % version 3 bits
       V3uuid2B:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       V3uuid2C:14,
       V3uuid2D:48>> = V3uuid2,
     true = uuid:is_v3(V3uuid2),
-    true = ((V3uuid1A == V3uuid2A) and
-            (V3uuid1B == V3uuid2B) and
+    true = ((V3uuid1A == V3uuid2A) andalso
+            (V3uuid1B == V3uuid2B) andalso
             (V3uuid1C == V3uuid2C)),
     % check fails:
     % since the python uuid discards bits from MD5 while this module
@@ -1309,13 +1576,13 @@ test() ->
     V4uuid1 = uuid:string_to_uuid("ffe8b758-a5dc-4bf4-9eb0-878e010e8df7"),
     "ffe8b758-a5dc-4bf4-9eb0-878e010e8df7" =
         uuid:uuid_to_string(V4uuid1, standard),
-    <<V4Rand1A:48,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
-      V4Rand1B:12,
-      1:1, 0:1,            % RFC 4122 variant bits
-      V4Rand1C:14,
-      V4Rand1D:48>> = V4uuid1,
+    <<V4Rand1A:48/bitstring,
+      0:1, 1:1, 0:1, 0:1,          % version 4 bits
+      V4Rand1B:12/bitstring,
+      1:1, 0:1,                    % RFC 4122 variant bits
+      V4Rand1C:62/bitstring>> = V4uuid1,
     true = uuid:is_v4(V4uuid1),
+    true = uuid:is_uuid(V4uuid1),
     % $ python
     % >>> import uuid
     % >>> uuid.uuid4().hex
@@ -1323,25 +1590,23 @@ test() ->
     V4uuid2 = uuid:string_to_uuid("cc9769818fe747398e2422e99fee2753"),
     "cc9769818fe747398e2422e99fee2753" =
         uuid:uuid_to_string(V4uuid2, nodash),
-    <<V4Rand2A:48,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
-      V4Rand2B:12,
-      1:1, 0:1,            % RFC 4122 variant bits
-      V4Rand2C:14,
-      V4Rand2D:48>> = V4uuid2,
+    <<V4Rand2A:48/bitstring,
+      0:1, 1:1, 0:1, 0:1,          % version 4 bits
+      V4Rand2B:12/bitstring,
+      1:1, 0:1,                    % RFC 4122 variant bits
+      V4Rand2C:62/bitstring>> = V4uuid2,
     true = uuid:is_v4(V4uuid2),
     V4uuid3 = uuid:get_v4(strong),
     <<_:48,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      0:1, 1:1, 0:1, 0:1,          % version 4 bits
       _:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       _:14,
       _:48>> = V4uuid3,
     true = uuid:is_v4(V4uuid3),
     true = (V4Rand1A /= V4Rand2A),
     true = (V4Rand1B /= V4Rand2B),
     true = (V4Rand1C /= V4Rand2C),
-    true = (V4Rand1D /= V4Rand2D),
     true = V4uuid3 /= uuid:increment(V4uuid3),
 
     % version 5 tests
@@ -1353,23 +1618,24 @@ test() ->
     "4be0643f1d98573b97cdca98a65347dd" =
         uuid:uuid_to_string(V5uuid1, nodash),
     <<V5uuid1A:48,
-      0:1, 1:1, 0:1, 1:1,  % version 5 bits
+      0:1, 1:1, 0:1, 1:1,          % version 5 bits
       V5uuid1B:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       V5uuid1C:14,
       V5uuid1D:48>> = V5uuid1,
     true = uuid:is_v5(V5uuid1),
+    true = uuid:is_uuid(V5uuid1),
     V5uuid2 = uuid:get_v5(?UUID_NAMESPACE_DNS, <<"test">>),
     true = (V5uuid2 == uuid:get_v5(dns, <<"test">>)),
     <<V5uuid2A:48,
-      0:1, 1:1, 0:1, 1:1,  % version 5 bits
+      0:1, 1:1, 0:1, 1:1,          % version 5 bits
       V5uuid2B:12,
-      1:1, 0:1,            % RFC 4122 variant bits
+      1:1, 0:1,                    % RFC 4122 variant bits
       V5uuid2C:14,
       V5uuid2D:48>> = V5uuid2,
     true = uuid:is_v5(V5uuid2),
-    true = ((V5uuid1A == V5uuid2A) and
-            (V5uuid1B == V5uuid2B) and
+    true = ((V5uuid1A == V5uuid2A) andalso
+            (V5uuid1B == V5uuid2B) andalso
             (V5uuid1C == V5uuid2C)),
     % check fails:
     % since the python uuid discards bits from SHA while this module
@@ -1387,6 +1653,50 @@ test() ->
             uuid:string_to_uuid("20ca53afd04c58a2a8b3d02b9e414e80")),
     true = (uuid:get_v5_compat(dns, <<"test4">>) ==
             uuid:string_to_uuid("3e673fdc1a4f5b168890dbe7e763f7b5")),
+
+    % version 6 tests
+    {V6uuid1, State8} = uuid:get_v6(State7),
+    {V6uuid2, State9} = uuid:get_v6(State8),
+    {V6uuid3, State10} = uuid:get_v6(State9),
+    {V6uuid4, State11} = uuid:get_v6(State10),
+    true = uuid:is_v6(V6uuid1),
+    true = uuid:is_v6(V6uuid2),
+    true = uuid:is_uuid(V6uuid3),
+    true = ((V6uuid4 > V6uuid3) andalso
+            (V6uuid3 > V6uuid2) andalso
+            (V6uuid2 > V6uuid1)),
+
+    % version 7 tests
+    {V7uuid1, State12} = uuid:get_v7(strong, State11),
+    {V7uuid2, State13} = uuid:get_v7(cached, State12),
+    {V7uuid3, State14} = uuid:get_v7(urandom, State13),
+    {V7uuid4, Randomness1, State15} = uuid:get_v7(Randomness0, State14),
+    {V7uuid5, State16} = uuid:get_v7(zero, State15),
+    {V7uuid6, _, _} = uuid:get_v7(Randomness1, State16),
+    true = uuid:is_v7(V7uuid1),
+    true = uuid:is_v7(V7uuid2),
+    true = uuid:is_uuid(V7uuid3),
+    true = ((V7uuid6 > V7uuid5) andalso
+            (V7uuid5 > V7uuid4) andalso
+            (V7uuid4 > V7uuid3) andalso
+            (V7uuid3 > V7uuid2) andalso
+            (V7uuid2 > V7uuid1)),
+
+    % version 8 tests
+    V8uuid1 = uuid:get_v8(V4Rand1A, V4Rand1B, V4Rand1C),
+    true = uuid:is_v8(V8uuid1),
+    V8uuid2 = uuid:get_v8(V4Rand2A, V4Rand2B, V4Rand2C),
+    true = uuid:is_v8(V8uuid2),
+    true = uuid:is_uuid(V8uuid2),
+    true = (V8uuid1 /= V8uuid2),
+    true = (V8uuid1 == uuid:get_v8(<<V4Rand1A:48/bitstring,
+                                     V4Rand1B:12/bitstring,
+                                     V4Rand1C:62/bitstring>>)),
+    V8uuid3 = uuid:get_v8(42),
+    true = uuid:is_v8(V8uuid3),
+    V8uuid4 = uuid:increment(V8uuid3),
+    true = uuid:is_v8(V8uuid4),
+    true = (V8uuid3 /= V8uuid4),
     ok.
 
 %%%------------------------------------------------------------------------

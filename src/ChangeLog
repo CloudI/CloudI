@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2025-10-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update uuid
+
 2025-06-29 Michael Truog   <mjtruog at protonmail dot com>
 
     * Testing has determined it is best to have the
@@ -8,8 +12,8 @@
       high priority to minimize service process restart latency
         * Specific CT tests have shown improvement when
           schedulers are running unbound
-          (more timeouts occur when the schedulers are unable to
-           to utilize the CPU)
+          (more timeouts occur when the schedulers are
+           unable to utilize the CPU)
             * cloudi_service_api_batch_SUITE timeouts in
               t_batch_3/1 and t_batch_4/1
             * cloudi_service_queue_SUITE timeouts in

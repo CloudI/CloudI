@@ -3,7 +3,9 @@ Erlang UUID Implementation
 
 [![Build Status](https://app.travis-ci.com/okeuday/uuid.svg?branch=master)](https://app.travis-ci.com/okeuday/uuid)
 
-http://www.ietf.org/rfc/rfc4122.txt is the reference for official UUIDs.
+http://www.ietf.org/rfc/rfc9562.txt is the reference for UUIDs
+(replacing http://www.ietf.org/rfc/rfc4122.txt).
+
 This implementation provides a version 1 UUID that includes both the Erlang pid
 identifier (ID, Serial, Creation) and the distributed Erlang node name within
 the 48 bit node ID.  To make room for the Erlang pid identifier, the 48 bits
@@ -11,8 +13,16 @@ from the MAC address (i.e., 3 OCI (Organizationally Unique Identifier) bytes and
 3 NIC (Network Interface Controller) specific bytes) and the distributed Erlang
 node name are bitwise-XORed down to 16 bits. The Erlang pid is 
 bitwise-XORed from 72 bits down to 32 bits.
+
 The version 3 (MD5), version 4 (random), and version 5 (SHA)
-methods are provided as specified within the RFC.
+methods are provided as specified within the RFC 4122.
+
+The ordered version 1 variant was used before the version 6 UUID
+was defined by RFC 9562.  Use the version 6 UUID instead, if possible.
+
+The version 6 (ordered v1), version 7 (UNIX epoch), and version 8 (custom)
+methods are provided as specified within RFC 9562.  The version 7 UUID
+provides less time precision than version 1 and version 6 UUIDs.
 
 Requires `Erlang >= R16B01`
 
