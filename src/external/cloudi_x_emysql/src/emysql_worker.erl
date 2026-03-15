@@ -4,6 +4,17 @@
 -export([start/1, execute/2]).
 -export([start_worker/2, worker_loop/2]).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+
 behaviour_info(callbacks) -> [{init, 1}, {process, 1}];
 behaviour_info(_) -> undefined.
 
@@ -44,7 +55,7 @@ start_worker(Parent, Module) ->
 worker_loop(Module, Pool) ->
     receive
         {'$emysql_worker', {From, Mref}, Message} ->
-            Results = (catch process_message(Module, Pool, Message)),
+            Results = ?CATCH0(process_message(Module, Pool, Message)),
             gen:reply({From, Mref}, Results);
         Message ->
             error_logger:warning_report([emysql_worker, Module, {unknown_message, Message}])
@@ -63,7 +74,7 @@ init_prepares([{StmtName, Statement} | Prepares], Pool) ->
 process_message(Module, Pool, {Key}) ->
     process_message(Module, Pool, {Key, []});
 process_message(Module, Pool, {Key, Args}) ->
-    case (catch Module:process({Key, Args})) of
+    case ?CATCH0(Module:process({Key, Args})) of
         {Statement} ->
             emysql:execute(Pool, Statement, Args);
         {Statement, NewArgs} ->

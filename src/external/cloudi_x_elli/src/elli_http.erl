@@ -7,6 +7,16 @@
 -include("elli.hrl").
 -include("elli_util.hrl").
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
 
 %% API
 -export([start_link/4]).
@@ -46,7 +56,7 @@ start_link(Server, ListenSocket, Options, Callback) ->
       Options      :: proplists:proplist(),
       Callback     :: elli_handler:callback().
 accept(Server, ListenSocket, Options, Callback) ->
-    case catch elli_tcp:accept(ListenSocket, Server, accept_timeout(Options)) of
+    case ?CATCH0(elli_tcp:accept(ListenSocket, Server, accept_timeout(Options))) of
         {ok, Socket} ->
             t(accepted),
             ?MODULE:keepalive_loop(Socket, Options, Callback);

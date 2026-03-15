@@ -263,6 +263,17 @@
 -define(COMMANDS_SZ_FACTOR, '$commands_size_factor').
 -define(RESIZE_FACTOR, proper_types:parameter(?COMMANDS_SZ_FACTOR, 1)).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+
 %% -----------------------------------------------------------------------------
 %% Exported only for testing purposes
 %% -----------------------------------------------------------------------------
@@ -767,7 +778,7 @@ pmap(F, L) ->
 		 [command_list()]) -> [pid()].
 spawn_jobs(F, L) ->
     Parent = self(),
-    [spawn_link_cp(fun() -> Parent ! {self(),catch {ok,F(X)}} end) || X <- L].
+    [spawn_link_cp(fun() -> Parent ! {self(),?CATCH0({ok,F(X)})} end) || X <- L].
 
 -spec await([pid()]) -> [parallel_history()].
 await([]) -> [];

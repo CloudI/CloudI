@@ -44,6 +44,17 @@
 
 -define(eat_message(M, T), receive M -> M after T -> timeout end).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+
 %%%-----------------------------------------------------------------
 %%% Exported functions
 
@@ -364,7 +375,7 @@ io_request({put_chars, Enc, Chars},
     end;
 io_request({put_chars,Enc,Mod,Func,Args}, 
 	   #state{}=State) ->
-    case catch apply(Mod, Func, Args) of
+    case ?CATCH0(apply(Mod, Func, Args)) of
 	Chars when is_list(Chars); is_binary(Chars) ->
 	    io_request({put_chars,Enc,Chars}, State);
 	_ ->
@@ -627,7 +638,7 @@ get_chars_apply(Mod, Func, XtraArg, S0, latin1,
 	       list when is_binary(Data0) -> binary_to_list(Data0);
 	       _ -> Data0
 	    end,
-    case catch Mod:Func(S0, Data1, latin1, XtraArg) of
+    case ?CATCH0(Mod:Func(S0, Data1, latin1, XtraArg)) of
 	{stop,Result,Buf} ->
 	    {reply,Result,State#state{buf=cast_binary(Buf)}};
 	{'EXIT',Reason} ->
@@ -664,7 +675,7 @@ get_chars_apply(Mod, Func, XtraArg, S0, OutEnc,
 			      _ -> %i.e. eof
 				  {Data0,<<>>}
 			  end,
-	case catch Mod:Func(S0, Data1, OutEnc, XtraArg) of
+	case ?CATCH0(Mod:Func(S0, Data1, OutEnc, XtraArg)) of
 	    {stop,Result,Buf} ->
 		{reply,Result,State#state{buf = (if
 						     is_binary(Buf) ->

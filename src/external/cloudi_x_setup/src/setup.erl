@@ -1310,7 +1310,8 @@ all_included([]) ->
 keep_release(RelVsn) ->
     %% 0. Check
     RelDir = setup_lib:releases_dir(),
-    case filelib:is_dir(TargetDir = filename:join(RelDir, RelVsn)) of
+    TargetDir = filename:join(RelDir, RelVsn),
+    case filelib:is_dir(TargetDir) of
         true -> error({target_dir_exists, TargetDir});
         false -> verify_dir(TargetDir)
     end,
@@ -1336,8 +1337,8 @@ keep_release(RelVsn) ->
             | [{root, R} || R <- current_roots() -- [otp_root()]]
            ]
         ++ [{env, env_diff(LoadedNames)}],
-    setup_lib:write_script(
-      ConfF = filename:join(TargetDir, "setup.conf"), [Conf]),
+    ConfF = filename:join(TargetDir, "setup.conf"),
+    setup_lib:write_script(ConfF, [Conf]),
     setup_gen:run([{name, Name}, {outdir, TargetDir}, {conf, ConfF}]).
      %% {loaded, Loaded},
      %% {running, Running},

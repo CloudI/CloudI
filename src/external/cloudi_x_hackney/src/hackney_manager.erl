@@ -47,6 +47,27 @@
 -record(mstate, {pids=dict:new(),
   metrics}).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+-define(CATCH1(E),
+        try E
+        catch
+            exit:Catch1Exit ->
+                {'EXIT', Catch1Exit};
+            error:Catch1Error:Catch1StackTrace ->
+                {'EXIT', {Catch1Error, Catch1StackTrace}};
+            throw:Catch1Throw ->
+                Catch1Throw
+        end).
+
 
 new_request(#client{request_ref=Ref}=Client) when is_reference(Ref) ->
   {ok, StartTime} = take_control(Ref, Client),
@@ -119,8 +140,8 @@ close_request(#client{}=Client) ->
   case Status of
     done -> ok;
     _ when Socket /= nil ->
-        catch Transport:controlling_process(Socket, self()),
-        catch Transport:close(Socket),
+        ?CATCH0(Transport:controlling_process(Socket, self())),
+        ?CATCH1(Transport:close(Socket)),
       ok;
     _ -> ok
   end;
@@ -255,8 +276,8 @@ handle_error(#client{request_ref=Ref, transport=Transport,
   case get_state(Ref) of
     req_not_found -> ok;
     _ ->
-        catch Transport:controlling_process(Socket, self()),
-        catch Transport:close(Socket),
+        ?CATCH0(Transport:controlling_process(Socket, self())),
+        ?CATCH1(Transport:close(Socket)),
       NClient = Client#client{socket=nil, state=closed},
       update_state(NClient),
       ok
@@ -436,7 +457,7 @@ do_start_async_response(Ref, StreamTo, Client, State) ->
               end,
 
   %% start the stream process
-  case catch hackney_stream:start_link(StreamTo2, Ref, Client) of
+  case ?CATCH0(hackney_stream:start_link(StreamTo2, Ref, Client)) of
     {ok, Pid} when is_pid(Pid) ->
       ets:insert(?REFS, {Ref, {Owner, Pid, Info}}),
       Pids2 = dict:store(Pid, {stream, Ref}, State#mstate.pids),
@@ -453,7 +474,7 @@ cleanup_socket(Ref) ->
       [{Ref, #request{ref=Ref,
                       state=#client{transport=Transport,
                                     socket=Socket}}}] ->
-         catch Transport:close(Socket),
+         ?CATCH0(Transport:close(Socket)),
          ok;
       [] ->
          ok
@@ -583,7 +604,7 @@ untrack_owner(Pid, Ref, Pids) ->
           dict:store(Pid, Refs2, Pids)
       end;
     error ->
-      catch unlink(Pid),
+      ?CATCH0(unlink(Pid)),
       Pids
   end.
 

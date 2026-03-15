@@ -11,7 +11,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2026 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @copyright 2015-2026 Michael Truog
+%%% @version 2.0.8 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_rest).
@@ -156,6 +156,9 @@
         debug_level :: off | trace | debug | info | warn | error | fatal,
         api_state :: any()
     }).
+
+-define(CATCH(E),
+        try _ = E, ok catch _:_ -> ok end).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -412,7 +415,7 @@ cloudi_service_terminate(Reason, Timeout,
         TerminateF =:= undefined ->
             ok;
         true ->
-            (catch TerminateF(Reason, Timeout, StateAPI))
+            ?CATCH(TerminateF(Reason, Timeout, StateAPI))
     end,
     ok.
 

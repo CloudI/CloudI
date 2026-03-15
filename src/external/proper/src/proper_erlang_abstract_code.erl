@@ -172,6 +172,10 @@
 %%% "div 2" is just a suggestion.
 -define(RESIZE(S), S#gen_state{size = S#gen_state.size div 2}).
 
+-if(?OTP_RELEASE >= 29).
+-compile({no_auto_import,[is_record/1]}).
+-endif.
+
 %%% @doc Returns abstract code of a term that can be handled by
 %%% <code>erl_parse:normalise/0</code>.
 

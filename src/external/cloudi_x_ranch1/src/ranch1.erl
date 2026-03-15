@@ -44,6 +44,17 @@
 -type ref() :: any().
 -export_type([ref/0]).
 
+-define(CATCH(E),
+        try E
+        catch
+            exit:Exit ->
+                {'EXIT', Exit};
+            error:Error ->
+                {'EXIT', {Error, erlang:get_stacktrace()}};
+            throw:Throw ->
+                Throw
+        end).
+
 -spec start_listener(ref(), non_neg_integer(), module(), any(), module(), any())
 	-> supervisor:startchild_ret().
 start_listener(Ref, NumAcceptors, Transport, TransOpts, Protocol, ProtoOpts)
@@ -70,7 +81,7 @@ start_listener(Ref, NumAcceptors, Transport, TransOpts, Protocol, ProtoOpts)
 					%%% Note: the catch is here because SSL crashes when you change
 					%%% the controlling process of a listen socket because of a bug.
 					%%% The bug will be fixed in R16.
-					catch Transport:controlling_process(Socket, AcceptorsSup);
+                                        ?CATCH(Transport:controlling_process(Socket, AcceptorsSup));
 				_ ->
 					ok
 			end,

@@ -62,6 +62,16 @@
                debug = [],
                sys = #sys{}}).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
 
 -spec spawn_process(exometer:name(), fun(() -> no_return())) -> pid().
 %% @doc Spawn an `exometer_proc' process.
@@ -220,7 +230,7 @@ format_status(Opt, StatusData) ->
     Specific =
         case erlang:function_exported(Mod, format_status, 2) of
             true ->
-                case catch Mod:format_status(Opt, [PDict, State]) of
+                case ?CATCH0(Mod:format_status(Opt, [PDict, State])) of
                     {'EXIT', _} -> [{data, [{"State", State}]}];
                     Else -> Else
                 end;

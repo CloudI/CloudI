@@ -40,6 +40,16 @@
 
 -include("emysql.hrl").
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
 
 set_database(Connection, Database) ->
     DefaultTimeout = emysql_app:default_timeout(),
@@ -144,7 +154,7 @@ open_n_connections(PoolId, N) ->
                 %% Catch {'EXIT',_} errors so newly opened connections are not orphaned.
                 %% We do not want to close all the connections here like in
                 %% open_connections/2. Struggle to keep working.
-                case catch open_connection_for_manager(Pool) of
+                case ?CATCH0(open_connection_for_manager(Pool)) of
                     #emysql_connection{} = Connection ->
                         {[Connection | Conns], Reasons};
                     {'EXIT', Reason} ->
@@ -164,7 +174,7 @@ open_connections(Pool) ->
      %-% io:format("open connections loop: .. "),
     case (queue:len(Pool#pool.available) + gb_trees:size(Pool#pool.locked)) < Pool#pool.size of
         true ->
-            case catch open_connection_for_manager(Pool) of
+            case ?CATCH0(open_connection_for_manager(Pool)) of
                 #emysql_connection{} = Conn ->
                     open_connections(Pool#pool{available = queue:in(Conn, Pool#pool.available)});
                 {'EXIT', Reason} ->
@@ -284,7 +294,7 @@ reset_connection(Pools, Conn, StayLocked) ->
     %% OPEN NEW SOCKET
     case emysql_conn_mgr:find_pool(Conn#emysql_connection.pool_id, Pools) of
         {Pool, _} ->
-            case catch open_connection_for_manager(Pool) of
+            case ?CATCH0(open_connection_for_manager(Pool)) of
                 #emysql_connection{} = NewConn when StayLocked == pass ->
                     NewConn2 = add_monitor_ref(NewConn, MonitorRef),
                     ok = emysql_conn_mgr:replace_connection_as_available(Conn, NewConn2),
@@ -311,7 +321,7 @@ close_connection(Conn) ->
 	ok = gen_tcp:close(Conn#emysql_connection.socket).
 
 ping_connection(Conn, Timeout) ->
-  case catch emysql_tcp:send_and_recv_packet(Conn#emysql_connection.socket, <<?COM_PING>>, 0, Timeout) of
+  case ?CATCH0(emysql_tcp:send_and_recv_packet(Conn#emysql_connection.socket, <<?COM_PING>>, 0, Timeout)) of
     {'EXIT', _} ->
         error;
     _ ->

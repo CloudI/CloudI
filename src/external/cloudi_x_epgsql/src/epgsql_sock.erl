@@ -111,13 +111,24 @@
 -define(WITH_STACKTRACE(T, R, S), T:R:S ->).
 -endif.
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+
 %% -- client interface --
 
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
 close(C) when is_pid(C) ->
-    catch gen_server:cast(C, stop),
+    ?CATCH0(gen_server:cast(C, stop)),
     ok.
 
 -spec sync_command(epgsql:connection(), epgsql_command:command(), any()) -> any().

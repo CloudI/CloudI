@@ -44,6 +44,17 @@
 	logger = undefined :: module()
 }).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+
 %% API.
 
 -spec start_link(ranch:ref(), module(), module()) -> {ok, pid()}.
@@ -77,8 +88,8 @@ start_protocol(SupPid, Socket) ->
 -spec active_connections(pid()) -> non_neg_integer().
 active_connections(SupPid) ->
 	Tag = erlang:monitor(process, SupPid),
-	catch erlang:send(SupPid, {?MODULE, active_connections, self(), Tag},
-		[noconnect]),
+        ?CATCH0(erlang:send(SupPid, {?MODULE, active_connections, self(), Tag},
+                           [noconnect])),
 	receive
 		{Tag, Ret} ->
 			erlang:demonitor(Tag, [flush]),

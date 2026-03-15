@@ -52,6 +52,26 @@
                 connections = dict:new(),
                 sockets = dict:new()}).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+-define(CATCH1(E),
+        try E
+        catch
+            exit:Catch1Exit ->
+                {'EXIT', Catch1Exit};
+            error:Catch1Error:Catch1StackTrace ->
+                {'EXIT', {Catch1Error, Catch1StackTrace}};
+            throw:Catch1Throw ->
+                Catch1Throw
+        end).
 
 start() ->
   %% NB this is first called from hackney_sup:start_link
@@ -97,7 +117,7 @@ do_checkout(Requester, Host, _Port, Transport, #client{options=Opts,
   RequestRef = Client#client.request_ref,
   PoolName = proplists:get_value(pool, Opts, default),
   Pool = find_pool(PoolName, Opts),
-  case catch gen_server:call(Pool, {checkout, Connection, Requester, RequestRef}, CheckoutTimeout) of
+  case ?CATCH0(gen_server:call(Pool, {checkout, Connection, Requester, RequestRef}, CheckoutTimeout)) of
     {ok, Socket, Owner} ->
 
       %% stats
@@ -120,7 +140,7 @@ do_checkout(Requester, Host, _Port, Transport, #client{options=Opts,
               _ = metrics:increment_counter(Metrics, [hackney_pool, Host, new_connection]),
               {ok, {PoolName, RequestRef, Connection, Owner, Transport}, Socket};
             Error ->
-              catch hackney_connection:close(Connection, Socket),
+              ?CATCH1(hackney_connection:close(Connection, Socket)),
               _ = metrics:increment_counter(Metrics, [hackney, Host, connect_error]),
               Error
            end;
@@ -148,11 +168,11 @@ checkin({_Name, Ref, Connection, Owner, Transport}, Socket) ->
         ok ->
           gen_server:call(Owner, {checkin, Ref, Connection, Socket, Transport}, infinity);
         _Error ->
-          catch hackney_connection:close(Connection,Socket),
+          ?CATCH0(hackney_connection:close(Connection,Socket)),
           ok
       end;
     false ->
-      catch hackney_connection:close(Connection, Socket),
+      ?CATCH0(hackney_connection:close(Connection, Socket)),
       ok
   end.
 
@@ -337,7 +357,7 @@ handle_call({checkin, Ref, Dest, Socket, Transport}, From, State) ->
                deliver_socket(Socket, Dest, State#state{clients=Clients2});
              Error ->
                %% socket may be half-closed, close it and return
-               catch Transport:close(Socket),
+               ?CATCH0(Transport:close(Socket)),
                ?report_trace("checkin: socket is not ok~n", [{socket, Socket}, {peername, Error}]),
                State#state{clients=Clients2}
            end,
@@ -435,7 +455,7 @@ find_connection(Connection, Pid, #state{connections=Conns, sockets=Sockets}=Stat
               %% something happened here normally the PID died,
               %% but make sure we still have the control of the
               %% process
-              catch hackney_connection:controlling_process(Connection, S, self()),
+              ?CATCH0(hackney_connection:controlling_process(Connection, S, self())),
               %% and then close it
               find_connection(Connection, Pid, remove_socket(S,  State));
             _Else ->
@@ -456,7 +476,7 @@ remove_socket(Socket, #state{connections=Conns, sockets=Sockets}=State) ->
   case dict:find(Socket, Sockets) of
     {ok, {Connection, Timer}} ->
       cancel_timer(Socket, Timer),
-      catch hackney_connection:close(Connection, Socket),
+      ?CATCH0(hackney_connection:close(Connection, Socket)),
       ConnSockets = lists:delete(Socket, dict:fetch(Connection, Conns)),
       NewConns = update_connections(ConnSockets, Connection, Conns),
       NewSockets = dict:erase(Socket, Sockets),
@@ -549,7 +569,7 @@ deliver_socket(Socket, Connection, State) ->
           monitor_client(Connection, Ref, State#state{queues = Queues2, pending=Pending2});
         _Error ->
           % Something wrong, close the socket
-          _ = (catch hackney_connection:close(Connection, Socket)),
+          _ = ?CATCH0(hackney_connection:close(Connection, Socket)),
           %% and let the waiter connect to a new one
           gen_server:reply(FromWaiter, {error, no_socket, self()}),
           State#state{queues = Queues2, pending = Pending2}

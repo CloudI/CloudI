@@ -16,6 +16,27 @@
   filename/0,
   trace_type/0]).
 
+-define(CATCH0(E),
+        try E
+        catch
+            exit:Catch0Exit ->
+                {'EXIT', Catch0Exit};
+            error:Catch0Error:Catch0StackTrace ->
+                {'EXIT', {Catch0Error, Catch0StackTrace}};
+            throw:Catch0Throw ->
+                Catch0Throw
+        end).
+-define(CATCH1(E),
+        try E
+        catch
+            exit:Catch1Exit ->
+                {'EXIT', Catch1Exit};
+            error:Catch1Error:Catch1StackTrace ->
+                {'EXIT', {Catch1Error, Catch1StackTrace}};
+            throw:Catch1Throw ->
+                Catch1Throw
+        end).
+
 
 %% @doc start tracing
 %% start tracing at level Level and send the result either to the file File,
@@ -129,40 +150,40 @@ handle_trace({trace_ts, _Who, call,
     [_Sev, "stop trace", stop_trace, [stop_trace]]},
   Timestamp},
   {_, standard_io} = Fd) ->
-  (catch io:format(standard_io, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
+  ?CATCH0(io:format(standard_io, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
   Fd;
 handle_trace({trace_ts, _Who, call,
   {?MODULE, report_event,
     [_Sev, "stop trace", stop_trace, [stop_trace]]},
   Timestamp},
   standard_io = Fd) ->
-  (catch io:format(Fd, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
+  ?CATCH0(io:format(Fd, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
   Fd;
 handle_trace({trace_ts, _Who, call,
   {?MODULE, report_event,
     [_Sev, "stop trace", stop_trace, [stop_trace]]},
   Timestamp},
   {_Service, Fd}) ->
-  (catch io:format(Fd, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
-  (catch file:close(Fd)),
+  ?CATCH0(io:format(Fd, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
+  ?CATCH1(file:close(Fd)),
   closed_file;
 handle_trace({trace_ts, _Who, call,
   {?MODULE, report_event,
     [_Sev, "stop trace", stop_trace, [stop_trace]]},
   Timestamp},
   Fd) ->
-  (catch io:format(Fd, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
-  (catch file:close(Fd)),
+  ?CATCH0(io:format(Fd, "stop trace at ~s~n", [format_timestamp(Timestamp)])),
+  ?CATCH1(file:close(Fd)),
   closed_file;
 handle_trace({trace_ts, Who, call,
   {?MODULE, report_event,
     [Sev, Label, Service, Content]}, Timestamp},
   Fd) ->
-  (catch print_hackney_trace(Fd, Sev, Timestamp, Who,
+  ?CATCH0(print_hackney_trace(Fd, Sev, Timestamp, Who,
     Label, Service, Content)),
   Fd;
 handle_trace(Event, Fd) ->
-  (catch print_trace(Fd, Event)),
+  ?CATCH0(print_trace(Fd, Event)),
   Fd.
 
 

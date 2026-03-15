@@ -210,7 +210,8 @@ update(Name, Value) ->
     end.
 
 update_(Name, Value) when is_list(Name) ->
-    case ets:lookup(Table = exometer_util:table(), Name) of
+    Table = exometer_util:table(),
+    case ets:lookup(Table, Name) of
         [#exometer_entry{status = Status} = E]
           when ?IS_ENABLED(Status) ->
             case E of
