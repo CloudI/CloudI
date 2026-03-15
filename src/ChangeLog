@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2026-03-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve autoconf clock_gettime check
+
 2025-10-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update uuid

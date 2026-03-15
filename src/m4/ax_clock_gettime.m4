@@ -17,7 +17,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2026 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -54,16 +54,24 @@ AC_DEFUN([AX_CLOCK_GETTIME],
     AC_SUBST(RT_LIB)
     if test $clock_gettime != no; then
         AC_MSG_CHECKING(clock_gettime CLOCK_MONOTONIC usability)
-        AC_PREPROC_IFELSE([AC_LANG_SOURCE([[
+        LIBS_SAVED="$LIBS"
+        LIBS="$RT_LIB $LIBS"
+        export LIBS
+        AC_RUN_IFELSE([AC_LANG_PROGRAM([[
 #include <unistd.h>
 #include <time.h>
 #if !defined(CLOCK_MONOTONIC) || !defined(_POSIX_MONOTONIC_CLOCK) || (_POSIX_MONOTONIC_CLOCK < 0)
 #error
 #endif
+#include <stdlib.h>
+             ]], [[
+exit(sysconf(_SC_MONOTONIC_CLOCK) <= 0);
              ]])],
             [AC_DEFINE([HAVE_CLOCK_GETTIME_MONOTONIC], [1],
                 [Define if clock_gettime supports CLOCK_MONOTONIC])
              AC_MSG_RESULT(yes)],
             [AC_MSG_RESULT(no)])
+        LIBS="$LIBS_SAVED"
+        export LIBS
     fi
 ])
