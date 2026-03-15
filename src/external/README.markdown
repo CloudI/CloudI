@@ -258,8 +258,8 @@ Erlang `rebar2`
 `Erlang OTP-compliant build tool`
 
 - `https://github.com/okeuday/rebar2`
-- `commit 68979e330b77450776bbe5dac973dab9d26ddc43 (2.7.0)`
-- `Mon Mar 11 20:36:34 UTC 2024`
+- `commit 6234df6b41d518309d00f6c4c94a5fa1be524530`
+- `Sun Mar 15 10:11:51 UTC 2026`
 - `MIT`
 
 Erlang `setup`

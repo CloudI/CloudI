@@ -118,8 +118,8 @@ Erlang `uuid`
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
-- `commit e91f1077b098ae287e873795ac353f6162dfe933`
-- `Sun Oct  5 00:38:33 UTC 2025`
+- `commit 7b703026df23c39a661ac8d605181943a914b6e6`
+- `Sun Mar 15 10:11:51 UTC 2026`
 - `MIT`
 
 Erlang `varpool`

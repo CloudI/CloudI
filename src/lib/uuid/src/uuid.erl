@@ -1404,10 +1404,16 @@ mac_address() ->
     ok.
 
 test() ->
-    ok = application:load(quickrand),
+    case application:load(quickrand) of
+        ok ->
+            ok;
+        {error, {already_loaded, quickrand}} ->
+            ok
+    end,
     ok = quickrand:seed(),
-    ok = quickrand_cache:init(),
-    Randomness0 = quickrand_cache:new(),
+    QuickrandCacheSize = 65536,
+    ok = quickrand_cache:init([{cache_size, QuickrandCacheSize}]),
+    Randomness0 = quickrand_cache:new([{cache_size, QuickrandCacheSize}]),
     true = uuid:is_uuid(?UUID_NIL),
     true = uuid:is_uuid(?UUID_MAX),
     % version 1 tests

@@ -7,7 +7,7 @@
 %%% rebar: Erlang Build Tool
 %%%
 %%% Copyright (c) 2009-2010 Dave Smith
-%%% Copyright (c) 2024 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2024-2026 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -33,7 +33,7 @@
 %--------------------------------------------------------------------------
 
 -module(rebar).
--vsn("2.7.0").
+-vsn("2.7.1").
 
 -mode(compile).
 
@@ -100,6 +100,21 @@
 
 -include_lib("kernel/include/file.hrl").
 
+-ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
+% able to use -if/-elif here
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
+-endif.
+
 -record(dep,
     {
         dir,
@@ -120,6 +135,7 @@
         xconf = rebar_config_new_xconf()
     }).
 -type config() :: #config{}.
+
 
 %% escript Entry point
 main(Args) ->
@@ -675,7 +691,7 @@ rebar_core_execute(Command, Modules, Config, ModuleFile, Env) ->
                 true ->
                     ok;
                 false ->
-                    ?WARN("'~p' command does not apply to directory ~s\n",
+                    ?WARN("'~p' command does not apply to directory ~s~n",
                           [Command, rebar_utils_get_cwd()])
             end,
             Config;
@@ -683,26 +699,31 @@ rebar_core_execute(Command, Modules, Config, ModuleFile, Env) ->
         TargetModules ->
             %% Provide some info on where we are
             Dir = rebar_utils_get_cwd(),
-            ?CONSOLE("==> ~s (~s)\n", [filename:basename(Dir), Command]),
+            ?CONSOLE("==> ~s (~s)~n", [filename:basename(Dir), Command]),
 
             Config1 = rebar_core_increment_operations(Config),
 
             %% Run the available modules
             rebar_core_apply_hooks(pre_hooks, Config1, Command, Env),
-            case catch(rebar_core_run_modules(TargetModules, Command,
-                                              Config1, ModuleFile)) of
+            try rebar_core_run_modules(TargetModules, Command,
+                                       Config1, ModuleFile) of
                 {ok, NewConfig} ->
                     rebar_core_apply_hooks(post_hooks, NewConfig, Command, Env),
                     NewConfig;
-                {error, failed} ->
-                    ?FAIL;
                 {Module, {error, _} = Other} ->
-                    ?ABORT("~p failed while processing ~s in module ~s: ~s\n",
-                           [Command, Dir, Module,
-                            io_lib:print(Other, 1, 80, -1)]);
-                Other ->
-                    ?ABORT("~p failed while processing ~s: ~s\n",
-                           [Command, Dir, io_lib:print(Other, 1, 80, -1)])
+                    ?ABORT("~p failed while processing ~s in module ~s:~n~p~n",
+                           [Command, Dir, Module, Other])
+            catch
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+                    case rebar_config_is_verbose(Config) of
+                        true ->
+                            ?ABORT("~p failed while processing ~s:~n~p~n~p~n",
+                                   [Command, Dir,
+                                    ErrorStackTrace, {ErrorType, Error}]);
+                        false ->
+                            ?ABORT("~p failed while processing ~s:~n~p~n",
+                                   [Command, Dir, {ErrorType, Error}])
+                    end
             end
     end.
 
@@ -1086,11 +1107,11 @@ rebar_erlc_compiler_inspect_epp(Epp, Source, Module, Includes) ->
                                         P <- ActualModule], ".")
                 end,
             rebar_erlc_compiler_inspect_epp(Epp, Source, ActualModuleStr, Includes);
-        {ok, {attribute, 1, file, {Module, 1}}} ->
+        {ok, {attribute, _, file, {Module, 1}}} ->
             rebar_erlc_compiler_inspect_epp(Epp, Source, Module, Includes);
-        {ok, {attribute, 1, file, {Source, 1}}} ->
+        {ok, {attribute, _, file, {Source, 1}}} ->
             rebar_erlc_compiler_inspect_epp(Epp, Source, Module, Includes);
-        {ok, {attribute, 1, file, {IncFile, 1}}} ->
+        {ok, {attribute, _, file, {IncFile, 1}}} ->
             rebar_erlc_compiler_inspect_epp(Epp, Source, Module, [IncFile | Includes]);
         {eof, _} ->
             epp:close(Epp),
@@ -1107,7 +1128,8 @@ rebar_erlc_compiler_needs_compile(Source, Target, Hrls) ->
               [Source] ++ Hrls).
 
 -spec rebar_erlc_compiler_internal_erl_compile(config(), file:filename(),
-                           file:filename(), list()) -> 'ok' | 'skipped'.
+                           file:filename(), list()) ->
+    ok | {ok, list()} | skipped | {error, list(), list()}.
 rebar_erlc_compiler_internal_erl_compile(Config, Source, Outdir, ErlOpts) ->
     %% Determine the target name and includes list by inspecting the source file
     {Module, Hrls} = rebar_erlc_compiler_inspect(Source, include_path(Source, Config)),
@@ -1166,7 +1188,8 @@ rebar_erlc_compiler_compile_yrl(Source, Target, Config) ->
     rebar_erlc_compiler_compile_xrl_yrl(Config, Source, Target, Opts, yecc).
 
 -spec rebar_erlc_compiler_compile_xrl_yrl(config(), file:filename(),
-                      file:filename(), list(), module()) -> 'ok'.
+                      file:filename(), list(), module()) ->
+    ok | {ok, list()} | skipped | {error, list(), list()}.
 rebar_erlc_compiler_compile_xrl_yrl(Config, Source, Target, Opts, Mod) ->
     case rebar_erlc_compiler_needs_compile(Source, Target, []) of
         true ->
@@ -1791,11 +1814,14 @@ rebar_eunit_run_eunit(Config, CodePath, SrcErls) ->
     %% eunit+cover to not slow down when analyzing many Erlang modules.
     ok = cover:stop(),
 
+    ErrorString = "One or more eunit tests failed.",
     case EunitResult of
         ok ->
             ok;
-        _ ->
-            ?ABORT("One or more eunit tests failed.~n", [])
+        error ->
+            ?ABORT("~s~n", [ErrorString]);
+        {error, Error} ->
+            ?ABORT("~s~n~p~n", [ErrorString, Error])
     end,
 
     %% Restore code path
@@ -2011,7 +2037,11 @@ rebar_eunit_perform_eunit(Config, Tests) ->
     Cwd = rebar_utils_get_cwd(),
     ok = file:set_cwd(?EUNIT_DIR),
 
-    EunitResult = (catch eunit:test(Tests, EunitOpts)),
+    EunitResult = try eunit:test(Tests, EunitOpts)
+    catch
+        ErrorType:Error ->
+            {error, {ErrorType, Error}}
+    end,
 
     %% Return to original working dir
     ok = file:set_cwd(Cwd),
@@ -2354,13 +2384,17 @@ rebar_eunit_kill_extras(Pids) ->
 rebar_eunit_reconstruct_app_env_vars([App|Apps]) ->
     CmdLine0 = proplists:get_value(App, init:get_arguments(), []),
     CmdVars = [{list_to_atom(K), list_to_atom(V)} || {K, V} <- CmdLine0],
-    AppFile = (catch filename:join([code:lib_dir(App),
-                                    "ebin",
-                                    atom_to_list(App) ++ ".app"])),
-    AppVars = case file:consult(AppFile) of
-        {ok, [{application, App, Ps}]} ->
-            proplists:get_value(env, Ps, []);
-        _ ->
+    AppVars = try filename:join([code:lib_dir(App),
+                                 "ebin", atom_to_list(App) ++ ".app"]) of
+        AppFile ->
+            case file:consult(AppFile) of
+                {ok, [{application, App, Ps}]} ->
+                    proplists:get_value(env, Ps, []);
+                _ ->
+                    []
+            end
+    catch
+        _:_ ->
             []
     end,
 
@@ -3330,9 +3364,11 @@ rebar_base_compiler_compile(Source, Config, CompileFn) ->
     case CompileFn(Source, Config) of
         ok ->
             ok;
+        {ok, _} = SuccessWithWarnings ->
+            SuccessWithWarnings;
         skipped ->
             skipped;
-        Error ->
+        {error, _, _} = Error ->
             Error
     end.
 
@@ -3347,7 +3383,7 @@ rebar_base_compiler_compile_each([Source | Rest], Config, CompileFn) ->
             ?CONSOLE("Compiled ~s\n", [Source]);
         skipped ->
             ?INFO("Skipped ~s\n", [Source]);
-        Error ->
+        {error, _, _} = Error ->
             rebar_base_compiler_maybe_report(Error),
             ?DEBUG("Compilation failed: ~p\n", [Error]),
             ?FAIL
@@ -3400,8 +3436,7 @@ rebar_base_compiler_compile_worker(QueuePid, Config, CompileFn) ->
     QueuePid ! {next, self()},
     receive
         {compile, Source} ->
-            case catch(rebar_base_compiler_compile(Source, Config,
-                                                   CompileFn)) of
+            try rebar_base_compiler_compile(Source, Config, CompileFn) of
                 {ok, Ws} ->
                     QueuePid ! {compiled, Source, Ws},
                     rebar_base_compiler_compile_worker(QueuePid, Config,
@@ -3414,12 +3449,16 @@ rebar_base_compiler_compile_worker(QueuePid, Config, CompileFn) ->
                     QueuePid ! {skipped, Source},
                     rebar_base_compiler_compile_worker(QueuePid, Config,
                                                        CompileFn);
-                Error ->
+                {error, _, _} = Error ->
                     QueuePid ! {fail, [{error, Error},
                                        {source, Source}]},
                     ok
+            catch
+                ErrorType:Error ->
+                    QueuePid ! {fail, [{error, {ErrorType, Error}},
+                                       {source, Source}]},
+                    ok
             end;
-
         empty ->
             ok
     end.
@@ -3857,22 +3896,8 @@ rebar_config_base_config(GlobalConfig) ->
 rebar_config_new() ->
     #config{dir = rebar_utils_get_cwd()}.
 
-rebar_config_new(ConfigFile) when is_list(ConfigFile) ->
-    case rebar_config_consult_file(ConfigFile) of
-        {ok, Opts} ->
-            #config{dir = rebar_utils_get_cwd(),
-                    opts = Opts};
-        Other ->
-            ?ABORT("Failed to load ~s: ~p~n", [ConfigFile, Other])
-    end;
-rebar_config_new(#config{opts = Opts,
-                         globals = Globals,
-                         skip_dirs = SkipDirs,
-                         xconf = Xconf}) ->
-    rebar_config_new(#config{opts = Opts,
-                             globals = Globals,
-                             skip_dirs = SkipDirs,
-                             xconf = Xconf},
+rebar_config_new(#config{} = ParentConfig) ->
+    rebar_config_new(ParentConfig,
                      ?CONFIG_FILENAME).
 
 rebar_config_get(Config, Key, Default) ->

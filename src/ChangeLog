@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2026-03-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update uuid
+    * Update rebar2
+
 2026-03-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Erlang/OTP 29.0 support
