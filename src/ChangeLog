@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2026-07-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve systemd configuration file script
+
 2026-03-15 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update uuid

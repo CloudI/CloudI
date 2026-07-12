@@ -43,9 +43,20 @@ OUTPUT_FILENAME="cloudi-systemd.service"
 # $ sudo systemctl enable cloudi-systemd.service
 # $ sudo systemctl start cloudi-systemd.service
 
+# When the installed cloudi-systemd.service file changes, use:
+# $ sudo systemctl daemon-reload
+
 # Additional commands that are useful:
 # $ sudo systemctl status cloudi-systemd.service
 # $ sudo systemctl restart cloudi-systemd.service
+
+# To view all cloudi-systemd.service systemd log output, use:
+# $ sudo journalctl -u cloudi-systemd.service
+
+# It is normal to have systemd log output complaining about the PIDFile
+# not existing immediately, with output like:
+#   cloudi-systemd.service: Can't open PID file FILE_PATH.pid (yet?)
+#   after start: Operation not permitted
 
 CLOUDI_EXECUTABLE="@cloudi_bindir@/cloudi"
 if [ ! -x "$CLOUDI_EXECUTABLE" ]; then
@@ -58,7 +69,8 @@ WORKING_DIRECTORY="@cloudi_logdir@"
 cat << EOF > cloudi-systemd.service
 [Unit]
 Description=CloudI SystemD Service
-After=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=forking
